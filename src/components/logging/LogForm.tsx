@@ -1,0 +1,229 @@
+import { useState, useRef, useEffect, type FormEvent } from "react";
+import { Sheet } from "../ui/sheet";
+import { Button } from "../ui/button";
+import { useToast } from "../ui/toast";
+import { DatePicker } from "../ui/date-picker";
+import { TimePicker } from "../ui/time-picker";
+import { StoolTypePicker } from "./StoolTypePicker";
+import { ColorPicker } from "./ColorPicker";
+import { SizePicker } from "./SizePicker";
+import { LogSuccess } from "./LogSuccess";
+import * as db from "../../lib/db";
+import { savePhoto } from "../../lib/photos";
+import type { StoolColor, StoolSize } from "../../lib/types";
+
+interface LogFormProps {
+  open: boolean;
+  onClose: () => void;
+  childId: string;
+  onLogged: () => void;
+}
+
+function getCurrentDate(): string {
+  return new Date().toISOString().split("T")[0];
+}
+
+function getCurrentTime(): string {
+  const now = new Date();
+  return now.toTimeString().slice(0, 5); // "HH:MM"
+}
+
+function combineToISO(date: string, time: string): string {
+  return `${date}T${time}:00`;
+}
+
+export function LogForm({ open, onClose, childId, onLogged }: LogFormProps) {
+  const { showError } = useToast();
+  const [logDate, setLogDate] = useState(getCurrentDate());
+  const [logTime, setLogTime] = useState(getCurrentTime());
+  const [stoolType, setStoolType] = useState<number | null>(null);
+  const [color, setColor] = useState<StoolColor | null>(null);
+  const [size, setSize] = useState<StoolSize | null>(null);
+  const [notes, setNotes] = useState("");
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Reset to "now" each time the sheet opens
+  useEffect(() => {
+    if (open) {
+      setLogDate(getCurrentDate());
+      setLogTime(getCurrentTime());
+    }
+  }, [open]);
+
+  const reset = () => {
+    setLogDate(getCurrentDate());
+    setLogTime(getCurrentTime());
+    setStoolType(null);
+    setColor(null);
+    setSize(null);
+    setNotes("");
+    setPhotoFile(null);
+    if (photoPreview) URL.revokeObjectURL(photoPreview);
+    setPhotoPreview(null);
+    setShowSuccess(false);
+  };
+
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setPhotoFile(file);
+      const url = URL.createObjectURL(file);
+      setPhotoPreview(url);
+    }
+  };
+
+  const removePhoto = () => {
+    setPhotoFile(null);
+    if (photoPreview) URL.revokeObjectURL(photoPreview);
+    setPhotoPreview(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    if (isSubmitting) return;
+
+    setIsSubmitting(true);
+    try {
+      let photoPath: string | null = null;
+      if (photoFile) {
+        try { photoPath = await savePhoto(photoFile); } catch { /* photo save is non-critical */ }
+      }
+
+      await db.createPoopLog({
+        child_id: childId,
+        logged_at: combineToISO(logDate, logTime),
+        stool_type: stoolType,
+        color,
+        size,
+        notes: notes.trim() || null,
+        photo_path: photoPath,
+      });
+    } catch {
+      setIsSubmitting(false);
+      showError("Failed to save entry. Please try again.");
+      return;
+    }
+
+    setIsSubmitting(false);
+    setShowSuccess(true);
+
+    setTimeout(() => {
+      onLogged();
+      onClose();
+      setTimeout(reset, 300);
+    }, 1200);
+  };
+
+  const handleClose = () => {
+    onClose();
+    setTimeout(reset, 300);
+  };
+
+  return (
+    <Sheet open={open} onClose={handleClose}>
+      {showSuccess ? (
+        <LogSuccess />
+      ) : (
+        <form onSubmit={handleSubmit} className="px-5 pb-8">
+          <h2 className="font-[var(--font-display)] text-lg font-semibold text-[var(--color-text)] mb-5 text-center">
+            Log a poop
+          </h2>
+
+          <div className="flex flex-col gap-5">
+            {/* Date & time */}
+            <div>
+              <label className="block text-sm font-medium text-[var(--color-text)] mb-1.5">
+                When
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                <DatePicker value={logDate} onChange={setLogDate} max={getCurrentDate()} />
+                <TimePicker value={logTime} onChange={setLogTime} />
+              </div>
+            </div>
+
+            <StoolTypePicker value={stoolType} onChange={setStoolType} />
+            <ColorPicker value={color} onChange={setColor} />
+            <SizePicker value={size} onChange={setSize} />
+
+            {/* Notes */}
+            <div>
+              <label htmlFor="log-notes" className="block text-sm font-medium text-[var(--color-text)] mb-1.5">
+                Notes (optional)
+              </label>
+              <textarea
+                id="log-notes"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Any observations..."
+                rows={2}
+                className="w-full px-3 py-2 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)] text-sm resize-none outline-none focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20 transition-colors"
+              />
+            </div>
+
+            {/* Photo */}
+            <div>
+              <label className="block text-sm font-medium text-[var(--color-text)] mb-1.5">
+                Photo (optional)
+              </label>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                onChange={handlePhotoChange}
+                className="hidden"
+                id="photo-input"
+              />
+              {photoPreview ? (
+                <div className="relative inline-block">
+                  <img
+                    src={photoPreview}
+                    alt="Captured photo"
+                    className="w-20 h-20 object-cover rounded-[var(--radius-md)] border border-[var(--color-border)]"
+                  />
+                  <button
+                    type="button"
+                    onClick={removePhoto}
+                    className="absolute -top-3 -right-3 w-8 h-8 min-w-[44px] min-h-[44px] rounded-full bg-[var(--color-alert)] text-white flex items-center justify-center cursor-pointer"
+                    aria-label="Remove photo"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5">
+                      <path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" />
+                    </svg>
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="flex items-center gap-2 h-11 px-4 rounded-[var(--radius-md)] border border-dashed border-[var(--color-border)] text-sm text-[var(--color-text-secondary)] hover:border-[var(--color-muted)] cursor-pointer transition-colors"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
+                    <path d="M12 9a3.75 3.75 0 1 0 0 7.5A3.75 3.75 0 0 0 12 9Z" />
+                    <path fillRule="evenodd" d="M9.344 3.071a49.52 49.52 0 0 1 5.312 0c.967.052 1.83.585 2.332 1.39l.821 1.317c.24.383.645.643 1.11.71.386.054.77.113 1.152.177 1.432.239 2.429 1.493 2.429 2.909V18a3 3 0 0 1-3 3H4.5a3 3 0 0 1-3-3V9.574c0-1.416.997-2.67 2.429-2.909.382-.064.766-.123 1.151-.178a1.56 1.56 0 0 0 1.11-.71l.822-1.315a2.942 2.942 0 0 1 2.332-1.39ZM6.75 12.75a5.25 5.25 0 1 1 10.5 0 5.25 5.25 0 0 1-10.5 0Zm12-1.5a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5Z" clipRule="evenodd" />
+                  </svg>
+                  Take Photo
+                </button>
+              )}
+            </div>
+          </div>
+
+          <Button
+            type="submit"
+            variant="cta"
+            size="lg"
+            className="w-full mt-6"
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? "Saving..." : "Save"}
+          </Button>
+        </form>
+      )}
+    </Sheet>
+  );
+}

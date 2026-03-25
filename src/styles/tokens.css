@@ -1,0 +1,116 @@
+/* Tiny Tummy Design System Tokens */
+
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('../assets/fonts/lora-variable.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Raleway';
+  font-style: normal;
+  font-weight: 400 600;
+  font-display: swap;
+  src: url('../assets/fonts/raleway-variable.woff2') format('woff2');
+}
+
+:root {
+  /* Brand */
+  --color-primary: #2563EB;
+  --color-primary-hover: #1D4ED8;
+  --color-cta: #F97316;
+  --color-cta-hover: #EA580C;
+
+  /* Backgrounds & surfaces */
+  --color-bg: #F8FAFC;
+  --color-surface: #FFFFFF;
+  --color-muted: #94A3B8;
+  --color-border: #E2E8F0;
+
+  /* Text */
+  --color-text: #1E293B;
+  --color-text-secondary: #64748B;
+
+  /* Health states */
+  --color-healthy: #22C55E;
+  --color-healthy-bg: #F0FDF4;
+  --color-caution: #F59E0B;
+  --color-caution-bg: #FFFBEB;
+  --color-alert: #EF4444;
+  --color-alert-bg: #FEF2F2;
+  --color-info: #3B82F6;
+  --color-info-bg: #EFF6FF;
+
+  /* Spacing */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+  --space-2xl: 48px;
+
+  /* Radii */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-full: 9999px;
+
+  /* Shadows */
+  --shadow-soft: 0 2px 8px rgba(0, 0, 0, 0.06);
+  --shadow-medium: 0 4px 16px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.12);
+
+  /* Touch */
+  --touch-target: 44px;
+
+  /* Typography */
+  --font-display: 'Lora', Georgia, serif;
+  --font-body: 'Raleway', system-ui, sans-serif;
+
+  /* Animation */
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-gentle: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Dark mode */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --color-bg: #0F172A;
+    --color-surface: #1E293B;
+    --color-text: #E2E8F0;
+    --color-text-secondary: #94A3B8;
+    --color-border: #334155;
+    --color-muted: #64748B;
+
+    --color-healthy-bg: #052E16;
+    --color-caution-bg: #451A03;
+    --color-alert-bg: #450A0A;
+    --color-info-bg: #172554;
+
+    --shadow-soft: 0 2px 8px rgba(0, 0, 0, 0.2);
+    --shadow-medium: 0 4px 16px rgba(0, 0, 0, 0.3);
+    --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.4);
+  }
+}
+
+/* Explicit dark theme override */
+[data-theme="dark"] {
+  --color-bg: #0F172A;
+  --color-surface: #1E293B;
+  --color-text: #E2E8F0;
+  --color-text-secondary: #94A3B8;
+  --color-border: #334155;
+  --color-muted: #64748B;
+
+  --color-healthy-bg: #052E16;
+  --color-caution-bg: #451A03;
+  --color-alert-bg: #450A0A;
+  --color-info-bg: #172554;
+
+  --shadow-soft: 0 2px 8px rgba(0, 0, 0, 0.2);
+  --shadow-medium: 0 4px 16px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
