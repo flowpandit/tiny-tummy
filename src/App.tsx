@@ -5,6 +5,7 @@ import { ThemeProvider } from "./contexts/ThemeContext";
 import { ErrorBoundary } from "./components/ui/error-boundary";
 import { ToastProvider } from "./components/ui/toast";
 import { AppShell } from "./components/layout/AppShell";
+import { useSafeArea } from "./hooks/useSafeArea";
 
 // Eagerly loaded (critical path)
 import { Home } from "./pages/Home";
@@ -70,6 +71,8 @@ function AppRoutes() {
 }
 
 function App() {
+  useSafeArea();
+
   return (
     <ErrorBoundary>
       <BrowserRouter>

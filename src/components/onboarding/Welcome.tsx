@@ -1,5 +1,5 @@
 import { Button } from "../ui/button";
-import logo from "../../assets/logo.svg";
+import { Logo } from "../ui/Logo";
 
 interface WelcomeProps {
   onNext: () => void;
@@ -8,7 +8,7 @@ interface WelcomeProps {
 export function Welcome({ onNext }: WelcomeProps) {
   return (
     <div className="flex flex-col items-center justify-center min-h-screen px-8 text-center">
-      <img src={logo} alt="Tiny Tummy logo" className="w-40 h-40 mb-6" />
+      <Logo className="w-40 h-40 mb-6" />
 
       <h1 className="font-[var(--font-display)] text-3xl font-bold text-[var(--color-text)] mb-3">
         Tiny Tummy

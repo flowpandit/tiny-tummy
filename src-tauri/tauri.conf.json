@@ -18,7 +18,7 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' asset: tauri:"
+      "csp": "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' asset: tauri: blob:"
     }
   },
   "bundle": {
