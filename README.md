@@ -240,25 +240,19 @@ The `.ipa` is generated in `src-tauri/gen/apple/build/`. Upload to [App Store Co
 
 - **Status bar icon color (light/dark)**: Android status bar icons default to white, making them invisible on a light app background. Fix this after running `cargo tauri android init` by editing two files:
 
-  **`src-tauri/gen/android/app/src/main/res/values/styles.xml`** — for light mode (dark icons):
+  Tauri generates `themes.xml` (not `styles.xml`) with the app theme. Add the `windowLightStatusBar` attribute to the **existing** theme in each file. Do **not** create separate `styles.xml` files — that causes duplicate resource errors.
+
+  **`src-tauri/gen/android/app/src/main/res/values/themes.xml`** — add inside the existing `<style>` block:
   ```xml
-  <resources>
-    <style name="AppTheme" parent="Theme.AppCompat.Light.NoActionBar">
-      <item name="android:windowLightStatusBar">true</item>
-    </style>
-  </resources>
+  <item name="android:windowLightStatusBar">true</item>
   ```
 
-  **`src-tauri/gen/android/app/src/main/res/values-night/styles.xml`** — for dark mode (light icons):
+  **`src-tauri/gen/android/app/src/main/res/values-night/themes.xml`** — add inside the existing `<style>` block:
   ```xml
-  <resources>
-    <style name="AppTheme" parent="Theme.AppCompat.DayNight.NoActionBar">
-      <item name="android:windowLightStatusBar">false</item>
-    </style>
-  </resources>
+  <item name="android:windowLightStatusBar">false</item>
   ```
 
-  Create the `values-night/` directory if it doesn't exist. Android switches between the two automatically based on the system theme. You must redo this after every `cargo tauri android init`.
+  Android switches between the two automatically based on the system theme. You must redo this after every `cargo tauri android init`.
 
 - **Photos/avatars not loading**: The CSP in `tauri.conf.json` must include `blob:` in `img-src`. This is already configured but worth checking if photos break after config changes.
 
