@@ -36,7 +36,6 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     document.documentElement.setAttribute("data-theme", effectiveTheme);
     // Update Android status bar icon color to match theme
     const isLight = effectiveTheme === "light";
-    console.log(`[ThemeContext] mode=${mode} effectiveTheme=${effectiveTheme} isLight=${isLight}`);
     setStatusBarStyle(isLight);
   }, [mode]);
 
