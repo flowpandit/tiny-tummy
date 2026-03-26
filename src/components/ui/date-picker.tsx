@@ -53,7 +53,7 @@ export function DatePicker({ value, onChange, max, min, label }: DatePickerProps
 
   // Year range: from minDate year (or 10 years back) to maxDate year (or current)
   const maxYear = maxDate ? maxDate.getFullYear() : new Date().getFullYear();
-  const minYear = minDate ? minDate.getFullYear() : maxYear - 10;
+  const minYear = minDate ? minDate.getFullYear() : maxYear - 100;
 
   const years = useMemo(() => {
     const arr: number[] = [];

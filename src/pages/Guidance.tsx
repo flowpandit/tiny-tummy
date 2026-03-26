@@ -34,7 +34,7 @@ function TipCard({ tip }: { tip: GuidanceTip }) {
     >
       <CardContent className="py-3">
         <div className="flex items-start justify-between gap-2">
-          <p className="text-sm font-medium text-[var(--color-text)]">
+          <p className="text-base font-medium text-[var(--color-text)]">
             {tip.title}
           </p>
           <motion.svg
@@ -57,7 +57,7 @@ function TipCard({ tip }: { tip: GuidanceTip }) {
               transition={{ duration: 0.2 }}
               className="overflow-hidden"
             >
-              <p className="text-xs text-[var(--color-text-secondary)] leading-relaxed whitespace-pre-line mt-2 pt-2 border-t border-[var(--color-border)]">
+              <p className="text-sm text-[var(--color-text-secondary)] leading-relaxed whitespace-pre-line mt-2 pt-2 border-t border-[var(--color-border)]">
                 {tip.body}
               </p>
             </motion.div>
@@ -100,7 +100,7 @@ export function Guidance() {
       <h2 className="font-[var(--font-display)] text-xl font-semibold text-[var(--color-text)] mb-2">
         Guidance
       </h2>
-      <p className="text-sm text-[var(--color-text-secondary)] mb-4">
+      <p className="text-base text-[var(--color-text-secondary)] mb-4">
         Tap a card to read more. Always consult your pediatrician for specific medical advice.
       </p>
 
@@ -129,7 +129,7 @@ export function Guidance() {
 
         return (
           <div key={cat} className="mb-5">
-            <h3 className="text-xs font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider mb-2">
+            <h3 className="text-sm font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider mb-2">
               {cat}
             </h3>
             <div className="flex flex-col gap-2">

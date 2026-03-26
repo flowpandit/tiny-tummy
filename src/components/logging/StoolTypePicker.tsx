@@ -10,7 +10,7 @@ export function StoolTypePicker({ value, onChange }: StoolTypePickerProps) {
   return (
     <div>
       <label className="block text-sm font-medium text-[var(--color-text)] mb-2">
-        Stool type
+        Consistency <span className="font-normal text-[var(--color-muted)]">(Bristol scale)</span>
       </label>
       <div className="grid grid-cols-4 gap-2">
         {BITSS_TYPES.map((item) => (

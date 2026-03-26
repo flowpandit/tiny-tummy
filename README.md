@@ -7,7 +7,7 @@ A smart baby bowel health tracker for iOS and Android. Helps parents track their
 ## What It Does
 
 - **Quick logging** — log poop (type, color, size, photo) and meals in seconds
-- **Age-adjusted intelligence** — knows what's normal for your baby's age and feeding type (breast, formula, mixed, solids) using the BITSS scale
+- **Age-adjusted intelligence** — knows what's normal for your baby's age and feeding type (breast, formula, mixed, solids) using the Bristol Stool Scale
 - **Smart alerts** — warns when patterns fall outside normal range, flags concerning stool colors (white, red, black)
 - **Trend charts** — daily frequency, consistency trends, color distribution, diet correlation timeline
 - **Multi-child support** — track unlimited children, switch instantly via header avatars
@@ -126,37 +126,99 @@ npm run build
 cd src-tauri && cargo check
 ```
 
-## Mobile Setup
+## Building for Mobile Testing
+
+### Android
+
+```bash
+# 1. Install the Tauri CLI (one-time)
+cargo install tauri-cli
+
+# 2. Initialize Android project (one-time per machine)
+cargo tauri android init
+
+# 3. Copy custom app icons (one-time, or after re-init)
+cp -r src-tauri/icons/android/* src-tauri/gen/android/app/src/main/res/
+
+# 4. Build a release APK for testing
+cargo tauri android build --apk
+```
+
+The release APK is at:
+```
+src-tauri/gen/android/app/build/outputs/apk/universal/release/app-universal-release-unsigned.apk
+```
+
+**To install on your phone:**
+
+```bash
+# Sign the APK first (Android requires it)
+# Create a keystore (one-time):
+keytool -genkey -v -keystore ~/tiny-tummy.keystore -alias tiny-tummy -keyalg RSA -keysize 2048 -validity 10000
+
+# Sign:
+apksigner sign --ks ~/tiny-tummy.keystore --ks-key-alias tiny-tummy \
+  src-tauri/gen/android/app/build/outputs/apk/universal/release/app-universal-release-unsigned.apk
+
+# Install via USB:
+adb install src-tauri/gen/android/app/build/outputs/apk/universal/release/app-universal-release-unsigned.apk
+```
+
+Alternatively, skip signing by building a debug APK (larger file, ~140 MB for single arch):
+```bash
+cargo tauri android build --apk --debug --target aarch64
+```
 
 ### iOS
 
 ```bash
 # Initialize iOS project (one-time)
-npm run tauri ios init
+cargo tauri ios init
 
 # Run on iOS Simulator
-npm run tauri ios dev
+cargo tauri ios dev
 
-# Build for release
-npm run tauri ios build
+# Run on a physical iPhone connected via USB
+cargo tauri ios dev --device
 ```
 
-The `.ipa` is generated in `src-tauri/gen/apple/build/`. Upload to App Store Connect via Xcode or Transporter.
+> **Note:** Testing on a physical iPhone requires an Apple Developer account and a provisioning profile configured in the Xcode project at `src-tauri/gen/apple/`.
 
-### Android
+## Building for Production (Store Submission)
+
+### Android (Google Play)
+
+Google Play requires `.aab` (Android App Bundle) format — not `.apk`. Google generates device-optimized APKs from the bundle, so users get smaller downloads.
 
 ```bash
-# Initialize Android project (one-time)
-npm run tauri android init
+# 1. Build the AAB (release mode)
+cargo tauri android build
 
-# Run on Android Emulator or connected device
-npm run tauri android dev
-
-# Build for release
-npm run tauri android build
+# Output is at:
+# src-tauri/gen/android/app/build/outputs/bundle/universalRelease/app-universal-release.aab
 ```
 
-The `.aab` (Android App Bundle) is generated in `src-tauri/gen/android/app/build/outputs/bundle/`. Upload to Google Play Console.
+**Before submitting, you must sign the AAB:**
+
+```bash
+# Sign with your upload keystore (same one used for APK testing, or a dedicated one)
+jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 \
+  -keystore ~/tiny-tummy.keystore \
+  src-tauri/gen/android/app/build/outputs/bundle/universalRelease/app-universal-release.aab \
+  tiny-tummy
+```
+
+Then upload the signed `.aab` to [Google Play Console](https://play.google.com/console/).
+
+> **Note:** Use the same keystore for every release. If you lose it, you cannot push updates to your app. Back it up securely.
+
+### iOS (App Store)
+
+```bash
+cargo tauri ios build
+```
+
+The `.ipa` is generated in `src-tauri/gen/apple/build/`. Upload to [App Store Connect](https://appstoreconnect.apple.com/) via Xcode or Transporter.
 
 ### Signing
 
@@ -164,6 +226,61 @@ The `.aab` (Android App Bundle) is generated in `src-tauri/gen/android/app/build
 |----------|--------------|
 | iOS | Apple Developer certificate + provisioning profile. Configure in Xcode project at `src-tauri/gen/apple/` |
 | Android | Keystore file for release signing. Configure in `src-tauri/gen/android/app/build.gradle.kts` |
+
+## Gotchas
+
+### Android-specific
+
+- **Status bar overlap**: Android WebView doesn't support `env(safe-area-inset-top)`. The app detects Android via user agent in `index.html` and sets `--safe-area-top: 36px` as a CSS variable. If content still overlaps the status bar on a specific device, adjust this value.
+
+- **App icon shows Tauri default**: After running `cargo tauri android init`, the generated project has Tauri's default icons. You must copy custom icons manually:
+  ```bash
+  cp -r src-tauri/icons/android/* src-tauri/gen/android/app/src/main/res/
+  ```
+
+- **Status bar icon color (light/dark)**: Android status bar icons default to white, making them invisible on a light app background. Fix this after running `cargo tauri android init` by editing two files:
+
+  **`src-tauri/gen/android/app/src/main/res/values/styles.xml`** — for light mode (dark icons):
+  ```xml
+  <resources>
+    <style name="AppTheme" parent="Theme.AppCompat.Light.NoActionBar">
+      <item name="android:windowLightStatusBar">true</item>
+    </style>
+  </resources>
+  ```
+
+  **`src-tauri/gen/android/app/src/main/res/values-night/styles.xml`** — for dark mode (light icons):
+  ```xml
+  <resources>
+    <style name="AppTheme" parent="Theme.AppCompat.DayNight.NoActionBar">
+      <item name="android:windowLightStatusBar">false</item>
+    </style>
+  </resources>
+  ```
+
+  Create the `values-night/` directory if it doesn't exist. Android switches between the two automatically based on the system theme. You must redo this after every `cargo tauri android init`.
+
+- **Photos/avatars not loading**: The CSP in `tauri.conf.json` must include `blob:` in `img-src`. This is already configured but worth checking if photos break after config changes.
+
+- **APK is 50+ MB**: Make sure you're building release, not debug. The release profile in `Cargo.toml` enables `strip`, `lto`, `opt-level = "s"`, and `panic = "abort"` — bringing the APK down to ~15-28 MB.
+
+- **`cargo: no such command: tauri`**: Install the CLI first: `cargo install tauri-cli`
+
+- **Unsigned APK won't install**: Android refuses unsigned APKs with `INSTALL_PARSE_FAILED_NO_CERTIFICATES`. Either sign with `apksigner` or build debug (`--debug` flag).
+
+### iOS-specific
+
+- **Safe areas**: iOS Safari WebView supports `env(safe-area-inset-top)` natively via `@supports` in CSS. No manual offsets needed.
+
+### General
+
+- **SVG logos in Android WebView**: Android WebView can't render SVG `<text>` elements with custom fonts. The app uses an inline React SVG component (`Logo.tsx`) without text elements to avoid this.
+
+- **Bottom sheet scroll conflicts**: The sheet component (`sheet.tsx`) restricts drag-to-close to the handle area only. Content inside the sheet scrolls normally with `overscroll-contain`. If a new sheet has scroll issues, ensure content is inside the sheet's scrollable child div.
+
+- **Calendar picker size jumps**: The date picker always renders 6 rows (42 cells) to prevent layout shifts when switching between months with different row counts.
+
+- **`gen/` directories are machine-specific**: `src-tauri/gen/android/` and `src-tauri/gen/apple/` are generated per machine and should be in `.gitignore`. Run `cargo tauri android init` / `cargo tauri ios init` on each new machine.
 
 ## Database
 
@@ -195,7 +312,7 @@ See the in-app privacy policy at `/privacy` for the full text.
 | Price | Free or $2.99 one-time | Free or $2.99 one-time |
 | Store fee | 15% (Small Business) or 30% | 15% on first $1M |
 | Min target | iOS 16 | Android 7.0 (SDK 24) |
-| App size | ~5-10 MB | ~5-10 MB |
+| App size | ~5-10 MB | ~15-28 MB |
 
 App store metadata (description, keywords, screenshots) is in `APP_STORE.md`.
 

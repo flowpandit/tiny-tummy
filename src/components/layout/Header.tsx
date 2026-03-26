@@ -50,7 +50,7 @@ export function Header() {
   if (!activeChild) return null;
 
   return (
-    <header className="sticky z-20 bg-[var(--color-surface)] border-b border-[var(--color-border)] px-4 py-3" style={{ top: "var(--safe-area-top)" }}>
+    <header className="fixed top-0 left-0 right-0 z-20 bg-[var(--color-surface)] border-b border-[var(--color-border)] px-4 py-3" style={{ paddingTop: "calc(var(--safe-area-top) + 12px)" }}>
       <div className="flex items-center justify-between">
         {/* Active child info */}
         <div className="flex items-center gap-3 flex-1 min-w-0">

@@ -12,6 +12,15 @@
     <title>Tiny Tummy</title>
   </head>
   <body>
+    <script>
+      // Detect Android synchronously before first paint — env(safe-area-inset-top)
+      // doesn't work on Android WebView, so we set the CSS variable manually.
+      if (/android/i.test(navigator.userAgent)) {
+        document.documentElement.dataset.platform = 'android';
+        document.documentElement.style.setProperty('--safe-area-top', '36px');
+        document.documentElement.style.setProperty('--safe-area-bottom', '12px');
+      }
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
