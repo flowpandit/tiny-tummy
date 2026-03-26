@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
 import * as db from "../lib/db";
+import { setStatusBarStyle } from "../lib/statusbar";
 
 type ThemeMode = "system" | "light" | "dark";
 
@@ -33,6 +34,10 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     const effectiveTheme = mode === "system" ? getSystemTheme() : mode;
     setResolved(effectiveTheme);
     document.documentElement.setAttribute("data-theme", effectiveTheme);
+    // Update Android status bar icon color to match theme
+    const isLight = effectiveTheme === "light";
+    console.log(`[ThemeContext] mode=${mode} effectiveTheme=${effectiveTheme} isLight=${isLight}`);
+    setStatusBarStyle(isLight);
   }, [mode]);
 
   // Listen for system theme changes
@@ -43,6 +48,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       const sys = getSystemTheme();
       setResolved(sys);
       document.documentElement.setAttribute("data-theme", sys);
+      setStatusBarStyle(sys === "light");
     };
     mq.addEventListener("change", handler);
     return () => mq.removeEventListener("change", handler);

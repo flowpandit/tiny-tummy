@@ -1,4 +1,5 @@
 mod engine;
+mod statusbar;
 
 use tauri_plugin_sql::{Migration, MigrationKind};
 
@@ -72,11 +73,13 @@ pub fn run() {
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_os::init())
+        .plugin(statusbar::init())
         .invoke_handler(tauri::generate_handler![
             check_frequency_alert,
             check_color_alert,
             get_child_status,
             get_guidance_tips,
+            statusbar::set_status_bar_style,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -137,8 +137,8 @@ cargo install tauri-cli
 # 2. Initialize Android project (one-time per machine)
 cargo tauri android init
 
-# 3. Copy custom app icons (one-time, or after re-init)
-cp -r src-tauri/icons/android/* src-tauri/gen/android/app/src/main/res/
+# 3. Apply custom Android config (icons, status bar fix)
+./scripts/setup-android.sh
 
 # 4. Build a release APK for testing
 cargo tauri android build --apk
@@ -238,21 +238,12 @@ The `.ipa` is generated in `src-tauri/gen/apple/build/`. Upload to [App Store Co
   cp -r src-tauri/icons/android/* src-tauri/gen/android/app/src/main/res/
   ```
 
-- **Status bar icon color (light/dark)**: Android status bar icons default to white, making them invisible on a light app background. Fix this after running `cargo tauri android init` by editing two files:
+- **Status bar icon color (light/dark)**: Tauri's default `enableEdgeToEdge()` installs an `OnPreDrawListener` that continuously overrides status bar icon appearance, making it impossible to control via XML themes or `WindowInsetsController`. The fix has two parts, both applied by `./scripts/setup-android.sh`:
 
-  Tauri generates `themes.xml` (not `styles.xml`) with the app theme. Add the `windowLightStatusBar` attribute to the **existing** theme in each file. Do **not** create separate `styles.xml` files — that causes duplicate resource errors.
+  1. **Custom `MainActivity.kt`** — replaces `enableEdgeToEdge()` with manual edge-to-edge setup (transparent bars without the persistent listener). Handles system theme changes via `onConfigurationChanged`.
+  2. **Custom `StatusBarPlugin.kt`** — a Tauri plugin that bridges TypeScript → Kotlin, letting the app's `ThemeContext` call `WindowInsetsControllerCompat` whenever the user toggles the theme in Settings. This means both system theme changes AND manual in-app theme toggles update the status bar icons correctly.
 
-  **`src-tauri/gen/android/app/src/main/res/values/themes.xml`** — add inside the existing `<style>` block:
-  ```xml
-  <item name="android:windowLightStatusBar">true</item>
-  ```
-
-  **`src-tauri/gen/android/app/src/main/res/values-night/themes.xml`** — add inside the existing `<style>` block:
-  ```xml
-  <item name="android:windowLightStatusBar">false</item>
-  ```
-
-  Android switches between the two automatically based on the system theme. You must redo this after every `cargo tauri android init`.
+  The Rust side (`src-tauri/src/statusbar.rs`) registers the plugin and exposes the `set_status_bar_style` command. The TypeScript wrapper is at `src/lib/statusbar.ts`. Templates for the Kotlin files are in `src-tauri/android-templates/`.
 
 - **Photos/avatars not loading**: The CSP in `tauri.conf.json` must include `blob:` in `img-src`. This is already configured but worth checking if photos break after config changes.
 
