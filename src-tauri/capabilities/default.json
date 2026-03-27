@@ -21,6 +21,12 @@
     "notification:allow-notify",
     "notification:allow-request-permission",
     "os:default",
-    "os:allow-platform"
+    "os:allow-platform",
+    {
+      "identifier": "fs:scope",
+      "allow": [
+        "$DOWNLOAD/tiny-tummy-report-*"
+      ]
+    }
   ]
 }
