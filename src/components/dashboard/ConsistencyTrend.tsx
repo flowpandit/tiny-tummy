@@ -26,11 +26,18 @@ function typeLabel(type: number): string {
 
 export function ConsistencyTrend({ data }: ConsistencyTrendProps) {
   return (
-    <div className="w-full h-48">
+    <div className="w-full h-52">
       <ResponsiveContainer width="100%" height="100%">
         <LineChart data={data} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
+          <defs>
+            <linearGradient id="consistencyGradient" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stopColor="#ffb48e" />
+              <stop offset="55%" stopColor="#f2c462" />
+              <stop offset="100%" stopColor="#94d6bb" />
+            </linearGradient>
+          </defs>
           <CartesianGrid
-            strokeDasharray="3 3"
+            strokeDasharray="4 8"
             stroke="var(--color-border)"
             vertical={false}
           />
@@ -59,15 +66,15 @@ export function ConsistencyTrend({ data }: ConsistencyTrendProps) {
             }}
           />
           {/* Normal range band (types 3-5) */}
-          <ReferenceLine y={3} stroke="var(--color-healthy)" strokeDasharray="4 4" strokeOpacity={0.4} />
-          <ReferenceLine y={5} stroke="var(--color-healthy)" strokeDasharray="4 4" strokeOpacity={0.4} />
+          <ReferenceLine y={3} stroke="var(--color-healthy)" strokeDasharray="5 6" strokeOpacity={0.55} />
+          <ReferenceLine y={5} stroke="var(--color-healthy)" strokeDasharray="5 6" strokeOpacity={0.55} />
           <Line
             type="monotone"
             dataKey="stool_type"
-            stroke="var(--color-cta)"
-            strokeWidth={2}
-            dot={{ fill: "var(--color-cta)", r: 4, strokeWidth: 0 }}
-            activeDot={{ r: 6, fill: "var(--color-cta)" }}
+            stroke="url(#consistencyGradient)"
+            strokeWidth={3}
+            dot={{ fill: "#ff8d69", r: 5, strokeWidth: 0 }}
+            activeDot={{ r: 7, fill: "#ff8d69" }}
           />
         </LineChart>
       </ResponsiveContainer>

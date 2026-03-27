@@ -42,13 +42,13 @@ function SwipeableAlert({
       initial={{ opacity: 0, x: -20 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -200, transition: { duration: 0.3 } }}
-      className="rounded-[var(--radius-md)] p-3 border-l-[3px] cursor-grab active:cursor-grabbing touch-pan-y"
+      className="rounded-[24px] p-3.5 border cursor-grab active:cursor-grabbing touch-pan-y shadow-[var(--shadow-soft)] backdrop-blur-xl"
       style={{ backgroundColor: bgColor, borderLeftColor: borderColor, x, opacity }}
     >
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium text-[var(--color-text)]">{alert.title}</p>
-          <p className="text-xs text-[var(--color-text-secondary)] mt-0.5">{alert.message}</p>
+          <p className="text-sm font-semibold text-[var(--color-text)]">{alert.title}</p>
+          <p className="mt-1 text-xs leading-relaxed text-[var(--color-text-secondary)]">{alert.message}</p>
         </div>
         <button
           onClick={() => onDismiss(alert.id)}

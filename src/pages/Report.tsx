@@ -55,12 +55,15 @@ export function Report() {
 
   return (
     <div className="px-4 py-5">
-      <h2 className="font-[var(--font-display)] text-xl font-semibold text-[var(--color-text)] mb-4">
-        Report
-      </h2>
-      <p className="text-sm text-[var(--color-text-secondary)] mb-5">
-        Generate a summary to share with your doctor.
-      </p>
+      <div className="mb-5 rounded-[16px] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-[var(--shadow-soft)] backdrop-blur-xl">
+        <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--color-text-soft)]">Share</p>
+        <h2 className="mt-2 font-[var(--font-display)] text-3xl font-semibold text-[var(--color-text)]">
+          Report
+        </h2>
+        <p className="mt-3 text-base leading-relaxed text-[var(--color-text-secondary)]">
+          Generate a summary to share with your doctor.
+        </p>
+      </div>
 
       {/* Date range picker */}
       <Card className="mb-5">

@@ -55,8 +55,8 @@ export function BottomNav() {
   const navigate = useNavigate();
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-30 bg-[var(--color-surface)] border-t border-[var(--color-border)]" style={{ paddingBottom: "var(--safe-area-bottom)" }}>
-      <div className="flex items-center justify-around h-16">
+    <nav className="fixed bottom-0 left-0 right-0 z-30 px-3" style={{ paddingBottom: "calc(var(--safe-area-bottom) + 8px)" }}>
+      <div className="mx-auto flex h-[72px] max-w-[560px] items-center justify-around rounded-[28px] border border-[var(--color-border)] bg-[var(--color-surface-strong)]/96 px-2 shadow-[var(--shadow-medium)] backdrop-blur-xl">
         {NAV_ITEMS.map((item) => {
           const isActive = location.pathname === item.path;
           return (
@@ -64,15 +64,15 @@ export function BottomNav() {
               key={item.path}
               onClick={() => navigate(item.path)}
               className={cn(
-                "flex flex-col items-center justify-center gap-0.5 w-16 h-full cursor-pointer transition-colors duration-200",
+                "flex h-[60px] w-16 flex-col items-center justify-center gap-1 rounded-[20px] cursor-pointer transition-all duration-200",
                 isActive
-                  ? "text-[var(--color-primary)]"
+                  ? "bg-[var(--color-bg-elevated)] text-[var(--color-primary)] shadow-[var(--shadow-soft)]"
                   : "text-[var(--color-muted)] hover:text-[var(--color-text-secondary)]",
               )}
               aria-label={item.label}
             >
               {item.icon(isActive)}
-              <span className="text-[10px] font-medium">{item.label}</span>
+              <span className="text-[10px] font-semibold tracking-[0.02em]">{item.label}</span>
             </button>
           );
         })}

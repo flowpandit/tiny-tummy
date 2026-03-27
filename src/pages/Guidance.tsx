@@ -97,12 +97,15 @@ export function Guidance() {
 
   return (
     <div className="px-4 py-5">
-      <h2 className="font-[var(--font-display)] text-xl font-semibold text-[var(--color-text)] mb-2">
-        Guidance
-      </h2>
-      <p className="text-base text-[var(--color-text-secondary)] mb-4">
-        Tap a card to read more. Always consult your doctor for specific medical advice.
-      </p>
+      <div className="mb-5 rounded-[16px] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-[var(--shadow-soft)] backdrop-blur-xl">
+        <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--color-text-soft)]">Support</p>
+        <h2 className="mt-2 font-[var(--font-display)] text-3xl font-semibold text-[var(--color-text)]">
+          Guidance
+        </h2>
+        <p className="mt-3 text-base leading-relaxed text-[var(--color-text-secondary)]">
+          Tap a card to read more. Always consult your doctor for specific medical advice.
+        </p>
+      </div>
 
       {/* Category filter chips */}
       <div className="flex gap-2 overflow-x-auto pb-3 mb-4 -mx-4 px-4 scrollbar-none">
@@ -111,10 +114,10 @@ export function Guidance() {
             key={filter}
             onClick={() => setActiveFilter(filter)}
             className={cn(
-              "flex-shrink-0 px-3 py-1.5 rounded-[var(--radius-full)] text-xs font-medium cursor-pointer transition-colors duration-200",
+              "flex-shrink-0 px-3 py-2 rounded-[var(--radius-full)] text-xs font-semibold cursor-pointer transition-colors duration-200 shadow-[var(--shadow-soft)]",
               activeFilter === filter
                 ? "bg-[var(--color-primary)] text-white"
-                : "bg-[var(--color-bg)] text-[var(--color-text-secondary)] border border-[var(--color-border)] hover:border-[var(--color-muted)]",
+                : "bg-[var(--color-surface-strong)] text-[var(--color-text-secondary)] border border-[var(--color-border)] hover:border-[var(--color-muted)]",
             )}
           >
             {filter}

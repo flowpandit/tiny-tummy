@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { motion } from "framer-motion";
 import type { HealthStatus } from "../../lib/types";
 import { timeSinceDetailed } from "../../lib/utils";
 
@@ -8,11 +7,11 @@ interface TimeSinceIndicatorProps {
   status: HealthStatus;
 }
 
-const STATUS_COLORS: Record<HealthStatus, string> = {
-  healthy: "var(--color-healthy)",
-  caution: "var(--color-caution)",
-  alert: "var(--color-alert)",
-  unknown: "var(--color-muted)",
+const STATUS_GRADIENTS: Record<HealthStatus, string> = {
+  healthy: "conic-gradient(from 210deg, #ff9c7c 0deg, #efc45c 120deg, #94d6bb 280deg, #ff9c7c 360deg)",
+  caution: "conic-gradient(from 210deg, #ff9c7c 0deg, #efc45c 170deg, #efc45c 360deg)",
+  alert: "conic-gradient(from 210deg, #ff9c7c 0deg, #ef8c7a 200deg, #d95f52 360deg)",
+  unknown: "conic-gradient(from 210deg, #cfd7e5 0deg, #9aabc4 360deg)",
 };
 
 export function TimeSinceIndicator({ lastPoopAt, status }: TimeSinceIndicatorProps) {
@@ -29,59 +28,26 @@ export function TimeSinceIndicator({ lastPoopAt, status }: TimeSinceIndicatorPro
     return () => clearInterval(interval);
   }, [lastPoopAt]);
 
-  const color = STATUS_COLORS[status];
-  const circumference = 2 * Math.PI * 54;
-  const progress = status === "healthy" ? 0.3 : status === "caution" ? 0.65 : 0.95;
+  const gradient = STATUS_GRADIENTS[status];
 
   return (
-    <div className="relative w-36 h-36 mx-auto">
-      <svg viewBox="0 0 120 120" className="w-full h-full -rotate-90">
-        {/* Background ring */}
-        <circle
-          cx="60"
-          cy="60"
-          r="54"
-          fill="none"
-          stroke="var(--color-border)"
-          strokeWidth="6"
-        />
-        {/* Progress ring */}
-        <motion.circle
-          cx="60"
-          cy="60"
-          r="54"
-          fill="none"
-          stroke={color}
-          strokeWidth="6"
-          strokeLinecap="round"
-          strokeDasharray={circumference}
-          initial={{ strokeDashoffset: circumference }}
-          animate={{ strokeDashoffset: circumference * (1 - progress) }}
-          transition={{ duration: 1, ease: [0.22, 1, 0.36, 1] }}
-        />
-      </svg>
-      {/* Center text */}
-      <div className="absolute inset-0 flex flex-col items-center justify-center">
+    <div
+      className="relative mx-auto flex h-[108px] w-[108px] items-center justify-center rounded-full shadow-[var(--shadow-soft)]"
+      style={{ background: gradient }}
+    >
+      <div className="absolute inset-[11px] rounded-full bg-[var(--color-surface-strong)] shadow-[var(--shadow-inner)]" />
+      <div className="relative z-10 flex flex-col items-center justify-center">
         {time ? (
           <>
-            <span className="text-3xl font-bold text-[var(--color-text)]" style={{ fontFamily: "var(--font-display)" }}>
+            <span className="text-[2rem] font-bold text-[var(--color-text)]" style={{ fontFamily: "var(--font-display)" }}>
               {time.value}
             </span>
-            <span className="text-sm text-[var(--color-text-secondary)]">{time.unit}</span>
+            <span className="text-xs text-[var(--color-text-secondary)]">{time.unit}</span>
           </>
         ) : (
           <span className="text-sm text-[var(--color-muted)]">No data</span>
         )}
       </div>
-      {/* Pulse for healthy */}
-      {status === "healthy" && lastPoopAt && (
-        <motion.div
-          className="absolute inset-0 rounded-full border-2"
-          style={{ borderColor: color }}
-          animate={{ scale: [1, 1.08, 1], opacity: [0.5, 0, 0.5] }}
-          transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-        />
-      )}
     </div>
   );
 }

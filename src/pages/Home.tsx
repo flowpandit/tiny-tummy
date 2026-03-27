@@ -1,14 +1,17 @@
 import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { useChildContext } from "../contexts/ChildContext";
 import { usePoopLogs } from "../hooks/usePoopLogs";
 import { useDietLogs } from "../hooks/useDietLogs";
 import { useAlerts } from "../hooks/useAlerts";
 import { useAlertEngine } from "../hooks/useAlertEngine";
+import { useStats } from "../hooks/useStats";
 import { getChildStatus } from "../lib/tauri";
+import { timeSince } from "../lib/utils";
 import * as db from "../lib/db";
+import { ChildSwitcherCard } from "../components/home/ChildSwitcherCard";
 import { TimeSinceIndicator } from "../components/home/TimeSinceIndicator";
-import { StatusCard } from "../components/home/StatusCard";
+import { WeeklyPatternCard } from "../components/home/WeeklyPatternCard";
 import { RecentActivity } from "../components/home/RecentActivity";
 import { AlertBanner } from "../components/dashboard/AlertBanner";
 import { LogForm } from "../components/logging/LogForm";
@@ -19,10 +22,11 @@ import { NoLogsYet } from "../components/empty-states/NoLogsYet";
 import type { HealthStatus, PoopEntry, DietEntry } from "../lib/types";
 
 export function Home() {
-  const { activeChild } = useChildContext();
+  const { activeChild, children, setActiveChildId } = useChildContext();
   const { logs, lastRealPoop, refresh: refreshLogs } = usePoopLogs(activeChild?.id ?? null);
   const { logs: dietLogs, refresh: refreshDietLogs } = useDietLogs(activeChild?.id ?? null);
   const { alerts, refresh: refreshAlerts, dismiss } = useAlerts(activeChild?.id ?? null);
+  const { frequency, consistency, colorDist } = useStats(activeChild?.id ?? null, 7);
   const { runChecks } = useAlertEngine();
   const [logFormOpen, setLogFormOpen] = useState(false);
   const [dietFormOpen, setDietFormOpen] = useState(false);
@@ -30,6 +34,7 @@ export function Home() {
   const [editingMeal, setEditingMeal] = useState<DietEntry | null>(null);
   const [status, setStatus] = useState<HealthStatus>("healthy");
   const [normalDesc, setNormalDesc] = useState("");
+  const [childSwitcherExpanded, setChildSwitcherExpanded] = useState(false);
 
   useEffect(() => {
     if (!activeChild) return;
@@ -68,29 +73,81 @@ export function Home() {
   };
 
   const hasLogs = logs.length > 0;
+  const lastPoopLabel = lastRealPoop?.logged_at ? timeSince(lastRealPoop.logged_at) : null;
 
   return (
-    <div className="flex flex-col gap-5 py-5">
+    <div className="flex flex-col gap-4 pb-3 pt-0.5">
       {/* Alerts */}
       <AlertBanner alerts={alerts} onDismiss={dismiss} />
 
       {hasLogs ? (
         <>
-          {/* Time since indicator ring */}
-          <div className="px-4">
-            <TimeSinceIndicator
-              lastPoopAt={lastRealPoop?.logged_at ?? null}
-              status={status}
-            />
+          <div className="px-3">
+            <div className="relative h-[84px]">
+              <ChildSwitcherCard
+                activeChild={activeChild}
+                children={children}
+                expanded={childSwitcherExpanded}
+                lastPoopLabel={lastPoopLabel}
+                onToggle={() => setChildSwitcherExpanded((open) => !open)}
+                onSelectChild={(childId) => {
+                  setActiveChildId(childId);
+                  setChildSwitcherExpanded(false);
+                }}
+              />
+
+              <AnimatePresence>
+                {!childSwitcherExpanded && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -6 }}
+                    className="absolute right-0 top-1/2 -translate-y-1/2"
+                  >
+                    <div className="h-11 min-w-[182px] max-w-full rounded-full bg-[var(--color-healthy-bg)] px-4 text-center text-[13px] font-semibold text-[var(--color-healthy)] shadow-[var(--shadow-soft)] whitespace-nowrap flex items-center justify-center">
+                      {status === "healthy" ? "All looks normal" : status === "caution" ? "Keep an eye on it" : "Pay attention"}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
           </div>
 
-          {/* Status card */}
-          <StatusCard
-            status={status}
-            normalDescription={normalDesc}
-            childName={activeChild.name}
-            lastPoopAt={lastRealPoop?.logged_at ?? null}
-          />
+          <div className="px-4">
+            <div className="rounded-[18px] border border-[var(--color-border)] bg-[var(--color-surface-strong)] p-5 shadow-[var(--shadow-soft)]">
+              <p className="text-[10px] uppercase tracking-[0.18em] text-[var(--color-text-soft)]">
+                Time since last poop
+              </p>
+              <div className="mt-4 flex items-center gap-5">
+                <TimeSinceIndicator
+                  lastPoopAt={lastRealPoop?.logged_at ?? null}
+                  status={status}
+                />
+                <div className="min-w-0 flex-1">
+                  <p className="text-[20px] font-semibold leading-tight text-[var(--color-text)]">
+                    {status === "healthy"
+                      ? `Still in ${activeChild.name}'s usual range`
+                      : status === "caution"
+                        ? `Still within ${activeChild.name}'s usual range`
+                        : `Time to pay closer attention`}
+                  </p>
+                  <p className="mt-3 text-[14px] leading-relaxed text-[var(--color-text-secondary)]">
+                    Meals, stool type, and color are all easy to review at a glance.
+                  </p>
+                  <p className="mt-4 text-[12px] text-[var(--color-text-soft)]">{normalDesc}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="px-4">
+            <WeeklyPatternCard
+              frequency={frequency}
+              consistency={consistency}
+              colorDist={colorDist}
+              poopLogs={logs}
+            />
+          </div>
         </>
       ) : (
         <NoLogsYet
@@ -100,35 +157,30 @@ export function Home() {
       )}
 
       {/* CTA Buttons */}
-      <div className="flex flex-col items-center gap-3 px-4">
-        {/* Big Log Poop button */}
-        <motion.button
-          whileTap={{ scale: 0.95 }}
-          onClick={() => setLogFormOpen(true)}
-          className="w-20 h-20 rounded-full bg-[var(--color-cta)] text-white shadow-[var(--shadow-medium)] flex items-center justify-center cursor-pointer hover:bg-[var(--color-cta-hover)] transition-colors"
-          aria-label="Log poop"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-8 h-8">
-            <path fillRule="evenodd" d="M12 3.75a.75.75 0 0 1 .75.75v6.75h6.75a.75.75 0 0 1 0 1.5h-6.75v6.75a.75.75 0 0 1-1.5 0v-6.75H4.5a.75.75 0 0 1 0-1.5h6.75V4.5a.75.75 0 0 1 .75-.75Z" clipRule="evenodd" />
-          </svg>
-        </motion.button>
-        <span className="text-sm font-medium text-[var(--color-text)]">Log Poop</span>
-
-        {/* Secondary actions */}
-        <div className="flex gap-3">
+      <div className="px-4">
+        <div className="grid grid-cols-2 gap-3">
           <motion.button
-            whileTap={{ scale: 0.97 }}
-            onClick={handleNoPoop}
-            className="text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-text)] cursor-pointer py-2 px-4 rounded-[var(--radius-md)] hover:bg-[var(--color-bg)] transition-colors border border-[var(--color-border)]"
+            whileTap={{ scale: 0.98 }}
+            onClick={() => setLogFormOpen(true)}
+            className="rounded-full bg-[var(--color-cta)] px-5 py-3.5 text-[15px] font-semibold text-white shadow-[var(--shadow-medium)] transition-colors hover:bg-[var(--color-cta-hover)]"
           >
-            No poop today
+            Log Poop
           </motion.button>
           <motion.button
-            whileTap={{ scale: 0.97 }}
+            whileTap={{ scale: 0.98 }}
             onClick={() => setDietFormOpen(true)}
-            className="text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-text)] cursor-pointer py-2 px-4 rounded-[var(--radius-md)] hover:bg-[var(--color-bg)] transition-colors border border-[var(--color-border)]"
+            className="rounded-full border border-[var(--color-border)] bg-[var(--color-surface-strong)] px-5 py-3.5 text-[15px] font-semibold text-[var(--color-text)] shadow-[var(--shadow-soft)] transition-colors hover:bg-white/70"
           >
             Log Meal
+          </motion.button>
+        </div>
+        <div className="mt-3 flex justify-center">
+          <motion.button
+            whileTap={{ scale: 0.98 }}
+            onClick={handleNoPoop}
+            className="text-[13px] font-medium text-[var(--color-text-secondary)] transition-colors hover:text-[var(--color-text)]"
+          >
+            Mark no-poop day
           </motion.button>
         </div>
       </div>

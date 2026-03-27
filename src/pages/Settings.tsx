@@ -278,9 +278,12 @@ export function Settings() {
 
   return (
     <div className="px-4 py-5">
-      <h2 className="font-[var(--font-display)] text-xl font-semibold text-[var(--color-text)] mb-6">
-        Settings
-      </h2>
+      <div className="mb-6 rounded-[16px] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-[var(--shadow-soft)] backdrop-blur-xl">
+        <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--color-text-soft)]">Preferences</p>
+        <h2 className="mt-2 font-[var(--font-display)] text-3xl font-semibold text-[var(--color-text)]">
+          Settings
+        </h2>
+      </div>
 
       {/* Children section */}
       <div className="mb-8">
