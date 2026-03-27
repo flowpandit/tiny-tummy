@@ -1,5 +1,6 @@
 import { useState, useRef } from "react";
-import { writeTextFile, exists, BaseDirectory } from "@tauri-apps/plugin-fs";
+import { writeTextFile } from "@tauri-apps/plugin-fs";
+import { save } from "@tauri-apps/plugin-dialog";
 import { platform } from "@tauri-apps/plugin-os";
 import { useChildContext } from "../contexts/ChildContext";
 import { Button } from "../components/ui/button";
@@ -243,16 +244,22 @@ export function Report() {
 
     try {
       const fileName = `tiny-tummy-report-${startDate}-to-${endDate}.html`;
-      await writeTextFile(fileName, buildPrintableHtml(reportData), {
-        baseDir: BaseDirectory.Download,
+      const targetPath = await save({
+        defaultPath: fileName,
+        filters: [
+          {
+            name: "HTML report",
+            extensions: ["html", "text/html"],
+          },
+        ],
       });
 
-      const wasSaved = await exists(fileName, { baseDir: BaseDirectory.Download });
-      if (!wasSaved) {
-        throw new Error("Report file was not found after save");
+      if (!targetPath) {
+        return;
       }
 
-      showSuccess(`Saved report to Downloads/${fileName}`);
+      await writeTextFile(targetPath, buildPrintableHtml(reportData));
+      showSuccess("Report saved successfully.");
     } catch {
       showError("Could not save the report export. Please try again.");
     }
@@ -432,12 +439,12 @@ export function Report() {
 
           {/* Print button */}
           <Button variant="cta" className="w-full mb-4" onClick={handlePrint}>
-            Export as PDF
+            {platform() === "android" || platform() === "ios" ? "Save Report" : "Export as PDF"}
           </Button>
 
           <p className="text-xs text-[var(--color-muted)] text-center">
             {platform() === "android" || platform() === "ios"
-              ? "Saves an HTML report to your Downloads folder."
+              ? "Lets you choose where to save the report file."
               : "Uses your browser's print dialog to save as PDF."}
           </p>
         </div>
