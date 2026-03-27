@@ -273,7 +273,7 @@ export function DatePicker({
                             className={cn(
                               "w-10 h-10 rounded-full text-sm flex items-center justify-center cursor-pointer transition-colors duration-150",
                               isSelected(day)
-                                ? "bg-[var(--color-primary)] text-white font-bold shadow-[var(--shadow-soft)]"
+                                ? "bg-[var(--color-primary)] text-[var(--color-on-primary)] font-bold shadow-[var(--shadow-soft)]"
                                 : isToday(day)
                                   ? "border-2 border-[var(--color-primary)] text-[var(--color-primary)] font-semibold"
                                   : "text-[var(--color-text)] hover:bg-[var(--color-bg)]",
@@ -322,7 +322,7 @@ export function DatePicker({
                         className={cn(
                           "py-2.5 rounded-[var(--radius-md)] text-sm font-medium cursor-pointer transition-colors duration-150",
                           y === viewYear
-                            ? "bg-[var(--color-primary)] text-white"
+                            ? "bg-[var(--color-primary)] text-[var(--color-on-primary)]"
                             : "text-[var(--color-text)] hover:bg-[var(--color-bg)]",
                           isYearDisabled(y) && "opacity-25 cursor-not-allowed",
                         )}
@@ -359,7 +359,7 @@ export function DatePicker({
                         className={cn(
                           "py-2.5 rounded-[var(--radius-md)] text-sm font-medium cursor-pointer transition-colors duration-150",
                           i === viewMonth && viewYear === selected.year
-                            ? "bg-[var(--color-primary)] text-white"
+                            ? "bg-[var(--color-primary)] text-[var(--color-on-primary)]"
                             : "text-[var(--color-text)] hover:bg-[var(--color-bg)]",
                           isMonthDisabled(i) && "opacity-25 cursor-not-allowed",
                         )}

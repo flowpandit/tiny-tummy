@@ -249,7 +249,7 @@ function ThemeSection() {
                 className={cn(
                   "flex-1 py-1.5 text-xs font-medium rounded-[var(--radius-sm)] cursor-pointer transition-colors duration-200",
                   mode === opt.value
-                    ? "bg-[var(--color-primary)] text-white"
+                    ? "bg-[var(--color-primary)] text-[var(--color-on-primary)]"
                     : "text-[var(--color-text-secondary)] hover:text-[var(--color-text)]",
                 )}
               >

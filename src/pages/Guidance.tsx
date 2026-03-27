@@ -116,7 +116,7 @@ export function Guidance() {
             className={cn(
               "flex-shrink-0 px-3 py-2 rounded-[var(--radius-full)] text-xs font-semibold cursor-pointer transition-colors duration-200 shadow-[var(--shadow-soft)]",
               activeFilter === filter
-                ? "bg-[var(--color-primary)] text-white"
+                ? "bg-[var(--color-primary)] text-[var(--color-on-primary)]"
                 : "bg-[var(--color-surface-strong)] text-[var(--color-text-secondary)] border border-[var(--color-border)] hover:border-[var(--color-muted)]",
             )}
           >

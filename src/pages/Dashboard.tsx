@@ -71,7 +71,7 @@ export function Dashboard() {
               className={cn(
                 "rounded-full px-3 py-1.5 text-xs font-semibold cursor-pointer transition-colors duration-200",
                 days === opt.value
-                  ? "bg-[var(--color-primary)] text-white shadow-[var(--shadow-soft)]"
+                  ? "bg-[var(--color-primary)] text-[var(--color-on-primary)] shadow-[var(--shadow-soft)]"
                   : "text-[var(--color-text-secondary)] hover:text-[var(--color-text)]",
               )}
             >

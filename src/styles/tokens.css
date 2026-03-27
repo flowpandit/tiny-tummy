@@ -20,6 +20,7 @@
   /* Brand */
   --color-primary: #2b3956;
   --color-primary-hover: #1f2a40;
+  --color-on-primary: #ffffff;
   --color-cta: #ff8b69;
   --color-cta-hover: #f5704c;
 
@@ -92,6 +93,7 @@
   :root:not([data-theme="light"]) {
     --color-primary: #f6f0ea;
     --color-primary-hover: #ffffff;
+    --color-on-primary: #1b2432;
     --color-cta: #ff8d69;
     --color-cta-hover: #ff7a54;
 
@@ -126,6 +128,7 @@
 [data-theme="dark"] {
   --color-primary: #f6f0ea;
   --color-primary-hover: #ffffff;
+  --color-on-primary: #1b2432;
   --color-cta: #ff8d69;
   --color-cta-hover: #ff7a54;
 
