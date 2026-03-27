@@ -60,7 +60,12 @@ export function AddChild() {
   };
 
   return (
-    <div className="min-h-screen bg-[var(--color-bg)] flex flex-col px-6 pt-6">
+    <div
+      className="min-h-[100dvh] bg-[var(--color-bg)] flex flex-col px-6"
+      style={{
+        paddingTop: "calc(var(--safe-area-top) + 18px)",
+      }}
+    >
       {/* Back button */}
       <button
         onClick={() => navigate(-1)}

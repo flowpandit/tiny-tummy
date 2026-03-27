@@ -55,7 +55,7 @@ export function Report() {
 
   return (
     <div className="px-4 py-5">
-      <div className="mb-5 rounded-[16px] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-[var(--shadow-soft)] backdrop-blur-xl">
+      <div className="my-5 rounded-[16px] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-[var(--shadow-soft)] backdrop-blur-xl">
         <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--color-text-soft)]">Share</p>
         <h2 className="mt-2 font-[var(--font-display)] text-3xl font-semibold text-[var(--color-text)]">
           Report
@@ -73,13 +73,28 @@ export function Report() {
               <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1">
                 From
               </label>
-              <DatePicker value={startDate} onChange={setStartDate} max={endDate} label="Start date" />
+              <DatePicker
+                value={startDate}
+                onChange={setStartDate}
+                max={endDate}
+                label="Start date"
+                dismissOnDocumentClick
+                overlayOffsetY={48}
+              />
             </div>
             <div>
               <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1">
                 To
               </label>
-              <DatePicker value={endDate} onChange={setEndDate} min={startDate} max={today} label="End date" />
+              <DatePicker
+                value={endDate}
+                onChange={setEndDate}
+                min={startDate}
+                max={today}
+                label="End date"
+                dismissOnDocumentClick
+                overlayOffsetY={48}
+              />
             </div>
           </div>
           <Button
