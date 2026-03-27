@@ -332,7 +332,6 @@ img {
   gap: 0.8rem;
 }
 
-.avatar-pill,
 .status-chip,
 .screen-card,
 .detail-card,
@@ -346,13 +345,6 @@ img {
   box-shadow: var(--shadow-card);
 }
 
-.avatar-pill {
-  gap: 0.7rem;
-  padding: 0.7rem 0.8rem;
-  border-radius: 1.1rem;
-  background: rgba(255, 255, 255, 0.9);
-}
-
 .avatar-circle {
   width: 2.5rem;
   height: 2.5rem;
@@ -364,7 +356,15 @@ img {
   background: linear-gradient(145deg, #ff9b7d, #f6795b);
 }
 
-.avatar-pill strong,
+.avatar-circle-hero {
+  width: 4.2rem;
+  height: 4.2rem;
+  flex: 0 0 auto;
+  box-shadow:
+    0 14px 32px rgba(255, 143, 112, 0.16),
+    0 0 0 0.4rem rgba(255, 255, 255, 0.72);
+}
+
 .ring-copy strong,
 .mini-summary strong,
 .pricing-card strong,
@@ -374,7 +374,6 @@ img {
   display: block;
 }
 
-.avatar-pill span,
 .status-chip,
 .ring-copy p,
 .mini-summary p,
