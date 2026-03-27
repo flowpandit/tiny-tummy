@@ -33,7 +33,7 @@ export function Header() {
   return (
     <header
       className="fixed top-0 left-0 right-0 z-20 px-4"
-      style={{ paddingTop: "calc(var(--safe-area-top) + 8px)" }}
+      style={{ paddingTop: "calc(var(--safe-area-top) + 16px)" }}
     >
       <div className="mx-auto max-w-[560px]">
         <ChildSwitcherCard

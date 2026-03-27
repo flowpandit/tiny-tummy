@@ -15,7 +15,17 @@ export function AppShell() {
   const showHeader = !hideHeaderPaths.has(location.pathname);
 
   return (
-    <div className="relative flex flex-col min-h-screen overflow-hidden bg-[var(--color-bg)]">
+    <div className="relative flex min-h-[100dvh] flex-col overflow-hidden bg-[var(--color-bg)]">
+      <div
+        className="pointer-events-none fixed inset-x-0 top-0 z-[25]"
+        style={{
+          height: "calc(var(--safe-area-top) + 14px)",
+          background:
+            "linear-gradient(180deg, var(--color-surface-strong) 0%, var(--color-surface) 72%, transparent 100%)",
+          backdropFilter: "blur(18px) saturate(1.08)",
+          WebkitBackdropFilter: "blur(18px) saturate(1.08)",
+        }}
+      />
       <div className="pointer-events-none absolute inset-0">
         <div className="absolute -left-10 top-20 h-48 w-48 rounded-full bg-[var(--color-peach)]/55 blur-3xl" />
         <div className="absolute right-[-72px] top-36 h-56 w-56 rounded-full bg-[var(--color-apricot)]/35 blur-3xl" />
@@ -27,7 +37,7 @@ export function AppShell() {
         style={{
           paddingTop: showHeader
             ? "calc(var(--safe-area-top) + 74px)"
-            : "calc(var(--safe-area-top) + 4px)",
+            : "calc(var(--safe-area-top) + 12px)",
         }}
       >
         <AnimatePresence mode="wait">
