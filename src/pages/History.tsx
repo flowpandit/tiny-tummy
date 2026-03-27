@@ -349,6 +349,8 @@ export function History() {
               max={today}
               min={earliestDate}
               label="Search by date"
+              dismissOnDocumentClick
+              overlayOffsetY={48}
             />
           </div>
           {searchDate && (

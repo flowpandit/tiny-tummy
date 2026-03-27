@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "../../lib/cn";
 
@@ -8,6 +8,8 @@ interface DatePickerProps {
   max?: string;
   min?: string;
   label?: string;
+  dismissOnDocumentClick?: boolean;
+  overlayOffsetY?: number;
 }
 
 const WEEKDAYS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
@@ -30,9 +32,18 @@ function toDateStr(y: number, m: number, d: number): string {
   return `${y}-${pad(m + 1)}-${pad(d)}`;
 }
 
-export function DatePicker({ value, onChange, max, min, label }: DatePickerProps) {
+export function DatePicker({
+  value,
+  onChange,
+  max,
+  min,
+  label,
+  dismissOnDocumentClick = false,
+  overlayOffsetY = 0,
+}: DatePickerProps) {
   const [open, setOpen] = useState(false);
   const [pickerView, setPickerView] = useState<PickerView>("calendar");
+  const rootRef = useRef<HTMLDivElement>(null);
 
   const selected = useMemo(() => {
     const [y, m, d] = value.split("-").map(Number);
@@ -151,8 +162,24 @@ export function DatePicker({ value, onChange, max, min, label }: DatePickerProps
     setPickerView("calendar");
   };
 
+  useEffect(() => {
+    if (!open || !dismissOnDocumentClick) return;
+
+    function handlePointerDown(event: PointerEvent) {
+      const target = event.target as Node | null;
+      if (!target) return;
+      if (rootRef.current?.contains(target)) return;
+      handleClose();
+    }
+
+    document.addEventListener("pointerdown", handlePointerDown, true);
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown, true);
+    };
+  }, [open, dismissOnDocumentClick]);
+
   return (
-    <div>
+    <div ref={rootRef}>
       {/* Trigger button */}
       <button
         type="button"
@@ -182,10 +209,10 @@ export function DatePicker({ value, onChange, max, min, label }: DatePickerProps
               exit={{ opacity: 0, scale: 0.95 }}
               transition={{ duration: 0.15 }}
               className="fixed z-50 left-4 right-4 top-1/2 -translate-y-1/2 bg-[var(--color-surface-strong)] rounded-[var(--radius-lg)] shadow-[var(--shadow-lg)] border border-[var(--color-border)] p-4 max-w-sm mx-auto"
+              style={{ top: `calc(50% + ${overlayOffsetY}px)` }}
             >
               {pickerView === "calendar" && (
                 <>
-                  {/* Month/year header — tappable to switch to year picker */}
                   <div className="flex items-center justify-between mb-4">
                     <button
                       type="button"
@@ -227,7 +254,6 @@ export function DatePicker({ value, onChange, max, min, label }: DatePickerProps
                     </button>
                   </div>
 
-                  {/* Weekday headers */}
                   <div className="grid grid-cols-7 mb-2">
                     {WEEKDAYS.map((wd) => (
                       <div key={wd} className="text-center text-xs font-semibold text-[var(--color-muted)] py-1">
@@ -236,7 +262,6 @@ export function DatePicker({ value, onChange, max, min, label }: DatePickerProps
                     ))}
                   </div>
 
-                  {/* Day grid */}
                   <div className="grid grid-cols-7 gap-y-1">
                     {days.map((day, i) => (
                       <div key={i} className="flex items-center justify-center">
@@ -264,7 +289,6 @@ export function DatePicker({ value, onChange, max, min, label }: DatePickerProps
                     ))}
                   </div>
 
-                  {/* Today shortcut */}
                   <button
                     type="button"
                     onClick={() => {
