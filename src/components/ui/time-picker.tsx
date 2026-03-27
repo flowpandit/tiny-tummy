@@ -79,7 +79,7 @@ export function TimePicker({ value, onChange, label }: TimePickerProps) {
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
               transition={{ duration: 0.15 }}
-              className="fixed z-50 left-4 right-4 top-1/2 -translate-y-1/2 bg-[var(--color-surface)] rounded-[var(--radius-lg)] shadow-[var(--shadow-lg)] border border-[var(--color-border)] p-4 max-w-sm mx-auto"
+              className="fixed z-50 left-4 right-4 top-1/2 -translate-y-1/2 bg-[var(--color-surface-strong)] rounded-[var(--radius-lg)] shadow-[var(--shadow-lg)] border border-[var(--color-border)] p-4 max-w-sm mx-auto"
             >
               <p className="text-base font-semibold text-[var(--color-text)] text-center mb-3">
                 Select Time
