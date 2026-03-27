@@ -33,7 +33,7 @@ pub fn check_frequency_alert(
                 days_since, child.name
             ),
             format!(
-                "{}. Consider consulting your pediatrician if this continues.",
+                "{}. Consider consulting your doctor if this continues.",
                 normal_desc
             ),
         ))
@@ -55,19 +55,19 @@ pub fn check_color_alert(
             "red_flag_color".to_string(),
             "urgent".to_string(),
             "White/pale stool detected".to_string(),
-            "White or very pale stools can indicate a bile duct issue (biliary atresia). Contact your pediatrician promptly.".to_string(),
+            "White or very pale stools can indicate a bile duct issue (biliary atresia). Contact your doctor promptly.".to_string(),
         )),
         "red" => Some((
             "red_flag_color".to_string(),
             "urgent".to_string(),
             "Red stool detected".to_string(),
-            "Red stools may contain blood. While some foods (beets, red drinks) can cause this, it's worth mentioning to your pediatrician.".to_string(),
+            "Red stools may contain blood. While some foods (beets, red drinks) can cause this, it's worth mentioning to your doctor.".to_string(),
         )),
         "black" if age_days > 3 => Some((
             "red_flag_color".to_string(),
             "urgent".to_string(),
             "Black stool detected".to_string(),
-            "Black stools after the newborn period may indicate upper GI bleeding. Contact your pediatrician.".to_string(),
+            "Black stools after the newborn period may indicate upper GI bleeding. Contact your doctor.".to_string(),
         )),
         _ => None,
     }

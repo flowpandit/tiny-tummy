@@ -20,7 +20,7 @@ Unlike generic baby trackers, Tiny Tummy uses age-adjusted thresholds based on t
 - Red-flag color detection (white, red, black) with guidance
 - Visual dashboard with frequency, consistency, and color trend charts
 - Diet logging to spot food→poop correlations
-- Generate PDF reports to share with your pediatrician
+- Generate PDF reports to share with your doctor
 - Track multiple children with easy switching
 - Evidence-based guidance for common concerns
 - Light and dark mode
@@ -35,7 +35,7 @@ We know the worry. "Is this normal?" "Should I call the doctor?" Tiny Tummy give
 No subscriptions. No in-app purchases. No ads. Ever.
 
 ## Keywords
-baby poop tracker, infant constipation, BITSS scale, baby health, diaper log, stool tracker, baby bowel, newborn poop, breastfed baby, formula baby, toddler constipation, pediatrician report, offline baby tracker, baby diet tracker, poop color chart
+baby poop tracker, infant constipation, BITSS scale, baby health, diaper log, stool tracker, baby bowel, newborn poop, breastfed baby, formula baby, toddler constipation, doctor report, offline baby tracker, baby diet tracker, poop color chart
 
 ## Category
 Health & Fitness (primary), Medical (secondary)

@@ -59,7 +59,7 @@ export function Report() {
         Report
       </h2>
       <p className="text-sm text-[var(--color-text-secondary)] mb-5">
-        Generate a summary to share with your pediatrician.
+        Generate a summary to share with your doctor.
       </p>
 
       {/* Date range picker */}

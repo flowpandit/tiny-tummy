@@ -11,7 +11,7 @@ A smart baby bowel health tracker for iOS and Android. Helps parents track their
 - **Smart alerts** — warns when patterns fall outside normal range, flags concerning stool colors (white, red, black)
 - **Trend charts** — daily frequency, consistency trends, color distribution, diet correlation timeline
 - **Multi-child support** — track unlimited children, switch instantly via header avatars
-- **Pediatrician reports** — generate PDF summaries with date range picker
+- **Doctor reports** — generate PDF summaries with date range picker
 - **Evidence-based guidance** — categorized tips for common concerns (solids transition, constipation, when to call the doctor)
 - **Photo avatars** — upload and crop child photos with a circle positioning tool
 - **History** — day-by-day timeline with search, edit, and delete

@@ -396,7 +396,7 @@ export function Settings() {
             <div>
               <p className="text-sm font-medium text-[var(--color-text)]">Generate Report</p>
               <p className="text-xs text-[var(--color-text-secondary)]">
-                Summary for your pediatrician
+                Summary for your doctor
               </p>
             </div>
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="var(--color-muted)" className="w-5 h-5">

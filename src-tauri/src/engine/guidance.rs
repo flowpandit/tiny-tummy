@@ -22,7 +22,7 @@ pub fn get_all_tips() -> Vec<GuidanceTip> {
             id: "formula-switch".to_string(),
             category: "Feeding Changes".to_string(),
             title: "Switching formulas".to_string(),
-            body: "Changing formula brands or types can temporarily affect bowel patterns. Give your baby 1-2 weeks to adjust before becoming concerned. If constipation persists, talk to your pediatrician about trying a different formula.".to_string(),
+            body: "Changing formula brands or types can temporarily affect bowel patterns. Give your baby 1-2 weeks to adjust before becoming concerned. If constipation persists, talk to your doctor about trying a different formula.".to_string(),
             severity: "info".to_string(),
         },
         GuidanceTip {
@@ -49,7 +49,7 @@ pub fn get_all_tips() -> Vec<GuidanceTip> {
         GuidanceTip {
             id: "when-to-call".to_string(),
             category: "When to Call the Doctor".to_string(),
-            title: "Call your pediatrician if you notice...".to_string(),
+            title: "Call your doctor if you notice...".to_string(),
             body: "• White, pale, or clay-colored stools (possible bile duct issue)\n• Blood in the stool (red or black after the newborn period)\n• Severe abdominal distension or vomiting with constipation\n• No stool AND no gas for more than 24 hours in a newborn\n• Your baby seems to be in significant pain\n• Constipation that doesn't improve with dietary changes after a week".to_string(),
             severity: "urgent".to_string(),
         },
@@ -57,7 +57,7 @@ pub fn get_all_tips() -> Vec<GuidanceTip> {
             id: "home-remedies".to_string(),
             category: "Home Remedies".to_string(),
             title: "Gentle constipation relief".to_string(),
-            body: "For babies on solids: increase water, offer high-fiber foods (prunes, pears, peas). For younger babies: bicycle legs gently, warm bath, tummy massage in clockwise circles. Never give laxatives or suppositories without pediatrician guidance.".to_string(),
+            body: "For babies on solids: increase water, offer high-fiber foods (prunes, pears, peas). For younger babies: bicycle legs gently, warm bath, tummy massage in clockwise circles. Never give laxatives or suppositories without doctor guidance.".to_string(),
             severity: "info".to_string(),
         },
     ]

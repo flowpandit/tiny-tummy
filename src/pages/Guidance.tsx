@@ -101,7 +101,7 @@ export function Guidance() {
         Guidance
       </h2>
       <p className="text-base text-[var(--color-text-secondary)] mb-4">
-        Tap a card to read more. Always consult your pediatrician for specific medical advice.
+        Tap a card to read more. Always consult your doctor for specific medical advice.
       </p>
 
       {/* Category filter chips */}
