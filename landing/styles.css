@@ -156,7 +156,7 @@ img {
   font-family: var(--font-display);
   font-weight: 700;
   letter-spacing: -0.03em;
-  line-height: 0.97;
+  line-height: 1.03;
 }
 
 .hero h1 {
@@ -1093,7 +1093,7 @@ img {
 
   .hero h1 {
     font-size: clamp(2.9rem, 14vw, 4rem);
-    line-height: 0.98;
+    line-height: 1.06;
   }
 
   .hero-points {
