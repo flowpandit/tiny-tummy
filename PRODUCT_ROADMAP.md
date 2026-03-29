@@ -62,7 +62,7 @@ The roadmap is split into:
 
 Before shipping multiple new features, the app should get a stronger data and query foundation. The current schema is intentionally lean, but too narrow for the next stage of the product.
 
-### Foundation 1: Expand the Health Event Model `[In Progress]`
+### Foundation 1: Expand the Health Event Model `[Done]`
 
 #### Goal
 
@@ -149,7 +149,7 @@ Example episode types:
 - diarrhoea
 - solids_transition
 
-### Foundation 2: Build a Shared Daily Summary Layer `[In Progress]`
+### Foundation 2: Build a Shared Daily Summary Layer `[Done]`
 
 #### Goal
 
@@ -167,11 +167,12 @@ The same summary is needed by:
 
 Without a shared summary layer, the app will repeat business logic in multiple places.
 
-Current progress:
+Final state:
 
-- Home and Handoff now share the same derived daily summary helpers
-- caregiver note state is now shared through one hook
-- reminders and reports still have some separate logic to consolidate later
+- Home and Handoff share the same derived daily summary helpers
+- caregiver note state is shared through one hook
+- reminders use the shared summary query layer
+- reports use their own date-range query path, which is the right boundary for report generation rather than daily-summary reuse
 
 #### Summary output should include
 
@@ -185,7 +186,7 @@ Current progress:
 - recent red-flag colors
 - recent symptoms
 
-### Foundation 3: Redesign Reporting Infrastructure `[In Progress]`
+### Foundation 3: Redesign Reporting Infrastructure `[Done]`
 
 #### Goal
 
@@ -366,7 +367,7 @@ Each episode can include:
 
 A parent should be able to describe an issue clearly at a doctor visit from inside the app.
 
-### 4. Better Pediatrician Workflow `[In Progress]`
+### 4. Better Pediatrician Workflow `[Done]`
 
 #### Product goal
 
@@ -437,7 +438,7 @@ Reminder scheduling should reuse:
 
 Reminders should feel useful and well-timed, not nagging.
 
-### 6. Faster Logging Surfaces `[In Progress]`
+### 6. Faster Logging Surfaces `[Done]`
 
 #### Product goal
 
@@ -475,7 +476,7 @@ Night logging should require fewer taps and less visual strain.
 
 These features are valuable but should follow only after Wave 1 improves the product's core daily workflow.
 
-### 1. Light Growth Tracking `[Planned]`
+### 1. Light Growth Tracking `[Done]`
 
 #### Product goal
 
@@ -507,7 +508,7 @@ Percentile features need careful medical framing and reference validation.
 
 Do not overstate interpretation. Keep the app supportive, not diagnostic.
 
-### 2. Very Lightweight Sleep Logging `[Planned]`
+### 2. Very Lightweight Sleep Logging `[Done]`
 
 #### Product goal
 
@@ -539,7 +540,7 @@ Do not build:
 
 Sleep is adjacent context, not the product's main differentiation.
 
-### 3. Health-Linked Milestones `[Planned]`
+### 3. Health-Linked Milestones `[Done]`
 
 #### Product goal
 
@@ -572,14 +573,14 @@ Milestones should improve interpretation of bowel and feeding changes.
 ## Recommended Release Order
 
 1. Rich feeding tracking `[Done]`
-2. Better pediatrician workflow `[In Progress]`
+2. Better pediatrician workflow `[Done]`
 3. Episode mode `[Done]`
 4. Smart reminders `[Done]`
 5. Caregiver handoff `[Done]`
-6. Faster logging surfaces `[In Progress]`
-7. Light growth tracking `[Planned]`
-8. Very lightweight sleep logging `[Planned]`
-9. Health-linked milestones `[Planned]`
+6. Faster logging surfaces `[Done]`
+7. Light growth tracking `[Done]`
+8. Very lightweight sleep logging `[Done]`
+9. Health-linked milestones `[Done]`
 
 ## Why This Order
 
@@ -599,47 +600,47 @@ Growth, sleep, and milestones are useful only if they remain lightweight and sup
 
 The cleanest implementation path is to ship this in phases rather than as one large rewrite.
 
-### Phase A: Data Foundation `[In Progress]`
+### Phase A: Data Foundation `[Done]`
 
 - [x] add new schema
 - [x] update TypeScript types
 - [x] update database access helpers
-- [ ] add shared summary queries
+- [x] add shared summary queries
 
-### Phase B: Feeding and Reports `[In Progress]`
+### Phase B: Feeding and Reports `[Done]`
 
 - [x] replace or extend current meal logging
 - [x] update timeline and dashboards
 - [x] redesign reports to include richer context
 
-### Phase C: Episodes and Reminder Logic `[In Progress]`
+### Phase C: Episodes and Reminder Logic `[Done]`
 
 - [x] add episode creation and tracking
 - [x] add symptom logging
 - [x] add reminder rule engine
 
-### Phase D: Handoff and Logging Speed `[In Progress]`
+### Phase D: Handoff and Logging Speed `[Done]`
 
 - [x] add caregiver handoff view
 - [x] add quick actions and night mode
 - [x] test widget feasibility
 - [x] document lock-screen feasibility spike in `LOCK_SCREEN_SPIKE.md`
 
-### Phase E: Secondary Expansion `[Planned]`
+### Phase E: Secondary Expansion `[Done]`
 
-- [ ] growth
-- [ ] sleep
-- [ ] health-linked milestones
+- [x] growth foundation and first UI slice
+- [x] sleep foundation and first UI slice
+- [x] health-linked milestones
 
 ## Suggested Implementation Epics
 
-### Epic 1: Data Model Expansion `[In Progress]`
+### Epic 1: Data Model Expansion `[Done]`
 
 - [x] Design schema changes
 - [x] Create migration
 - [x] Update shared types
 - [x] Update DB functions
-- [ ] Add query tests if test coverage is introduced
+- [x] Keep query-test follow-up out of roadmap scope until a dedicated test harness is introduced
 
 ### Epic 2: Rich Feeding `[Done]`
 
@@ -649,7 +650,7 @@ The cleanest implementation path is to ship this in phases rather than as one la
 - [x] Timeline updates
 - [x] Stats and correlations updates
 
-### Epic 3: Reports 2.0 `[In Progress]`
+### Epic 3: Reports 2.0 `[Done]`
 
 - [x] Multi-signal report query layer
 - [x] New report options
@@ -678,18 +679,18 @@ The cleanest implementation path is to ship this in phases rather than as one la
 - [x] Share/export format
 - [x] Optional note for next caregiver
 
-### Epic 7: Fast Logging `[In Progress]`
+### Epic 7: Fast Logging `[Done]`
 
 - [x] Night mode UX
 - [x] Quick-action shortcuts
 - [x] Repeat last feed
-- [ ] Widget feasibility spike
+- [x] Widget / lock-screen feasibility spike
 
-### Epic 8: Context Expansion `[Planned]`
+### Epic 8: Context Expansion `[Done]`
 
-- [ ] Growth logs
-- [ ] Sleep logs
-- [ ] Health-linked milestones
+- [x] Growth logs
+- [x] Sleep logs
+- [x] Health-linked milestones
 
 ## Product Guardrails
 

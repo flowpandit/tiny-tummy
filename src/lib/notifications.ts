@@ -8,6 +8,7 @@ import {
   pending,
 } from "@tauri-apps/plugin-notification";
 import * as db from "./db";
+import { getChildSummarySnapshot } from "./child-summary";
 import { checkColorAlert } from "./tauri";
 import type { Child, Episode } from "./types";
 
@@ -184,17 +185,15 @@ export async function syncSmartRemindersForChild(child: Child): Promise<void> {
   const permissionGranted = await isPermissionGranted();
   if (!permissionGranted) return;
 
-  const [lastPoop, latestFeed, activeEpisode] = await Promise.all([
-    db.getLastRealPoop(child.id),
-    db.getDietLogs(child.id, 1),
-    db.getActiveEpisode(child.id),
-  ]);
-
-  let episodeEventsDates: string[] = [];
-  if (activeEpisode) {
-    const episodeEvents = await db.getEpisodeEvents(activeEpisode.id);
-    episodeEventsDates = episodeEvents.map((event) => event.logged_at);
-  }
+  const summary = await getChildSummarySnapshot(child.id, {
+    poopLimit: 30,
+    dietLimit: 1,
+    symptomLimit: 3,
+  });
+  const lastPoop = summary.lastPoop;
+  const latestFeedDates = summary.lastFeed ? [summary.lastFeed.logged_at] : [];
+  const activeEpisode = summary.activeEpisode;
+  const episodeEventsDates = summary.episodeEvents.map((event) => event.logged_at);
 
   if (settings.noPoop && lastPoop?.logged_at) {
     const thresholdDays = getWarningThresholdDays(child.date_of_birth, child.feeding_type);
@@ -231,7 +230,7 @@ export async function syncSmartRemindersForChild(child: Child): Promise<void> {
     const anchor = getEpisodeAnchorDate(
       activeEpisode,
       episodeEventsDates,
-      latestFeed.map((log) => log.logged_at),
+      latestFeedDates,
     );
     const reminderAt = new Date(anchor.getTime() + 24 * 60 * 60 * 1000);
 
@@ -247,7 +246,7 @@ export async function syncSmartRemindersForChild(child: Child): Promise<void> {
     const anchor = getEpisodeAnchorDate(
       activeEpisode,
       episodeEventsDates,
-      latestFeed.map((log) => log.logged_at),
+      latestFeedDates,
     );
     const reminderAt = new Date(anchor.getTime() + 6 * 60 * 60 * 1000);
 

@@ -11,10 +11,12 @@ import { getAgeLabelFromDob, formatDate } from "../lib/utils";
 import { BITSS_TYPES, STOOL_COLORS } from "../lib/constants";
 import { getDietEntryDisplayLabel, getDietEntrySecondaryText } from "../lib/feeding";
 import { getEpisodeEventTypeLabel, getEpisodeTypeLabel } from "../lib/episode-constants";
+import { getMilestoneTypeLabel } from "../lib/milestone-constants";
 import { getSymptomSeverityBadgeVariant, getSymptomSeverityLabel, getSymptomTypeLabel } from "../lib/symptom-constants";
+import { loadPhotoDataUrl } from "../lib/photos";
 import * as db from "../lib/db";
 import { useToast } from "../components/ui/toast";
-import type { DietEntry, Episode, EpisodeEvent, PoopEntry, SymptomEntry } from "../lib/types";
+import type { DietEntry, Episode, EpisodeEvent, MilestoneEntry, PoopEntry, SymptomEntry } from "../lib/types";
 
 interface EpisodeReportGroup {
   episode: Episode;
@@ -30,17 +32,23 @@ interface ReportHighlight {
 interface ReportOptions {
   includeFeeds: boolean;
   includeEpisodes: boolean;
+  includeEpisodeSummary: boolean;
   includeSymptoms: boolean;
+  includeMilestones: boolean;
   includeNotes: boolean;
   includeCaregiverNote: boolean;
+  includePhotos: boolean;
 }
 
 interface ReportData {
   logs: PoopEntry[];
   dietLogs: DietEntry[];
   episodeGroups: EpisodeReportGroup[];
+  activeEpisodeGroup: EpisodeReportGroup | null;
   symptomLogs: SymptomEntry[];
+  milestoneLogs: MilestoneEntry[];
   caregiverNote: string | null;
+  photoUrls: Record<string, string>;
   highlights: ReportHighlight[];
   stats: {
     totalPoops: number;
@@ -66,9 +74,12 @@ export function Report() {
   const [options, setOptions] = useState<ReportOptions>({
     includeFeeds: true,
     includeEpisodes: true,
+    includeEpisodeSummary: true,
     includeSymptoms: true,
+    includeMilestones: true,
     includeNotes: true,
     includeCaregiverNote: true,
+    includePhotos: true,
   });
 
   if (!activeChild) return null;
@@ -112,6 +123,7 @@ export function Report() {
     dietLogs: DietEntry[];
     episodeGroups: EpisodeReportGroup[];
     symptomLogs: SymptomEntry[];
+    milestoneLogs: MilestoneEntry[];
   }): ReportHighlight[] {
     const highlights: ReportHighlight[] = [];
     const redFlagLogs = data.logs.filter((log) => {
@@ -124,6 +136,7 @@ export function Report() {
     const activeEpisode = data.episodeGroups.find((group) => group.episode.status === "active");
     const severeSymptoms = data.symptomLogs.filter((log) => log.severity === "severe");
     const strainingCount = data.symptomLogs.filter((log) => log.symptom_type === "straining").length;
+    const latestMilestone = data.milestoneLogs[0] ?? null;
 
     if (redFlagLogs.length > 0) {
       const lastRedFlag = redFlagLogs[0];
@@ -186,6 +199,14 @@ export function Report() {
       });
     }
 
+    if (latestMilestone && highlights.length < 4) {
+      highlights.push({
+        tone: "info",
+        title: "Recent context milestone logged",
+        detail: `${getMilestoneTypeLabel(latestMilestone.milestone_type)} was recorded on ${formatDate(latestMilestone.logged_at)}.`,
+      });
+    }
+
     if (highlights.length === 0) {
       highlights.push({
         tone: "info",
@@ -199,12 +220,13 @@ export function Report() {
 
   const handleGenerate = async () => {
     setIsGenerating(true);
-    const [logs, dietLogs, episodes, episodeEvents, symptomLogs, caregiverNote, stats] = await Promise.all([
+    const [logs, dietLogs, episodes, episodeEvents, symptomLogs, milestoneLogs, caregiverNote, stats] = await Promise.all([
       db.getPoopLogsForRange(activeChild.id, startDate, endDate),
       db.getDietLogsForRange(activeChild.id, startDate, endDate),
       db.getEpisodesForRange(activeChild.id, startDate, endDate),
       db.getEpisodeEventsForRange(activeChild.id, startDate, endDate),
       db.getSymptomsForRange(activeChild.id, startDate, endDate),
+      db.getMilestonesForRange(activeChild.id, startDate, endDate),
       db.getSetting(`handoff_note:${activeChild.id}`),
       db.getReportStats(activeChild.id, startDate, endDate),
     ]);
@@ -213,10 +235,35 @@ export function Report() {
       episode,
       events: episodeEvents.filter((event) => event.episode_id === episode.id),
     }));
+    const activeEpisodeGroup = episodeGroups.find((group) => group.episode.status === "active") ?? null;
+    const photoUrls = Object.fromEntries(
+      (await Promise.all(
+        logs
+          .filter((log) => log.photo_path)
+          .map(async (log) => {
+            try {
+              return [log.id, await loadPhotoDataUrl(log.photo_path!)] as const;
+            } catch {
+              return null;
+            }
+          }),
+      )).filter((entry): entry is readonly [string, string] => entry !== null),
+    );
 
-    const highlights = buildHighlights({ logs, dietLogs, episodeGroups, symptomLogs });
+    const highlights = buildHighlights({ logs, dietLogs, episodeGroups, symptomLogs, milestoneLogs });
 
-    setReportData({ logs, dietLogs, episodeGroups, symptomLogs, caregiverNote, highlights, stats });
+    setReportData({
+      logs,
+      dietLogs,
+      episodeGroups,
+      activeEpisodeGroup,
+      symptomLogs,
+      milestoneLogs,
+      caregiverNote,
+      photoUrls,
+      highlights,
+      stats,
+    });
     setIsGenerating(false);
   };
 
@@ -301,6 +348,41 @@ export function Report() {
             <td class="size">${escapeHtml(log.episode_id ? "Episode-linked" : "Standalone")}</td>
           </tr>
         `).join("");
+
+    const milestoneEntriesHtml = data.milestoneLogs.length === 0
+      ? '<p class="empty">No milestones in this date range.</p>'
+      : data.milestoneLogs.map((log) => `
+          <tr>
+            <td class="date">${escapeHtml(formatDate(log.logged_at))}</td>
+            <td class="entry">
+              ${escapeHtml(getMilestoneTypeLabel(log.milestone_type))}
+              ${options.includeNotes && log.notes ? `<div class="subtle note">${escapeHtml(log.notes)}</div>` : ""}
+            </td>
+            <td class="size">Context</td>
+          </tr>
+        `).join("");
+
+    const photoEntriesHtml = data.logs.filter((log) => log.photo_path && data.photoUrls[log.id]).length === 0
+      ? '<p class="empty">No photos in this date range.</p>'
+      : data.logs
+          .filter((log) => log.photo_path && data.photoUrls[log.id])
+          .map((log) => `
+            <div class="photo-card">
+              <img class="photo-thumb" src="${data.photoUrls[log.id]}" alt="Stool log photo" />
+              <div class="photo-copy">
+                <p><strong>${escapeHtml(formatDate(log.logged_at))}</strong></p>
+                <p class="subtle">${escapeHtml(
+                  log.is_no_poop
+                    ? "No poop day"
+                    : log.stool_type
+                      ? `Type ${log.stool_type}: ${typeLabel(log.stool_type)}`
+                      : "Logged stool",
+                )}</p>
+                ${log.color ? `<p class="subtle">Color: ${escapeHtml(colorLabel(log.color))}</p>` : ""}
+                ${options.includeNotes && log.notes ? `<p class="subtle note">${escapeHtml(log.notes)}</p>` : ""}
+              </div>
+            </div>
+          `).join("");
 
     const highlightsHtml = data.highlights.map((highlight) => `
       <div class="highlight highlight-${highlight.tone}">
@@ -425,6 +507,27 @@ export function Report() {
         padding-top: 16px;
         border-top: 1px solid var(--line);
       }
+      .photo-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 12px;
+        margin-top: 12px;
+      }
+      .photo-card {
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        overflow: hidden;
+        background: #fff8f1;
+      }
+      .photo-thumb {
+        display: block;
+        width: 100%;
+        aspect-ratio: 1 / 1;
+        object-fit: cover;
+      }
+      .photo-copy {
+        padding: 12px;
+      }
       .episode-title {
         font-size: 16px;
         font-weight: 600;
@@ -484,6 +587,7 @@ export function Report() {
         ${data.dietLogs.length > 0 ? `<p class="subtle" style="margin-top:10px;text-align:center;">${data.dietLogs.length} feed${data.dietLogs.length > 1 ? "s" : ""} recorded</p>` : ""}
         ${data.symptomLogs.length > 0 ? `<p class="subtle" style="margin-top:10px;text-align:center;">${data.symptomLogs.length} symptom${data.symptomLogs.length > 1 ? "s" : ""} recorded</p>` : ""}
         ${data.episodeGroups.length > 0 ? `<p class="subtle" style="margin-top:10px;text-align:center;">${data.episodeGroups.length} episode${data.episodeGroups.length > 1 ? "s" : ""} captured</p>` : ""}
+        ${data.milestoneLogs.length > 0 ? `<p class="subtle" style="margin-top:10px;text-align:center;">${data.milestoneLogs.length} milestone${data.milestoneLogs.length > 1 ? "s" : ""} recorded</p>` : ""}
         <div class="highlight-list">
           ${highlightsHtml}
         </div>
@@ -493,6 +597,17 @@ export function Report() {
         <section class="card">
           <h2>Caregiver Note</h2>
           <p class="episode-copy">${escapeHtml(data.caregiverNote)}</p>
+        </section>
+      ` : ""}
+
+      ${options.includeEpisodeSummary && data.activeEpisodeGroup ? `
+        <section class="card">
+          <h2>Active Episode Summary</h2>
+          <p class="episode-title">${escapeHtml(getEpisodeTypeLabel(data.activeEpisodeGroup.episode.episode_type))}</p>
+          <p class="subtle" style="margin-top:6px;">Started ${escapeHtml(formatDate(data.activeEpisodeGroup.episode.started_at))}</p>
+          ${data.activeEpisodeGroup.episode.summary ? `<p class="episode-copy">${escapeHtml(data.activeEpisodeGroup.episode.summary)}</p>` : ""}
+          ${data.activeEpisodeGroup.events[0] ? `<p class="episode-copy"><strong>Latest update:</strong> ${escapeHtml(data.activeEpisodeGroup.events[0].title)} · ${escapeHtml(formatDate(data.activeEpisodeGroup.events[0].logged_at))}</p>` : ""}
+          ${data.activeEpisodeGroup.episode.outcome ? `<p class="episode-copy"><strong>Outcome:</strong> ${escapeHtml(data.activeEpisodeGroup.episode.outcome)}</p>` : ""}
         </section>
       ` : ""}
 
@@ -512,6 +627,20 @@ export function Report() {
         <section class="card">
           <h2>Symptoms (${data.symptomLogs.length})</h2>
           ${data.symptomLogs.length === 0 ? symptomEntriesHtml : `<table><tbody>${symptomEntriesHtml}</tbody></table>`}
+        </section>
+      ` : ""}
+
+      ${options.includeMilestones ? `
+        <section class="card">
+          <h2>Milestones (${data.milestoneLogs.length})</h2>
+          ${data.milestoneLogs.length === 0 ? milestoneEntriesHtml : `<table><tbody>${milestoneEntriesHtml}</tbody></table>`}
+        </section>
+      ` : ""}
+
+      ${options.includePhotos ? `
+        <section class="card">
+          <h2>Photos</h2>
+          ${data.logs.filter((log) => log.photo_path && data.photoUrls[log.id]).length === 0 ? photoEntriesHtml : `<div class="photo-grid">${photoEntriesHtml}</div>`}
         </section>
       ` : ""}
 
@@ -613,8 +742,11 @@ export function Report() {
             <div className="flex flex-wrap gap-2">
               {[
                 { key: "includeFeeds", label: "Feeds" },
+                { key: "includePhotos", label: "Photos" },
                 { key: "includeSymptoms", label: "Symptoms" },
+                { key: "includeMilestones", label: "Milestones" },
                 { key: "includeEpisodes", label: "Episodes" },
+                { key: "includeEpisodeSummary", label: "Active episode" },
                 { key: "includeNotes", label: "Notes" },
                 { key: "includeCaregiverNote", label: "Caregiver note" },
               ].map((item) => (
@@ -728,6 +860,11 @@ export function Report() {
                   {reportData.symptomLogs.length} symptom{reportData.symptomLogs.length > 1 ? "s" : ""} recorded
                 </p>
               )}
+              {reportData.milestoneLogs.length > 0 && (
+                <p className="text-xs text-[var(--color-muted)] mt-2 text-center">
+                  {reportData.milestoneLogs.length} milestone{reportData.milestoneLogs.length > 1 ? "s" : ""} recorded
+                </p>
+              )}
               {reportData.episodeGroups.length > 0 && (
                 <p className="text-xs text-[var(--color-muted)] mt-2 text-center">
                   {reportData.episodeGroups.length} episode{reportData.episodeGroups.length > 1 ? "s" : ""} captured
@@ -762,6 +899,48 @@ export function Report() {
                 <p className="text-sm leading-relaxed text-[var(--color-text-secondary)]">
                   {reportData.caregiverNote}
                 </p>
+              </CardContent>
+            </Card>
+          )}
+
+          {options.includeEpisodeSummary && reportData.activeEpisodeGroup && (
+            <Card className="mb-4">
+              <CardHeader>
+                <CardTitle>Active Episode Summary</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-semibold text-[var(--color-text)]">
+                      {getEpisodeTypeLabel(reportData.activeEpisodeGroup.episode.episode_type)}
+                    </p>
+                    <p className="mt-1 text-xs text-[var(--color-text-soft)]">
+                      Started {formatDate(reportData.activeEpisodeGroup.episode.started_at)}
+                    </p>
+                  </div>
+                  <Badge variant="info">Active</Badge>
+                </div>
+                {reportData.activeEpisodeGroup.episode.summary && (
+                  <p className="mt-3 text-sm leading-relaxed text-[var(--color-text-secondary)]">
+                    {reportData.activeEpisodeGroup.episode.summary}
+                  </p>
+                )}
+                {reportData.activeEpisodeGroup.events[0] && (
+                  <div className="mt-3 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg)] p-3">
+                    <p className="text-xs uppercase tracking-[0.12em] text-[var(--color-text-soft)]">Latest update</p>
+                    <p className="mt-2 text-sm font-medium text-[var(--color-text)]">
+                      {reportData.activeEpisodeGroup.events[0].title}
+                    </p>
+                    <p className="mt-1 text-xs text-[var(--color-text-secondary)]">
+                      {getEpisodeEventTypeLabel(reportData.activeEpisodeGroup.events[0].event_type)} · {formatDate(reportData.activeEpisodeGroup.events[0].logged_at)}
+                    </p>
+                    {options.includeNotes && reportData.activeEpisodeGroup.events[0].notes && (
+                      <p className="mt-2 text-sm leading-relaxed text-[var(--color-text-secondary)]">
+                        {reportData.activeEpisodeGroup.events[0].notes}
+                      </p>
+                    )}
+                  </div>
+                )}
               </CardContent>
             </Card>
           )}
@@ -811,6 +990,13 @@ export function Report() {
                             <p className="mt-1 text-[11px] text-[var(--color-text-secondary)]">
                               {log.notes}
                             </p>
+                          )}
+                          {options.includePhotos && log.photo_path && reportData.photoUrls[log.id] && (
+                            <img
+                              src={reportData.photoUrls[log.id]}
+                              alt="Stool log photo"
+                              className="mt-2 h-16 w-16 rounded-[var(--radius-sm)] border border-[var(--color-border)] object-cover"
+                            />
                           )}
                         </div>
                       </div>
@@ -891,6 +1077,85 @@ export function Report() {
                         )}
                       </div>
                     ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {options.includeMilestones && (
+            <Card className="mb-4">
+              <CardHeader>
+                <CardTitle>Milestones ({reportData.milestoneLogs.length})</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {reportData.milestoneLogs.length === 0 ? (
+                  <p className="text-sm text-[var(--color-muted)] text-center py-4">
+                    No milestones in this date range.
+                  </p>
+                ) : (
+                  <div className="flex flex-col gap-2">
+                    {reportData.milestoneLogs.map((milestone) => (
+                      <div key={milestone.id} className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg)] p-3">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <p className="text-sm font-medium text-[var(--color-text)]">
+                              {getMilestoneTypeLabel(milestone.milestone_type)}
+                            </p>
+                            <p className="mt-1 text-xs text-[var(--color-text-soft)]">
+                              {formatDate(milestone.logged_at)}
+                            </p>
+                          </div>
+                          <Badge variant="info">Context</Badge>
+                        </div>
+                        {options.includeNotes && milestone.notes && (
+                          <p className="mt-2 text-sm leading-relaxed text-[var(--color-text-secondary)]">
+                            {milestone.notes}
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {options.includePhotos && (
+            <Card className="mb-4">
+              <CardHeader>
+                <CardTitle>Photos</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {reportData.logs.filter((log) => log.photo_path && reportData.photoUrls[log.id]).length === 0 ? (
+                  <p className="text-sm text-[var(--color-muted)] text-center py-4">
+                    No photos in this date range.
+                  </p>
+                ) : (
+                  <div className="grid grid-cols-2 gap-3">
+                    {reportData.logs
+                      .filter((log) => log.photo_path && reportData.photoUrls[log.id])
+                      .map((log) => (
+                        <div key={log.id} className="overflow-hidden rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg)]">
+                          <img
+                            src={reportData.photoUrls[log.id]}
+                            alt="Stool log photo"
+                            className="aspect-square w-full object-cover"
+                          />
+                          <div className="p-3">
+                            <p className="text-sm font-medium text-[var(--color-text)]">{formatDate(log.logged_at)}</p>
+                            <p className="mt-1 text-xs text-[var(--color-text-secondary)]">
+                              {log.stool_type ? `Type ${log.stool_type}: ${typeLabel(log.stool_type)}` : "Logged stool"}
+                              {log.color ? ` · ${colorLabel(log.color)}` : ""}
+                            </p>
+                            {options.includeNotes && log.notes && (
+                              <p className="mt-2 text-sm leading-relaxed text-[var(--color-text-secondary)]">
+                                {log.notes}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      ))}
                   </div>
                 )}
               </CardContent>

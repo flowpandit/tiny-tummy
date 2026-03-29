@@ -1,9 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import * as db from "../lib/db";
-
-export function getCaregiverNoteSettingKey(childId: string): string {
-  return `handoff_note:${childId}`;
-}
+import { getCaregiverNoteSettingKey } from "../lib/caregiver-note";
 
 export function useCaregiverNote(childId: string | null) {
   const [note, setNote] = useState("");

@@ -477,12 +477,99 @@ export function Settings() {
       {/* Notifications */}
       <NotificationSection children={children} />
 
+      <div className="mb-6">
+        <h3 className="text-sm font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider mb-3">
+          Tracking
+        </h3>
+        <div className="flex flex-col gap-2">
+          <Card
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") navigate("/growth"); }}
+            className="cursor-pointer hover:shadow-[var(--shadow-soft)] transition-shadow"
+            onClick={() => navigate("/growth")}
+          >
+            <CardContent className="py-3 flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-[var(--color-text)]">Growth</p>
+                <p className="text-xs text-[var(--color-text-secondary)]">
+                  Weight, length, and head circumference trends
+                </p>
+              </div>
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="var(--color-muted)" className="w-5 h-5">
+                <path fillRule="evenodd" d="M8.22 5.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L11.94 10 8.22 6.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
+              </svg>
+            </CardContent>
+          </Card>
+
+          <Card
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") navigate("/sleep"); }}
+            className="cursor-pointer hover:shadow-[var(--shadow-soft)] transition-shadow"
+            onClick={() => navigate("/sleep")}
+          >
+            <CardContent className="py-3 flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-[var(--color-text)]">Sleep</p>
+                <p className="text-xs text-[var(--color-text-secondary)]">
+                  Simple nap and night sleep logging
+                </p>
+              </div>
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="var(--color-muted)" className="w-5 h-5">
+                <path fillRule="evenodd" d="M8.22 5.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L11.94 10 8.22 6.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
+              </svg>
+            </CardContent>
+          </Card>
+
+          <Card
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") navigate("/milestones"); }}
+            className="cursor-pointer hover:shadow-[var(--shadow-soft)] transition-shadow"
+            onClick={() => navigate("/milestones")}
+          >
+            <CardContent className="py-3 flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-[var(--color-text)]">Milestones</p>
+                <p className="text-xs text-[var(--color-text-secondary)]">
+                  Health-linked context like solids, illness, teething, or medication changes
+                </p>
+              </div>
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="var(--color-muted)" className="w-5 h-5">
+                <path fillRule="evenodd" d="M8.22 5.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L11.94 10 8.22 6.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
+              </svg>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
       {/* Reports */}
       <div className="mb-6">
         <h3 className="text-sm font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider mb-3">
           Support
         </h3>
         <div className="flex flex-col gap-2">
+          <Card
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") navigate("/handoff"); }}
+            className="cursor-pointer hover:shadow-[var(--shadow-soft)] transition-shadow"
+            onClick={() => navigate("/handoff")}
+          >
+            <CardContent className="py-3 flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-[var(--color-text)]">Caregiver Handoff</p>
+                <p className="text-xs text-[var(--color-text-secondary)]">
+                  Last poop, last feed, alerts, and a note for the next caregiver
+                </p>
+              </div>
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="var(--color-muted)" className="w-5 h-5">
+                <path fillRule="evenodd" d="M8.22 5.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L11.94 10 8.22 6.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
+              </svg>
+            </CardContent>
+          </Card>
+
           <Card
             role="button"
             tabIndex={0}

@@ -86,6 +86,64 @@ export type SymptomType =
 
 export type SymptomSeverity = "mild" | "moderate" | "severe";
 
+export interface GrowthEntry {
+  id: string;
+  child_id: string;
+  measured_at: string;
+  weight_kg: number | null;
+  height_cm: number | null;
+  head_circumference_cm: number | null;
+  notes: string | null;
+  created_at: string;
+}
+
+export interface GrowthLogDraft {
+  weight_kg: string;
+  height_cm: string;
+  head_circumference_cm: string;
+  notes: string;
+}
+
+export interface SleepEntry {
+  id: string;
+  child_id: string;
+  sleep_type: SleepType;
+  started_at: string;
+  ended_at: string;
+  notes: string | null;
+  created_at: string;
+}
+
+export interface SleepLogDraft {
+  sleep_type: SleepType;
+  notes: string;
+}
+
+export type SleepType = "nap" | "night";
+
+export interface MilestoneEntry {
+  id: string;
+  child_id: string;
+  milestone_type: MilestoneType;
+  logged_at: string;
+  notes: string | null;
+  created_at: string;
+}
+
+export interface MilestoneLogDraft {
+  milestone_type: MilestoneType;
+  notes: string;
+}
+
+export type MilestoneType =
+  | "started_solids"
+  | "teething"
+  | "medication_started"
+  | "allergy_concern"
+  | "illness"
+  | "travel_or_daycare_change"
+  | "toilet_training_interest";
+
 export interface DietEntry {
   id: string;
   child_id: string;

@@ -39,6 +39,15 @@ export async function loadPhoto(relativePath: string): Promise<string> {
   return URL.createObjectURL(blob);
 }
 
+export async function loadPhotoDataUrl(relativePath: string): Promise<string> {
+  const bytes = await readFile(relativePath, { baseDir: BaseDirectory.AppData });
+  let binary = "";
+  for (const byte of bytes) {
+    binary += String.fromCharCode(byte);
+  }
+  return `data:image/jpeg;base64,${btoa(binary)}`;
+}
+
 /**
  * Delete a photo from the app's data directory.
  */

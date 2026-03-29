@@ -30,14 +30,27 @@ const NAV_ITEMS = [
     ),
   },
   {
-    path: "/handoff",
-    label: "Handoff",
+    path: "/growth",
+    label: "Growth",
     icon: () => (
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} className="w-6 h-6">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 7.5h8.25a3.75 3.75 0 0 1 0 7.5H14.5" />
-        <path strokeLinecap="round" strokeLinejoin="round" d="m13.5 12 3 3-3 3" />
-        <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 16.5H8.25a3.75 3.75 0 0 1 0-7.5H9.5" />
-        <path strokeLinecap="round" strokeLinejoin="round" d="m10.5 12-3-3 3-3" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M6 4.5v15" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M18 4.5v15" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M6 7.5h4.5" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M6 12h7.5" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M6 16.5h4.5" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M18 4.5h-2.25" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M18 19.5h-2.25" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 4.5v15" />
+      </svg>
+    ),
+  },
+  {
+    path: "/sleep",
+    label: "Sleep",
+    icon: () => (
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} className="w-6 h-6">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M21 12.79A9 9 0 1 1 11.21 3c-.12.64-.21 1.3-.21 2a9 9 0 0 0 10 7.79Z" />
       </svg>
     ),
   },

@@ -4,6 +4,9 @@ import type {
   PoopEntry,
   Alert,
   SymptomEntry,
+  GrowthEntry,
+  SleepEntry,
+  MilestoneEntry,
   DietEntry,
   DailyFrequency,
   ConsistencyPoint,
@@ -270,6 +273,147 @@ export async function getSymptomsForRange(
      WHERE child_id = ? AND logged_at >= ? AND logged_at <= ?
      ORDER BY logged_at DESC`,
     [childId, startDate, endDate + "T23:59:59"],
+  );
+}
+
+// --- Growth Logs ---
+
+export async function createGrowthLog(input: {
+  child_id: string;
+  measured_at: string;
+  weight_kg?: number | null;
+  height_cm?: number | null;
+  head_circumference_cm?: number | null;
+  notes?: string | null;
+}): Promise<GrowthEntry> {
+  const conn = await getDb();
+  const id = generateId();
+  const now = nowISO();
+
+  await conn.execute(
+    `INSERT INTO growth_logs (
+      id, child_id, measured_at, weight_kg, height_cm, head_circumference_cm, notes, created_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      id,
+      input.child_id,
+      input.measured_at,
+      input.weight_kg ?? null,
+      input.height_cm ?? null,
+      input.head_circumference_cm ?? null,
+      input.notes ?? null,
+      now,
+    ],
+  );
+
+  return {
+    id,
+    child_id: input.child_id,
+    measured_at: input.measured_at,
+    weight_kg: input.weight_kg ?? null,
+    height_cm: input.height_cm ?? null,
+    head_circumference_cm: input.head_circumference_cm ?? null,
+    notes: input.notes ?? null,
+    created_at: now,
+  };
+}
+
+export async function getGrowthLogs(childId: string, limit = 50): Promise<GrowthEntry[]> {
+  const conn = await getDb();
+  return conn.select<GrowthEntry[]>(
+    "SELECT * FROM growth_logs WHERE child_id = ? ORDER BY measured_at DESC LIMIT ?",
+    [childId, limit],
+  );
+}
+
+export async function getLatestGrowthLog(childId: string): Promise<GrowthEntry | null> {
+  const conn = await getDb();
+  const rows = await conn.select<GrowthEntry[]>(
+    "SELECT * FROM growth_logs WHERE child_id = ? ORDER BY measured_at DESC LIMIT 1",
+    [childId],
+  );
+  return rows[0] ?? null;
+}
+
+// --- Sleep Logs ---
+
+export async function createSleepLog(input: {
+  child_id: string;
+  sleep_type: string;
+  started_at: string;
+  ended_at: string;
+  notes?: string | null;
+}): Promise<SleepEntry> {
+  const conn = await getDb();
+  const id = generateId();
+  const now = nowISO();
+
+  await conn.execute(
+    `INSERT INTO sleep_logs (
+      id, child_id, sleep_type, started_at, ended_at, notes, created_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    [
+      id,
+      input.child_id,
+      input.sleep_type,
+      input.started_at,
+      input.ended_at,
+      input.notes ?? null,
+      now,
+    ],
+  );
+
+  return {
+    id,
+    child_id: input.child_id,
+    sleep_type: input.sleep_type as SleepEntry["sleep_type"],
+    started_at: input.started_at,
+    ended_at: input.ended_at,
+    notes: input.notes ?? null,
+    created_at: now,
+  };
+}
+
+export async function getSleepLogs(childId: string, limit = 50): Promise<SleepEntry[]> {
+  const conn = await getDb();
+  return conn.select<SleepEntry[]>(
+    "SELECT * FROM sleep_logs WHERE child_id = ? ORDER BY started_at DESC LIMIT ?",
+    [childId, limit],
+  );
+}
+
+// --- Milestone Logs ---
+
+export async function createMilestoneLog(input: {
+  child_id: string;
+  milestone_type: string;
+  logged_at: string;
+  notes?: string | null;
+}): Promise<MilestoneEntry> {
+  const conn = await getDb();
+  const id = generateId();
+  const now = nowISO();
+
+  await conn.execute(
+    "INSERT INTO milestone_logs (id, child_id, milestone_type, logged_at, notes, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+    [id, input.child_id, input.milestone_type, input.logged_at, input.notes ?? null, now],
+  );
+
+  return {
+    id,
+    child_id: input.child_id,
+    milestone_type: input.milestone_type as MilestoneEntry["milestone_type"],
+    logged_at: input.logged_at,
+    notes: input.notes ?? null,
+    created_at: now,
+  };
+}
+
+export async function getMilestoneLogs(childId: string, limit = 50): Promise<MilestoneEntry[]> {
+  const conn = await getDb();
+  return conn.select<MilestoneEntry[]>(
+    "SELECT * FROM milestone_logs WHERE child_id = ? ORDER BY logged_at DESC LIMIT ?",
+    [childId, limit],
   );
 }
 
@@ -639,6 +783,20 @@ export async function getDietLogsForRange(
   const conn = await getDb();
   return conn.select<DietEntry[]>(
     `SELECT * FROM diet_logs
+     WHERE child_id = ? AND logged_at >= ? AND logged_at <= ?
+     ORDER BY logged_at DESC`,
+    [childId, startDate, endDate + "T23:59:59"],
+  );
+}
+
+export async function getMilestonesForRange(
+  childId: string,
+  startDate: string,
+  endDate: string,
+): Promise<MilestoneEntry[]> {
+  const conn = await getDb();
+  return conn.select<MilestoneEntry[]>(
+    `SELECT * FROM milestone_logs
      WHERE child_id = ? AND logged_at >= ? AND logged_at <= ?
      ORDER BY logged_at DESC`,
     [childId, startDate, endDate + "T23:59:59"],

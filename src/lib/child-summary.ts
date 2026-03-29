@@ -1,3 +1,5 @@
+import * as db from "./db";
+import { getCaregiverNoteSettingKey } from "./caregiver-note";
 import type { Alert, DietEntry, Episode, EpisodeEvent, PoopEntry, SymptomEntry } from "./types";
 
 export interface ChildDailySummary {
@@ -10,6 +12,14 @@ export interface ChildDailySummary {
   visibleAlerts: Alert[];
   recentSymptoms: SymptomEntry[];
   activeEpisode: Episode | null;
+}
+
+export interface ChildSummarySnapshot extends ChildDailySummary {
+  lastPoop: PoopEntry | null;
+  alerts: Alert[];
+  episodeEvents: EpisodeEvent[];
+  symptomLogs: SymptomEntry[];
+  handoffNote: string | null;
 }
 
 export function getTodayKey(now: Date = new Date()): string {
@@ -37,5 +47,52 @@ export function buildChildDailySummary(input: {
     visibleAlerts: input.alerts.slice(0, 3),
     recentSymptoms: input.symptomLogs.slice(0, 3),
     activeEpisode: input.activeEpisode,
+  };
+}
+
+export async function getChildSummarySnapshot(
+  childId: string,
+  options: {
+    poopLimit?: number;
+    dietLimit?: number;
+    symptomLimit?: number;
+    dayKey?: string;
+  } = {},
+): Promise<ChildSummarySnapshot> {
+  const poopLimit = options.poopLimit ?? 100;
+  const dietLimit = options.dietLimit ?? 100;
+  const symptomLimit = options.symptomLimit ?? 10;
+
+  const [poopLogs, lastPoop, dietLogs, alerts, activeEpisode, symptomLogs, handoffNote] = await Promise.all([
+    db.getPoopLogs(childId, poopLimit),
+    db.getLastRealPoop(childId),
+    db.getDietLogs(childId, dietLimit),
+    db.getActiveAlerts(childId),
+    db.getActiveEpisode(childId),
+    db.getSymptoms(childId, symptomLimit),
+    db.getSetting(getCaregiverNoteSettingKey(childId)),
+  ]);
+
+  const episodeEvents = activeEpisode
+    ? await db.getEpisodeEvents(activeEpisode.id)
+    : [];
+
+  const summary = buildChildDailySummary({
+    poopLogs,
+    dietLogs,
+    alerts,
+    activeEpisode,
+    episodeEvents,
+    symptomLogs,
+    dayKey: options.dayKey,
+  });
+
+  return {
+    ...summary,
+    lastPoop,
+    alerts,
+    episodeEvents,
+    symptomLogs,
+    handoffNote,
   };
 }

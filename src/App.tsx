@@ -14,6 +14,9 @@ import { Onboarding } from "./pages/Onboarding";
 // Lazy loaded (non-critical)
 const History = lazy(() => import("./pages/History").then((m) => ({ default: m.History })));
 const Dashboard = lazy(() => import("./pages/Dashboard").then((m) => ({ default: m.Dashboard })));
+const Growth = lazy(() => import("./pages/Growth").then((m) => ({ default: m.Growth })));
+const Sleep = lazy(() => import("./pages/Sleep").then((m) => ({ default: m.Sleep })));
+const Milestones = lazy(() => import("./pages/Milestones").then((m) => ({ default: m.Milestones })));
 const Handoff = lazy(() => import("./pages/Handoff").then((m) => ({ default: m.Handoff })));
 const Guidance = lazy(() => import("./pages/Guidance").then((m) => ({ default: m.Guidance })));
 const Settings = lazy(() => import("./pages/Settings").then((m) => ({ default: m.Settings })));
@@ -57,6 +60,9 @@ function AppRoutes() {
           <Route path="/" element={<Home />} />
           <Route path="/history" element={<History />} />
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/growth" element={<Growth />} />
+          <Route path="/sleep" element={<Sleep />} />
+          <Route path="/milestones" element={<Milestones />} />
           <Route path="/handoff" element={<Handoff />} />
           <Route path="/guidance" element={<Guidance />} />
           <Route path="/settings" element={<Settings />} />

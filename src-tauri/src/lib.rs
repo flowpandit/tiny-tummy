@@ -81,6 +81,24 @@ pub fn run() {
             sql: include_str!("../migrations/004_symptom_logs.sql"),
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 5,
+            description: "add growth logs",
+            sql: include_str!("../migrations/005_growth_logs.sql"),
+            kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 6,
+            description: "add sleep logs",
+            sql: include_str!("../migrations/006_sleep_logs.sql"),
+            kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 7,
+            description: "add milestone logs",
+            sql: include_str!("../migrations/007_milestone_logs.sql"),
+            kind: MigrationKind::Up,
+        },
     ];
 
     tauri::Builder::default()
