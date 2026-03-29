@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Badge } from "../components/ui/badge";
+import { PageIntro } from "../components/ui/page-intro";
 import { useToast } from "../components/ui/toast";
 import { useChildContext } from "../contexts/ChildContext";
 import { usePoopLogs } from "../hooks/usePoopLogs";
@@ -125,15 +126,11 @@ export function Handoff() {
         Back to Settings
       </button>
 
-      <div className="my-5 rounded-[16px] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-[var(--shadow-soft)] backdrop-blur-xl">
-        <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--color-text-soft)]">Caregiver</p>
-        <h2 className="mt-2 font-[var(--font-display)] text-3xl font-semibold text-[var(--color-text)]">
-          Handoff
-        </h2>
-        <p className="mt-3 text-base leading-relaxed text-[var(--color-text-secondary)]">
-          A plain-language update for your partner, nanny, grandparent, or daycare handoff.
-        </p>
-      </div>
+      <PageIntro
+        eyebrow="Caregiver"
+        title="Handoff"
+        description="A plain-language update for your partner, nanny, grandparent, or daycare handoff."
+      />
 
       <Card className="mb-4">
         <CardContent className="py-4">

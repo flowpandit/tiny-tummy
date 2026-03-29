@@ -4,6 +4,7 @@ import { useSleepLogs } from "../hooks/useSleepLogs";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Badge } from "../components/ui/badge";
+import { PageIntro } from "../components/ui/page-intro";
 import { SleepLogSheet } from "../components/sleep/SleepLogSheet";
 import { SleepDurationChart } from "../components/sleep/SleepDurationChart";
 import { SleepPatternTimeline } from "../components/sleep/SleepPatternTimeline";
@@ -63,26 +64,13 @@ export function Sleep() {
 
   return (
     <div className="px-4 py-5">
-      <div className="my-5 rounded-[16px] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-[var(--shadow-soft)] backdrop-blur-xl">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--color-text-soft)]">Tracking</p>
-            <h2 className="mt-2 font-[var(--font-display)] text-3xl font-semibold text-[var(--color-text)]">
-              Sleep
-            </h2>
-            <p className="mt-3 text-base leading-relaxed text-[var(--color-text-secondary)]">
-              Keep naps and night sleep in view without turning Tiny Tummy into a sleep coaching app.
-            </p>
-          </div>
-          <Button variant="cta" size="sm" onClick={() => setSheetOpen(true)}>
-            Add
-          </Button>
-        </div>
-        <p className="mt-4 text-xs text-[var(--color-text-soft)]">
-          {activeChild.name} · {getAgeLabelFromDob(activeChild.date_of_birth)}
-          {latestLog ? ` · last sleep ${timeSince(latestLog.started_at)}` : ""}
-        </p>
-      </div>
+      <PageIntro
+        eyebrow="Tracking"
+        title="Sleep"
+        description="Keep naps and night sleep in view without turning Tiny Tummy into a sleep coaching app."
+        meta={`${activeChild.name} · ${getAgeLabelFromDob(activeChild.date_of_birth)}${latestLog ? ` · last sleep ${timeSince(latestLog.started_at)}` : ""}`}
+        action={<Button variant="cta" size="sm" onClick={() => setSheetOpen(true)}>Add</Button>}
+      />
 
       {logs.length === 0 ? (
         <Card>

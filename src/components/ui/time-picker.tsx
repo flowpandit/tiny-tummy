@@ -1,6 +1,7 @@
 import { useState, useMemo, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "../../lib/cn";
+import { useTheme } from "../../contexts/ThemeContext";
 
 interface TimePickerProps {
   value: string; // "HH:MM"
@@ -22,6 +23,8 @@ function formatDisplay(time: string): string {
 
 export function TimePicker({ value, onChange, label, nightMode = false }: TimePickerProps) {
   const [open, setOpen] = useState(false);
+  const { resolved } = useTheme();
+  const isNight = nightMode || resolved === "night";
   const hourRef = useRef<HTMLDivElement>(null);
   const minuteRef = useRef<HTMLDivElement>(null);
 
@@ -57,10 +60,10 @@ export function TimePicker({ value, onChange, label, nightMode = false }: TimePi
         type="button"
         onClick={() => setOpen(!open)}
         className={cn(
-          nightMode
+          isNight
             ? "w-full h-11 px-3 rounded-[var(--radius-md)] border border-slate-700 bg-slate-900/90"
             : "w-full h-11 px-3 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)]",
-          nightMode
+          isNight
             ? "text-slate-100 text-sm text-left cursor-pointer transition-colors hover:border-slate-500 focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20 outline-none"
             : "text-[var(--color-text)] text-sm text-left cursor-pointer transition-colors hover:border-[var(--color-muted)] focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20 outline-none",
           "flex items-center justify-between",
@@ -68,7 +71,7 @@ export function TimePicker({ value, onChange, label, nightMode = false }: TimePi
         aria-label={label ?? "Select time"}
       >
         <span>{formatDisplay(value)}</span>
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill={nightMode ? "#94a3b8" : "var(--color-muted)"} className="w-4 h-4">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill={isNight ? "#94a3b8" : "var(--color-muted)"} className="w-4 h-4">
           <path fillRule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm.75-13a.75.75 0 0 0-1.5 0v5c0 .414.336.75.75.75h4a.75.75 0 0 0 0-1.5h-3.25V5Z" clipRule="evenodd" />
         </svg>
       </button>
@@ -77,7 +80,7 @@ export function TimePicker({ value, onChange, label, nightMode = false }: TimePi
       <AnimatePresence>
         {open && (
           <>
-            <div className={cn("fixed inset-0 z-40", nightMode ? "bg-[#020617]/75" : "bg-black/20")} onClick={() => setOpen(false)} />
+            <div className={cn("fixed inset-0 z-40", isNight ? "bg-[#020617]/75" : "bg-black/20")} onClick={() => setOpen(false)} />
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -85,20 +88,20 @@ export function TimePicker({ value, onChange, label, nightMode = false }: TimePi
               transition={{ duration: 0.15 }}
               className={cn(
                 "fixed z-50 left-4 right-4 top-1/2 -translate-y-1/2 rounded-[var(--radius-lg)] shadow-[var(--shadow-lg)] p-4 max-w-sm mx-auto",
-                nightMode
+                isNight
                   ? "bg-[#0f172a] border border-slate-700/70"
                   : "bg-[var(--color-surface-strong)] border border-[var(--color-border)]",
               )}
             >
-              <p className={cn("text-base font-semibold text-center mb-3", nightMode ? "text-slate-100" : "text-[var(--color-text)]")}>
+              <p className={cn("text-base font-semibold text-center mb-3", isNight ? "text-slate-100" : "text-[var(--color-text)]")}>
                 Select Time
               </p>
 
               <div className="flex gap-3">
                 {/* Hours column */}
                 <div className="flex-1">
-                  <p className={cn("text-xs font-medium text-center mb-2", nightMode ? "text-slate-400" : "text-[var(--color-muted)]")}>Hour</p>
-                  <div ref={hourRef} className={cn("h-52 overflow-y-auto rounded-[var(--radius-md)]", nightMode ? "bg-slate-900/90" : "bg-[var(--color-bg)]")}>
+                  <p className={cn("text-xs font-medium text-center mb-2", isNight ? "text-slate-400" : "text-[var(--color-muted)]")}>Hour</p>
+                  <div ref={hourRef} className={cn("h-52 overflow-y-auto rounded-[var(--radius-md)]", isNight ? "bg-slate-900/90" : "bg-[var(--color-bg)]")}>
                     {hours.map((h) => {
                       const ampm = h >= 12 ? "PM" : "AM";
                       const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
@@ -113,7 +116,7 @@ export function TimePicker({ value, onChange, label, nightMode = false }: TimePi
                             "w-full py-2.5 text-sm text-center cursor-pointer transition-colors duration-100 rounded-[var(--radius-sm)]",
                             isActive
                               ? "bg-[var(--color-primary)] text-[var(--color-on-primary)] font-semibold"
-                              : nightMode
+                              : isNight
                                 ? "text-slate-100 hover:bg-slate-800"
                                 : "text-[var(--color-text)] hover:bg-[var(--color-border)]",
                           )}
@@ -127,8 +130,8 @@ export function TimePicker({ value, onChange, label, nightMode = false }: TimePi
 
                 {/* Minutes column */}
                 <div className="flex-1">
-                  <p className={cn("text-xs font-medium text-center mb-2", nightMode ? "text-slate-400" : "text-[var(--color-muted)]")}>Minute</p>
-                  <div ref={minuteRef} className={cn("h-52 overflow-y-auto rounded-[var(--radius-md)]", nightMode ? "bg-slate-900/90" : "bg-[var(--color-bg)]")}>
+                  <p className={cn("text-xs font-medium text-center mb-2", isNight ? "text-slate-400" : "text-[var(--color-muted)]")}>Minute</p>
+                  <div ref={minuteRef} className={cn("h-52 overflow-y-auto rounded-[var(--radius-md)]", isNight ? "bg-slate-900/90" : "bg-[var(--color-bg)]")}>
                     {minutes.map((m) => {
                       const isActive = minute === m;
                       return (
@@ -141,7 +144,7 @@ export function TimePicker({ value, onChange, label, nightMode = false }: TimePi
                             "w-full py-2.5 text-sm text-center cursor-pointer transition-colors duration-100 rounded-[var(--radius-sm)]",
                             isActive
                               ? "bg-[var(--color-primary)] text-[var(--color-on-primary)] font-semibold"
-                              : nightMode
+                              : isNight
                                 ? "text-slate-100 hover:bg-slate-800"
                                 : "text-[var(--color-text)] hover:bg-[var(--color-border)]",
                           )}
@@ -156,7 +159,7 @@ export function TimePicker({ value, onChange, label, nightMode = false }: TimePi
 
               {/* Current selection + Done */}
               <div className="mt-3 flex items-center justify-between">
-                <span className={cn("text-sm", nightMode ? "text-slate-300" : "text-[var(--color-text-secondary)]")}>
+                <span className={cn("text-sm", isNight ? "text-slate-300" : "text-[var(--color-text-secondary)]")}>
                   {formatDisplay(value)}
                 </span>
                 <button

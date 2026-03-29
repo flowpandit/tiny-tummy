@@ -7,7 +7,7 @@ import { useToast } from "../ui/toast";
 import { BOTTLE_CONTENTS, BREAST_SIDES, FOOD_TYPES } from "../../lib/diet-constants";
 import { cn } from "../../lib/cn";
 import * as db from "../../lib/db";
-import { isNightLoggingWindow } from "../../lib/logging-ui";
+import { useTheme } from "../../contexts/ThemeContext";
 import type { BottleContent, BreastSide, DietLogDraft, FoodType } from "../../lib/types";
 
 function getCurrentDate(): string {
@@ -62,7 +62,8 @@ export function DietLogForm({ open, onClose, childId, onLogged, initialDraft = n
   const [isConstipationSupport, setIsConstipationSupport] = useState(false);
   const [notes, setNotes] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [nightMode, setNightMode] = useState(false);
+  const { resolved } = useTheme();
+  const nightMode = resolved === "night";
 
   const applyDraft = (draft?: Partial<DietLogDraft> | null) => {
     const nextDraft = { ...EMPTY_DRAFT, ...draft };
@@ -81,7 +82,6 @@ export function DietLogForm({ open, onClose, childId, onLogged, initialDraft = n
 
   useEffect(() => {
     if (open) {
-      setNightMode(isNightLoggingWindow());
       applyDraft(initialDraft);
     }
   }, [open, initialDraft]);
@@ -164,28 +164,7 @@ export function DietLogForm({ open, onClose, childId, onLogged, initialDraft = n
           <h2 className={cn("font-[var(--font-display)] text-lg font-semibold", nightMode ? "text-slate-100" : "text-[var(--color-text)]")}>
             Log a feed
           </h2>
-          <button
-            type="button"
-            onClick={() => setNightMode((current) => !current)}
-            className={cn(
-              "rounded-full border px-3 py-2 text-xs font-semibold transition-colors",
-              nightMode
-                ? "border-slate-600 bg-slate-800 text-slate-100"
-                : "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-secondary)]",
-            )}
-          >
-            {nightMode ? "Night on" : "Night off"}
-          </button>
         </div>
-
-        {nightMode && (
-          <div className="mb-4 rounded-[var(--radius-md)] border border-slate-700 bg-slate-900/90 px-3 py-3">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-300">Low-light mode</p>
-            <p className="mt-1 text-sm leading-relaxed text-slate-400">
-              Darker surfaces and bigger actions for late-night feeding logs.
-            </p>
-          </div>
-        )}
 
         <div className="flex flex-col gap-5">
           {/* Date & time */}

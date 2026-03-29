@@ -11,7 +11,8 @@ import { LogSuccess } from "./LogSuccess";
 import * as db from "../../lib/db";
 import { savePhoto } from "../../lib/photos";
 import { cn } from "../../lib/cn";
-import { isNightLoggingWindow } from "../../lib/logging-ui";
+import { useTheme } from "../../contexts/ThemeContext";
+import { FieldLabel, Textarea } from "../ui/field";
 import type { PoopLogDraft, StoolColor, StoolSize } from "../../lib/types";
 
 const EMPTY_DRAFT: PoopLogDraft = {
@@ -54,7 +55,8 @@ export function LogForm({ open, onClose, childId, onLogged, initialDraft = null 
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
-  const [nightMode, setNightMode] = useState(false);
+  const { resolved } = useTheme();
+  const nightMode = resolved === "night";
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const applyDraft = (draft?: Partial<PoopLogDraft> | null) => {
@@ -73,7 +75,6 @@ export function LogForm({ open, onClose, childId, onLogged, initialDraft = null 
 
   useEffect(() => {
     if (open) {
-      setNightMode(isNightLoggingWindow());
       applyDraft(initialDraft);
     }
   }, [open, initialDraft]);
@@ -139,14 +140,6 @@ export function LogForm({ open, onClose, childId, onLogged, initialDraft = null 
     setTimeout(reset, 300);
   };
 
-  const fieldLabelClassName = cn("block text-sm font-medium mb-1.5", nightMode ? "text-slate-100" : "text-[var(--color-text)]");
-  const textareaClassName = cn(
-    "w-full px-3 py-2 rounded-[var(--radius-md)] border text-sm resize-none outline-none transition-colors",
-    nightMode
-      ? "border-slate-700 bg-slate-900/90 text-slate-100 placeholder:text-slate-500 focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20"
-      : "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)] focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20",
-  );
-
   return (
     <Sheet open={open} onClose={handleClose} tone={nightMode ? "night" : "default"}>
       {showSuccess ? (
@@ -157,28 +150,7 @@ export function LogForm({ open, onClose, childId, onLogged, initialDraft = null 
             <h2 className={cn("font-[var(--font-display)] text-lg font-semibold text-center", nightMode ? "text-slate-100" : "text-[var(--color-text)]")}>
               Log a poop
             </h2>
-            <button
-              type="button"
-              onClick={() => setNightMode((current) => !current)}
-              className={cn(
-                "rounded-full border px-3 py-2 text-xs font-semibold transition-colors",
-                nightMode
-                  ? "border-slate-600 bg-slate-800 text-slate-100"
-                  : "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-secondary)]",
-              )}
-            >
-              {nightMode ? "Night on" : "Night off"}
-            </button>
           </div>
-
-          {nightMode && (
-            <div className="mb-4 rounded-[var(--radius-md)] border border-slate-700 bg-slate-900/90 px-3 py-3">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-300">Low-light mode</p>
-              <p className="mt-1 text-sm leading-relaxed text-slate-400">
-                Larger targets and darker surfaces for late-night logging.
-              </p>
-            </div>
-          )}
 
           {(stoolType || color || size) && (
             <div className={cn("mb-4 rounded-[var(--radius-md)] border px-3 py-3", nightMode ? "border-slate-700 bg-slate-900/90" : "border-[var(--color-primary)]/15 bg-[var(--color-primary)]/10")}>
@@ -194,9 +166,7 @@ export function LogForm({ open, onClose, childId, onLogged, initialDraft = null 
           <div className="flex flex-col gap-5">
             {/* Date & time */}
             <div>
-              <label className={fieldLabelClassName}>
-                When
-              </label>
+              <FieldLabel className={nightMode ? "text-slate-100" : undefined}>When</FieldLabel>
               <div className="grid grid-cols-2 gap-2">
                 <DatePicker value={logDate} onChange={setLogDate} max={getCurrentDate()} nightMode={nightMode} />
                 <TimePicker value={logTime} onChange={setLogTime} nightMode={nightMode} />
@@ -209,24 +179,24 @@ export function LogForm({ open, onClose, childId, onLogged, initialDraft = null 
 
             {/* Notes */}
             <div>
-              <label htmlFor="log-notes" className={fieldLabelClassName}>
+              <FieldLabel htmlFor="log-notes" className={nightMode ? "text-slate-100" : undefined}>
                 Notes (optional)
-              </label>
-              <textarea
+              </FieldLabel>
+              <Textarea
                 id="log-notes"
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 placeholder="Any observations..."
                 rows={2}
-                className={textareaClassName}
+                className={cn(nightMode && "border-slate-700 bg-slate-900/90 text-slate-100 placeholder:text-slate-500")}
               />
             </div>
 
             {/* Photo */}
             <div>
-              <label className={fieldLabelClassName}>
+              <FieldLabel className={nightMode ? "text-slate-100" : undefined}>
                 Photo (optional)
-              </label>
+              </FieldLabel>
               <input
                 ref={fileInputRef}
                 type="file"

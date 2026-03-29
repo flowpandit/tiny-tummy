@@ -5,6 +5,7 @@ import { useMilestoneLogs } from "../hooks/useMilestoneLogs";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Badge } from "../components/ui/badge";
+import { PageIntro } from "../components/ui/page-intro";
 import { MilestoneLogSheet } from "../components/milestones/MilestoneLogSheet";
 import { getMilestoneTypeDescription, getMilestoneTypeLabel } from "../lib/milestone-constants";
 import { formatDate, getAgeLabelFromDob, timeSince } from "../lib/utils";
@@ -44,26 +45,13 @@ export function Milestones() {
         Back to Settings
       </button>
 
-      <div className="my-5 rounded-[16px] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-[var(--shadow-soft)] backdrop-blur-xl">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--color-text-soft)]">Tracking</p>
-            <h2 className="mt-2 font-[var(--font-display)] text-3xl font-semibold text-[var(--color-text)]">
-              Milestones
-            </h2>
-            <p className="mt-3 text-base leading-relaxed text-[var(--color-text-secondary)]">
-              Capture only the changes that help explain bowel, feeding, or routine shifts. This is context, not a baby memory book.
-            </p>
-          </div>
-          <Button variant="cta" size="sm" onClick={() => setSheetOpen(true)}>
-            Add
-          </Button>
-        </div>
-        <p className="mt-4 text-xs text-[var(--color-text-soft)]">
-          {activeChild.name} · {getAgeLabelFromDob(activeChild.date_of_birth)}
-          {latest ? ` · last logged ${timeSince(latest.logged_at)}` : ""}
-        </p>
-      </div>
+      <PageIntro
+        eyebrow="Tracking"
+        title="Milestones"
+        description="Capture only the changes that help explain bowel, feeding, or routine shifts. This is context, not a baby memory book."
+        meta={`${activeChild.name} · ${getAgeLabelFromDob(activeChild.date_of_birth)}${latest ? ` · last logged ${timeSince(latest.logged_at)}` : ""}`}
+        action={<Button variant="cta" size="sm" onClick={() => setSheetOpen(true)}>Add</Button>}
+      />
 
       {sortedLogs.length === 0 ? (
         <Card>

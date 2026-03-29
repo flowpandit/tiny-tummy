@@ -5,6 +5,7 @@ import { platform } from "@tauri-apps/plugin-os";
 import { useChildContext } from "../contexts/ChildContext";
 import { Button } from "../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
+import { PageIntro } from "../components/ui/page-intro";
 import { DatePicker } from "../components/ui/date-picker";
 import { Badge } from "../components/ui/badge";
 import { getAgeLabelFromDob, formatDate } from "../lib/utils";
@@ -693,15 +694,11 @@ export function Report() {
 
   return (
     <div className="px-4 py-5">
-      <div className="my-5 rounded-[16px] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-[var(--shadow-soft)] backdrop-blur-xl">
-        <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--color-text-soft)]">Share</p>
-        <h2 className="mt-2 font-[var(--font-display)] text-3xl font-semibold text-[var(--color-text)]">
-          Report
-        </h2>
-        <p className="mt-3 text-base leading-relaxed text-[var(--color-text-secondary)]">
-          Generate a poop and feeding summary to share with your doctor.
-        </p>
-      </div>
+      <PageIntro
+        eyebrow="Share"
+        title="Report"
+        description="Generate a poop and feeding summary to share with your doctor."
+      />
 
       {/* Date range picker */}
       <Card className="mb-5">

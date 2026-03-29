@@ -4,7 +4,12 @@ import { useChildContext } from "../contexts/ChildContext";
 import { useTheme } from "../contexts/ThemeContext";
 import { Card, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
+import { FieldLabel, Input } from "../components/ui/field";
+import { SegmentedControl } from "../components/ui/segmented-control";
+import { Switch } from "../components/ui/switch";
+import { PageIntro } from "../components/ui/page-intro";
 import { DatePicker } from "../components/ui/date-picker";
+import { TimePicker } from "../components/ui/time-picker";
 import { Sheet } from "../components/ui/sheet";
 import { useToast } from "../components/ui/toast";
 import { FEEDING_TYPES, AVATAR_COLORS } from "../lib/constants";
@@ -93,46 +98,29 @@ function EditChildSheet({
           />
 
           <div>
-            <label htmlFor="edit-name" className="block text-sm font-medium text-[var(--color-text)] mb-1.5">
-              Name
-            </label>
-            <input
+            <FieldLabel htmlFor="edit-name">Name</FieldLabel>
+            <Input
               id="edit-name"
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full h-11 px-3 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)] text-base outline-none focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20 transition-colors"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-[var(--color-text)] mb-1.5">
-              Date of birth
-            </label>
+            <FieldLabel>Date of birth</FieldLabel>
             <DatePicker value={dob} onChange={setDob} max={new Date().toISOString().split("T")[0]} label="Date of birth" />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-[var(--color-text)] mb-1.5">
-              Feeding type
-            </label>
-            <div className="grid grid-cols-2 gap-2">
-              {FEEDING_TYPES.map((ft) => (
-                <button
-                  key={ft.value}
-                  type="button"
-                  onClick={() => setFeedingType(ft.value)}
-                  className={cn(
-                    "h-10 rounded-[var(--radius-md)] border text-sm font-medium transition-colors duration-200 cursor-pointer",
-                    feedingType === ft.value
-                      ? "border-[var(--color-primary)] bg-[var(--color-primary)]/10 text-[var(--color-primary)]"
-                      : "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-secondary)]",
-                  )}
-                >
-                  {ft.label}
-                </button>
-              ))}
-            </div>
+            <FieldLabel>Feeding type</FieldLabel>
+            <SegmentedControl
+              value={feedingType}
+              onChange={setFeedingType}
+              options={FEEDING_TYPES}
+              gridClassName="grid-cols-2"
+              size="sm"
+            />
           </div>
 
           <div>
@@ -259,25 +247,7 @@ function NotificationSection({ children }: { children: Child[] }) {
               Remind me to log daily
             </p>
           </div>
-          <button
-            onClick={handleToggle}
-            disabled={loading}
-            className={cn(
-              "relative w-12 h-7 rounded-full cursor-pointer transition-colors duration-200",
-              enabled ? "bg-[var(--color-primary)]" : "bg-[var(--color-border)]",
-              loading && "opacity-50",
-            )}
-            role="switch"
-            aria-checked={enabled}
-            aria-label="Toggle daily reminder"
-          >
-            <div
-              className={cn(
-                "absolute top-0.5 w-6 h-6 rounded-full bg-white shadow-sm transition-transform duration-200",
-                enabled ? "translate-x-5.5" : "translate-x-0.5",
-              )}
-            />
-          </button>
+          <Switch checked={enabled} onCheckedChange={handleToggle} disabled={loading} ariaLabel="Toggle daily reminder" />
         </CardContent>
       </Card>
 
@@ -291,25 +261,7 @@ function NotificationSection({ children }: { children: Child[] }) {
                   {row.description}
                 </p>
               </div>
-              <button
-                onClick={() => handleSmartToggle(row.key)}
-                disabled={loading}
-                className={cn(
-                  "relative w-12 h-7 rounded-full cursor-pointer transition-colors duration-200 shrink-0",
-                  smartSettings[row.key] ? "bg-[var(--color-primary)]" : "bg-[var(--color-border)]",
-                  loading && "opacity-50",
-                )}
-                role="switch"
-                aria-checked={smartSettings[row.key]}
-                aria-label={`Toggle ${row.title}`}
-              >
-                <div
-                  className={cn(
-                    "absolute top-0.5 w-6 h-6 rounded-full bg-white shadow-sm transition-transform duration-200",
-                    smartSettings[row.key] ? "translate-x-5.5" : "translate-x-0.5",
-                  )}
-                />
-              </button>
+              <Switch checked={smartSettings[row.key]} onCheckedChange={() => handleSmartToggle(row.key)} disabled={loading} ariaLabel={`Toggle ${row.title}`} />
             </CardContent>
           </Card>
         ))}
@@ -324,8 +276,23 @@ const THEME_OPTIONS: { value: "system" | "light" | "dark"; label: string }[] = [
   { value: "dark", label: "Dark" },
 ];
 
+function formatScheduleTime(value: string) {
+  const [hour, minute] = value.split(":").map(Number);
+  const suffix = hour >= 12 ? "PM" : "AM";
+  const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
+  return `${displayHour}:${minute.toString().padStart(2, "0")} ${suffix}`;
+}
+
 function ThemeSection() {
-  const { mode, setMode } = useTheme();
+  const {
+    mode,
+    setMode,
+    nightModeEnabled,
+    setNightModeEnabled,
+    nightModeStart,
+    nightModeEnd,
+    setNightModeSchedule,
+  } = useTheme();
 
   return (
     <div className="mb-6">
@@ -335,21 +302,51 @@ function ThemeSection() {
       <Card>
         <CardContent className="py-3">
           <p className="text-sm font-medium text-[var(--color-text)] mb-2">Theme</p>
-          <div className="flex bg-[var(--color-bg)] rounded-[var(--radius-sm)] p-0.5 border border-[var(--color-border)]">
-            {THEME_OPTIONS.map((opt) => (
-              <button
-                key={opt.value}
-                onClick={() => setMode(opt.value)}
-                className={cn(
-                  "flex-1 py-1.5 text-xs font-medium rounded-[var(--radius-sm)] cursor-pointer transition-colors duration-200",
-                  mode === opt.value
-                    ? "bg-[var(--color-primary)] text-[var(--color-on-primary)]"
-                    : "text-[var(--color-text-secondary)] hover:text-[var(--color-text)]",
-                )}
-              >
-                {opt.label}
-              </button>
-            ))}
+          <SegmentedControl value={mode} onChange={setMode} options={THEME_OPTIONS} className="bg-[var(--color-bg)] rounded-[var(--radius-sm)] border border-[var(--color-border)] p-0.5" gridClassName="grid-cols-3" size="sm" />
+          <p className="mt-2 text-xs text-[var(--color-text-secondary)]">
+            Choose how Tiny Tummy looks during the day.
+          </p>
+
+          <div className="mt-4 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg)]/70 p-3">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-[var(--color-text)]">Night mode schedule</p>
+                <p className="mt-1 text-xs leading-relaxed text-[var(--color-text-secondary)]">
+                  Automatically switch to the softer low-glare palette during overnight care.
+                </p>
+              </div>
+              <Switch
+                checked={nightModeEnabled}
+                onCheckedChange={setNightModeEnabled}
+                ariaLabel="Toggle scheduled night mode"
+              />
+            </div>
+
+            {nightModeEnabled && (
+              <div className="mt-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <FieldLabel>Starts</FieldLabel>
+                    <TimePicker
+                      value={nightModeStart}
+                      onChange={(value) => setNightModeSchedule(value, nightModeEnd)}
+                      label="Night mode starts"
+                    />
+                  </div>
+                  <div>
+                    <FieldLabel>Ends</FieldLabel>
+                    <TimePicker
+                      value={nightModeEnd}
+                      onChange={(value) => setNightModeSchedule(nightModeStart, value)}
+                      label="Night mode ends"
+                    />
+                  </div>
+                </div>
+                <p className="mt-3 text-xs text-[var(--color-text-secondary)]">
+                  Active from {formatScheduleTime(nightModeStart)} to {formatScheduleTime(nightModeEnd)}.
+                </p>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -372,12 +369,7 @@ export function Settings() {
 
   return (
     <div className="px-4 py-5">
-      <div className="mb-6 rounded-[16px] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-[var(--shadow-soft)] backdrop-blur-xl">
-        <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--color-text-soft)]">Preferences</p>
-        <h2 className="mt-2 font-[var(--font-display)] text-3xl font-semibold text-[var(--color-text)]">
-          Settings
-        </h2>
-      </div>
+      <PageIntro eyebrow="Preferences" title="Settings" className="mb-6" />
 
       {/* Children section */}
       <div className="mb-8">

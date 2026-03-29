@@ -1,6 +1,7 @@
 import { useEffect, type ReactNode } from "react";
 import { motion, AnimatePresence, useMotionValue, useTransform, animate } from "framer-motion";
 import { cn } from "../../lib/cn";
+import { useTheme } from "../../contexts/ThemeContext";
 
 interface SheetProps {
   open: boolean;
@@ -11,8 +12,10 @@ interface SheetProps {
 }
 
 export function Sheet({ open, onClose, children, className, tone = "default" }: SheetProps) {
+  const { resolved } = useTheme();
   const sheetY = useMotionValue(0);
   const backdropOpacity = useTransform(sheetY, [0, 300], [1, 0]);
+  const effectiveTone = tone === "night" || (tone === "default" && resolved === "night") ? "night" : "default";
   useEffect(() => {
     if (open) {
       document.body.style.overflow = "hidden";
@@ -45,7 +48,7 @@ export function Sheet({ open, onClose, children, className, tone = "default" }: 
             transition={{ duration: 0.2 }}
             className={cn(
               "fixed inset-0 z-40",
-              tone === "night" ? "bg-[#020617]/75" : "bg-black/40",
+              effectiveTone === "night" ? "bg-[#020617]/75" : "bg-black/40",
             )}
             style={{ opacity: backdropOpacity }}
             onClick={onClose}
@@ -64,7 +67,7 @@ export function Sheet({ open, onClose, children, className, tone = "default" }: 
             className={cn(
               "fixed bottom-0 left-0 right-0 z-50 rounded-t-[var(--radius-lg)] shadow-[var(--shadow-lg)]",
               "max-h-[85vh] flex flex-col",
-              tone === "night"
+              effectiveTone === "night"
                 ? "border border-slate-700/70 bg-[#0f172a] text-slate-100"
                 : "border border-[var(--color-border)] bg-[var(--color-surface-strong)]",
               className,
@@ -85,7 +88,7 @@ export function Sheet({ open, onClose, children, className, tone = "default" }: 
               onDragEnd={handleDragEnd}
               style={{ y: 0 }}
             >
-              <div className={cn("w-10 h-1 rounded-full", tone === "night" ? "bg-slate-500" : "bg-[var(--color-muted)]")} />
+              <div className={cn("w-10 h-1 rounded-full", effectiveTone === "night" ? "bg-slate-500" : "bg-[var(--color-muted)]")} />
             </motion.div>
             {/* Scrollable content */}
             <div className="flex-1 overflow-y-auto overscroll-contain min-h-0">
