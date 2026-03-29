@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useChildContext } from "../contexts/ChildContext";
 import { useSleepLogs } from "../hooks/useSleepLogs";
 import { Card, CardContent, CardHeader } from "../components/ui/card";
@@ -10,6 +11,8 @@ import { SleepLogSheet } from "../components/sleep/SleepLogSheet";
 import { SleepDurationChart } from "../components/sleep/SleepDurationChart";
 import { SleepPatternTimeline } from "../components/sleep/SleepPatternTimeline";
 import { getAgeLabelFromDob, formatDate, timeSince } from "../lib/utils";
+import { formatSleepTimerClock, formatSleepTimerSummary, getSleepTimerElapsedMs, getSleepTimerSettingKey, parseSleepTimerSession, type SleepTimerSession } from "../lib/sleep-timer";
+import * as db from "../lib/db";
 import type { SleepEntry } from "../lib/types";
 
 function getDurationMinutes(entry: SleepEntry): number {
@@ -37,9 +40,13 @@ function toDayKey(dateStr: string): string {
 }
 
 export function Sleep() {
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { activeChild } = useChildContext();
   const { logs, refresh } = useSleepLogs(activeChild?.id ?? null);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [timerSession, setTimerSession] = useState<SleepTimerSession | null>(null);
+  const [tick, setTick] = useState(Date.now());
 
   const todayKey = getTodayKey();
 
@@ -61,6 +68,46 @@ export function Sleep() {
     ? "Today"
     : `Latest logged day · ${new Date(`${patternDayKey}T00:00:00`).toLocaleDateString(undefined, { month: "short", day: "numeric" })}`;
 
+  useEffect(() => {
+    if (!activeChild) return;
+
+    let cancelled = false;
+    const refreshTimerSession = () => {
+      db.getSetting(getSleepTimerSettingKey(activeChild.id))
+        .then((raw) => {
+          if (!cancelled) {
+            setTimerSession(parseSleepTimerSession(raw));
+            setTick(Date.now());
+          }
+        })
+        .catch(() => {
+          if (!cancelled) {
+            setTimerSession(null);
+          }
+        });
+    };
+
+    refreshTimerSession();
+    window.addEventListener("focus", refreshTimerSession);
+    document.addEventListener("visibilitychange", refreshTimerSession);
+    return () => {
+      cancelled = true;
+      window.removeEventListener("focus", refreshTimerSession);
+      document.removeEventListener("visibilitychange", refreshTimerSession);
+    };
+  }, [activeChild, sheetOpen]);
+
+  useEffect(() => {
+    if (searchParams.get("add") !== "1") return;
+    setSheetOpen(true);
+  }, [searchParams]);
+
+  useEffect(() => {
+    if (!timerSession) return;
+    const interval = window.setInterval(() => setTick(Date.now()), 1000);
+    return () => window.clearInterval(interval);
+  }, [timerSession]);
+
   if (!activeChild) return null;
 
   return (
@@ -72,6 +119,25 @@ export function Sleep() {
         meta={`${activeChild.name} · ${getAgeLabelFromDob(activeChild.date_of_birth)}${latestLog ? ` · last sleep ${timeSince(latestLog.started_at)}` : ""}`}
         action={<Button variant="cta" size="sm" onClick={() => setSheetOpen(true)}>Add</Button>}
       />
+
+      {timerSession && (
+        <InsetPanel className="flex items-center justify-between gap-4">
+          <div>
+            <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--color-text-soft)]">
+              {timerSession.sleepType === "night" ? "Night timer running" : "Nap timer running"}
+            </p>
+            <p className="mt-2 text-2xl font-semibold tracking-[-0.03em] text-[var(--color-text)]">
+              {formatSleepTimerClock(getSleepTimerElapsedMs(timerSession, tick))}
+            </p>
+            <p className="mt-2 text-sm text-[var(--color-text-secondary)]">
+              Started {timeSince(timerSession.startedAt)} · {formatSleepTimerSummary(getSleepTimerElapsedMs(timerSession, tick))}
+            </p>
+          </div>
+          <Button variant="secondary" size="sm" onClick={() => setSheetOpen(true)}>
+            Open timer
+          </Button>
+        </InsetPanel>
+      )}
 
       {logs.length === 0 ? (
         <EmptyState
@@ -179,7 +245,12 @@ export function Sleep() {
 
       <SleepLogSheet
         open={sheetOpen}
-        onClose={() => setSheetOpen(false)}
+        onClose={() => {
+          setSheetOpen(false);
+          if (searchParams.get("add") === "1") {
+            navigate("/sleep", { replace: true });
+          }
+        }}
         childId={activeChild.id}
         onLogged={refresh}
       />

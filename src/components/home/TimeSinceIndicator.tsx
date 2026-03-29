@@ -3,8 +3,9 @@ import type { HealthStatus } from "../../lib/types";
 import { timeSinceDetailed } from "../../lib/utils";
 
 interface TimeSinceIndicatorProps {
-  lastPoopAt: string | null;
-  status: HealthStatus;
+  timestamp: string | null;
+  status?: HealthStatus;
+  gradient?: string;
 }
 
 const STATUS_GRADIENTS: Record<HealthStatus, string> = {
@@ -14,32 +15,32 @@ const STATUS_GRADIENTS: Record<HealthStatus, string> = {
   unknown: "var(--gradient-status-unknown)",
 };
 
-export function TimeSinceIndicator({ lastPoopAt, status }: TimeSinceIndicatorProps) {
+export function TimeSinceIndicator({ timestamp, status = "unknown", gradient }: TimeSinceIndicatorProps) {
   const [time, setTime] = useState(
-    lastPoopAt ? timeSinceDetailed(lastPoopAt) : null,
+    timestamp ? timeSinceDetailed(timestamp) : null,
   );
 
   useEffect(() => {
-    if (!lastPoopAt) return;
-    setTime(timeSinceDetailed(lastPoopAt));
+    if (!timestamp) return;
+    setTime(timeSinceDetailed(timestamp));
     const interval = setInterval(() => {
-      setTime(timeSinceDetailed(lastPoopAt));
+      setTime(timeSinceDetailed(timestamp));
     }, 60000);
     return () => clearInterval(interval);
-  }, [lastPoopAt]);
+  }, [timestamp]);
 
-  const gradient = STATUS_GRADIENTS[status];
+  const ringGradient = gradient ?? STATUS_GRADIENTS[status];
 
   return (
     <div
-      className="relative mx-auto flex h-[108px] w-[108px] items-center justify-center rounded-full shadow-[var(--shadow-soft)]"
-      style={{ background: gradient }}
+      className="relative mx-auto flex h-[96px] w-[96px] items-center justify-center rounded-full shadow-[var(--shadow-soft)]"
+      style={{ background: ringGradient }}
     >
-      <div className="absolute inset-[11px] rounded-full bg-[var(--color-surface-strong)] shadow-[var(--shadow-inner)]" />
+      <div className="absolute inset-[10px] rounded-full bg-[var(--color-surface-strong)] shadow-[var(--shadow-inner)]" />
       <div className="relative z-10 flex flex-col items-center justify-center">
         {time ? (
           <>
-            <span className="text-[2rem] font-bold text-[var(--color-text)]" style={{ fontFamily: "var(--font-display)" }}>
+            <span className="text-[1.7rem] font-bold text-[var(--color-text)]" style={{ fontFamily: "var(--font-display)" }}>
               {time.value}
             </span>
             <span className="text-xs text-[var(--color-text-secondary)]">{time.unit}</span>

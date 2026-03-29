@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { useChildContext } from "../contexts/ChildContext";
 import { usePoopLogs } from "../hooks/usePoopLogs";
 import { useFeedingLogs } from "../hooks/useFeedingLogs";
+import { useSleepLogs } from "../hooks/useSleepLogs";
 import { useAlerts } from "../hooks/useAlerts";
 import { useAlertEngine } from "../hooks/useAlertEngine";
 import { useStats } from "../hooks/useStats";
@@ -32,6 +33,7 @@ import { EditMealSheet } from "../components/logging/EditMealSheet";
 import { EpisodeSheet } from "../components/episodes/EpisodeSheet";
 import { NoLogsYet } from "../components/empty-states/NoLogsYet";
 import { SymptomSheet } from "../components/symptoms/SymptomSheet";
+import { SleepLogSheet } from "../components/sleep/SleepLogSheet";
 import { Badge } from "../components/ui/badge";
 import { useToast } from "../components/ui/toast";
 import type { FeedingEntry, FeedingLogDraft, FeedingType, HealthStatus, PoopEntry, PoopLogDraft } from "../lib/types";
@@ -183,6 +185,7 @@ export function Home() {
   const { showError, showSuccess } = useToast();
   const { logs, lastRealPoop, refresh: refreshLogs } = usePoopLogs(activeChild?.id ?? null);
   const { logs: feedingLogs, refresh: refreshFeedingLogs } = useFeedingLogs(activeChild?.id ?? null);
+  const { logs: sleepLogs, refresh: refreshSleepLogs } = useSleepLogs(activeChild?.id ?? null);
   const { activeEpisode, events: episodeEvents, recentEpisodes, refresh: refreshEpisodes } = useEpisodes(activeChild?.id ?? null);
   const { logs: symptomLogs, refresh: refreshSymptoms } = useSymptoms(activeChild?.id ?? null);
   const { alerts, refresh: refreshAlerts, dismiss } = useAlerts(activeChild?.id ?? null);
@@ -192,13 +195,13 @@ export function Home() {
   const [poopDraft, setPoopDraft] = useState<Partial<PoopLogDraft> | null>(null);
   const [feedingFormOpen, setFeedingFormOpen] = useState(false);
   const [feedingDraft, setFeedingDraft] = useState<Partial<FeedingLogDraft> | null>(null);
+  const [sleepSheetOpen, setSleepSheetOpen] = useState(false);
   const [episodeSheetOpen, setEpisodeSheetOpen] = useState(false);
   const [episodeSheetMode, setEpisodeSheetMode] = useState<"default" | "start" | "update">("default");
   const [symptomSheetOpen, setSymptomSheetOpen] = useState(false);
   const [editingPoop, setEditingPoop] = useState<PoopEntry | null>(null);
   const [editingMeal, setEditingMeal] = useState<FeedingEntry | null>(null);
   const [status, setStatus] = useState<HealthStatus>("healthy");
-  const [normalDesc, setNormalDesc] = useState("");
   const [childSwitcherExpanded, setChildSwitcherExpanded] = useState(false);
   const [activeBreastfeedingSide, setActiveBreastfeedingSide] = useState<"left" | "right" | null>(null);
   const {
@@ -216,9 +219,8 @@ export function Home() {
       activeChild.date_of_birth,
       activeChild.feeding_type,
       lastRealPoop?.logged_at ?? null,
-    ).then(([s, desc]) => {
+    ).then(([s]) => {
       setStatus(s);
-      setNormalDesc(desc);
     });
   }, [activeChild, lastRealPoop]);
 
@@ -408,6 +410,10 @@ export function Home() {
     await refreshEpisodes();
   };
 
+  const handleSleepLogged = async () => {
+    await refreshSleepLogs();
+  };
+
   const hasLogs = logs.length > 0;
   const lastPoopLabel = lastRealPoop?.logged_at ? timeSince(lastRealPoop.logged_at) : null;
   const summary = buildChildDailySummary({
@@ -419,6 +425,7 @@ export function Home() {
     symptomLogs,
   });
   const lastFeed = summary.lastFeed;
+  const lastNap = sleepLogs.find((entry) => entry.sleep_type === "nap") ?? null;
   const latestSymptom = summary.latestSymptom;
   const repeatablePoop = getRepeatablePoopEntry(lastRealPoop);
   const quickFeedPresets = getQuickFeedPresets(activeChild.feeding_type);
@@ -469,26 +476,33 @@ export function Home() {
 
           <div className="px-4">
             <div className="rounded-[18px] border border-[var(--color-border)] bg-[var(--color-surface-strong)] p-5 shadow-[var(--shadow-soft)]">
-              <p className="text-[10px] uppercase tracking-[0.18em] text-[var(--color-text-soft)]">
-                Time since last poop
+              <p className="text-[11px] uppercase tracking-[0.18em] text-[var(--color-text-soft)]">
+                Overview
               </p>
-              <div className="mt-4 flex items-center gap-5">
-                <TimeSinceIndicator
-                  lastPoopAt={lastRealPoop?.logged_at ?? null}
-                  status={status}
-                />
-                <div className="min-w-0 flex-1">
-                  <p className="text-[20px] font-semibold leading-tight text-[var(--color-text)]">
-                    {status === "healthy"
-                      ? `Still in ${activeChild.name}'s usual range`
-                      : status === "caution"
-                        ? `Still within ${activeChild.name}'s usual range`
-                        : `Time to pay closer attention`}
-                  </p>
-                  <p className="mt-3 text-[14px] leading-relaxed text-[var(--color-text-secondary)]">
-                    Feeds, stool type, and color are all easy to review at a glance.
-                  </p>
-                  <p className="mt-4 text-[12px] text-[var(--color-text-soft)]">{normalDesc}</p>
+              <p className="mt-2 text-[22px] font-semibold tracking-[-0.03em] text-[var(--color-text)]">
+                {activeChild.name}'s quick summary
+              </p>
+              <div className="mt-5 grid grid-cols-3 gap-3">
+                <div className="flex flex-col items-center gap-3 text-center">
+                  <TimeSinceIndicator
+                    timestamp={lastRealPoop?.logged_at ?? null}
+                    status={status === "alert" ? "unknown" : "healthy"}
+                  />
+                  <p className="text-[12px] font-medium uppercase tracking-[0.12em] text-[var(--color-text-soft)]">Last poop</p>
+                </div>
+                <div className="flex flex-col items-center gap-3 text-center">
+                  <TimeSinceIndicator
+                    timestamp={lastFeed?.logged_at ?? null}
+                    gradient="conic-gradient(from 210deg, var(--color-cta) 0deg, var(--color-gold) 160deg, var(--color-apricot) 360deg)"
+                  />
+                  <p className="text-[12px] font-medium uppercase tracking-[0.12em] text-[var(--color-text-soft)]">Last feed</p>
+                </div>
+                <div className="flex flex-col items-center gap-3 text-center">
+                  <TimeSinceIndicator
+                    timestamp={lastNap?.ended_at ?? lastNap?.started_at ?? null}
+                    gradient="conic-gradient(from 210deg, var(--color-info) 0deg, #8aa7ea 180deg, #c1d4ff 360deg)"
+                  />
+                  <p className="text-[12px] font-medium uppercase tracking-[0.12em] text-[var(--color-text-soft)]">Last nap</p>
                 </div>
               </div>
             </div>
@@ -567,21 +581,31 @@ export function Home() {
             </motion.button>
             <motion.button
               whileTap={{ scale: 0.98 }}
-              onClick={() => openEpisodeSheet(activeEpisode ? "update" : "start")}
+              onClick={() => setSleepSheetOpen(true)}
               className="min-h-[104px] rounded-[18px] border border-[var(--color-border)] bg-[var(--color-surface-strong)] px-4 py-4 text-left shadow-[var(--shadow-soft)] transition-colors hover:bg-white/70"
             >
-              <p className="text-[15px] font-semibold text-[var(--color-text)]">{episodeActionLabel}</p>
+              <p className="text-[15px] font-semibold text-[var(--color-text)]">Log sleep</p>
               <p className="mt-2 text-[12px] leading-relaxed text-[var(--color-text-secondary)]">
-                {episodeActionDescription}
+                Start a nap or night sleep log with timer or manual times.
               </p>
             </motion.button>
           </div>
 
-          <div className="mt-3">
+          <div className="mt-3 grid grid-cols-2 gap-3">
+            <button
+              type="button"
+              onClick={() => openEpisodeSheet(activeEpisode ? "update" : "start")}
+              className="rounded-[16px] border border-[var(--color-border)] bg-[var(--color-surface-strong)] px-4 py-3 text-left transition-colors hover:bg-white/70"
+            >
+              <p className="text-[14px] font-semibold text-[var(--color-text)]">{episodeActionLabel}</p>
+              <p className="mt-1 text-[12px] leading-relaxed text-[var(--color-text-secondary)]">
+                {episodeActionDescription}
+              </p>
+            </button>
             <button
               type="button"
               onClick={() => setSymptomSheetOpen(true)}
-              className="w-full rounded-[16px] border border-[var(--color-border)] bg-[var(--color-surface-strong)] px-4 py-3 text-left transition-colors hover:bg-white/70"
+              className="rounded-[16px] border border-[var(--color-border)] bg-[var(--color-surface-strong)] px-4 py-3 text-left transition-colors hover:bg-white/70"
             >
               <p className="text-[14px] font-semibold text-[var(--color-text)]">Log symptom</p>
               <p className="mt-1 text-[12px] leading-relaxed text-[var(--color-text-secondary)]">
@@ -836,6 +860,13 @@ export function Home() {
         childId={activeChild.id}
         activeEpisode={activeEpisode}
         onLogged={handleSymptomLogged}
+      />
+
+      <SleepLogSheet
+        open={sleepSheetOpen}
+        onClose={() => setSleepSheetOpen(false)}
+        childId={activeChild.id}
+        onLogged={handleSleepLogged}
       />
 
       {/* Edit sheets */}
