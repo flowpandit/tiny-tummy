@@ -4,7 +4,7 @@ import { useChildContext } from "../contexts/ChildContext";
 import { usePoopLogs } from "../hooks/usePoopLogs";
 import { useDietLogs } from "../hooks/useDietLogs";
 import { BITSS_TYPES, STOOL_COLORS } from "../lib/constants";
-import { FOOD_TYPES } from "../lib/diet-constants";
+import { getDietEntryDetailParts, getDietEntryPrimaryLabel, getDietEntrySecondaryText } from "../lib/feeding";
 import { Badge } from "../components/ui/badge";
 import { PoopIcon, MealIcon, NoPoopIcon } from "../components/ui/icons";
 import { DatePicker } from "../components/ui/date-picker";
@@ -138,7 +138,8 @@ function PoopItem({ log, onTap }: { log: PoopEntry; onTap: () => void }) {
 }
 
 function MealItem({ meal, onTap }: { meal: DietEntry; onTap: () => void }) {
-  const foodLabel = FOOD_TYPES.find((f) => f.value === meal.food_type)?.label ?? meal.food_type;
+  const detailText = getDietEntryDetailParts(meal).join(" · ");
+  const secondaryText = [detailText, getDietEntrySecondaryText(meal)].filter(Boolean).join(" • ");
 
   return (
     <div
@@ -149,11 +150,11 @@ function MealItem({ meal, onTap }: { meal: DietEntry; onTap: () => void }) {
       <span className="text-xs text-[var(--color-muted)] w-14 flex-shrink-0">{formatTime(meal.logged_at)}</span>
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium text-[var(--color-text)] truncate">
-          {meal.food_name ? `${foodLabel}: ${meal.food_name}` : foodLabel}
+          {getDietEntryPrimaryLabel(meal)}
         </p>
-        {meal.notes && <p className="text-xs text-[var(--color-text-secondary)] truncate">{meal.notes}</p>}
+        {secondaryText && <p className="text-xs text-[var(--color-text-secondary)] truncate">{secondaryText}</p>}
       </div>
-      <Badge variant="info">meal</Badge>
+      <Badge variant="info">feed</Badge>
     </div>
   );
 }
@@ -212,7 +213,7 @@ function DayCard({
           )}
           {mealCount > 0 && (
             <span className="text-xs text-[var(--color-primary)] font-medium">
-              {mealCount} meal{mealCount !== 1 ? "s" : ""}
+              {mealCount} feed{mealCount !== 1 ? "s" : ""}
             </span>
           )}
           {noPoopCount > 0 && (

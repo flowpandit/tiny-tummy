@@ -1,5 +1,15 @@
 import Database from "@tauri-apps/plugin-sql";
-import type { Child, PoopEntry, Alert, DietEntry, DailyFrequency, ConsistencyPoint, ColorCount } from "./types";
+import type {
+  Child,
+  PoopEntry,
+  Alert,
+  DietEntry,
+  DailyFrequency,
+  ConsistencyPoint,
+  ColorCount,
+  Episode,
+  EpisodeEvent,
+} from "./types";
 import { generateId, nowISO } from "./utils";
 
 let db: Database | null = null;
@@ -247,6 +257,12 @@ export async function createDietLog(input: {
   logged_at: string;
   food_type: string;
   food_name?: string | null;
+  amount_ml?: number | null;
+  duration_minutes?: number | null;
+  breast_side?: string | null;
+  bottle_content?: string | null;
+  reaction_notes?: string | null;
+  is_constipation_support?: number;
   notes?: string | null;
 }): Promise<DietEntry> {
   const conn = await getDb();
@@ -254,8 +270,25 @@ export async function createDietLog(input: {
   const now = nowISO();
 
   await conn.execute(
-    "INSERT INTO diet_logs (id, child_id, logged_at, food_type, food_name, notes, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
-    [id, input.child_id, input.logged_at, input.food_type, input.food_name ?? null, input.notes ?? null, now],
+    `INSERT INTO diet_logs (
+      id, child_id, logged_at, food_type, food_name, amount_ml, duration_minutes,
+      breast_side, bottle_content, reaction_notes, is_constipation_support, notes, created_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      id,
+      input.child_id,
+      input.logged_at,
+      input.food_type,
+      input.food_name ?? null,
+      input.amount_ml ?? null,
+      input.duration_minutes ?? null,
+      input.breast_side ?? null,
+      input.bottle_content ?? null,
+      input.reaction_notes ?? null,
+      input.is_constipation_support ?? 0,
+      input.notes ?? null,
+      now,
+    ],
   );
 
   return {
@@ -264,6 +297,12 @@ export async function createDietLog(input: {
     logged_at: input.logged_at,
     food_type: input.food_type as DietEntry["food_type"],
     food_name: input.food_name ?? null,
+    amount_ml: input.amount_ml ?? null,
+    duration_minutes: input.duration_minutes ?? null,
+    breast_side: (input.breast_side as DietEntry["breast_side"]) ?? null,
+    bottle_content: (input.bottle_content as DietEntry["bottle_content"]) ?? null,
+    reaction_notes: input.reaction_notes ?? null,
+    is_constipation_support: input.is_constipation_support ?? 0,
     notes: input.notes ?? null,
     created_at: now,
   };
@@ -286,6 +325,12 @@ export async function updateDietLog(
     logged_at?: string;
     food_type?: string;
     food_name?: string | null;
+    amount_ml?: number | null;
+    duration_minutes?: number | null;
+    breast_side?: string | null;
+    bottle_content?: string | null;
+    reaction_notes?: string | null;
+    is_constipation_support?: number;
     notes?: string | null;
   },
 ): Promise<void> {
@@ -296,6 +341,12 @@ export async function updateDietLog(
   if (updates.logged_at !== undefined) { sets.push("logged_at = ?"); params.push(updates.logged_at); }
   if (updates.food_type !== undefined) { sets.push("food_type = ?"); params.push(updates.food_type); }
   if (updates.food_name !== undefined) { sets.push("food_name = ?"); params.push(updates.food_name); }
+  if (updates.amount_ml !== undefined) { sets.push("amount_ml = ?"); params.push(updates.amount_ml); }
+  if (updates.duration_minutes !== undefined) { sets.push("duration_minutes = ?"); params.push(updates.duration_minutes); }
+  if (updates.breast_side !== undefined) { sets.push("breast_side = ?"); params.push(updates.breast_side); }
+  if (updates.bottle_content !== undefined) { sets.push("bottle_content = ?"); params.push(updates.bottle_content); }
+  if (updates.reaction_notes !== undefined) { sets.push("reaction_notes = ?"); params.push(updates.reaction_notes); }
+  if (updates.is_constipation_support !== undefined) { sets.push("is_constipation_support = ?"); params.push(updates.is_constipation_support); }
   if (updates.notes !== undefined) { sets.push("notes = ?"); params.push(updates.notes); }
 
   if (sets.length === 0) return;
@@ -306,6 +357,145 @@ export async function updateDietLog(
 export async function deleteDietLog(id: string): Promise<void> {
   const conn = await getDb();
   await conn.execute("DELETE FROM diet_logs WHERE id = ?", [id]);
+}
+
+// --- Episodes ---
+
+export async function createEpisode(input: {
+  child_id: string;
+  episode_type: string;
+  started_at: string;
+  summary?: string | null;
+}): Promise<Episode> {
+  const conn = await getDb();
+  const active = await conn.select<{ id: string }[]>(
+    "SELECT id FROM episodes WHERE child_id = ? AND status = 'active' LIMIT 1",
+    [input.child_id],
+  );
+
+  if (active.length > 0) {
+    throw new Error("An active episode already exists");
+  }
+
+  const id = generateId();
+  const now = nowISO();
+
+  await conn.execute(
+    `INSERT INTO episodes (
+      id, child_id, episode_type, status, started_at, ended_at, summary, outcome, created_at, updated_at
+    ) VALUES (?, ?, ?, 'active', ?, NULL, ?, NULL, ?, ?)`,
+    [id, input.child_id, input.episode_type, input.started_at, input.summary ?? null, now, now],
+  );
+
+  return {
+    id,
+    child_id: input.child_id,
+    episode_type: input.episode_type as Episode["episode_type"],
+    status: "active",
+    started_at: input.started_at,
+    ended_at: null,
+    summary: input.summary ?? null,
+    outcome: null,
+    created_at: now,
+    updated_at: now,
+  };
+}
+
+export async function getActiveEpisode(childId: string): Promise<Episode | null> {
+  const conn = await getDb();
+  const rows = await conn.select<Episode[]>(
+    "SELECT * FROM episodes WHERE child_id = ? AND status = 'active' ORDER BY started_at DESC LIMIT 1",
+    [childId],
+  );
+  return rows[0] ?? null;
+}
+
+export async function getEpisodes(childId: string, limit = 10): Promise<Episode[]> {
+  const conn = await getDb();
+  return conn.select<Episode[]>(
+    "SELECT * FROM episodes WHERE child_id = ? ORDER BY started_at DESC LIMIT ?",
+    [childId, limit],
+  );
+}
+
+export async function closeEpisode(
+  id: string,
+  input: { ended_at: string; outcome?: string | null },
+): Promise<void> {
+  const conn = await getDb();
+  await conn.execute(
+    "UPDATE episodes SET status = 'resolved', ended_at = ?, outcome = ?, updated_at = ? WHERE id = ?",
+    [input.ended_at, input.outcome ?? null, nowISO(), id],
+  );
+}
+
+export async function createEpisodeEvent(input: {
+  episode_id: string;
+  child_id: string;
+  event_type: string;
+  title: string;
+  notes?: string | null;
+  logged_at: string;
+}): Promise<EpisodeEvent> {
+  const conn = await getDb();
+  const id = generateId();
+  const now = nowISO();
+
+  await conn.execute(
+    `INSERT INTO episode_events (
+      id, episode_id, child_id, event_type, title, notes, logged_at, created_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    [id, input.episode_id, input.child_id, input.event_type, input.title, input.notes ?? null, input.logged_at, now],
+  );
+
+  return {
+    id,
+    episode_id: input.episode_id,
+    child_id: input.child_id,
+    event_type: input.event_type as EpisodeEvent["event_type"],
+    title: input.title,
+    notes: input.notes ?? null,
+    logged_at: input.logged_at,
+    created_at: now,
+  };
+}
+
+export async function getEpisodeEvents(episodeId: string): Promise<EpisodeEvent[]> {
+  const conn = await getDb();
+  return conn.select<EpisodeEvent[]>(
+    "SELECT * FROM episode_events WHERE episode_id = ? ORDER BY logged_at DESC",
+    [episodeId],
+  );
+}
+
+export async function getEpisodesForRange(
+  childId: string,
+  startDate: string,
+  endDate: string,
+): Promise<Episode[]> {
+  const conn = await getDb();
+  return conn.select<Episode[]>(
+    `SELECT * FROM episodes
+     WHERE child_id = ?
+       AND started_at <= ?
+       AND (ended_at IS NULL OR ended_at >= ?)
+     ORDER BY started_at DESC`,
+    [childId, endDate + "T23:59:59", startDate],
+  );
+}
+
+export async function getEpisodeEventsForRange(
+  childId: string,
+  startDate: string,
+  endDate: string,
+): Promise<EpisodeEvent[]> {
+  const conn = await getDb();
+  return conn.select<EpisodeEvent[]>(
+    `SELECT * FROM episode_events
+     WHERE child_id = ? AND logged_at >= ? AND logged_at <= ?
+     ORDER BY logged_at DESC`,
+    [childId, startDate, endDate + "T23:59:59"],
+  );
 }
 
 // --- Stats ---
@@ -367,6 +557,20 @@ export async function getPoopLogsForRange(
   const conn = await getDb();
   return conn.select<PoopEntry[]>(
     `SELECT * FROM poop_logs
+     WHERE child_id = ? AND logged_at >= ? AND logged_at <= ?
+     ORDER BY logged_at DESC`,
+    [childId, startDate, endDate + "T23:59:59"],
+  );
+}
+
+export async function getDietLogsForRange(
+  childId: string,
+  startDate: string,
+  endDate: string,
+): Promise<DietEntry[]> {
+  const conn = await getDb();
+  return conn.select<DietEntry[]>(
+    `SELECT * FROM diet_logs
      WHERE child_id = ? AND logged_at >= ? AND logged_at <= ?
      ORDER BY logged_at DESC`,
     [childId, startDate, endDate + "T23:59:59"],

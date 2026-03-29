@@ -81,7 +81,7 @@ export function Dashboard() {
         </div>
       </div>
       <p className="text-base leading-relaxed text-[var(--color-text-secondary)]">
-        Softer visual summaries to help you spot frequency, consistency, color, and meal correlations over time.
+        Softer visual summaries to help you spot frequency, consistency, color, and feed correlations over time.
       </p>
       </div>
 
@@ -140,9 +140,9 @@ export function Dashboard() {
         {/* Diet correlation timeline */}
         <Card>
           <CardHeader>
-            <CardTitle>Meals & Poops</CardTitle>
+            <CardTitle>Feeds & Poops</CardTitle>
             <p className="text-xs text-[var(--color-muted)]">
-              Timeline to help spot food→poop patterns
+              Timeline to help spot feeding and food→poop patterns
             </p>
           </CardHeader>
           <CardContent>

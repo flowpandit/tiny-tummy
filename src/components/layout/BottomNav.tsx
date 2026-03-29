@@ -30,11 +30,14 @@ const NAV_ITEMS = [
     ),
   },
   {
-    path: "/guidance",
-    label: "Guidance",
-    icon: (active: boolean) => (
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill={active ? "currentColor" : "none"} stroke="currentColor" strokeWidth={active ? 0 : 1.5} className="w-6 h-6">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" />
+    path: "/handoff",
+    label: "Handoff",
+    icon: () => (
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} className="w-6 h-6">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 7.5h8.25a3.75 3.75 0 0 1 0 7.5H14.5" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="m13.5 12 3 3-3 3" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 16.5H8.25a3.75 3.75 0 0 1 0-7.5H9.5" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="m10.5 12-3-3 3-3" />
       </svg>
     ),
   },
@@ -64,7 +67,7 @@ export function BottomNav() {
               key={item.path}
               onClick={() => navigate(item.path)}
               className={cn(
-                "flex h-[60px] w-16 flex-col items-center justify-center gap-1 rounded-[20px] cursor-pointer transition-all duration-200",
+                "flex h-[60px] min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-[20px] cursor-pointer transition-all duration-200",
                 isActive
                   ? "bg-[var(--color-bg-elevated)] text-[var(--color-primary)] shadow-[var(--shadow-soft)]"
                   : "text-[var(--color-muted)] hover:text-[var(--color-text-secondary)]",
@@ -72,7 +75,7 @@ export function BottomNav() {
               aria-label={item.label}
             >
               {item.icon(isActive)}
-              <span className="text-[10px] font-semibold tracking-[0.02em]">{item.label}</span>
+              <span className="text-[10px] font-semibold tracking-[0.02em] truncate max-w-full px-1">{item.label}</span>
             </button>
           );
         })}

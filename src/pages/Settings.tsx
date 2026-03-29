@@ -6,10 +6,18 @@ import { Card, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { DatePicker } from "../components/ui/date-picker";
 import { Sheet } from "../components/ui/sheet";
+import { useToast } from "../components/ui/toast";
 import { FEEDING_TYPES, AVATAR_COLORS } from "../lib/constants";
 import { getAgeLabelFromDob } from "../lib/utils";
 import { cn } from "../lib/cn";
-import { isDailyReminderEnabled, enableDailyReminder, cancelDailyReminder } from "../lib/notifications";
+import {
+  isDailyReminderEnabled,
+  enableDailyReminder,
+  cancelDailyReminder,
+  getSmartReminderSettings,
+  setSmartReminderEnabled,
+  syncSmartRemindersForChildren,
+} from "../lib/notifications";
 import { AvatarUpload } from "../components/child/AvatarUpload";
 import { Avatar } from "../components/child/Avatar";
 import { saveAvatar, deleteAvatar } from "../lib/photos";
@@ -163,13 +171,21 @@ function EditChildSheet({
   );
 }
 
-function NotificationSection() {
+function NotificationSection({ children }: { children: Child[] }) {
+  const { showError } = useToast();
   const [enabled, setEnabled] = useState(false);
+  const [smartSettings, setSmartSettings] = useState({
+    noPoop: false,
+    redFlagFollowUp: false,
+    episodeCheckIn: false,
+    solidsHydration: false,
+  });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    isDailyReminderEnabled().then((val) => {
-      setEnabled(val);
+    Promise.all([isDailyReminderEnabled(), getSmartReminderSettings()]).then(([daily, smart]) => {
+      setEnabled(daily);
+      setSmartSettings(smart);
       setLoading(false);
     });
   }, []);
@@ -185,6 +201,50 @@ function NotificationSection() {
     }
     setLoading(false);
   };
+
+  const handleSmartToggle = async (key: keyof typeof smartSettings) => {
+    setLoading(true);
+    const nextValue = !smartSettings[key];
+    const success = await setSmartReminderEnabled(key, nextValue);
+
+    if (!success) {
+      showError("Notifications are not allowed on this device.");
+      setLoading(false);
+      return;
+    }
+
+    const nextSettings = { ...smartSettings, [key]: nextValue };
+    setSmartSettings(nextSettings);
+    await syncSmartRemindersForChildren(children);
+    setLoading(false);
+  };
+
+  const reminderRows: Array<{
+    key: keyof typeof smartSettings;
+    title: string;
+    description: string;
+  }> = [
+    {
+      key: "noPoop",
+      title: "No-poop threshold",
+      description: "Age-aware reminder when it's time to review a long gap since the last poop.",
+    },
+    {
+      key: "redFlagFollowUp",
+      title: "Red-flag stool follow-up",
+      description: "Follow up after white, red, or post-newborn black stool entries.",
+    },
+    {
+      key: "episodeCheckIn",
+      title: "Active episode check-in",
+      description: "Nudge you to add another update when an episode is still active.",
+    },
+    {
+      key: "solidsHydration",
+      title: "Solids hydration check",
+      description: "Extra hydration reminder while a solids transition episode is active.",
+    },
+  ];
 
   return (
     <div className="mb-6">
@@ -220,6 +280,40 @@ function NotificationSection() {
           </button>
         </CardContent>
       </Card>
+
+      <div className="mt-3 flex flex-col gap-2">
+        {reminderRows.map((row) => (
+          <Card key={row.key}>
+            <CardContent className="py-3 flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-[var(--color-text)]">{row.title}</p>
+                <p className="text-xs text-[var(--color-text-secondary)]">
+                  {row.description}
+                </p>
+              </div>
+              <button
+                onClick={() => handleSmartToggle(row.key)}
+                disabled={loading}
+                className={cn(
+                  "relative w-12 h-7 rounded-full cursor-pointer transition-colors duration-200 shrink-0",
+                  smartSettings[row.key] ? "bg-[var(--color-primary)]" : "bg-[var(--color-border)]",
+                  loading && "opacity-50",
+                )}
+                role="switch"
+                aria-checked={smartSettings[row.key]}
+                aria-label={`Toggle ${row.title}`}
+              >
+                <div
+                  className={cn(
+                    "absolute top-0.5 w-6 h-6 rounded-full bg-white shadow-sm transition-transform duration-200",
+                    smartSettings[row.key] ? "translate-x-5.5" : "translate-x-0.5",
+                  )}
+                />
+              </button>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
     </div>
   );
 }
@@ -381,32 +475,54 @@ export function Settings() {
       <ThemeSection />
 
       {/* Notifications */}
-      <NotificationSection />
+      <NotificationSection children={children} />
 
       {/* Reports */}
       <div className="mb-6">
         <h3 className="text-sm font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider mb-3">
-          Reports
+          Support
         </h3>
-        <Card
-          role="button"
-          tabIndex={0}
-          onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") navigate("/report"); }}
-          className="cursor-pointer hover:shadow-[var(--shadow-soft)] transition-shadow"
-          onClick={() => navigate("/report")}
-        >
-          <CardContent className="py-3 flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-[var(--color-text)]">Generate Report</p>
-              <p className="text-xs text-[var(--color-text-secondary)]">
-                Summary for your doctor
-              </p>
-            </div>
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="var(--color-muted)" className="w-5 h-5">
-              <path fillRule="evenodd" d="M8.22 5.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L11.94 10 8.22 6.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
-            </svg>
-          </CardContent>
-        </Card>
+        <div className="flex flex-col gap-2">
+          <Card
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") navigate("/guidance"); }}
+            className="cursor-pointer hover:shadow-[var(--shadow-soft)] transition-shadow"
+            onClick={() => navigate("/guidance")}
+          >
+            <CardContent className="py-3 flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-[var(--color-text)]">Guidance</p>
+                <p className="text-xs text-[var(--color-text-secondary)]">
+                  Evidence-based tips and when to call the doctor
+                </p>
+              </div>
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="var(--color-muted)" className="w-5 h-5">
+                <path fillRule="evenodd" d="M8.22 5.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L11.94 10 8.22 6.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
+              </svg>
+            </CardContent>
+          </Card>
+
+          <Card
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") navigate("/report"); }}
+            className="cursor-pointer hover:shadow-[var(--shadow-soft)] transition-shadow"
+            onClick={() => navigate("/report")}
+          >
+            <CardContent className="py-3 flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-[var(--color-text)]">Generate Report</p>
+                <p className="text-xs text-[var(--color-text-secondary)]">
+                  Summary for your doctor
+                </p>
+              </div>
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="var(--color-muted)" className="w-5 h-5">
+                <path fillRule="evenodd" d="M8.22 5.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L11.94 10 8.22 6.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
+              </svg>
+            </CardContent>
+          </Card>
+        </div>
       </div>
 
       {/* About */}

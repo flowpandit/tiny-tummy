@@ -9,12 +9,36 @@ import { DatePicker } from "../components/ui/date-picker";
 import { Badge } from "../components/ui/badge";
 import { getAgeLabelFromDob, formatDate } from "../lib/utils";
 import { BITSS_TYPES, STOOL_COLORS } from "../lib/constants";
+import { getDietEntryDisplayLabel, getDietEntrySecondaryText } from "../lib/feeding";
+import { getEpisodeEventTypeLabel, getEpisodeTypeLabel } from "../lib/episode-constants";
 import * as db from "../lib/db";
 import { useToast } from "../components/ui/toast";
-import type { PoopEntry } from "../lib/types";
+import type { DietEntry, Episode, EpisodeEvent, PoopEntry } from "../lib/types";
+
+interface EpisodeReportGroup {
+  episode: Episode;
+  events: EpisodeEvent[];
+}
+
+interface ReportHighlight {
+  tone: "alert" | "caution" | "info";
+  title: string;
+  detail: string;
+}
+
+interface ReportOptions {
+  includeFeeds: boolean;
+  includeEpisodes: boolean;
+  includeNotes: boolean;
+  includeCaregiverNote: boolean;
+}
 
 interface ReportData {
   logs: PoopEntry[];
+  dietLogs: DietEntry[];
+  episodeGroups: EpisodeReportGroup[];
+  caregiverNote: string | null;
+  highlights: ReportHighlight[];
   stats: {
     totalPoops: number;
     totalNoPoop: number;
@@ -36,24 +60,143 @@ export function Report() {
   const [endDate, setEndDate] = useState(today);
   const [reportData, setReportData] = useState<ReportData | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [options, setOptions] = useState<ReportOptions>({
+    includeFeeds: true,
+    includeEpisodes: true,
+    includeNotes: true,
+    includeCaregiverNote: true,
+  });
 
   if (!activeChild) return null;
   const child = activeChild;
-
-  const handleGenerate = async () => {
-    setIsGenerating(true);
-    const [logs, stats] = await Promise.all([
-      db.getPoopLogsForRange(activeChild.id, startDate, endDate),
-      db.getReportStats(activeChild.id, startDate, endDate),
-    ]);
-    setReportData({ logs, stats });
-    setIsGenerating(false);
-  };
 
   const typeLabel = (type: number) =>
     BITSS_TYPES.find((b) => b.type === type)?.label ?? `Type ${type}`;
   const colorLabel = (color: string) =>
     STOOL_COLORS.find((c) => c.value === color)?.label ?? color;
+
+  function getLongestNoPoopStreak(logs: PoopEntry[]): number {
+    const dates = [...new Set(
+      logs
+        .filter((log) => log.is_no_poop === 1)
+        .map((log) => log.logged_at.split("T")[0]),
+    )].sort();
+
+    if (dates.length === 0) return 0;
+
+    let longest = 1;
+    let current = 1;
+
+    for (let index = 1; index < dates.length; index += 1) {
+      const previous = new Date(`${dates[index - 1]}T00:00:00`);
+      const next = new Date(`${dates[index]}T00:00:00`);
+      const dayDiff = (next.getTime() - previous.getTime()) / 86400000;
+
+      if (dayDiff === 1) {
+        current += 1;
+        longest = Math.max(longest, current);
+      } else {
+        current = 1;
+      }
+    }
+
+    return longest;
+  }
+
+  function buildHighlights(data: {
+    logs: PoopEntry[];
+    dietLogs: DietEntry[];
+    episodeGroups: EpisodeReportGroup[];
+  }): ReportHighlight[] {
+    const highlights: ReportHighlight[] = [];
+    const redFlagLogs = data.logs.filter((log) => {
+      const colorInfo = log.color ? STOOL_COLORS.find((item) => item.value === log.color) : null;
+      return log.is_no_poop === 0 && colorInfo?.isRedFlag;
+    });
+    const hardStoolCount = data.logs.filter((log) => (log.stool_type ?? 99) <= 2).length;
+    const looseStoolCount = data.logs.filter((log) => (log.stool_type ?? 0) >= 6).length;
+    const longestNoPoopStreak = getLongestNoPoopStreak(data.logs);
+    const activeEpisode = data.episodeGroups.find((group) => group.episode.status === "active");
+
+    if (redFlagLogs.length > 0) {
+      const lastRedFlag = redFlagLogs[0];
+      highlights.push({
+        tone: "alert",
+        title: "Red-flag stool logged",
+        detail: `${colorLabel(lastRedFlag.color ?? "")} stool appears in this period and should be reviewed in context.`,
+      });
+    }
+
+    if (longestNoPoopStreak >= 2) {
+      highlights.push({
+        tone: "caution",
+        title: "No-poop streak recorded",
+        detail: `Longest marked no-poop streak was ${longestNoPoopStreak} day${longestNoPoopStreak !== 1 ? "s" : ""}.`,
+      });
+    }
+
+    if (hardStoolCount >= 2) {
+      highlights.push({
+        tone: "caution",
+        title: "Hard stool pattern",
+        detail: `${hardStoolCount} stool entr${hardStoolCount === 1 ? "y" : "ies"} were Type 1-2 during this period.`,
+      });
+    }
+
+    if (looseStoolCount >= 2) {
+      highlights.push({
+        tone: "alert",
+        title: "Loose stool pattern",
+        detail: `${looseStoolCount} stool entr${looseStoolCount === 1 ? "y" : "ies"} were Type 6-7 during this period.`,
+      });
+    }
+
+    if (activeEpisode) {
+      highlights.push({
+        tone: "info",
+        title: "Active episode in progress",
+        detail: `${getEpisodeTypeLabel(activeEpisode.episode.episode_type)} is still active with ${activeEpisode.events.length} update${activeEpisode.events.length !== 1 ? "s" : ""}.`,
+      });
+    } else if (data.episodeGroups.length > 0) {
+      highlights.push({
+        tone: "info",
+        title: "Episode history recorded",
+        detail: `${data.episodeGroups.length} episode${data.episodeGroups.length !== 1 ? "s" : ""} captured in this date range.`,
+      });
+    }
+
+    if (highlights.length === 0) {
+      highlights.push({
+        tone: "info",
+        title: "No major changes highlighted",
+        detail: "This period does not include red-flag colors, marked no-poop streaks, or episode activity.",
+      });
+    }
+
+    return highlights.slice(0, 4);
+  }
+
+  const handleGenerate = async () => {
+    setIsGenerating(true);
+    const [logs, dietLogs, episodes, episodeEvents, caregiverNote, stats] = await Promise.all([
+      db.getPoopLogsForRange(activeChild.id, startDate, endDate),
+      db.getDietLogsForRange(activeChild.id, startDate, endDate),
+      db.getEpisodesForRange(activeChild.id, startDate, endDate),
+      db.getEpisodeEventsForRange(activeChild.id, startDate, endDate),
+      db.getSetting(`handoff_note:${activeChild.id}`),
+      db.getReportStats(activeChild.id, startDate, endDate),
+    ]);
+
+    const episodeGroups: EpisodeReportGroup[] = episodes.map((episode) => ({
+      episode,
+      events: episodeEvents.filter((event) => event.episode_id === episode.id),
+    }));
+
+    const highlights = buildHighlights({ logs, dietLogs, episodeGroups });
+
+    setReportData({ logs, dietLogs, episodeGroups, caregiverNote, highlights, stats });
+    setIsGenerating(false);
+  };
 
   function escapeHtml(value: string): string {
     return value
@@ -65,9 +208,10 @@ export function Report() {
   }
 
   function buildPrintableHtml(data: ReportData): string {
+    const logEntries = data.logs.filter((log) => !log.is_no_poop || log.is_no_poop === 1);
     const entriesHtml = data.logs.length === 0
       ? '<p class="empty">No entries in this date range.</p>'
-      : data.logs.map((log) => {
+      : logEntries.map((log) => {
           const colorInfo = log.color ? STOOL_COLORS.find((c) => c.value === log.color) : null;
           const dotColor = log.is_no_poop
             ? "#98a2b3"
@@ -83,11 +227,51 @@ export function Report() {
               <td class="entry">
                 <span class="dot" style="background:${dotColor}"></span>
                 ${escapeHtml(label)}
+                ${options.includeNotes && log.notes ? `<div class="subtle note">${escapeHtml(log.notes)}</div>` : ""}
               </td>
               <td class="size">${escapeHtml(log.size ?? "—")}</td>
             </tr>
           `;
         }).join("");
+
+    const feedEntriesHtml = data.dietLogs.length === 0
+      ? '<p class="empty">No feeds or meals in this date range.</p>'
+      : data.dietLogs.map((log) => `
+          <tr>
+            <td class="date">${escapeHtml(formatDate(log.logged_at))}</td>
+            <td class="entry">${escapeHtml(getDietEntryDisplayLabel(log))}</td>
+            <td class="size">${escapeHtml(options.includeNotes ? (getDietEntrySecondaryText(log) ?? "—") : "—")}</td>
+          </tr>
+        `).join("");
+
+    const episodeEntriesHtml = data.episodeGroups.length === 0
+      ? '<p class="empty">No episodes in this date range.</p>'
+      : data.episodeGroups.map(({ episode, events }) => `
+          <div class="episode">
+            <p class="episode-title">${escapeHtml(getEpisodeTypeLabel(episode.episode_type))} · ${escapeHtml(episode.status === "active" ? "Active" : "Resolved")}</p>
+            <p class="subtle">${escapeHtml(formatDate(episode.started_at))}${episode.ended_at ? ` to ${escapeHtml(formatDate(episode.ended_at))}` : ""}</p>
+            ${options.includeNotes && episode.summary ? `<p class="episode-copy">${escapeHtml(episode.summary)}</p>` : ""}
+            ${options.includeNotes && episode.outcome ? `<p class="episode-copy"><strong>Outcome:</strong> ${escapeHtml(episode.outcome)}</p>` : ""}
+            ${events.length > 0 ? `
+              <ul class="episode-list">
+                ${events.map((event) => `
+                  <li>
+                    <strong>${escapeHtml(event.title)}</strong>
+                    <span class="subtle"> · ${escapeHtml(getEpisodeEventTypeLabel(event.event_type))} · ${escapeHtml(formatDate(event.logged_at))}</span>
+                    ${options.includeNotes && event.notes ? `<div class="subtle">${escapeHtml(event.notes)}</div>` : ""}
+                  </li>
+                `).join("")}
+              </ul>
+            ` : ""}
+          </div>
+        `).join("");
+
+    const highlightsHtml = data.highlights.map((highlight) => `
+      <div class="highlight highlight-${highlight.tone}">
+        <strong>${escapeHtml(highlight.title)}</strong>
+        <p class="subtle" style="margin-top:6px;">${escapeHtml(highlight.detail)}</p>
+      </div>
+    `).join("");
 
     return `<!doctype html>
 <html lang="en">
@@ -177,6 +361,49 @@ export function Report() {
         text-align: center;
         padding: 18px 0 4px;
       }
+      .note {
+        margin-top: 4px;
+      }
+      .highlight-list {
+        display: grid;
+        gap: 10px;
+        margin-top: 16px;
+      }
+      .highlight {
+        border-radius: 16px;
+        padding: 14px;
+        border: 1px solid var(--line);
+        background: #fff8f1;
+      }
+      .highlight-alert {
+        background: #fff2ef;
+      }
+      .highlight-caution {
+        background: #fff7ea;
+      }
+      .highlight-info {
+        background: #f4f9ff;
+      }
+      .episode + .episode {
+        margin-top: 16px;
+        padding-top: 16px;
+        border-top: 1px solid var(--line);
+      }
+      .episode-title {
+        font-size: 16px;
+        font-weight: 600;
+      }
+      .episode-copy {
+        margin-top: 8px;
+        line-height: 1.5;
+      }
+      .episode-list {
+        margin: 10px 0 0;
+        padding-left: 18px;
+      }
+      .episode-list li + li {
+        margin-top: 8px;
+      }
       .footer {
         margin-top: 10px;
         color: var(--ink-soft);
@@ -218,12 +445,38 @@ export function Report() {
           </div>
         </div>
         ${data.stats.totalNoPoop > 0 ? `<p class="subtle" style="margin-top:12px;text-align:center;">${data.stats.totalNoPoop} no-poop day${data.stats.totalNoPoop > 1 ? "s" : ""} recorded</p>` : ""}
+        ${data.dietLogs.length > 0 ? `<p class="subtle" style="margin-top:10px;text-align:center;">${data.dietLogs.length} feed${data.dietLogs.length > 1 ? "s" : ""} recorded</p>` : ""}
+        ${data.episodeGroups.length > 0 ? `<p class="subtle" style="margin-top:10px;text-align:center;">${data.episodeGroups.length} episode${data.episodeGroups.length > 1 ? "s" : ""} captured</p>` : ""}
+        <div class="highlight-list">
+          ${highlightsHtml}
+        </div>
       </section>
+
+      ${options.includeCaregiverNote && data.caregiverNote ? `
+        <section class="card">
+          <h2>Caregiver Note</h2>
+          <p class="episode-copy">${escapeHtml(data.caregiverNote)}</p>
+        </section>
+      ` : ""}
 
       <section class="card">
         <h2>Log Entries (${data.logs.length})</h2>
         ${data.logs.length === 0 ? entriesHtml : `<table><tbody>${entriesHtml}</tbody></table>`}
       </section>
+
+      ${options.includeFeeds ? `
+        <section class="card">
+          <h2>Feeds & Meals (${data.dietLogs.length})</h2>
+          ${data.dietLogs.length === 0 ? feedEntriesHtml : `<table><tbody>${feedEntriesHtml}</tbody></table>`}
+        </section>
+      ` : ""}
+
+      ${options.includeEpisodes ? `
+        <section class="card">
+          <h2>Episodes (${data.episodeGroups.length})</h2>
+          ${episodeEntriesHtml}
+        </section>
+      ` : ""}
 
       <p class="footer">Open your browser or system share/print menu to save this as PDF.</p>
     </main>
@@ -273,7 +526,7 @@ export function Report() {
           Report
         </h2>
         <p className="mt-3 text-base leading-relaxed text-[var(--color-text-secondary)]">
-          Generate a summary to share with your doctor.
+          Generate a poop and feeding summary to share with your doctor.
         </p>
       </div>
 
@@ -309,6 +562,35 @@ export function Report() {
                 overlayOffsetY={48}
                 usePortal
               />
+            </div>
+          </div>
+          <div className="mb-4 flex flex-col gap-2">
+            <p className="text-xs font-medium text-[var(--color-text-secondary)]">Include in report</p>
+            <div className="flex flex-wrap gap-2">
+              {[
+                { key: "includeFeeds", label: "Feeds" },
+                { key: "includeEpisodes", label: "Episodes" },
+                { key: "includeNotes", label: "Notes" },
+                { key: "includeCaregiverNote", label: "Caregiver note" },
+              ].map((item) => (
+                <button
+                  key={item.key}
+                  type="button"
+                  onClick={() =>
+                    setOptions((current) => ({
+                      ...current,
+                      [item.key]: !current[item.key as keyof ReportOptions],
+                    }))
+                  }
+                  className={`px-3 py-2 rounded-[var(--radius-full)] text-xs font-semibold border transition-colors ${
+                    options[item.key as keyof ReportOptions]
+                      ? "border-[var(--color-primary)] bg-[var(--color-primary)]/10 text-[var(--color-primary)]"
+                      : "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-secondary)]"
+                  }`}
+                >
+                  {item.label}
+                </button>
+              ))}
             </div>
           </div>
           <Button
@@ -391,8 +673,48 @@ export function Report() {
                   {reportData.stats.totalNoPoop} "no poop" day{reportData.stats.totalNoPoop > 1 ? "s" : ""} recorded
                 </p>
               )}
+              {reportData.dietLogs.length > 0 && (
+                <p className="text-xs text-[var(--color-muted)] mt-2 text-center">
+                  {reportData.dietLogs.length} feed{reportData.dietLogs.length > 1 ? "s" : ""} recorded
+                </p>
+              )}
+              {reportData.episodeGroups.length > 0 && (
+                <p className="text-xs text-[var(--color-muted)] mt-2 text-center">
+                  {reportData.episodeGroups.length} episode{reportData.episodeGroups.length > 1 ? "s" : ""} captured
+                </p>
+              )}
+              <div className="mt-4 flex flex-col gap-2">
+                {reportData.highlights.map((highlight, index) => (
+                  <div
+                    key={`${highlight.title}-${index}`}
+                    className={`rounded-[var(--radius-md)] border px-3 py-3 ${
+                      highlight.tone === "alert"
+                        ? "border-[var(--color-alert)]/20 bg-[var(--color-alert-bg)]"
+                        : highlight.tone === "caution"
+                          ? "border-[var(--color-caution)]/20 bg-[var(--color-caution-bg)]"
+                          : "border-[var(--color-info)]/20 bg-[var(--color-info-bg)]"
+                    }`}
+                  >
+                    <p className="text-sm font-medium text-[var(--color-text)]">{highlight.title}</p>
+                    <p className="mt-1 text-xs leading-relaxed text-[var(--color-text-secondary)]">{highlight.detail}</p>
+                  </div>
+                ))}
+              </div>
             </CardContent>
           </Card>
+
+          {options.includeCaregiverNote && reportData.caregiverNote && (
+            <Card className="mb-4">
+              <CardHeader>
+                <CardTitle>Caregiver Note</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm leading-relaxed text-[var(--color-text-secondary)]">
+                  {reportData.caregiverNote}
+                </p>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Log entries */}
           <Card className="mb-4">
@@ -409,9 +731,9 @@ export function Report() {
                   {reportData.logs.map((log) => {
                     const colorInfo = log.color ? STOOL_COLORS.find((c) => c.value === log.color) : null;
                     return (
-                      <div key={log.id} className="flex items-center gap-2 py-1.5 border-b border-[var(--color-border)] last:border-0">
+                      <div key={log.id} className="flex items-start gap-2 py-1.5 border-b border-[var(--color-border)] last:border-0">
                         <div
-                          className="w-3 h-3 rounded-full flex-shrink-0 border border-[var(--color-border)]"
+                          className="mt-1 w-3 h-3 rounded-full flex-shrink-0 border border-[var(--color-border)]"
                           style={{
                             backgroundColor: log.is_no_poop
                               ? "var(--color-muted)"
@@ -421,14 +743,26 @@ export function Report() {
                         <span className="text-xs text-[var(--color-muted)] w-24 flex-shrink-0">
                           {formatDate(log.logged_at)}
                         </span>
-                        <span className="text-xs text-[var(--color-text)] flex-1 truncate">
-                          {log.is_no_poop
-                            ? "No poop"
-                            : log.stool_type
-                              ? `Type ${log.stool_type}: ${typeLabel(log.stool_type)}`
-                              : "Logged"}
-                        </span>
-                        {log.size && <Badge variant="default">{log.size}</Badge>}
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-[var(--color-text)] truncate">
+                              {log.is_no_poop
+                                ? "No poop"
+                                : log.stool_type
+                                  ? `Type ${log.stool_type}: ${typeLabel(log.stool_type)}`
+                                  : "Logged"}
+                            </span>
+                            {log.color && STOOL_COLORS.find((c) => c.value === log.color)?.isRedFlag && (
+                              <Badge variant="alert">red flag</Badge>
+                            )}
+                            {log.size && <Badge variant="default">{log.size}</Badge>}
+                          </div>
+                          {options.includeNotes && log.notes && (
+                            <p className="mt-1 text-[11px] text-[var(--color-text-secondary)]">
+                              {log.notes}
+                            </p>
+                          )}
+                        </div>
                       </div>
                     );
                   })}
@@ -436,6 +770,110 @@ export function Report() {
               )}
             </CardContent>
           </Card>
+
+          {options.includeFeeds && (
+            <Card className="mb-4">
+              <CardHeader>
+                <CardTitle>Feeds & Meals ({reportData.dietLogs.length})</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {reportData.dietLogs.length === 0 ? (
+                  <p className="text-sm text-[var(--color-muted)] text-center py-4">
+                    No feeds or meals in this date range.
+                  </p>
+                ) : (
+                  <div className="flex flex-col gap-1.5 max-h-80 overflow-y-auto">
+                    {reportData.dietLogs.map((log) => (
+                      <div key={log.id} className="flex items-start gap-2 py-1.5 border-b border-[var(--color-border)] last:border-0">
+                        <div className="mt-1 w-3 h-3 rounded-full flex-shrink-0 border border-[var(--color-border)] bg-[#f7b183]" />
+                        <span className="text-xs text-[var(--color-muted)] w-24 flex-shrink-0">
+                          {formatDate(log.logged_at)}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs text-[var(--color-text)] truncate">
+                            {getDietEntryDisplayLabel(log)}
+                          </p>
+                          {options.includeNotes && getDietEntrySecondaryText(log) && (
+                            <p className="text-[11px] text-[var(--color-text-secondary)] truncate mt-0.5">
+                              {getDietEntrySecondaryText(log)}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {options.includeEpisodes && (
+            <Card className="mb-4">
+              <CardHeader>
+                <CardTitle>Episodes ({reportData.episodeGroups.length})</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {reportData.episodeGroups.length === 0 ? (
+                  <p className="text-sm text-[var(--color-muted)] text-center py-4">
+                    No episodes in this date range.
+                  </p>
+                ) : (
+                  <div className="flex flex-col gap-3">
+                    {reportData.episodeGroups.map(({ episode, events }) => (
+                      <div key={episode.id} className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg)] p-3">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <p className="text-sm font-semibold text-[var(--color-text)]">
+                              {getEpisodeTypeLabel(episode.episode_type)}
+                            </p>
+                            <p className="mt-1 text-xs text-[var(--color-text-soft)]">
+                              {formatDate(episode.started_at)}
+                              {episode.ended_at ? ` to ${formatDate(episode.ended_at)}` : ""}
+                            </p>
+                          </div>
+                          <Badge variant={episode.status === "active" ? "info" : "default"}>
+                            {episode.status === "active" ? "Active" : "Resolved"}
+                          </Badge>
+                        </div>
+
+                        {options.includeNotes && episode.summary && (
+                          <p className="mt-2 text-sm leading-relaxed text-[var(--color-text-secondary)]">
+                            {episode.summary}
+                          </p>
+                        )}
+
+                        {options.includeNotes && episode.outcome && (
+                          <p className="mt-2 text-sm leading-relaxed text-[var(--color-text-secondary)]">
+                            Outcome: {episode.outcome}
+                          </p>
+                        )}
+
+                        {events.length > 0 && (
+                          <div className="mt-3 flex flex-col gap-2 border-t border-[var(--color-border)] pt-3">
+                            {events.map((event) => (
+                              <div key={event.id}>
+                                <p className="text-xs font-medium text-[var(--color-text)]">
+                                  {event.title}
+                                </p>
+                                <p className="mt-0.5 text-[11px] text-[var(--color-text-soft)]">
+                                  {getEpisodeEventTypeLabel(event.event_type)} · {formatDate(event.logged_at)}
+                                </p>
+                                {options.includeNotes && event.notes && (
+                                  <p className="mt-1 text-[11px] text-[var(--color-text-secondary)]">
+                                    {event.notes}
+                                  </p>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
 
           {/* Print button */}
           <Button variant="cta" className="w-full mb-4" onClick={handlePrint}>

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { getGuidanceTips } from "../lib/tauri";
 import { Card, CardContent } from "../components/ui/card";
@@ -71,6 +72,7 @@ function TipCard({ tip }: { tip: GuidanceTip }) {
 const ALL_FILTER = "All";
 
 export function Guidance() {
+  const navigate = useNavigate();
   const [tips, setTips] = useState<GuidanceTip[]>([]);
   const [activeFilter, setActiveFilter] = useState(ALL_FILTER);
 
@@ -97,6 +99,16 @@ export function Guidance() {
 
   return (
     <div className="px-4 py-5">
+      <button
+        onClick={() => navigate("/settings")}
+        className="mb-4 flex items-center gap-1 text-sm text-[var(--color-primary)] cursor-pointer"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+          <path fillRule="evenodd" d="M17 10a.75.75 0 0 1-.75.75H5.612l4.158 3.96a.75.75 0 1 1-1.04 1.08l-5.5-5.25a.75.75 0 0 1 0-1.08l5.5-5.25a.75.75 0 1 1 1.04 1.08L5.612 9.25H16.25A.75.75 0 0 1 17 10Z" clipRule="evenodd" />
+        </svg>
+        Back to Settings
+      </button>
+
       <div className="mb-5 rounded-[16px] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-[var(--shadow-soft)] backdrop-blur-xl">
         <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--color-text-soft)]">Support</p>
         <h2 className="mt-2 font-[var(--font-display)] text-3xl font-semibold text-[var(--color-text)]">

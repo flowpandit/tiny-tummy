@@ -6,18 +6,22 @@ import { useDietLogs } from "../hooks/useDietLogs";
 import { useAlerts } from "../hooks/useAlerts";
 import { useAlertEngine } from "../hooks/useAlertEngine";
 import { useStats } from "../hooks/useStats";
+import { useEpisodes } from "../hooks/useEpisodes";
 import { getChildStatus } from "../lib/tauri";
 import { timeSince } from "../lib/utils";
+import { syncSmartRemindersForChild, syncSmartRemindersForChildren } from "../lib/notifications";
 import * as db from "../lib/db";
 import { ChildSwitcherCard } from "../components/home/ChildSwitcherCard";
 import { TimeSinceIndicator } from "../components/home/TimeSinceIndicator";
 import { WeeklyPatternCard } from "../components/home/WeeklyPatternCard";
+import { EpisodeCard } from "../components/home/EpisodeCard";
 import { RecentActivity } from "../components/home/RecentActivity";
 import { AlertBanner } from "../components/dashboard/AlertBanner";
 import { LogForm } from "../components/logging/LogForm";
 import { DietLogForm } from "../components/logging/DietLogForm";
 import { EditPoopSheet } from "../components/logging/EditPoopSheet";
 import { EditMealSheet } from "../components/logging/EditMealSheet";
+import { EpisodeSheet } from "../components/episodes/EpisodeSheet";
 import { NoLogsYet } from "../components/empty-states/NoLogsYet";
 import type { HealthStatus, PoopEntry, DietEntry } from "../lib/types";
 
@@ -25,11 +29,13 @@ export function Home() {
   const { activeChild, children, setActiveChildId } = useChildContext();
   const { logs, lastRealPoop, refresh: refreshLogs } = usePoopLogs(activeChild?.id ?? null);
   const { logs: dietLogs, refresh: refreshDietLogs } = useDietLogs(activeChild?.id ?? null);
+  const { activeEpisode, events: episodeEvents, recentEpisodes, refresh: refreshEpisodes } = useEpisodes(activeChild?.id ?? null);
   const { alerts, refresh: refreshAlerts, dismiss } = useAlerts(activeChild?.id ?? null);
   const { frequency, consistency, colorDist } = useStats(activeChild?.id ?? null, 7);
   const { runChecks } = useAlertEngine();
   const [logFormOpen, setLogFormOpen] = useState(false);
   const [dietFormOpen, setDietFormOpen] = useState(false);
+  const [episodeSheetOpen, setEpisodeSheetOpen] = useState(false);
   const [editingPoop, setEditingPoop] = useState<PoopEntry | null>(null);
   const [editingMeal, setEditingMeal] = useState<DietEntry | null>(null);
   const [status, setStatus] = useState<HealthStatus>("healthy");
@@ -48,6 +54,32 @@ export function Home() {
     });
   }, [activeChild, lastRealPoop]);
 
+  useEffect(() => {
+    if (children.length === 0) return;
+    syncSmartRemindersForChildren(children).catch(() => {
+      // Reminder sync is non-critical
+    });
+  }, [children]);
+
+  useEffect(() => {
+    if (!activeChild) return;
+    syncSmartRemindersForChild(activeChild).catch(() => {
+      // Reminder sync is non-critical
+    });
+  }, [
+    activeChild,
+    lastRealPoop?.id,
+    lastRealPoop?.logged_at,
+    lastRealPoop?.color,
+    dietLogs[0]?.id,
+    dietLogs[0]?.logged_at,
+    activeEpisode?.id,
+    activeEpisode?.status,
+    activeEpisode?.episode_type,
+    episodeEvents[0]?.id,
+    episodeEvents[0]?.logged_at,
+  ]);
+
   // Run alert checks on mount, when child changes, and every 30 minutes
   useEffect(() => {
     if (!activeChild) return;
@@ -65,11 +97,23 @@ export function Home() {
     await refreshLogs();
     await runChecks(activeChild);
     await refreshAlerts();
+    await syncSmartRemindersForChild(activeChild);
   };
 
   const handleNoPoop = async () => {
     await db.logNoPoop(activeChild.id);
-    refreshLogs();
+    await refreshLogs();
+    await syncSmartRemindersForChild(activeChild);
+  };
+
+  const handleDietLogged = async () => {
+    await refreshDietLogs();
+    await syncSmartRemindersForChild(activeChild);
+  };
+
+  const handleEpisodeUpdated = async () => {
+    await refreshEpisodes();
+    await syncSmartRemindersForChild(activeChild);
   };
 
   const hasLogs = logs.length > 0;
@@ -132,7 +176,7 @@ export function Home() {
                         : `Time to pay closer attention`}
                   </p>
                   <p className="mt-3 text-[14px] leading-relaxed text-[var(--color-text-secondary)]">
-                    Meals, stool type, and color are all easy to review at a glance.
+                    Feeds, stool type, and color are all easy to review at a glance.
                   </p>
                   <p className="mt-4 text-[12px] text-[var(--color-text-soft)]">{normalDesc}</p>
                 </div>
@@ -156,6 +200,15 @@ export function Home() {
         />
       )}
 
+      <div className="px-4">
+        <EpisodeCard
+          activeEpisode={activeEpisode}
+          events={episodeEvents}
+          recentEpisodes={recentEpisodes}
+          onOpen={() => setEpisodeSheetOpen(true)}
+        />
+      </div>
+
       {/* CTA Buttons */}
       <div className="px-4">
         <div className="grid grid-cols-2 gap-3">
@@ -171,7 +224,7 @@ export function Home() {
             onClick={() => setDietFormOpen(true)}
             className="rounded-full border border-[var(--color-border)] bg-[var(--color-surface-strong)] px-5 py-3.5 text-[15px] font-semibold text-[var(--color-text)] shadow-[var(--shadow-soft)] transition-colors hover:bg-white/70"
           >
-            Log Meal
+            Log Feed
           </motion.button>
         </div>
         <div className="mt-3 flex justify-center">
@@ -208,7 +261,16 @@ export function Home() {
         open={dietFormOpen}
         onClose={() => setDietFormOpen(false)}
         childId={activeChild.id}
-        onLogged={refreshDietLogs}
+        onLogged={handleDietLogged}
+      />
+
+      <EpisodeSheet
+        open={episodeSheetOpen}
+        onClose={() => setEpisodeSheetOpen(false)}
+        childId={activeChild.id}
+        activeEpisode={activeEpisode}
+        events={episodeEvents}
+        onUpdated={handleEpisodeUpdated}
       />
 
       {/* Edit sheets */}

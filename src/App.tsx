@@ -14,6 +14,7 @@ import { Onboarding } from "./pages/Onboarding";
 // Lazy loaded (non-critical)
 const History = lazy(() => import("./pages/History").then((m) => ({ default: m.History })));
 const Dashboard = lazy(() => import("./pages/Dashboard").then((m) => ({ default: m.Dashboard })));
+const Handoff = lazy(() => import("./pages/Handoff").then((m) => ({ default: m.Handoff })));
 const Guidance = lazy(() => import("./pages/Guidance").then((m) => ({ default: m.Guidance })));
 const Settings = lazy(() => import("./pages/Settings").then((m) => ({ default: m.Settings })));
 const Report = lazy(() => import("./pages/Report").then((m) => ({ default: m.Report })));
@@ -56,6 +57,7 @@ function AppRoutes() {
           <Route path="/" element={<Home />} />
           <Route path="/history" element={<History />} />
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/handoff" element={<Handoff />} />
           <Route path="/guidance" element={<Guidance />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/report" element={<Report />} />

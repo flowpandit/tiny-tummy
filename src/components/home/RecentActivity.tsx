@@ -1,7 +1,7 @@
 import type { PoopEntry, DietEntry } from "../../lib/types";
 import { formatDate } from "../../lib/utils";
 import { BITSS_TYPES, STOOL_COLORS } from "../../lib/constants";
-import { FOOD_TYPES } from "../../lib/diet-constants";
+import { getDietEntryDisplayLabel } from "../../lib/feeding";
 
 type ActivityItem =
   | { kind: "poop"; entry: PoopEntry }
@@ -71,7 +71,6 @@ export function RecentActivity({ poopLogs, dietLogs, onEditPoop, onEditMeal }: R
           }
 
           const meal = item.entry;
-          const foodLabel = FOOD_TYPES.find((f) => f.value === meal.food_type)?.label ?? meal.food_type;
 
           return (
             <div
@@ -82,7 +81,7 @@ export function RecentActivity({ poopLogs, dietLogs, onEditPoop, onEditMeal }: R
               <div className="h-4 w-4 flex-shrink-0 rounded-full bg-[#f7b183]" />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-[18px] text-[var(--color-text)]">
-                  {meal.food_name ? `${foodLabel}: ${meal.food_name}` : foodLabel}
+                  {getDietEntryDisplayLabel(meal)}
                 </p>
               </div>
               <span className="ml-3 flex-shrink-0 text-[18px] text-[var(--color-text-secondary)]">

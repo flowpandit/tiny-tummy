@@ -1,6 +1,6 @@
 import type { PoopEntry, DietEntry, TimelineEvent } from "../../lib/types";
 import { STOOL_COLORS } from "../../lib/constants";
-import { FOOD_TYPES } from "../../lib/diet-constants";
+import { getDietEntryDisplayLabel } from "../../lib/feeding";
 
 interface DietCorrelationProps {
   poopLogs: PoopEntry[];
@@ -34,12 +34,11 @@ function buildTimeline(
 
   for (const log of dietLogs) {
     if (new Date(log.logged_at) < cutoff) continue;
-    const typeLabel = FOOD_TYPES.find((f) => f.value === log.food_type)?.label ?? log.food_type;
     events.push({
       id: log.id,
       type: "meal",
       logged_at: log.logged_at,
-      label: log.food_name ? `${typeLabel}: ${log.food_name}` : typeLabel,
+      label: getDietEntryDisplayLabel(log),
     });
   }
 
@@ -81,7 +80,7 @@ export function DietCorrelation({ poopLogs, dietLogs, days }: DietCorrelationPro
   if (timeline.size === 0) {
     return (
       <p className="text-sm text-[var(--color-muted)] text-center py-8">
-        Log meals and poops to see correlations
+        Log feeds and poops to see correlations
       </p>
     );
   }

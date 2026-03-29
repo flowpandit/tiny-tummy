@@ -64,11 +64,63 @@ export interface DietEntry {
   logged_at: string;
   food_type: FoodType;
   food_name: string | null;
+  amount_ml: number | null;
+  duration_minutes: number | null;
+  breast_side: BreastSide | null;
+  bottle_content: BottleContent | null;
+  reaction_notes: string | null;
+  is_constipation_support: number;
   notes: string | null;
   created_at: string;
 }
 
-export type FoodType = "breast_milk" | "formula" | "solids" | "water" | "other";
+export type FoodType =
+  | "breast_milk"
+  | "formula"
+  | "bottle"
+  | "pumping"
+  | "solids"
+  | "water"
+  | "other";
+
+export type BreastSide = "left" | "right" | "both";
+
+export type BottleContent = "breast_milk" | "formula" | "mixed";
+
+export interface Episode {
+  id: string;
+  child_id: string;
+  episode_type: EpisodeType;
+  status: EpisodeStatus;
+  started_at: string;
+  ended_at: string | null;
+  summary: string | null;
+  outcome: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type EpisodeType = "constipation" | "diarrhoea" | "solids_transition";
+
+export type EpisodeStatus = "active" | "resolved";
+
+export interface EpisodeEvent {
+  id: string;
+  episode_id: string;
+  child_id: string;
+  event_type: EpisodeEventType;
+  title: string;
+  notes: string | null;
+  logged_at: string;
+  created_at: string;
+}
+
+export type EpisodeEventType =
+  | "symptom"
+  | "hydration"
+  | "food"
+  | "intervention"
+  | "progress";
 
 export interface DailyFrequency {
   date: string;
