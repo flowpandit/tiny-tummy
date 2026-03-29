@@ -5,12 +5,13 @@ import type { StoolSize } from "../../lib/types";
 interface SizePickerProps {
   value: StoolSize | null;
   onChange: (size: StoolSize) => void;
+  nightMode?: boolean;
 }
 
-export function SizePicker({ value, onChange }: SizePickerProps) {
+export function SizePicker({ value, onChange, nightMode = false }: SizePickerProps) {
   return (
     <div>
-      <label className="block text-sm font-medium text-[var(--color-text)] mb-2">
+      <label className={cn("block text-sm font-medium mb-2", nightMode ? "text-slate-100" : "text-[var(--color-text)]")}>
         Size
       </label>
       <div className="flex gap-2">
@@ -23,7 +24,9 @@ export function SizePicker({ value, onChange }: SizePickerProps) {
               "flex-1 h-11 rounded-[var(--radius-md)] border text-sm font-medium transition-colors duration-200 cursor-pointer",
               value === size.value
                 ? "border-[var(--color-primary)] bg-[var(--color-primary)]/10 text-[var(--color-primary)]"
-                : "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-secondary)] hover:border-[var(--color-muted)]",
+                : nightMode
+                  ? "border-slate-700 bg-slate-900/90 text-slate-200 hover:border-slate-500"
+                  : "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-secondary)] hover:border-[var(--color-muted)]",
             )}
           >
             {size.label}

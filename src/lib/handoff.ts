@@ -1,7 +1,8 @@
 import { getDietEntryDisplayLabel } from "./feeding";
 import { getEpisodeTypeLabel } from "./episode-constants";
+import { getSymptomSeverityLabel, getSymptomTypeLabel } from "./symptom-constants";
 import { formatDate, timeSince } from "./utils";
-import type { Alert, DietEntry, Episode, EpisodeEvent, HealthStatus, PoopEntry } from "./types";
+import type { Alert, DietEntry, Episode, EpisodeEvent, HealthStatus, PoopEntry, SymptomEntry } from "./types";
 
 export function getStatusLabel(status: HealthStatus): string {
   if (status === "healthy") return "All looks normal";
@@ -29,29 +30,44 @@ export function buildHandoffSummary(input: {
   lastFeed: DietEntry | null;
   activeEpisode: Episode | null;
   latestEpisodeUpdate: EpisodeEvent | null;
+  recentSymptoms: SymptomEntry[];
   todayPoops: number;
   todayFeeds: number;
   hasNoPoopDay: boolean;
   handoffNote: string | null;
 }): string {
+  const alertLine = input.alerts.length > 0
+    ? input.alerts.map((alert) => alert.title).join("; ")
+    : "No active alerts";
+  const episodeLine = input.activeEpisode
+    ? `${getEpisodeTypeLabel(input.activeEpisode.episode_type)} still active`
+    : "No active episode";
+  const symptomLine = input.recentSymptoms.length > 0
+    ? input.recentSymptoms
+        .slice(0, 2)
+        .map((symptom) => `${getSymptomTypeLabel(symptom.symptom_type)} (${getSymptomSeverityLabel(symptom.severity).toLowerCase()})`)
+        .join("; ")
+    : "No recent symptoms logged";
+
   const lines = [
-    `${input.childName} handoff`,
-    `Status: ${getStatusLabel(input.status)}`,
-    input.normalDescription ? `Range: ${input.normalDescription}` : null,
+    `${input.childName} handoff update`,
+    "",
+    `Right now: ${getStatusLabel(input.status)}`,
+    input.normalDescription ? `Expected range: ${input.normalDescription}` : null,
+    "",
     `Last poop: ${getLastPoopSummary(input.lastPoop)}`,
     `Last feed: ${getLastFeedSummary(input.lastFeed)}`,
-    `Today: ${input.todayPoops} poop${input.todayPoops !== 1 ? "s" : ""}, ${input.todayFeeds} feed${input.todayFeeds !== 1 ? "s" : ""}${input.hasNoPoopDay ? ", no-poop day marked" : ""}`,
-    input.alerts.length > 0
-      ? `Alerts: ${input.alerts.map((alert) => alert.title).join("; ")}`
-      : "Alerts: none active",
-    input.activeEpisode
-      ? `Episode: ${getEpisodeTypeLabel(input.activeEpisode.episode_type)} (${input.activeEpisode.status})`
-      : "Episode: none active",
+    `Today so far: ${input.todayPoops} poop${input.todayPoops !== 1 ? "s" : ""}, ${input.todayFeeds} feed${input.todayFeeds !== 1 ? "s" : ""}${input.hasNoPoopDay ? ", no-poop day marked" : ""}`,
+    "",
+    `Current concern: ${alertLine}`,
+    `Episode: ${episodeLine}`,
+    `Recent symptoms: ${symptomLine}`,
     input.latestEpisodeUpdate
       ? `Latest episode update: ${input.latestEpisodeUpdate.title} · ${formatDate(input.latestEpisodeUpdate.logged_at)}`
       : null,
-    input.handoffNote?.trim() ? `Caregiver note: ${input.handoffNote.trim()}` : null,
+    input.handoffNote?.trim() ? "" : null,
+    input.handoffNote?.trim() ? `Next caregiver note: ${input.handoffNote.trim()}` : null,
   ];
 
-  return lines.filter(Boolean).join("\n");
+  return lines.filter((line): line is string => line !== null).join("\n");
 }

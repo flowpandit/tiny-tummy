@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Sheet } from "../ui/sheet";
 import { Button } from "../ui/button";
 import { Badge } from "../ui/badge";
@@ -45,6 +45,7 @@ interface EpisodeSheetProps {
   activeEpisode: Episode | null;
   events: EpisodeEvent[];
   onUpdated: () => Promise<void> | void;
+  initialMode?: "default" | "start" | "update";
 }
 
 export function EpisodeSheet({
@@ -54,6 +55,7 @@ export function EpisodeSheet({
   activeEpisode,
   events,
   onUpdated,
+  initialMode = "default",
 }: EpisodeSheetProps) {
   const { showError, showSuccess } = useToast();
   const [episodeType, setEpisodeType] = useState<EpisodeType | null>(null);
@@ -71,6 +73,7 @@ export function EpisodeSheet({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isAddingEvent, setIsAddingEvent] = useState(false);
   const [isResolving, setIsResolving] = useState(false);
+  const eventTitleRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -88,6 +91,16 @@ export function EpisodeSheet({
     setResolutionTime(getCurrentTime());
     setOutcome("");
   }, [open, activeEpisode]);
+
+  useEffect(() => {
+    if (!open || !activeEpisode || initialMode !== "update") return;
+
+    const timer = window.setTimeout(() => {
+      eventTitleRef.current?.focus();
+    }, 120);
+
+    return () => window.clearTimeout(timer);
+  }, [open, activeEpisode, initialMode]);
 
   const handleCreateEpisode = async (e: FormEvent) => {
     e.preventDefault();
@@ -228,10 +241,12 @@ export function EpisodeSheet({
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <h2 className="font-[var(--font-display)] text-lg font-semibold text-[var(--color-text)]">
-                    Manage Episode
+                    {initialMode === "update" ? "Add Episode Update" : "Manage Episode"}
                   </h2>
                   <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
-                    Keep a clean timeline of what changed and what helped.
+                    {initialMode === "update"
+                      ? "Capture the latest change without digging through the full flow."
+                      : "Keep a clean timeline of what changed and what helped."}
                   </p>
                 </div>
                 <Badge variant={getEpisodeBadgeVariant(activeEpisode.episode_type)}>
@@ -282,6 +297,7 @@ export function EpisodeSheet({
                   What happened?
                 </label>
                 <input
+                  ref={eventTitleRef}
                   id="episode-event-title"
                   type="text"
                   value={eventTitle}

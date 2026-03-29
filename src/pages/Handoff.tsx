@@ -8,17 +8,16 @@ import { usePoopLogs } from "../hooks/usePoopLogs";
 import { useDietLogs } from "../hooks/useDietLogs";
 import { useAlerts } from "../hooks/useAlerts";
 import { useEpisodes } from "../hooks/useEpisodes";
+import { useSymptoms } from "../hooks/useSymptoms";
+import { useCaregiverNote } from "../hooks/useCaregiverNote";
+import { buildChildDailySummary } from "../lib/child-summary";
 import { getDietEntryDisplayLabel } from "../lib/feeding";
 import { buildHandoffSummary, getLastFeedSummary, getLastPoopSummary, getStatusLabel } from "../lib/handoff";
 import { getEpisodeEventTypeLabel, getEpisodeTypeLabel } from "../lib/episode-constants";
+import { getSymptomSeverityBadgeVariant, getSymptomSeverityLabel, getSymptomTypeLabel } from "../lib/symptom-constants";
 import { getChildStatus } from "../lib/tauri";
 import { formatDate } from "../lib/utils";
-import * as db from "../lib/db";
 import type { HealthStatus } from "../lib/types";
-
-function todayKey(): string {
-  return new Date().toISOString().split("T")[0];
-}
 
 export function Handoff() {
   const { activeChild } = useChildContext();
@@ -26,13 +25,20 @@ export function Handoff() {
   const { logs: dietLogs } = useDietLogs(activeChild?.id ?? null);
   const { alerts } = useAlerts(activeChild?.id ?? null);
   const { activeEpisode, events: episodeEvents } = useEpisodes(activeChild?.id ?? null);
+  const { logs: symptomLogs } = useSymptoms(activeChild?.id ?? null);
   const { showError, showSuccess } = useToast();
+  const {
+    note: handoffNote,
+    setNote: setHandoffNote,
+    savedNote,
+    isSaving,
+    hasChanges,
+    save: saveHandoffNote,
+    reset: resetHandoffNote,
+  } = useCaregiverNote(activeChild?.id ?? null);
 
   const [status, setStatus] = useState<HealthStatus>("healthy");
   const [normalDesc, setNormalDesc] = useState("");
-  const [handoffNote, setHandoffNote] = useState("");
-  const [savedNote, setSavedNote] = useState("");
-  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     if (!activeChild) return;
@@ -45,22 +51,18 @@ export function Handoff() {
       setStatus(nextStatus);
       setNormalDesc(desc);
     });
-
-    db.getSetting(`handoff_note:${activeChild.id}`).then((value) => {
-      const note = value ?? "";
-      setHandoffNote(note);
-      setSavedNote(note);
-    });
   }, [activeChild, lastRealPoop]);
 
   if (!activeChild) return null;
 
-  const latestFeed = dietLogs[0] ?? null;
-  const latestEpisodeUpdate = episodeEvents[0] ?? null;
-  const currentDay = todayKey();
-  const todayPoops = logs.filter((log) => log.logged_at.startsWith(currentDay) && log.is_no_poop === 0).length;
-  const todayFeeds = dietLogs.filter((log) => log.logged_at.startsWith(currentDay)).length;
-  const hasNoPoopDay = logs.some((log) => log.logged_at.startsWith(currentDay) && log.is_no_poop === 1);
+  const summary = buildChildDailySummary({
+    poopLogs: logs,
+    dietLogs,
+    alerts,
+    activeEpisode,
+    episodeEvents,
+    symptomLogs,
+  });
 
   const summaryText = buildHandoffSummary({
     childName: activeChild.name,
@@ -68,21 +70,23 @@ export function Handoff() {
     normalDescription: normalDesc,
     alerts,
     lastPoop: lastRealPoop,
-    lastFeed: latestFeed,
-    activeEpisode,
-    latestEpisodeUpdate,
-    todayPoops,
-    todayFeeds,
-    hasNoPoopDay,
+    lastFeed: summary.lastFeed,
+    activeEpisode: summary.activeEpisode,
+    latestEpisodeUpdate: summary.latestEpisodeUpdate,
+    recentSymptoms: summary.recentSymptoms,
+    todayPoops: summary.todayPoops,
+    todayFeeds: summary.todayFeeds,
+    hasNoPoopDay: summary.hasNoPoopDay,
     handoffNote: savedNote || null,
   });
 
   const handleSaveNote = async () => {
-    setIsSaving(true);
-    await db.setSetting(`handoff_note:${activeChild.id}`, handoffNote.trim());
-    setSavedNote(handoffNote.trim());
-    setIsSaving(false);
-    showSuccess("Handoff note saved.");
+    try {
+      await saveHandoffNote();
+      showSuccess("Handoff note saved.");
+    } catch {
+      showError("Could not save the handoff note.");
+    }
   };
 
   const handleShare = async () => {
@@ -115,7 +119,7 @@ export function Handoff() {
           Handoff
         </h2>
         <p className="mt-3 text-base leading-relaxed text-[var(--color-text-secondary)]">
-          A quick summary for your partner, nanny, grandparent, or daycare handoff.
+          A plain-language update for your partner, nanny, grandparent, or daycare handoff.
         </p>
       </div>
 
@@ -132,7 +136,7 @@ export function Handoff() {
           </div>
           <p className="mt-3 text-sm leading-relaxed text-[var(--color-text-secondary)]">{normalDesc}</p>
           <Button variant="cta" className="mt-4 w-full" onClick={handleShare}>
-            Copy or Share Handoff
+            Copy or Share Update
           </Button>
         </CardContent>
       </Card>
@@ -147,7 +151,7 @@ export function Handoff() {
         <Card>
           <CardContent className="py-4">
             <p className="text-[11px] uppercase tracking-[0.14em] text-[var(--color-text-soft)]">Last feed</p>
-            <p className="mt-2 text-sm font-medium text-[var(--color-text)]">{getLastFeedSummary(latestFeed)}</p>
+            <p className="mt-2 text-sm font-medium text-[var(--color-text)]">{getLastFeedSummary(summary.lastFeed)}</p>
           </CardContent>
         </Card>
       </div>
@@ -159,15 +163,15 @@ export function Handoff() {
         <CardContent>
           <div className="grid grid-cols-3 gap-3">
             <div className="rounded-[var(--radius-md)] bg-[var(--color-bg)] p-3 text-center">
-              <p className="text-xl font-semibold text-[var(--color-text)]">{todayPoops}</p>
+              <p className="text-xl font-semibold text-[var(--color-text)]">{summary.todayPoops}</p>
               <p className="text-xs text-[var(--color-text-secondary)]">Poops</p>
             </div>
             <div className="rounded-[var(--radius-md)] bg-[var(--color-bg)] p-3 text-center">
-              <p className="text-xl font-semibold text-[var(--color-text)]">{todayFeeds}</p>
+              <p className="text-xl font-semibold text-[var(--color-text)]">{summary.todayFeeds}</p>
               <p className="text-xs text-[var(--color-text-secondary)]">Feeds</p>
             </div>
             <div className="rounded-[var(--radius-md)] bg-[var(--color-bg)] p-3 text-center">
-              <p className="text-xl font-semibold text-[var(--color-text)]">{hasNoPoopDay ? "Yes" : "No"}</p>
+              <p className="text-xl font-semibold text-[var(--color-text)]">{summary.hasNoPoopDay ? "Yes" : "No"}</p>
               <p className="text-xs text-[var(--color-text-secondary)]">No-poop day</p>
             </div>
           </div>
@@ -185,7 +189,7 @@ export function Handoff() {
               <p className="mt-2 text-sm text-[var(--color-text-secondary)]">No active alerts.</p>
             ) : (
               <div className="mt-2 flex flex-col gap-2">
-                {alerts.slice(0, 3).map((alert) => (
+                {summary.visibleAlerts.map((alert) => (
                   <div key={alert.id} className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-2">
                     <p className="text-sm font-medium text-[var(--color-text)]">{alert.title}</p>
                     <p className="mt-1 text-xs text-[var(--color-text-secondary)]">{alert.message}</p>
@@ -196,39 +200,71 @@ export function Handoff() {
           </div>
 
           <div className="border-t border-[var(--color-border)] pt-3">
+            <p className="text-xs uppercase tracking-[0.12em] text-[var(--color-text-soft)]">Symptoms</p>
+            {summary.recentSymptoms.length === 0 ? (
+              <p className="mt-2 text-sm text-[var(--color-text-secondary)]">No recent symptoms logged.</p>
+            ) : (
+              <div className="mt-2 flex flex-col gap-2">
+                {summary.recentSymptoms.map((symptom) => (
+                  <div key={symptom.id} className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-medium text-[var(--color-text)]">
+                          {getSymptomTypeLabel(symptom.symptom_type)}
+                        </p>
+                        <p className="mt-1 text-xs text-[var(--color-text-secondary)]">
+                          {formatDate(symptom.logged_at)}
+                        </p>
+                      </div>
+                      <Badge variant={getSymptomSeverityBadgeVariant(symptom.severity)}>
+                        {getSymptomSeverityLabel(symptom.severity)}
+                      </Badge>
+                    </div>
+                    {symptom.notes && (
+                      <p className="mt-2 text-sm leading-relaxed text-[var(--color-text-secondary)]">
+                        {symptom.notes}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="border-t border-[var(--color-border)] pt-3">
             <p className="text-xs uppercase tracking-[0.12em] text-[var(--color-text-soft)]">Episode</p>
-            {!activeEpisode ? (
+            {!summary.activeEpisode ? (
               <p className="mt-2 text-sm text-[var(--color-text-secondary)]">No active episode.</p>
             ) : (
               <div className="mt-2 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-3">
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <p className="text-sm font-medium text-[var(--color-text)]">
-                      {getEpisodeTypeLabel(activeEpisode.episode_type)}
+                      {getEpisodeTypeLabel(summary.activeEpisode.episode_type)}
                     </p>
                     <p className="mt-1 text-xs text-[var(--color-text-secondary)]">
-                      Started {formatDate(activeEpisode.started_at)}
+                      Started {formatDate(summary.activeEpisode.started_at)}
                     </p>
                   </div>
                   <Badge variant="info">Active</Badge>
                 </div>
-                {activeEpisode.summary && (
+                {summary.activeEpisode.summary && (
                   <p className="mt-2 text-sm leading-relaxed text-[var(--color-text-secondary)]">
-                    {activeEpisode.summary}
+                    {summary.activeEpisode.summary}
                   </p>
                 )}
-                {latestEpisodeUpdate && (
+                {summary.latestEpisodeUpdate && (
                   <div className="mt-3 border-t border-[var(--color-border)] pt-3">
                     <p className="text-xs uppercase tracking-[0.12em] text-[var(--color-text-soft)]">Latest update</p>
                     <p className="mt-2 text-sm font-medium text-[var(--color-text)]">
-                      {latestEpisodeUpdate.title}
+                      {summary.latestEpisodeUpdate.title}
                     </p>
                     <p className="mt-1 text-xs text-[var(--color-text-secondary)]">
-                      {getEpisodeEventTypeLabel(latestEpisodeUpdate.event_type)} · {formatDate(latestEpisodeUpdate.logged_at)}
+                      {getEpisodeEventTypeLabel(summary.latestEpisodeUpdate.event_type)} · {formatDate(summary.latestEpisodeUpdate.logged_at)}
                     </p>
-                    {latestEpisodeUpdate.notes && (
+                    {summary.latestEpisodeUpdate.notes && (
                       <p className="mt-2 text-sm leading-relaxed text-[var(--color-text-secondary)]">
-                        {latestEpisodeUpdate.notes}
+                        {summary.latestEpisodeUpdate.notes}
                       </p>
                     )}
                   </div>
@@ -258,8 +294,8 @@ export function Handoff() {
             <Button
               variant="ghost"
               className="flex-1"
-              onClick={() => setHandoffNote(savedNote)}
-              disabled={handoffNote === savedNote}
+              onClick={resetHandoffNote}
+              disabled={!hasChanges}
             >
               Reset
             </Button>
@@ -267,16 +303,16 @@ export function Handoff() {
         </CardContent>
       </Card>
 
-      {latestFeed && (
+      {summary.lastFeed && (
         <Card className="mt-4">
           <CardHeader>
             <CardTitle>Most Recent Feed</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-sm font-medium text-[var(--color-text)]">{getDietEntryDisplayLabel(latestFeed)}</p>
-            <p className="mt-1 text-xs text-[var(--color-text-secondary)]">{formatDate(latestFeed.logged_at)}</p>
-            {latestFeed.reaction_notes && (
-              <p className="mt-2 text-sm leading-relaxed text-[var(--color-text-secondary)]">{latestFeed.reaction_notes}</p>
+            <p className="text-sm font-medium text-[var(--color-text)]">{getDietEntryDisplayLabel(summary.lastFeed)}</p>
+            <p className="mt-1 text-xs text-[var(--color-text-secondary)]">{formatDate(summary.lastFeed.logged_at)}</p>
+            {summary.lastFeed.reaction_notes && (
+              <p className="mt-2 text-sm leading-relaxed text-[var(--color-text-secondary)]">{summary.lastFeed.reaction_notes}</p>
             )}
           </CardContent>
         </Card>

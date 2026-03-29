@@ -7,9 +7,10 @@ interface SheetProps {
   onClose: () => void;
   children: ReactNode;
   className?: string;
+  tone?: "default" | "night";
 }
 
-export function Sheet({ open, onClose, children, className }: SheetProps) {
+export function Sheet({ open, onClose, children, className, tone = "default" }: SheetProps) {
   const sheetY = useMotionValue(0);
   const backdropOpacity = useTransform(sheetY, [0, 300], [1, 0]);
   useEffect(() => {
@@ -42,7 +43,10 @@ export function Sheet({ open, onClose, children, className }: SheetProps) {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="fixed inset-0 bg-black/40 z-40"
+            className={cn(
+              "fixed inset-0 z-40",
+              tone === "night" ? "bg-[#020617]/75" : "bg-black/40",
+            )}
             style={{ opacity: backdropOpacity }}
             onClick={onClose}
           />
@@ -58,8 +62,11 @@ export function Sheet({ open, onClose, children, className }: SheetProps) {
             }}
             style={{ y: sheetY }}
             className={cn(
-              "fixed bottom-0 left-0 right-0 z-50 border border-[var(--color-border)] bg-[var(--color-surface-strong)] rounded-t-[var(--radius-lg)] shadow-[var(--shadow-lg)]",
+              "fixed bottom-0 left-0 right-0 z-50 rounded-t-[var(--radius-lg)] shadow-[var(--shadow-lg)]",
               "max-h-[85vh] flex flex-col",
+              tone === "night"
+                ? "border border-slate-700/70 bg-[#0f172a] text-slate-100"
+                : "border border-[var(--color-border)] bg-[var(--color-surface-strong)]",
               className,
             )}
           >
@@ -78,7 +85,7 @@ export function Sheet({ open, onClose, children, className }: SheetProps) {
               onDragEnd={handleDragEnd}
               style={{ y: 0 }}
             >
-              <div className="w-10 h-1 rounded-full bg-[var(--color-muted)]" />
+              <div className={cn("w-10 h-1 rounded-full", tone === "night" ? "bg-slate-500" : "bg-[var(--color-muted)]")} />
             </motion.div>
             {/* Scrollable content */}
             <div className="flex-1 overflow-y-auto overscroll-contain min-h-0">

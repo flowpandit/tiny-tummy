@@ -25,6 +25,13 @@ export interface PoopEntry {
   updated_at: string;
 }
 
+export interface PoopLogDraft {
+  stool_type: number | null;
+  color: StoolColor | null;
+  size: StoolSize | null;
+  notes: string;
+}
+
 export type StoolColor =
   | "yellow"
   | "green"
@@ -58,6 +65,27 @@ export interface GuidanceTip {
 
 export type HealthStatus = "healthy" | "caution" | "alert" | "unknown";
 
+export interface SymptomEntry {
+  id: string;
+  child_id: string;
+  episode_id: string | null;
+  symptom_type: SymptomType;
+  severity: SymptomSeverity;
+  logged_at: string;
+  notes: string | null;
+  created_at: string;
+}
+
+export type SymptomType =
+  | "straining"
+  | "pain"
+  | "rash"
+  | "vomiting"
+  | "blood_concern"
+  | "dehydration_concern";
+
+export type SymptomSeverity = "mild" | "moderate" | "severe";
+
 export interface DietEntry {
   id: string;
   child_id: string;
@@ -72,6 +100,18 @@ export interface DietEntry {
   is_constipation_support: number;
   notes: string | null;
   created_at: string;
+}
+
+export interface DietLogDraft {
+  food_type: FoodType | null;
+  food_name: string;
+  amount_ml: string;
+  duration_minutes: string;
+  breast_side: BreastSide | null;
+  bottle_content: BottleContent | null;
+  reaction_notes: string;
+  is_constipation_support: boolean;
+  notes: string;
 }
 
 export type FoodType =

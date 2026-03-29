@@ -10,13 +10,23 @@ import { SizePicker } from "./SizePicker";
 import { LogSuccess } from "./LogSuccess";
 import * as db from "../../lib/db";
 import { savePhoto } from "../../lib/photos";
-import type { StoolColor, StoolSize } from "../../lib/types";
+import { cn } from "../../lib/cn";
+import { isNightLoggingWindow } from "../../lib/logging-ui";
+import type { PoopLogDraft, StoolColor, StoolSize } from "../../lib/types";
+
+const EMPTY_DRAFT: PoopLogDraft = {
+  stool_type: null,
+  color: null,
+  size: null,
+  notes: "",
+};
 
 interface LogFormProps {
   open: boolean;
   onClose: () => void;
   childId: string;
   onLogged: () => void;
+  initialDraft?: Partial<PoopLogDraft> | null;
 }
 
 function getCurrentDate(): string {
@@ -32,7 +42,7 @@ function combineToISO(date: string, time: string): string {
   return `${date}T${time}:00`;
 }
 
-export function LogForm({ open, onClose, childId, onLogged }: LogFormProps) {
+export function LogForm({ open, onClose, childId, onLogged, initialDraft = null }: LogFormProps) {
   const { showError } = useToast();
   const [logDate, setLogDate] = useState(getCurrentDate());
   const [logTime, setLogTime] = useState(getCurrentTime());
@@ -44,27 +54,32 @@ export function LogForm({ open, onClose, childId, onLogged }: LogFormProps) {
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [nightMode, setNightMode] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Reset to "now" each time the sheet opens
-  useEffect(() => {
-    if (open) {
-      setLogDate(getCurrentDate());
-      setLogTime(getCurrentTime());
-    }
-  }, [open]);
-
-  const reset = () => {
+  const applyDraft = (draft?: Partial<PoopLogDraft> | null) => {
+    const nextDraft = { ...EMPTY_DRAFT, ...draft };
     setLogDate(getCurrentDate());
     setLogTime(getCurrentTime());
-    setStoolType(null);
-    setColor(null);
-    setSize(null);
-    setNotes("");
+    setStoolType(nextDraft.stool_type);
+    setColor(nextDraft.color);
+    setSize(nextDraft.size);
+    setNotes(nextDraft.notes);
     setPhotoFile(null);
     if (photoPreview) URL.revokeObjectURL(photoPreview);
     setPhotoPreview(null);
     setShowSuccess(false);
+  };
+
+  useEffect(() => {
+    if (open) {
+      setNightMode(isNightLoggingWindow());
+      applyDraft(initialDraft);
+    }
+  }, [open, initialDraft]);
+
+  const reset = () => {
+    applyDraft(null);
   };
 
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -124,35 +139,77 @@ export function LogForm({ open, onClose, childId, onLogged }: LogFormProps) {
     setTimeout(reset, 300);
   };
 
+  const fieldLabelClassName = cn("block text-sm font-medium mb-1.5", nightMode ? "text-slate-100" : "text-[var(--color-text)]");
+  const textareaClassName = cn(
+    "w-full px-3 py-2 rounded-[var(--radius-md)] border text-sm resize-none outline-none transition-colors",
+    nightMode
+      ? "border-slate-700 bg-slate-900/90 text-slate-100 placeholder:text-slate-500 focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20"
+      : "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)] focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20",
+  );
+
   return (
-    <Sheet open={open} onClose={handleClose}>
+    <Sheet open={open} onClose={handleClose} tone={nightMode ? "night" : "default"}>
       {showSuccess ? (
         <LogSuccess />
       ) : (
         <form onSubmit={handleSubmit} className="px-5 pb-8">
-          <h2 className="font-[var(--font-display)] text-lg font-semibold text-[var(--color-text)] mb-5 text-center">
-            Log a poop
-          </h2>
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <h2 className={cn("font-[var(--font-display)] text-lg font-semibold text-center", nightMode ? "text-slate-100" : "text-[var(--color-text)]")}>
+              Log a poop
+            </h2>
+            <button
+              type="button"
+              onClick={() => setNightMode((current) => !current)}
+              className={cn(
+                "rounded-full border px-3 py-2 text-xs font-semibold transition-colors",
+                nightMode
+                  ? "border-slate-600 bg-slate-800 text-slate-100"
+                  : "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-secondary)]",
+              )}
+            >
+              {nightMode ? "Night on" : "Night off"}
+            </button>
+          </div>
+
+          {nightMode && (
+            <div className="mb-4 rounded-[var(--radius-md)] border border-slate-700 bg-slate-900/90 px-3 py-3">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-300">Low-light mode</p>
+              <p className="mt-1 text-sm leading-relaxed text-slate-400">
+                Larger targets and darker surfaces for late-night logging.
+              </p>
+            </div>
+          )}
+
+          {(stoolType || color || size) && (
+            <div className={cn("mb-4 rounded-[var(--radius-md)] border px-3 py-3", nightMode ? "border-slate-700 bg-slate-900/90" : "border-[var(--color-primary)]/15 bg-[var(--color-primary)]/10")}>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--color-primary)]">
+                Quick preset
+              </p>
+              <p className={cn("mt-1 text-sm leading-relaxed", nightMode ? "text-slate-300" : "text-[var(--color-text-secondary)]")}>
+                This form started with a common poop pattern. Adjust anything before saving if needed.
+              </p>
+            </div>
+          )}
 
           <div className="flex flex-col gap-5">
             {/* Date & time */}
             <div>
-              <label className="block text-sm font-medium text-[var(--color-text)] mb-1.5">
+              <label className={fieldLabelClassName}>
                 When
               </label>
               <div className="grid grid-cols-2 gap-2">
-                <DatePicker value={logDate} onChange={setLogDate} max={getCurrentDate()} />
-                <TimePicker value={logTime} onChange={setLogTime} />
+                <DatePicker value={logDate} onChange={setLogDate} max={getCurrentDate()} nightMode={nightMode} />
+                <TimePicker value={logTime} onChange={setLogTime} nightMode={nightMode} />
               </div>
             </div>
 
-            <StoolTypePicker value={stoolType} onChange={setStoolType} />
-            <ColorPicker value={color} onChange={setColor} />
-            <SizePicker value={size} onChange={setSize} />
+            <StoolTypePicker value={stoolType} onChange={setStoolType} nightMode={nightMode} />
+            <ColorPicker value={color} onChange={setColor} nightMode={nightMode} />
+            <SizePicker value={size} onChange={setSize} nightMode={nightMode} />
 
             {/* Notes */}
             <div>
-              <label htmlFor="log-notes" className="block text-sm font-medium text-[var(--color-text)] mb-1.5">
+              <label htmlFor="log-notes" className={fieldLabelClassName}>
                 Notes (optional)
               </label>
               <textarea
@@ -161,13 +218,13 @@ export function LogForm({ open, onClose, childId, onLogged }: LogFormProps) {
                 onChange={(e) => setNotes(e.target.value)}
                 placeholder="Any observations..."
                 rows={2}
-                className="w-full px-3 py-2 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)] text-sm resize-none outline-none focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20 transition-colors"
+                className={textareaClassName}
               />
             </div>
 
             {/* Photo */}
             <div>
-              <label className="block text-sm font-medium text-[var(--color-text)] mb-1.5">
+              <label className={fieldLabelClassName}>
                 Photo (optional)
               </label>
               <input
@@ -201,7 +258,12 @@ export function LogForm({ open, onClose, childId, onLogged }: LogFormProps) {
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="flex items-center gap-2 h-11 px-4 rounded-[var(--radius-md)] border border-dashed border-[var(--color-border)] text-sm text-[var(--color-text-secondary)] hover:border-[var(--color-muted)] cursor-pointer transition-colors"
+                  className={cn(
+                    "flex items-center gap-2 px-4 rounded-[var(--radius-md)] border border-dashed text-sm cursor-pointer transition-colors",
+                    nightMode
+                      ? "h-11 border-slate-700 text-slate-300 hover:border-slate-500"
+                      : "h-11 border-[var(--color-border)] text-[var(--color-text-secondary)] hover:border-[var(--color-muted)]",
+                  )}
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
                     <path d="M12 9a3.75 3.75 0 1 0 0 7.5A3.75 3.75 0 0 0 12 9Z" />
@@ -217,7 +279,7 @@ export function LogForm({ open, onClose, childId, onLogged }: LogFormProps) {
             type="submit"
             variant="cta"
             size="lg"
-            className="w-full mt-6"
+            className={cn("w-full mt-6", nightMode && "shadow-none")}
             disabled={isSubmitting}
           >
             {isSubmitting ? "Saving..." : "Save"}

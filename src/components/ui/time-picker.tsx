@@ -6,6 +6,7 @@ interface TimePickerProps {
   value: string; // "HH:MM"
   onChange: (time: string) => void;
   label?: string;
+  nightMode?: boolean;
 }
 
 function pad(n: number): string {
@@ -19,7 +20,7 @@ function formatDisplay(time: string): string {
   return `${h12}:${pad(m)} ${ampm}`;
 }
 
-export function TimePicker({ value, onChange, label }: TimePickerProps) {
+export function TimePicker({ value, onChange, label, nightMode = false }: TimePickerProps) {
   const [open, setOpen] = useState(false);
   const hourRef = useRef<HTMLDivElement>(null);
   const minuteRef = useRef<HTMLDivElement>(null);
@@ -56,15 +57,18 @@ export function TimePicker({ value, onChange, label }: TimePickerProps) {
         type="button"
         onClick={() => setOpen(!open)}
         className={cn(
-          "w-full h-11 px-3 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)]",
-          "text-[var(--color-text)] text-sm text-left cursor-pointer transition-colors",
-          "hover:border-[var(--color-muted)] focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20 outline-none",
+          nightMode
+            ? "w-full h-11 px-3 rounded-[var(--radius-md)] border border-slate-700 bg-slate-900/90"
+            : "w-full h-11 px-3 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)]",
+          nightMode
+            ? "text-slate-100 text-sm text-left cursor-pointer transition-colors hover:border-slate-500 focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20 outline-none"
+            : "text-[var(--color-text)] text-sm text-left cursor-pointer transition-colors hover:border-[var(--color-muted)] focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20 outline-none",
           "flex items-center justify-between",
         )}
         aria-label={label ?? "Select time"}
       >
         <span>{formatDisplay(value)}</span>
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="var(--color-muted)" className="w-4 h-4">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill={nightMode ? "#94a3b8" : "var(--color-muted)"} className="w-4 h-4">
           <path fillRule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm.75-13a.75.75 0 0 0-1.5 0v5c0 .414.336.75.75.75h4a.75.75 0 0 0 0-1.5h-3.25V5Z" clipRule="evenodd" />
         </svg>
       </button>
@@ -73,23 +77,28 @@ export function TimePicker({ value, onChange, label }: TimePickerProps) {
       <AnimatePresence>
         {open && (
           <>
-            <div className="fixed inset-0 z-40 bg-black/20" onClick={() => setOpen(false)} />
+            <div className={cn("fixed inset-0 z-40", nightMode ? "bg-[#020617]/75" : "bg-black/20")} onClick={() => setOpen(false)} />
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
               transition={{ duration: 0.15 }}
-              className="fixed z-50 left-4 right-4 top-1/2 -translate-y-1/2 bg-[var(--color-surface-strong)] rounded-[var(--radius-lg)] shadow-[var(--shadow-lg)] border border-[var(--color-border)] p-4 max-w-sm mx-auto"
+              className={cn(
+                "fixed z-50 left-4 right-4 top-1/2 -translate-y-1/2 rounded-[var(--radius-lg)] shadow-[var(--shadow-lg)] p-4 max-w-sm mx-auto",
+                nightMode
+                  ? "bg-[#0f172a] border border-slate-700/70"
+                  : "bg-[var(--color-surface-strong)] border border-[var(--color-border)]",
+              )}
             >
-              <p className="text-base font-semibold text-[var(--color-text)] text-center mb-3">
+              <p className={cn("text-base font-semibold text-center mb-3", nightMode ? "text-slate-100" : "text-[var(--color-text)]")}>
                 Select Time
               </p>
 
               <div className="flex gap-3">
                 {/* Hours column */}
                 <div className="flex-1">
-                  <p className="text-xs font-medium text-[var(--color-muted)] text-center mb-2">Hour</p>
-                  <div ref={hourRef} className="h-52 overflow-y-auto rounded-[var(--radius-md)] bg-[var(--color-bg)]">
+                  <p className={cn("text-xs font-medium text-center mb-2", nightMode ? "text-slate-400" : "text-[var(--color-muted)]")}>Hour</p>
+                  <div ref={hourRef} className={cn("h-52 overflow-y-auto rounded-[var(--radius-md)]", nightMode ? "bg-slate-900/90" : "bg-[var(--color-bg)]")}>
                     {hours.map((h) => {
                       const ampm = h >= 12 ? "PM" : "AM";
                       const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
@@ -104,7 +113,9 @@ export function TimePicker({ value, onChange, label }: TimePickerProps) {
                             "w-full py-2.5 text-sm text-center cursor-pointer transition-colors duration-100 rounded-[var(--radius-sm)]",
                             isActive
                               ? "bg-[var(--color-primary)] text-[var(--color-on-primary)] font-semibold"
-                              : "text-[var(--color-text)] hover:bg-[var(--color-border)]",
+                              : nightMode
+                                ? "text-slate-100 hover:bg-slate-800"
+                                : "text-[var(--color-text)] hover:bg-[var(--color-border)]",
                           )}
                         >
                           {h12} {ampm}
@@ -116,8 +127,8 @@ export function TimePicker({ value, onChange, label }: TimePickerProps) {
 
                 {/* Minutes column */}
                 <div className="flex-1">
-                  <p className="text-xs font-medium text-[var(--color-muted)] text-center mb-2">Minute</p>
-                  <div ref={minuteRef} className="h-52 overflow-y-auto rounded-[var(--radius-md)] bg-[var(--color-bg)]">
+                  <p className={cn("text-xs font-medium text-center mb-2", nightMode ? "text-slate-400" : "text-[var(--color-muted)]")}>Minute</p>
+                  <div ref={minuteRef} className={cn("h-52 overflow-y-auto rounded-[var(--radius-md)]", nightMode ? "bg-slate-900/90" : "bg-[var(--color-bg)]")}>
                     {minutes.map((m) => {
                       const isActive = minute === m;
                       return (
@@ -130,7 +141,9 @@ export function TimePicker({ value, onChange, label }: TimePickerProps) {
                             "w-full py-2.5 text-sm text-center cursor-pointer transition-colors duration-100 rounded-[var(--radius-sm)]",
                             isActive
                               ? "bg-[var(--color-primary)] text-[var(--color-on-primary)] font-semibold"
-                              : "text-[var(--color-text)] hover:bg-[var(--color-border)]",
+                              : nightMode
+                                ? "text-slate-100 hover:bg-slate-800"
+                                : "text-[var(--color-text)] hover:bg-[var(--color-border)]",
                           )}
                         >
                           :{pad(m)}
@@ -143,13 +156,16 @@ export function TimePicker({ value, onChange, label }: TimePickerProps) {
 
               {/* Current selection + Done */}
               <div className="mt-3 flex items-center justify-between">
-                <span className="text-sm text-[var(--color-text-secondary)]">
+                <span className={cn("text-sm", nightMode ? "text-slate-300" : "text-[var(--color-text-secondary)]")}>
                   {formatDisplay(value)}
                 </span>
                 <button
                   type="button"
                   onClick={() => setOpen(false)}
-                  className="px-5 py-2 text-sm font-medium bg-[var(--color-primary)] text-[var(--color-on-primary)] rounded-[var(--radius-md)] cursor-pointer hover:bg-[var(--color-primary-hover)] transition-colors"
+                  className={cn(
+                    "px-5 text-sm font-medium bg-[var(--color-primary)] text-[var(--color-on-primary)] rounded-[var(--radius-md)] cursor-pointer hover:bg-[var(--color-primary-hover)] transition-colors",
+                    "py-2",
+                  )}
                 >
                   Done
                 </button>

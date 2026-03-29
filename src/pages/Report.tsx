@@ -11,9 +11,10 @@ import { getAgeLabelFromDob, formatDate } from "../lib/utils";
 import { BITSS_TYPES, STOOL_COLORS } from "../lib/constants";
 import { getDietEntryDisplayLabel, getDietEntrySecondaryText } from "../lib/feeding";
 import { getEpisodeEventTypeLabel, getEpisodeTypeLabel } from "../lib/episode-constants";
+import { getSymptomSeverityBadgeVariant, getSymptomSeverityLabel, getSymptomTypeLabel } from "../lib/symptom-constants";
 import * as db from "../lib/db";
 import { useToast } from "../components/ui/toast";
-import type { DietEntry, Episode, EpisodeEvent, PoopEntry } from "../lib/types";
+import type { DietEntry, Episode, EpisodeEvent, PoopEntry, SymptomEntry } from "../lib/types";
 
 interface EpisodeReportGroup {
   episode: Episode;
@@ -29,6 +30,7 @@ interface ReportHighlight {
 interface ReportOptions {
   includeFeeds: boolean;
   includeEpisodes: boolean;
+  includeSymptoms: boolean;
   includeNotes: boolean;
   includeCaregiverNote: boolean;
 }
@@ -37,6 +39,7 @@ interface ReportData {
   logs: PoopEntry[];
   dietLogs: DietEntry[];
   episodeGroups: EpisodeReportGroup[];
+  symptomLogs: SymptomEntry[];
   caregiverNote: string | null;
   highlights: ReportHighlight[];
   stats: {
@@ -63,6 +66,7 @@ export function Report() {
   const [options, setOptions] = useState<ReportOptions>({
     includeFeeds: true,
     includeEpisodes: true,
+    includeSymptoms: true,
     includeNotes: true,
     includeCaregiverNote: true,
   });
@@ -107,6 +111,7 @@ export function Report() {
     logs: PoopEntry[];
     dietLogs: DietEntry[];
     episodeGroups: EpisodeReportGroup[];
+    symptomLogs: SymptomEntry[];
   }): ReportHighlight[] {
     const highlights: ReportHighlight[] = [];
     const redFlagLogs = data.logs.filter((log) => {
@@ -117,6 +122,8 @@ export function Report() {
     const looseStoolCount = data.logs.filter((log) => (log.stool_type ?? 0) >= 6).length;
     const longestNoPoopStreak = getLongestNoPoopStreak(data.logs);
     const activeEpisode = data.episodeGroups.find((group) => group.episode.status === "active");
+    const severeSymptoms = data.symptomLogs.filter((log) => log.severity === "severe");
+    const strainingCount = data.symptomLogs.filter((log) => log.symptom_type === "straining").length;
 
     if (redFlagLogs.length > 0) {
       const lastRedFlag = redFlagLogs[0];
@@ -165,11 +172,25 @@ export function Report() {
       });
     }
 
+    if (severeSymptoms.length > 0) {
+      highlights.push({
+        tone: "alert",
+        title: "Severe symptom logged",
+        detail: `${getSymptomTypeLabel(severeSymptoms[0].symptom_type)} was marked severe during this period.`,
+      });
+    } else if (strainingCount >= 2) {
+      highlights.push({
+        tone: "caution",
+        title: "Repeated straining logged",
+        detail: `${strainingCount} straining symptom entr${strainingCount === 1 ? "y" : "ies"} were recorded in this period.`,
+      });
+    }
+
     if (highlights.length === 0) {
       highlights.push({
         tone: "info",
         title: "No major changes highlighted",
-        detail: "This period does not include red-flag colors, marked no-poop streaks, or episode activity.",
+        detail: "This period does not include red-flag colors, marked no-poop streaks, severe symptoms, or episode activity.",
       });
     }
 
@@ -178,11 +199,12 @@ export function Report() {
 
   const handleGenerate = async () => {
     setIsGenerating(true);
-    const [logs, dietLogs, episodes, episodeEvents, caregiverNote, stats] = await Promise.all([
+    const [logs, dietLogs, episodes, episodeEvents, symptomLogs, caregiverNote, stats] = await Promise.all([
       db.getPoopLogsForRange(activeChild.id, startDate, endDate),
       db.getDietLogsForRange(activeChild.id, startDate, endDate),
       db.getEpisodesForRange(activeChild.id, startDate, endDate),
       db.getEpisodeEventsForRange(activeChild.id, startDate, endDate),
+      db.getSymptomsForRange(activeChild.id, startDate, endDate),
       db.getSetting(`handoff_note:${activeChild.id}`),
       db.getReportStats(activeChild.id, startDate, endDate),
     ]);
@@ -192,9 +214,9 @@ export function Report() {
       events: episodeEvents.filter((event) => event.episode_id === episode.id),
     }));
 
-    const highlights = buildHighlights({ logs, dietLogs, episodeGroups });
+    const highlights = buildHighlights({ logs, dietLogs, episodeGroups, symptomLogs });
 
-    setReportData({ logs, dietLogs, episodeGroups, caregiverNote, highlights, stats });
+    setReportData({ logs, dietLogs, episodeGroups, symptomLogs, caregiverNote, highlights, stats });
     setIsGenerating(false);
   };
 
@@ -264,6 +286,20 @@ export function Report() {
               </ul>
             ` : ""}
           </div>
+        `).join("");
+
+    const symptomEntriesHtml = data.symptomLogs.length === 0
+      ? '<p class="empty">No symptoms in this date range.</p>'
+      : data.symptomLogs.map((log) => `
+          <tr>
+            <td class="date">${escapeHtml(formatDate(log.logged_at))}</td>
+            <td class="entry">
+              ${escapeHtml(getSymptomTypeLabel(log.symptom_type))}
+              <div class="subtle note">${escapeHtml(getSymptomSeverityLabel(log.severity))}</div>
+              ${options.includeNotes && log.notes ? `<div class="subtle note">${escapeHtml(log.notes)}</div>` : ""}
+            </td>
+            <td class="size">${escapeHtml(log.episode_id ? "Episode-linked" : "Standalone")}</td>
+          </tr>
         `).join("");
 
     const highlightsHtml = data.highlights.map((highlight) => `
@@ -446,6 +482,7 @@ export function Report() {
         </div>
         ${data.stats.totalNoPoop > 0 ? `<p class="subtle" style="margin-top:12px;text-align:center;">${data.stats.totalNoPoop} no-poop day${data.stats.totalNoPoop > 1 ? "s" : ""} recorded</p>` : ""}
         ${data.dietLogs.length > 0 ? `<p class="subtle" style="margin-top:10px;text-align:center;">${data.dietLogs.length} feed${data.dietLogs.length > 1 ? "s" : ""} recorded</p>` : ""}
+        ${data.symptomLogs.length > 0 ? `<p class="subtle" style="margin-top:10px;text-align:center;">${data.symptomLogs.length} symptom${data.symptomLogs.length > 1 ? "s" : ""} recorded</p>` : ""}
         ${data.episodeGroups.length > 0 ? `<p class="subtle" style="margin-top:10px;text-align:center;">${data.episodeGroups.length} episode${data.episodeGroups.length > 1 ? "s" : ""} captured</p>` : ""}
         <div class="highlight-list">
           ${highlightsHtml}
@@ -468,6 +505,13 @@ export function Report() {
         <section class="card">
           <h2>Feeds & Meals (${data.dietLogs.length})</h2>
           ${data.dietLogs.length === 0 ? feedEntriesHtml : `<table><tbody>${feedEntriesHtml}</tbody></table>`}
+        </section>
+      ` : ""}
+
+      ${options.includeSymptoms ? `
+        <section class="card">
+          <h2>Symptoms (${data.symptomLogs.length})</h2>
+          ${data.symptomLogs.length === 0 ? symptomEntriesHtml : `<table><tbody>${symptomEntriesHtml}</tbody></table>`}
         </section>
       ` : ""}
 
@@ -569,6 +613,7 @@ export function Report() {
             <div className="flex flex-wrap gap-2">
               {[
                 { key: "includeFeeds", label: "Feeds" },
+                { key: "includeSymptoms", label: "Symptoms" },
                 { key: "includeEpisodes", label: "Episodes" },
                 { key: "includeNotes", label: "Notes" },
                 { key: "includeCaregiverNote", label: "Caregiver note" },
@@ -676,6 +721,11 @@ export function Report() {
               {reportData.dietLogs.length > 0 && (
                 <p className="text-xs text-[var(--color-muted)] mt-2 text-center">
                   {reportData.dietLogs.length} feed{reportData.dietLogs.length > 1 ? "s" : ""} recorded
+                </p>
+              )}
+              {reportData.symptomLogs.length > 0 && (
+                <p className="text-xs text-[var(--color-muted)] mt-2 text-center">
+                  {reportData.symptomLogs.length} symptom{reportData.symptomLogs.length > 1 ? "s" : ""} recorded
                 </p>
               )}
               {reportData.episodeGroups.length > 0 && (
@@ -799,6 +849,46 @@ export function Report() {
                             </p>
                           )}
                         </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {options.includeSymptoms && (
+            <Card className="mb-4">
+              <CardHeader>
+                <CardTitle>Symptoms ({reportData.symptomLogs.length})</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {reportData.symptomLogs.length === 0 ? (
+                  <p className="text-sm text-[var(--color-muted)] text-center py-4">
+                    No symptoms in this date range.
+                  </p>
+                ) : (
+                  <div className="flex flex-col gap-2">
+                    {reportData.symptomLogs.map((symptom) => (
+                      <div key={symptom.id} className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg)] p-3">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <p className="text-sm font-medium text-[var(--color-text)]">
+                              {getSymptomTypeLabel(symptom.symptom_type)}
+                            </p>
+                            <p className="mt-1 text-xs text-[var(--color-text-soft)]">
+                              {formatDate(symptom.logged_at)} · {symptom.episode_id ? "Episode-linked" : "Standalone"}
+                            </p>
+                          </div>
+                          <Badge variant={getSymptomSeverityBadgeVariant(symptom.severity)}>
+                            {getSymptomSeverityLabel(symptom.severity)}
+                          </Badge>
+                        </div>
+                        {options.includeNotes && symptom.notes && (
+                          <p className="mt-2 text-sm leading-relaxed text-[var(--color-text-secondary)]">
+                            {symptom.notes}
+                          </p>
+                        )}
                       </div>
                     ))}
                   </div>

@@ -7,7 +7,8 @@ import { useToast } from "../ui/toast";
 import { BOTTLE_CONTENTS, BREAST_SIDES, FOOD_TYPES } from "../../lib/diet-constants";
 import { cn } from "../../lib/cn";
 import * as db from "../../lib/db";
-import type { BottleContent, BreastSide, FoodType } from "../../lib/types";
+import { isNightLoggingWindow } from "../../lib/logging-ui";
+import type { BottleContent, BreastSide, DietLogDraft, FoodType } from "../../lib/types";
 
 function getCurrentDate(): string {
   return new Date().toISOString().split("T")[0];
@@ -27,14 +28,27 @@ function parseInteger(value: string): number | null {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
+const EMPTY_DRAFT: DietLogDraft = {
+  food_type: null,
+  food_name: "",
+  amount_ml: "",
+  duration_minutes: "",
+  breast_side: null,
+  bottle_content: null,
+  reaction_notes: "",
+  is_constipation_support: false,
+  notes: "",
+};
+
 interface DietLogFormProps {
   open: boolean;
   onClose: () => void;
   childId: string;
   onLogged: () => void;
+  initialDraft?: Partial<DietLogDraft> | null;
 }
 
-export function DietLogForm({ open, onClose, childId, onLogged }: DietLogFormProps) {
+export function DietLogForm({ open, onClose, childId, onLogged, initialDraft = null }: DietLogFormProps) {
   const { showError } = useToast();
   const [logDate, setLogDate] = useState(getCurrentDate());
   const [logTime, setLogTime] = useState(getCurrentTime());
@@ -48,26 +62,32 @@ export function DietLogForm({ open, onClose, childId, onLogged }: DietLogFormPro
   const [isConstipationSupport, setIsConstipationSupport] = useState(false);
   const [notes, setNotes] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [nightMode, setNightMode] = useState(false);
+
+  const applyDraft = (draft?: Partial<DietLogDraft> | null) => {
+    const nextDraft = { ...EMPTY_DRAFT, ...draft };
+    setLogDate(getCurrentDate());
+    setLogTime(getCurrentTime());
+    setFoodType(nextDraft.food_type);
+    setFoodName(nextDraft.food_name);
+    setAmountMl(nextDraft.amount_ml);
+    setDurationMinutes(nextDraft.duration_minutes);
+    setBreastSide(nextDraft.breast_side);
+    setBottleContent(nextDraft.bottle_content);
+    setReactionNotes(nextDraft.reaction_notes);
+    setIsConstipationSupport(nextDraft.is_constipation_support);
+    setNotes(nextDraft.notes);
+  };
 
   useEffect(() => {
     if (open) {
-      setLogDate(getCurrentDate());
-      setLogTime(getCurrentTime());
+      setNightMode(isNightLoggingWindow());
+      applyDraft(initialDraft);
     }
-  }, [open]);
+  }, [open, initialDraft]);
 
   const reset = () => {
-    setLogDate(getCurrentDate());
-    setLogTime(getCurrentTime());
-    setFoodType(null);
-    setFoodName("");
-    setAmountMl("");
-    setDurationMinutes("");
-    setBreastSide(null);
-    setBottleContent(null);
-    setReactionNotes("");
-    setIsConstipationSupport(false);
-    setNotes("");
+    applyDraft(null);
   };
 
   const handleSubmit = async (e: FormEvent) => {
@@ -113,28 +133,75 @@ export function DietLogForm({ open, onClose, childId, onLogged }: DietLogFormPro
     setTimeout(reset, 300);
   };
 
+  const fieldLabelClassName = cn("block text-sm font-medium mb-1.5", nightMode ? "text-slate-100" : "text-[var(--color-text)]");
+  const chipClassName = (selected: boolean) =>
+    cn(
+      "px-4 rounded-[var(--radius-md)] border text-sm font-medium transition-colors duration-200 cursor-pointer",
+      "h-10",
+      selected
+        ? "border-[var(--color-primary)] bg-[var(--color-primary)]/10 text-[var(--color-primary)]"
+        : nightMode
+          ? "border-slate-700 bg-slate-900/90 text-slate-200 hover:border-slate-500"
+          : "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-secondary)] hover:border-[var(--color-muted)]",
+    );
+  const inputClassName = cn(
+    "w-full rounded-[var(--radius-md)] border text-sm outline-none transition-colors",
+    nightMode
+      ? "h-11 px-3 border-slate-700 bg-slate-900/90 text-slate-100 placeholder:text-slate-500 focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20"
+      : "h-11 px-3 border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)] focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20",
+  );
+  const textareaClassName = cn(
+    "w-full rounded-[var(--radius-md)] border text-sm resize-none outline-none transition-colors",
+    nightMode
+      ? "px-3 py-2 border-slate-700 bg-slate-900/90 text-slate-100 placeholder:text-slate-500 focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20"
+      : "px-3 py-2 border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)] focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20",
+  );
+
   return (
-    <Sheet open={open} onClose={handleClose}>
+    <Sheet open={open} onClose={handleClose} tone={nightMode ? "night" : "default"}>
       <form onSubmit={handleSubmit} className="px-5 pb-8">
-        <h2 className="font-[var(--font-display)] text-lg font-semibold text-[var(--color-text)] mb-5 text-center">
-          Log a feed
-        </h2>
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <h2 className={cn("font-[var(--font-display)] text-lg font-semibold", nightMode ? "text-slate-100" : "text-[var(--color-text)]")}>
+            Log a feed
+          </h2>
+          <button
+            type="button"
+            onClick={() => setNightMode((current) => !current)}
+            className={cn(
+              "rounded-full border px-3 py-2 text-xs font-semibold transition-colors",
+              nightMode
+                ? "border-slate-600 bg-slate-800 text-slate-100"
+                : "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-secondary)]",
+            )}
+          >
+            {nightMode ? "Night on" : "Night off"}
+          </button>
+        </div>
+
+        {nightMode && (
+          <div className="mb-4 rounded-[var(--radius-md)] border border-slate-700 bg-slate-900/90 px-3 py-3">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-300">Low-light mode</p>
+            <p className="mt-1 text-sm leading-relaxed text-slate-400">
+              Darker surfaces and bigger actions for late-night feeding logs.
+            </p>
+          </div>
+        )}
 
         <div className="flex flex-col gap-5">
           {/* Date & time */}
           <div>
-            <label className="block text-sm font-medium text-[var(--color-text)] mb-1.5">
+            <label className={fieldLabelClassName}>
               When
             </label>
             <div className="grid grid-cols-2 gap-2">
-              <DatePicker value={logDate} onChange={setLogDate} max={getCurrentDate()} />
-              <TimePicker value={logTime} onChange={setLogTime} />
+              <DatePicker value={logDate} onChange={setLogDate} max={getCurrentDate()} nightMode={nightMode} />
+              <TimePicker value={logTime} onChange={setLogTime} nightMode={nightMode} />
             </div>
           </div>
 
           {/* Food type */}
           <div>
-            <label className="block text-sm font-medium text-[var(--color-text)] mb-2">
+            <label className={cn("block text-sm font-medium mb-2", nightMode ? "text-slate-100" : "text-[var(--color-text)]")}>
               Type
             </label>
             <div className="flex flex-wrap gap-2">
@@ -143,12 +210,7 @@ export function DietLogForm({ open, onClose, childId, onLogged }: DietLogFormPro
                   key={ft.value}
                   type="button"
                   onClick={() => setFoodType(ft.value)}
-                  className={cn(
-                    "px-4 h-10 rounded-[var(--radius-md)] border text-sm font-medium transition-colors duration-200 cursor-pointer",
-                    foodType === ft.value
-                      ? "border-[var(--color-primary)] bg-[var(--color-primary)]/10 text-[var(--color-primary)]"
-                      : "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-secondary)] hover:border-[var(--color-muted)]",
-                  )}
+                  className={chipClassName(foodType === ft.value)}
                 >
                   {ft.label}
                 </button>
@@ -160,7 +222,7 @@ export function DietLogForm({ open, onClose, childId, onLogged }: DietLogFormPro
           {foodType === "breast_milk" && (
             <>
               <div>
-                <label className="block text-sm font-medium text-[var(--color-text)] mb-2">
+                <label className={cn("block text-sm font-medium mb-2", nightMode ? "text-slate-100" : "text-[var(--color-text)]")}>
                   Breast side
                 </label>
                 <div className="flex flex-wrap gap-2">
@@ -169,12 +231,7 @@ export function DietLogForm({ open, onClose, childId, onLogged }: DietLogFormPro
                       key={side.value}
                       type="button"
                       onClick={() => setBreastSide(side.value)}
-                      className={cn(
-                        "px-4 h-10 rounded-[var(--radius-md)] border text-sm font-medium transition-colors duration-200 cursor-pointer",
-                        breastSide === side.value
-                          ? "border-[var(--color-primary)] bg-[var(--color-primary)]/10 text-[var(--color-primary)]"
-                          : "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-secondary)] hover:border-[var(--color-muted)]",
-                      )}
+                      className={chipClassName(breastSide === side.value)}
                     >
                       {side.label}
                     </button>
@@ -183,7 +240,7 @@ export function DietLogForm({ open, onClose, childId, onLogged }: DietLogFormPro
               </div>
 
               <div>
-                <label htmlFor="duration-minutes" className="block text-sm font-medium text-[var(--color-text)] mb-1.5">
+                <label htmlFor="duration-minutes" className={fieldLabelClassName}>
                   Duration (minutes)
                 </label>
                 <input
@@ -194,7 +251,7 @@ export function DietLogForm({ open, onClose, childId, onLogged }: DietLogFormPro
                   value={durationMinutes}
                   onChange={(e) => setDurationMinutes(e.target.value)}
                   placeholder="e.g. 12"
-                  className="w-full h-11 px-3 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)] text-sm outline-none focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20 transition-colors"
+                  className={inputClassName}
                 />
               </div>
             </>
@@ -204,7 +261,7 @@ export function DietLogForm({ open, onClose, childId, onLogged }: DietLogFormPro
           {foodType === "bottle" && (
             <>
               <div>
-                <label htmlFor="amount-ml" className="block text-sm font-medium text-[var(--color-text)] mb-1.5">
+                <label htmlFor="amount-ml" className={fieldLabelClassName}>
                   Amount (ml)
                 </label>
                 <input
@@ -215,12 +272,12 @@ export function DietLogForm({ open, onClose, childId, onLogged }: DietLogFormPro
                   value={amountMl}
                   onChange={(e) => setAmountMl(e.target.value)}
                   placeholder="e.g. 120"
-                  className="w-full h-11 px-3 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)] text-sm outline-none focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20 transition-colors"
+                  className={inputClassName}
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-[var(--color-text)] mb-2">
+                <label className={cn("block text-sm font-medium mb-2", nightMode ? "text-slate-100" : "text-[var(--color-text)]")}>
                   Bottle contents
                 </label>
                 <div className="flex flex-wrap gap-2">
@@ -229,12 +286,7 @@ export function DietLogForm({ open, onClose, childId, onLogged }: DietLogFormPro
                       key={option.value}
                       type="button"
                       onClick={() => setBottleContent(option.value)}
-                      className={cn(
-                        "px-4 h-10 rounded-[var(--radius-md)] border text-sm font-medium transition-colors duration-200 cursor-pointer",
-                        bottleContent === option.value
-                          ? "border-[var(--color-primary)] bg-[var(--color-primary)]/10 text-[var(--color-primary)]"
-                          : "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-secondary)] hover:border-[var(--color-muted)]",
-                      )}
+                      className={chipClassName(bottleContent === option.value)}
                     >
                       {option.label}
                     </button>
@@ -247,7 +299,7 @@ export function DietLogForm({ open, onClose, childId, onLogged }: DietLogFormPro
           {/* Formula, pumping, water amounts */}
           {(foodType === "formula" || foodType === "pumping" || foodType === "water") && (
             <div>
-              <label htmlFor="amount-ml-other" className="block text-sm font-medium text-[var(--color-text)] mb-1.5">
+              <label htmlFor="amount-ml-other" className={fieldLabelClassName}>
                 Amount (ml)
               </label>
               <input
@@ -258,14 +310,14 @@ export function DietLogForm({ open, onClose, childId, onLogged }: DietLogFormPro
                 value={amountMl}
                 onChange={(e) => setAmountMl(e.target.value)}
                 placeholder={foodType === "pumping" ? "e.g. 90" : "e.g. 120"}
-                className="w-full h-11 px-3 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)] text-sm outline-none focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20 transition-colors"
+                className={inputClassName}
               />
             </div>
           )}
 
           {foodType === "pumping" && (
             <div>
-              <label htmlFor="pump-duration-minutes" className="block text-sm font-medium text-[var(--color-text)] mb-1.5">
+              <label htmlFor="pump-duration-minutes" className={fieldLabelClassName}>
                 Duration (minutes)
               </label>
               <input
@@ -276,7 +328,7 @@ export function DietLogForm({ open, onClose, childId, onLogged }: DietLogFormPro
                 value={durationMinutes}
                 onChange={(e) => setDurationMinutes(e.target.value)}
                 placeholder="e.g. 15"
-                className="w-full h-11 px-3 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)] text-sm outline-none focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20 transition-colors"
+                className={inputClassName}
               />
             </div>
           )}
@@ -285,7 +337,7 @@ export function DietLogForm({ open, onClose, childId, onLogged }: DietLogFormPro
           {(foodType === "solids" || foodType === "other") && (
             <>
               <div>
-                <label htmlFor="food-name" className="block text-sm font-medium text-[var(--color-text)] mb-1.5">
+                <label htmlFor="food-name" className={fieldLabelClassName}>
                   What food?
                 </label>
                 <input
@@ -294,7 +346,7 @@ export function DietLogForm({ open, onClose, childId, onLogged }: DietLogFormPro
                   value={foodName}
                   onChange={(e) => setFoodName(e.target.value)}
                   placeholder="e.g. pears, rice cereal"
-                  className="w-full h-11 px-3 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)] text-sm outline-none focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20 transition-colors"
+                  className={inputClassName}
                   autoComplete="off"
                 />
               </div>
@@ -306,12 +358,14 @@ export function DietLogForm({ open, onClose, childId, onLogged }: DietLogFormPro
                   "flex items-center justify-between rounded-[var(--radius-md)] border px-3 py-3 text-left transition-colors",
                   isConstipationSupport
                     ? "border-[var(--color-primary)] bg-[var(--color-primary)]/10"
-                    : "border-[var(--color-border)] bg-[var(--color-surface)]",
+                    : nightMode
+                      ? "border-slate-700 bg-slate-900/90"
+                      : "border-[var(--color-border)] bg-[var(--color-surface)]",
                 )}
               >
                 <div>
-                  <p className="text-sm font-medium text-[var(--color-text)]">Constipation support food</p>
-                  <p className="text-xs text-[var(--color-text-secondary)]">
+                  <p className={cn("text-sm font-medium", nightMode ? "text-slate-100" : "text-[var(--color-text)]")}>Constipation support food</p>
+                  <p className={cn("text-xs", nightMode ? "text-slate-400" : "text-[var(--color-text-secondary)]")}>
                     Mark foods like pears, prunes, peas, or extra water-rich foods.
                   </p>
                 </div>
@@ -330,7 +384,7 @@ export function DietLogForm({ open, onClose, childId, onLogged }: DietLogFormPro
           {/* Reaction notes */}
           {(foodType === "solids" || foodType === "other" || foodType === "formula" || foodType === "bottle") && (
             <div>
-              <label htmlFor="reaction-notes" className="block text-sm font-medium text-[var(--color-text)] mb-1.5">
+              <label htmlFor="reaction-notes" className={fieldLabelClassName}>
                 Reactions or tummy notes
               </label>
               <textarea
@@ -339,14 +393,14 @@ export function DietLogForm({ open, onClose, childId, onLogged }: DietLogFormPro
                 onChange={(e) => setReactionNotes(e.target.value)}
                 placeholder="e.g. seemed gassy, accepted well, refused second half"
                 rows={2}
-                className="w-full px-3 py-2 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)] text-sm resize-none outline-none focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20 transition-colors"
+                className={textareaClassName}
               />
             </div>
           )}
 
           {/* Notes */}
           <div>
-            <label htmlFor="diet-notes" className="block text-sm font-medium text-[var(--color-text)] mb-1.5">
+            <label htmlFor="diet-notes" className={fieldLabelClassName}>
               Notes (optional)
             </label>
             <textarea
@@ -355,7 +409,7 @@ export function DietLogForm({ open, onClose, childId, onLogged }: DietLogFormPro
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Any observations..."
               rows={2}
-              className="w-full px-3 py-2 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)] text-sm resize-none outline-none focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20 transition-colors"
+              className={textareaClassName}
             />
           </div>
         </div>
@@ -364,7 +418,7 @@ export function DietLogForm({ open, onClose, childId, onLogged }: DietLogFormPro
           type="submit"
           variant="primary"
           size="lg"
-          className="w-full mt-6"
+          className={cn("w-full mt-6", nightMode && "shadow-none")}
           disabled={!foodType || isSubmitting}
         >
           {isSubmitting ? "Saving..." : "Save Feed"}

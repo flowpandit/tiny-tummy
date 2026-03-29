@@ -3,6 +3,7 @@ import type {
   Child,
   PoopEntry,
   Alert,
+  SymptomEntry,
   DietEntry,
   DailyFrequency,
   ConsistencyPoint,
@@ -203,6 +204,73 @@ export async function updatePoopLog(
 export async function deletePoopLog(id: string): Promise<void> {
   const conn = await getDb();
   await conn.execute("DELETE FROM poop_logs WHERE id = ?", [id]);
+}
+
+// --- Symptom Logs ---
+
+export async function createSymptomLog(input: {
+  child_id: string;
+  episode_id?: string | null;
+  symptom_type: string;
+  severity: string;
+  logged_at: string;
+  notes?: string | null;
+}): Promise<SymptomEntry> {
+  const conn = await getDb();
+  const id = generateId();
+  const now = nowISO();
+
+  await conn.execute(
+    `INSERT INTO symptom_logs (
+      id, child_id, episode_id, symptom_type, severity, logged_at, notes, created_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      id,
+      input.child_id,
+      input.episode_id ?? null,
+      input.symptom_type,
+      input.severity,
+      input.logged_at,
+      input.notes ?? null,
+      now,
+    ],
+  );
+
+  return {
+    id,
+    child_id: input.child_id,
+    episode_id: input.episode_id ?? null,
+    symptom_type: input.symptom_type as SymptomEntry["symptom_type"],
+    severity: input.severity as SymptomEntry["severity"],
+    logged_at: input.logged_at,
+    notes: input.notes ?? null,
+    created_at: now,
+  };
+}
+
+export async function getSymptoms(
+  childId: string,
+  limit = 50,
+): Promise<SymptomEntry[]> {
+  const conn = await getDb();
+  return conn.select<SymptomEntry[]>(
+    "SELECT * FROM symptom_logs WHERE child_id = ? ORDER BY logged_at DESC LIMIT ?",
+    [childId, limit],
+  );
+}
+
+export async function getSymptomsForRange(
+  childId: string,
+  startDate: string,
+  endDate: string,
+): Promise<SymptomEntry[]> {
+  const conn = await getDb();
+  return conn.select<SymptomEntry[]>(
+    `SELECT * FROM symptom_logs
+     WHERE child_id = ? AND logged_at >= ? AND logged_at <= ?
+     ORDER BY logged_at DESC`,
+    [childId, startDate, endDate + "T23:59:59"],
+  );
 }
 
 // --- Alerts ---

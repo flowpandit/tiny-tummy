@@ -12,6 +12,7 @@ interface DatePickerProps {
   dismissOnDocumentClick?: boolean;
   overlayOffsetY?: number;
   usePortal?: boolean;
+  nightMode?: boolean;
 }
 
 const WEEKDAYS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
@@ -43,6 +44,7 @@ export function DatePicker({
   dismissOnDocumentClick = false,
   overlayOffsetY = 0,
   usePortal = false,
+  nightMode = false,
 }: DatePickerProps) {
   const [open, setOpen] = useState(false);
   const [pickerView, setPickerView] = useState<PickerView>("calendar");
@@ -168,7 +170,7 @@ export function DatePicker({
 
   const overlayContent = (
     <>
-      <div className="fixed inset-0 z-40 bg-black/20" onClick={handleClose} />
+      <div className={cn("fixed inset-0 z-40", nightMode ? "bg-[#020617]/75" : "bg-black/20")} onClick={handleClose} />
       <motion.div
         ref={overlayRef}
         initial={{ opacity: 0, scale: 0.95 }}
@@ -176,7 +178,10 @@ export function DatePicker({
         exit={{ opacity: 0, scale: 0.95 }}
         transition={{ duration: 0.15 }}
         className={cn(
-          "fixed left-4 right-4 top-1/2 -translate-y-1/2 bg-[var(--color-surface-strong)] rounded-[var(--radius-lg)] shadow-[var(--shadow-lg)] border border-[var(--color-border)] p-4 max-w-sm mx-auto",
+          "fixed left-4 right-4 top-1/2 -translate-y-1/2 rounded-[var(--radius-lg)] shadow-[var(--shadow-lg)] p-4 max-w-sm mx-auto",
+          nightMode
+            ? "bg-[#0f172a] border border-slate-700/70"
+            : "bg-[var(--color-surface-strong)] border border-[var(--color-border)]",
           usePortal ? "z-[120]" : "z-50",
         )}
         style={{ top: `calc(50% + ${overlayOffsetY}px)` }}
@@ -189,8 +194,9 @@ export function DatePicker({
                 onClick={goToPrev}
                 disabled={isPrevDisabled}
                 className={cn(
-                  "w-10 h-10 flex items-center justify-center rounded-full cursor-pointer text-[var(--color-text-secondary)]",
-                  isPrevDisabled ? "opacity-30 cursor-not-allowed" : "hover:bg-[var(--color-bg)]",
+                  "w-10 h-10 flex items-center justify-center rounded-full cursor-pointer",
+                  nightMode ? "text-slate-300" : "text-[var(--color-text-secondary)]",
+                  isPrevDisabled ? "opacity-30 cursor-not-allowed" : nightMode ? "hover:bg-slate-800" : "hover:bg-[var(--color-bg)]",
                 )}
                 aria-label="Previous month"
               >
@@ -201,7 +207,10 @@ export function DatePicker({
               <button
                 type="button"
                 onClick={() => setPickerView("year")}
-                className="text-base font-semibold text-[var(--color-text)] cursor-pointer hover:text-[var(--color-primary)] transition-colors flex items-center gap-1"
+                className={cn(
+                  "text-base font-semibold cursor-pointer hover:text-[var(--color-primary)] transition-colors flex items-center gap-1",
+                  nightMode ? "text-slate-100" : "text-[var(--color-text)]",
+                )}
               >
                 {MONTHS[viewMonth]} {viewYear}
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
@@ -213,8 +222,9 @@ export function DatePicker({
                 onClick={goToNext}
                 disabled={isNextDisabled}
                 className={cn(
-                  "w-10 h-10 flex items-center justify-center rounded-full cursor-pointer text-[var(--color-text-secondary)]",
-                  isNextDisabled ? "opacity-30 cursor-not-allowed" : "hover:bg-[var(--color-bg)]",
+                  "w-10 h-10 flex items-center justify-center rounded-full cursor-pointer",
+                  nightMode ? "text-slate-300" : "text-[var(--color-text-secondary)]",
+                  isNextDisabled ? "opacity-30 cursor-not-allowed" : nightMode ? "hover:bg-slate-800" : "hover:bg-[var(--color-bg)]",
                 )}
                 aria-label="Next month"
               >
@@ -226,7 +236,7 @@ export function DatePicker({
 
             <div className="grid grid-cols-7 mb-2">
               {WEEKDAYS.map((wd) => (
-                <div key={wd} className="text-center text-xs font-semibold text-[var(--color-muted)] py-1">
+                <div key={wd} className={cn("text-center text-xs font-semibold py-1", nightMode ? "text-slate-500" : "text-[var(--color-muted)]")}>
                   {wd}
                 </div>
               ))}
@@ -246,7 +256,9 @@ export function DatePicker({
                           ? "bg-[var(--color-primary)] text-[var(--color-on-primary)] font-bold shadow-[var(--shadow-soft)]"
                           : isToday(day)
                             ? "border-2 border-[var(--color-primary)] text-[var(--color-primary)] font-semibold"
-                            : "text-[var(--color-text)] hover:bg-[var(--color-bg)]",
+                            : nightMode
+                              ? "text-slate-100 hover:bg-slate-800"
+                              : "text-[var(--color-text)] hover:bg-[var(--color-bg)]",
                         isDisabled(day) && "opacity-25 cursor-not-allowed",
                       )}
                     >
@@ -267,7 +279,10 @@ export function DatePicker({
                 setOpen(false);
                 setPickerView("calendar");
               }}
-              className="w-full mt-3 py-2 text-sm font-medium text-[var(--color-primary)] cursor-pointer rounded-[var(--radius-sm)] hover:bg-[var(--color-primary)]/5 transition-colors"
+              className={cn(
+                "w-full mt-3 text-sm font-medium text-[var(--color-primary)] cursor-pointer rounded-[var(--radius-sm)] transition-colors",
+                nightMode ? "py-2 hover:bg-slate-800" : "py-2 hover:bg-[var(--color-primary)]/5",
+              )}
             >
               Today
             </button>
@@ -276,7 +291,7 @@ export function DatePicker({
 
         {pickerView === "year" && (
           <>
-            <p className="text-base font-semibold text-[var(--color-text)] text-center mb-3">
+            <p className={cn("text-base font-semibold text-center mb-3", nightMode ? "text-slate-100" : "text-[var(--color-text)]")}>
               Select Year
             </p>
             <div className="grid grid-cols-3 gap-2 max-h-64 overflow-y-auto">
@@ -293,7 +308,9 @@ export function DatePicker({
                     "py-2.5 rounded-[var(--radius-md)] text-sm font-medium cursor-pointer transition-colors duration-150",
                     y === viewYear
                       ? "bg-[var(--color-primary)] text-[var(--color-on-primary)]"
-                      : "text-[var(--color-text)] hover:bg-[var(--color-bg)]",
+                      : nightMode
+                        ? "text-slate-100 hover:bg-slate-800"
+                        : "text-[var(--color-text)] hover:bg-[var(--color-bg)]",
                     isYearDisabled(y) && "opacity-25 cursor-not-allowed",
                   )}
                 >
@@ -309,7 +326,10 @@ export function DatePicker({
             <button
               type="button"
               onClick={() => setPickerView("year")}
-              className="text-base font-semibold text-[var(--color-text)] text-center mb-3 w-full cursor-pointer hover:text-[var(--color-primary)] transition-colors flex items-center justify-center gap-1"
+              className={cn(
+                "text-base font-semibold text-center mb-3 w-full cursor-pointer hover:text-[var(--color-primary)] transition-colors flex items-center justify-center gap-1",
+                nightMode ? "text-slate-100" : "text-[var(--color-text)]",
+              )}
             >
               {viewYear}
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
@@ -330,7 +350,9 @@ export function DatePicker({
                     "py-2.5 rounded-[var(--radius-md)] text-sm font-medium cursor-pointer transition-colors duration-150",
                     i === viewMonth && viewYear === selected.year
                       ? "bg-[var(--color-primary)] text-[var(--color-on-primary)]"
-                      : "text-[var(--color-text)] hover:bg-[var(--color-bg)]",
+                      : nightMode
+                        ? "text-slate-100 hover:bg-slate-800"
+                        : "text-[var(--color-text)] hover:bg-[var(--color-bg)]",
                     isMonthDisabled(i) && "opacity-25 cursor-not-allowed",
                   )}
                 >
@@ -368,15 +390,18 @@ export function DatePicker({
         type="button"
         onClick={handleOpen}
         className={cn(
-          "w-full h-11 px-3 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)]",
-          "text-[var(--color-text)] text-sm text-left cursor-pointer transition-colors",
-          "hover:border-[var(--color-muted)] focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20 outline-none",
+          nightMode
+            ? "w-full h-11 px-3 rounded-[var(--radius-md)] border border-slate-700 bg-slate-900/90"
+            : "w-full h-11 px-3 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)]",
+          nightMode
+            ? "text-slate-100 text-sm text-left cursor-pointer transition-colors hover:border-slate-500 focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20 outline-none"
+            : "text-[var(--color-text)] text-sm text-left cursor-pointer transition-colors hover:border-[var(--color-muted)] focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20 outline-none",
           "flex items-center justify-between",
         )}
         aria-label={label ?? "Select date"}
       >
         <span>{displayValue}</span>
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="var(--color-muted)" className="w-4 h-4">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill={nightMode ? "#94a3b8" : "var(--color-muted)"} className="w-4 h-4">
           <path fillRule="evenodd" d="M5.75 2a.75.75 0 0 1 .75.75V4h7V2.75a.75.75 0 0 1 1.5 0V4h.25A2.75 2.75 0 0 1 18 6.75v8.5A2.75 2.75 0 0 1 15.25 18H4.75A2.75 2.75 0 0 1 2 15.25v-8.5A2.75 2.75 0 0 1 4.75 4H5V2.75A.75.75 0 0 1 5.75 2Zm-1 5.5c-.69 0-1.25.56-1.25 1.25v6.5c0 .69.56 1.25 1.25 1.25h10.5c.69 0 1.25-.56 1.25-1.25v-6.5c0-.69-.56-1.25-1.25-1.25H4.75Z" clipRule="evenodd" />
         </svg>
       </button>

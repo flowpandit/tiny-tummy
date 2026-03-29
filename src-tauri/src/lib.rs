@@ -75,6 +75,12 @@ pub fn run() {
             sql: include_str!("../migrations/003_episode_mode.sql"),
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 4,
+            description: "add symptom logs",
+            sql: include_str!("../migrations/004_symptom_logs.sql"),
+            kind: MigrationKind::Up,
+        },
     ];
 
     tauri::Builder::default()

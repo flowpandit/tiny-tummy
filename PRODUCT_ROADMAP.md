@@ -44,6 +44,12 @@ That does not mean:
 
 ## Roadmap Structure
 
+Status key:
+
+- `[Done]` shipped
+- `[In Progress]` partially shipped
+- `[Planned]` not started
+
 The roadmap is split into:
 
 1. Foundation work
@@ -56,7 +62,7 @@ The roadmap is split into:
 
 Before shipping multiple new features, the app should get a stronger data and query foundation. The current schema is intentionally lean, but too narrow for the next stage of the product.
 
-### Foundation 1: Expand the Health Event Model
+### Foundation 1: Expand the Health Event Model `[In Progress]`
 
 #### Goal
 
@@ -143,7 +149,7 @@ Example episode types:
 - diarrhoea
 - solids_transition
 
-### Foundation 2: Build a Shared Daily Summary Layer
+### Foundation 2: Build a Shared Daily Summary Layer `[In Progress]`
 
 #### Goal
 
@@ -161,6 +167,12 @@ The same summary is needed by:
 
 Without a shared summary layer, the app will repeat business logic in multiple places.
 
+Current progress:
+
+- Home and Handoff now share the same derived daily summary helpers
+- caregiver note state is now shared through one hook
+- reminders and reports still have some separate logic to consolidate later
+
 #### Summary output should include
 
 - last poop
@@ -173,7 +185,7 @@ Without a shared summary layer, the app will repeat business logic in multiple p
 - recent red-flag colors
 - recent symptoms
 
-### Foundation 3: Redesign Reporting Infrastructure
+### Foundation 3: Redesign Reporting Infrastructure `[In Progress]`
 
 #### Goal
 
@@ -198,7 +210,7 @@ Reports are one of Tiny Tummy's strongest commercial and clinical features. They
 
 These are the highest-priority additions because they strengthen the app's core value and improve daily usefulness immediately.
 
-### 1. Caregiver Handoff
+### 1. Caregiver Handoff `[Done]`
 
 #### Product goal
 
@@ -251,7 +263,7 @@ Add a dedicated handoff view with:
 
 A caregiver should understand the child's state without opening history.
 
-### 2. Rich Feeding Tracking
+### 2. Rich Feeding Tracking `[Done]`
 
 #### Product goal
 
@@ -303,7 +315,7 @@ Detailed mode should support:
 
 Feeding data should explain bowel changes, not just sit in the timeline.
 
-### 3. Episode Mode
+### 3. Episode Mode `[Done]`
 
 #### Product goal
 
@@ -354,7 +366,7 @@ Each episode can include:
 
 A parent should be able to describe an issue clearly at a doctor visit from inside the app.
 
-### 4. Better Pediatrician Workflow
+### 4. Better Pediatrician Workflow `[In Progress]`
 
 #### Product goal
 
@@ -389,7 +401,7 @@ The report should remain descriptive, not diagnostic.
 
 Parents should not need to manually explain the story from memory.
 
-### 5. Smart Reminders
+### 5. Smart Reminders `[Done]`
 
 #### Product goal
 
@@ -425,7 +437,7 @@ Reminder scheduling should reuse:
 
 Reminders should feel useful and well-timed, not nagging.
 
-### 6. Faster Logging Surfaces
+### 6. Faster Logging Surfaces `[In Progress]`
 
 #### Product goal
 
@@ -463,7 +475,7 @@ Night logging should require fewer taps and less visual strain.
 
 These features are valuable but should follow only after Wave 1 improves the product's core daily workflow.
 
-### 1. Light Growth Tracking
+### 1. Light Growth Tracking `[Planned]`
 
 #### Product goal
 
@@ -495,7 +507,7 @@ Percentile features need careful medical framing and reference validation.
 
 Do not overstate interpretation. Keep the app supportive, not diagnostic.
 
-### 2. Very Lightweight Sleep Logging
+### 2. Very Lightweight Sleep Logging `[Planned]`
 
 #### Product goal
 
@@ -527,7 +539,7 @@ Do not build:
 
 Sleep is adjacent context, not the product's main differentiation.
 
-### 3. Health-Linked Milestones
+### 3. Health-Linked Milestones `[Planned]`
 
 #### Product goal
 
@@ -559,15 +571,15 @@ Milestones should improve interpretation of bowel and feeding changes.
 
 ## Recommended Release Order
 
-1. Rich feeding tracking
-2. Better pediatrician workflow
-3. Episode mode
-4. Smart reminders
-5. Caregiver handoff
-6. Faster logging surfaces
-7. Light growth tracking
-8. Very lightweight sleep logging
-9. Health-linked milestones
+1. Rich feeding tracking `[Done]`
+2. Better pediatrician workflow `[In Progress]`
+3. Episode mode `[Done]`
+4. Smart reminders `[Done]`
+5. Caregiver handoff `[Done]`
+6. Faster logging surfaces `[In Progress]`
+7. Light growth tracking `[Planned]`
+8. Very lightweight sleep logging `[Planned]`
+9. Health-linked milestones `[Planned]`
 
 ## Why This Order
 
@@ -587,96 +599,97 @@ Growth, sleep, and milestones are useful only if they remain lightweight and sup
 
 The cleanest implementation path is to ship this in phases rather than as one large rewrite.
 
-### Phase A: Data Foundation
+### Phase A: Data Foundation `[In Progress]`
 
-- add new schema
-- update TypeScript types
-- update database access helpers
-- add shared summary queries
+- [x] add new schema
+- [x] update TypeScript types
+- [x] update database access helpers
+- [ ] add shared summary queries
 
-### Phase B: Feeding and Reports
+### Phase B: Feeding and Reports `[In Progress]`
 
-- replace or extend current meal logging
-- update timeline and dashboards
-- redesign reports to include richer context
+- [x] replace or extend current meal logging
+- [x] update timeline and dashboards
+- [x] redesign reports to include richer context
 
-### Phase C: Episodes and Reminder Logic
+### Phase C: Episodes and Reminder Logic `[In Progress]`
 
-- add episode creation and tracking
-- add symptom logging
-- add reminder rule engine
+- [x] add episode creation and tracking
+- [x] add symptom logging
+- [x] add reminder rule engine
 
-### Phase D: Handoff and Logging Speed
+### Phase D: Handoff and Logging Speed `[In Progress]`
 
-- add caregiver handoff view
-- add quick actions and night mode
-- test widget feasibility
+- [x] add caregiver handoff view
+- [x] add quick actions and night mode
+- [x] test widget feasibility
+- [x] document lock-screen feasibility spike in `LOCK_SCREEN_SPIKE.md`
 
-### Phase E: Secondary Expansion
+### Phase E: Secondary Expansion `[Planned]`
 
-- growth
-- sleep
-- health-linked milestones
+- [ ] growth
+- [ ] sleep
+- [ ] health-linked milestones
 
 ## Suggested Implementation Epics
 
-### Epic 1: Data Model Expansion
+### Epic 1: Data Model Expansion `[In Progress]`
 
-- Design schema changes
-- Create migration
-- Update shared types
-- Update DB functions
-- Add query tests if test coverage is introduced
+- [x] Design schema changes
+- [x] Create migration
+- [x] Update shared types
+- [x] Update DB functions
+- [ ] Add query tests if test coverage is introduced
 
-### Epic 2: Rich Feeding
+### Epic 2: Rich Feeding `[Done]`
 
-- New feeding type model
-- New log form UX
-- Edit flow updates
-- Timeline updates
-- Stats and correlations updates
+- [x] New feeding type model
+- [x] New log form UX
+- [x] Edit flow updates
+- [x] Timeline updates
+- [x] Stats and correlations updates
 
-### Epic 3: Reports 2.0
+### Epic 3: Reports 2.0 `[In Progress]`
 
-- Multi-signal report query layer
-- New report options
-- Updated HTML export layout
-- Clinical summary section
+- [x] Multi-signal report query layer
+- [x] New report options
+- [x] Updated HTML export layout
+- [x] Clinical summary section
 
-### Epic 4: Episode Tracking
+### Epic 4: Episode Tracking `[Done]`
 
-- Episode data model
-- Episode creation flow
-- Active episode banner
-- Episode timeline
-- Episode close-out flow
+- [x] Episode data model
+- [x] Episode creation flow
+- [x] Active episode banner
+- [x] Episode timeline
+- [x] Episode close-out flow
 
-### Epic 5: Smart Reminder Engine
+### Epic 5: Smart Reminder Engine `[Done]`
 
-- Reminder rules data model
-- Local notification rules
-- Reminder settings UI
-- Reminder state management
+- [x] Reminder rules data model
+- [x] Local notification rules
+- [x] Reminder settings UI
+- [x] Reminder state management
 
-### Epic 6: Caregiver Handoff
+### Epic 6: Caregiver Handoff `[Done]`
 
-- Summary query layer reuse
-- Handoff screen
-- Share/export format
-- Optional note for next caregiver
+- [x] Summary query layer reuse
+- [x] Handoff screen
+- [x] Share/export format
+- [x] Optional note for next caregiver
 
-### Epic 7: Fast Logging
+### Epic 7: Fast Logging `[In Progress]`
 
-- Night mode UX
-- Quick-action shortcuts
-- Repeat last feed
-- Widget feasibility spike
+- [x] Night mode UX
+- [x] Quick-action shortcuts
+- [x] Repeat last feed
+- [ ] Widget feasibility spike
 
-### Epic 8: Context Expansion
+### Epic 8: Context Expansion `[Planned]`
 
-- Growth logs
-- Sleep logs
-- Health-linked milestones
+- [ ] Growth logs
+- [ ] Sleep logs
+- [ ] Health-linked milestones
 
 ## Product Guardrails
 
