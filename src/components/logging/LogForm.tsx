@@ -13,6 +13,12 @@ import { savePhoto } from "../../lib/photos";
 import { cn } from "../../lib/cn";
 import { useTheme } from "../../contexts/ThemeContext";
 import { FieldLabel, Textarea } from "../ui/field";
+import {
+  getLoggingLabelClassName,
+  LoggingFieldGroup,
+  LoggingFormHeader,
+  LoggingPresetNotice,
+} from "./logging-form-primitives";
 import type { PoopLogDraft, StoolColor, StoolSize } from "../../lib/types";
 
 const EMPTY_DRAFT: PoopLogDraft = {
@@ -146,40 +152,29 @@ export function LogForm({ open, onClose, childId, onLogged, initialDraft = null 
         <LogSuccess />
       ) : (
         <form onSubmit={handleSubmit} className="px-5 pb-8">
-          <div className="mb-4 flex items-center justify-between gap-3">
-            <h2 className={cn("font-[var(--font-display)] text-lg font-semibold text-center", nightMode ? "text-slate-100" : "text-[var(--color-text)]")}>
-              Log a poop
-            </h2>
-          </div>
+          <LoggingFormHeader title="Log a poop" isNight={nightMode} />
 
           {(stoolType || color || size) && (
-            <div className={cn("mb-4 rounded-[var(--radius-md)] border px-3 py-3", nightMode ? "border-slate-700 bg-slate-900/90" : "border-[var(--color-primary)]/15 bg-[var(--color-primary)]/10")}>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--color-primary)]">
-                Quick preset
-              </p>
-              <p className={cn("mt-1 text-sm leading-relaxed", nightMode ? "text-slate-300" : "text-[var(--color-text-secondary)]")}>
-                This form started with a common poop pattern. Adjust anything before saving if needed.
-              </p>
-            </div>
+            <LoggingPresetNotice
+              isNight={nightMode}
+              description="This form started with a common poop pattern. Adjust anything before saving if needed."
+            />
           )}
 
           <div className="flex flex-col gap-5">
-            {/* Date & time */}
-            <div>
-              <FieldLabel className={nightMode ? "text-slate-100" : undefined}>When</FieldLabel>
+            <LoggingFieldGroup label="When" isNight={nightMode}>
               <div className="grid grid-cols-2 gap-2">
                 <DatePicker value={logDate} onChange={setLogDate} max={getCurrentDate()} nightMode={nightMode} />
                 <TimePicker value={logTime} onChange={setLogTime} nightMode={nightMode} />
               </div>
-            </div>
+            </LoggingFieldGroup>
 
             <StoolTypePicker value={stoolType} onChange={setStoolType} nightMode={nightMode} />
             <ColorPicker value={color} onChange={setColor} nightMode={nightMode} />
             <SizePicker value={size} onChange={setSize} nightMode={nightMode} />
 
-            {/* Notes */}
             <div>
-              <FieldLabel htmlFor="log-notes" className={nightMode ? "text-slate-100" : undefined}>
+              <FieldLabel htmlFor="log-notes" className={getLoggingLabelClassName(nightMode)}>
                 Notes (optional)
               </FieldLabel>
               <Textarea
@@ -192,9 +187,8 @@ export function LogForm({ open, onClose, childId, onLogged, initialDraft = null 
               />
             </div>
 
-            {/* Photo */}
             <div>
-              <FieldLabel className={nightMode ? "text-slate-100" : undefined}>
+              <FieldLabel className={getLoggingLabelClassName(nightMode)}>
                 Photo (optional)
               </FieldLabel>
               <input

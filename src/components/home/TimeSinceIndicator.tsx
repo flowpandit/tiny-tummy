@@ -8,10 +8,10 @@ interface TimeSinceIndicatorProps {
 }
 
 const STATUS_GRADIENTS: Record<HealthStatus, string> = {
-  healthy: "conic-gradient(from 210deg, #ff9c7c 0deg, #efc45c 120deg, #94d6bb 280deg, #ff9c7c 360deg)",
-  caution: "conic-gradient(from 210deg, #ff9c7c 0deg, #efc45c 170deg, #efc45c 360deg)",
-  alert: "conic-gradient(from 210deg, #ff9c7c 0deg, #ef8c7a 200deg, #d95f52 360deg)",
-  unknown: "conic-gradient(from 210deg, #cfd7e5 0deg, #9aabc4 360deg)",
+  healthy: "var(--gradient-status-healthy)",
+  caution: "var(--gradient-status-caution)",
+  alert: "var(--gradient-status-alert)",
+  unknown: "var(--gradient-status-unknown)",
 };
 
 export function TimeSinceIndicator({ lastPoopAt, status }: TimeSinceIndicatorProps) {

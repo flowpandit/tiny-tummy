@@ -1,5 +1,5 @@
 import { BOTTLE_CONTENTS, BREAST_SIDES, FOOD_TYPES } from "./diet-constants";
-import type { BottleContent, BreastSide, DietEntry, FoodType } from "./types";
+import type { BottleContent, BreastSide, FeedingEntry, FoodType } from "./types";
 
 export function getFoodTypeLabel(foodType: FoodType): string {
   return FOOD_TYPES.find((item) => item.value === foodType)?.label ?? foodType;
@@ -13,7 +13,7 @@ export function getBreastSideLabel(side: BreastSide): string {
   return BREAST_SIDES.find((item) => item.value === side)?.label ?? side;
 }
 
-export function getDietEntryPrimaryLabel(entry: DietEntry): string {
+export function getFeedingEntryPrimaryLabel(entry: FeedingEntry): string {
   if (entry.food_type === "solids" || entry.food_type === "other") {
     const typeLabel = getFoodTypeLabel(entry.food_type);
     return entry.food_name ? `${typeLabel}: ${entry.food_name}` : typeLabel;
@@ -28,7 +28,7 @@ export function getDietEntryPrimaryLabel(entry: DietEntry): string {
   return getFoodTypeLabel(entry.food_type);
 }
 
-export function getDietEntryDetailParts(entry: DietEntry): string[] {
+export function getFeedingEntryDetailParts(entry: FeedingEntry): string[] {
   const parts: string[] = [];
 
   if (entry.breast_side) {
@@ -50,12 +50,17 @@ export function getDietEntryDetailParts(entry: DietEntry): string[] {
   return parts;
 }
 
-export function getDietEntryDisplayLabel(entry: DietEntry): string {
-  const details = getDietEntryDetailParts(entry);
-  const primary = getDietEntryPrimaryLabel(entry);
+export function getFeedingEntryDisplayLabel(entry: FeedingEntry): string {
+  const details = getFeedingEntryDetailParts(entry);
+  const primary = getFeedingEntryPrimaryLabel(entry);
   return details.length > 0 ? `${primary} · ${details.join(" · ")}` : primary;
 }
 
-export function getDietEntrySecondaryText(entry: DietEntry): string | null {
+export function getFeedingEntrySecondaryText(entry: FeedingEntry): string | null {
   return entry.reaction_notes ?? entry.notes ?? null;
 }
+
+export const getDietEntryPrimaryLabel = getFeedingEntryPrimaryLabel;
+export const getDietEntryDetailParts = getFeedingEntryDetailParts;
+export const getDietEntryDisplayLabel = getFeedingEntryDisplayLabel;
+export const getDietEntrySecondaryText = getFeedingEntrySecondaryText;

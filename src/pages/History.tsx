@@ -2,9 +2,9 @@ import { motion, useMotionValue, useTransform, AnimatePresence } from "framer-mo
 import { useState, useEffect, useMemo } from "react";
 import { useChildContext } from "../contexts/ChildContext";
 import { usePoopLogs } from "../hooks/usePoopLogs";
-import { useDietLogs } from "../hooks/useDietLogs";
+import { useFeedingLogs } from "../hooks/useFeedingLogs";
 import { BITSS_TYPES, STOOL_COLORS } from "../lib/constants";
-import { getDietEntryDetailParts, getDietEntryPrimaryLabel, getDietEntrySecondaryText } from "../lib/feeding";
+import { getFeedingEntryDetailParts, getFeedingEntryPrimaryLabel, getFeedingEntrySecondaryText } from "../lib/feeding";
 import { Badge } from "../components/ui/badge";
 import { PoopIcon, MealIcon, NoPoopIcon } from "../components/ui/icons";
 import { DatePicker } from "../components/ui/date-picker";
@@ -13,7 +13,7 @@ import { EditMealSheet } from "../components/logging/EditMealSheet";
 import { loadPhoto } from "../lib/photos";
 import { cn } from "../lib/cn";
 import * as db from "../lib/db";
-import type { PoopEntry, DietEntry } from "../lib/types";
+import type { FeedingEntry, PoopEntry } from "../lib/types";
 
 // --- Shared sub-components ---
 
@@ -44,12 +44,12 @@ function formatDayHeader(dateStr: string): string {
 
 type TimelineEvent =
   | { kind: "poop"; entry: PoopEntry }
-  | { kind: "meal"; entry: DietEntry };
+  | { kind: "meal"; entry: FeedingEntry };
 
-function groupByDay(poopLogs: PoopEntry[], dietLogs: DietEntry[]): Map<string, TimelineEvent[]> {
+function groupByDay(poopLogs: PoopEntry[], feedingLogs: FeedingEntry[]): Map<string, TimelineEvent[]> {
   const all: TimelineEvent[] = [
     ...poopLogs.map((e) => ({ kind: "poop" as const, entry: e })),
-    ...dietLogs.map((e) => ({ kind: "meal" as const, entry: e })),
+    ...feedingLogs.map((e) => ({ kind: "meal" as const, entry: e })),
   ];
 
   const grouped = new Map<string, TimelineEvent[]>();
@@ -137,20 +137,20 @@ function PoopItem({ log, onTap }: { log: PoopEntry; onTap: () => void }) {
   );
 }
 
-function MealItem({ meal, onTap }: { meal: DietEntry; onTap: () => void }) {
-  const detailText = getDietEntryDetailParts(meal).join(" · ");
-  const secondaryText = [detailText, getDietEntrySecondaryText(meal)].filter(Boolean).join(" • ");
+function MealItem({ meal, onTap }: { meal: FeedingEntry; onTap: () => void }) {
+  const detailText = getFeedingEntryDetailParts(meal).join(" · ");
+  const secondaryText = [detailText, getFeedingEntrySecondaryText(meal)].filter(Boolean).join(" • ");
 
   return (
     <div
       onClick={onTap}
-      className="flex items-center gap-3 bg-[var(--color-surface)] px-3 py-2.5 border border-[var(--color-border)] rounded-[var(--radius-md)] cursor-pointer hover:bg-[var(--color-bg)] transition-colors"
+        className="flex items-center gap-3 bg-[var(--color-surface)] px-3 py-2.5 border border-[var(--color-border)] rounded-[var(--radius-md)] cursor-pointer hover:bg-[var(--color-bg)] transition-colors"
     >
       <MealIcon className="w-5 h-5 flex-shrink-0" color="var(--color-primary)" />
       <span className="text-xs text-[var(--color-muted)] w-14 flex-shrink-0">{formatTime(meal.logged_at)}</span>
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium text-[var(--color-text)] truncate">
-          {getDietEntryPrimaryLabel(meal)}
+          {getFeedingEntryPrimaryLabel(meal)}
         </p>
         {secondaryText && <p className="text-xs text-[var(--color-text-secondary)] truncate">{secondaryText}</p>}
       </div>
@@ -178,7 +178,7 @@ function DayCard({
   onDeletePoop: (id: string) => void;
   onDeleteMeal: (id: string) => void;
   onEditPoop: (entry: PoopEntry) => void;
-  onEditMeal: (entry: DietEntry) => void;
+  onEditMeal: (entry: FeedingEntry) => void;
 }) {
   const poopCount = events.filter((e) => e.kind === "poop" && !e.entry.is_no_poop).length;
   const mealCount = events.filter((e) => e.kind === "meal").length;
@@ -270,15 +270,15 @@ function DayCard({
 export function History() {
   const { activeChild } = useChildContext();
   const { logs: poopLogs, isLoading: poopLoading, refresh: refreshPoop } = usePoopLogs(activeChild?.id ?? null);
-  const { logs: dietLogs, isLoading: dietLoading, refresh: refreshDiet } = useDietLogs(activeChild?.id ?? null);
+  const { logs: feedingLogs, isLoading: feedingLoading, refresh: refreshFeeding } = useFeedingLogs(activeChild?.id ?? null);
   const [expandedDay, setExpandedDay] = useState<string | null>(null);
   const [searchDate, setSearchDate] = useState<string | null>(null);
   const [editingPoop, setEditingPoop] = useState<PoopEntry | null>(null);
-  const [editingMeal, setEditingMeal] = useState<DietEntry | null>(null);
+  const [editingMeal, setEditingMeal] = useState<FeedingEntry | null>(null);
 
-  const isLoading = poopLoading || dietLoading;
+  const isLoading = poopLoading || feedingLoading;
 
-  const grouped = useMemo(() => groupByDay(poopLogs, dietLogs), [poopLogs, dietLogs]);
+  const grouped = useMemo(() => groupByDay(poopLogs, feedingLogs), [poopLogs, feedingLogs]);
 
   // Filter to single day if search is active
   const displayDays = useMemo(() => {
@@ -295,7 +295,7 @@ export function History() {
 
   if (!activeChild) return null;
 
-  if (!isLoading && poopLogs.length === 0 && dietLogs.length === 0) {
+  if (!isLoading && poopLogs.length === 0 && feedingLogs.length === 0) {
     return (
       <div className="px-4 py-8">
         <div className="flex flex-col items-center justify-center rounded-[16px] border border-[var(--color-border)] bg-[var(--color-surface)] px-8 py-16 text-center shadow-[var(--shadow-soft)] backdrop-blur-xl">
@@ -317,8 +317,8 @@ export function History() {
   };
 
   const handleDeleteMeal = async (id: string) => {
-    await db.deleteDietLog(id);
-    refreshDiet();
+    await db.deleteFeedingLog(id);
+    refreshFeeding();
   };
 
   const today = new Date().toISOString().split("T")[0];
@@ -395,8 +395,8 @@ export function History() {
           entry={editingPoop}
           open={!!editingPoop}
           onClose={() => setEditingPoop(null)}
-          onSaved={() => { refreshPoop(); refreshDiet(); }}
-          onDeleted={() => { refreshPoop(); refreshDiet(); }}
+          onSaved={() => { refreshPoop(); refreshFeeding(); }}
+          onDeleted={() => { refreshPoop(); refreshFeeding(); }}
         />
       )}
       {editingMeal && (
@@ -405,8 +405,8 @@ export function History() {
           entry={editingMeal}
           open={!!editingMeal}
           onClose={() => setEditingMeal(null)}
-          onSaved={() => { refreshPoop(); refreshDiet(); }}
-          onDeleted={() => { refreshPoop(); refreshDiet(); }}
+          onSaved={() => { refreshPoop(); refreshFeeding(); }}
+          onDeleted={() => { refreshPoop(); refreshFeeding(); }}
         />
       )}
     </div>

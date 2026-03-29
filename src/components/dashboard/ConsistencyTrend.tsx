@@ -31,9 +31,9 @@ export function ConsistencyTrend({ data }: ConsistencyTrendProps) {
         <LineChart data={data} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
           <defs>
             <linearGradient id="consistencyGradient" x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0%" stopColor="#ffb48e" />
-              <stop offset="55%" stopColor="#f2c462" />
-              <stop offset="100%" stopColor="#94d6bb" />
+              <stop offset="0%" stopColor="var(--color-chart-warm-start)" />
+              <stop offset="55%" stopColor="var(--color-chart-spectrum-mid)" />
+              <stop offset="100%" stopColor="var(--color-chart-spectrum-end)" />
             </linearGradient>
           </defs>
           <CartesianGrid
@@ -73,8 +73,8 @@ export function ConsistencyTrend({ data }: ConsistencyTrendProps) {
             dataKey="stool_type"
             stroke="url(#consistencyGradient)"
             strokeWidth={3}
-            dot={{ fill: "#ff8d69", r: 5, strokeWidth: 0 }}
-            activeDot={{ r: 7, fill: "#ff8d69" }}
+            dot={{ fill: "var(--color-chart-dot)", r: 5, strokeWidth: 0 }}
+            activeDot={{ r: 7, fill: "var(--color-chart-dot)" }}
           />
         </LineChart>
       </ResponsiveContainer>

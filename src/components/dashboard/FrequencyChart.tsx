@@ -30,8 +30,8 @@ export function FrequencyChart({ data, days }: FrequencyChartProps) {
         <BarChart data={filled} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
           <defs>
             <linearGradient id="freqGradient" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#ffb48e" />
-              <stop offset="100%" stopColor="#ff8d69" />
+              <stop offset="0%" stopColor="var(--color-chart-warm-start)" />
+              <stop offset="100%" stopColor="var(--color-chart-warm-end)" />
             </linearGradient>
           </defs>
           <CartesianGrid

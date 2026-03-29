@@ -187,7 +187,7 @@ export async function syncSmartRemindersForChild(child: Child): Promise<void> {
 
   const summary = await getChildSummarySnapshot(child.id, {
     poopLimit: 30,
-    dietLimit: 1,
+    feedingLimit: 1,
     symptomLimit: 3,
   });
   const lastPoop = summary.lastPoop;

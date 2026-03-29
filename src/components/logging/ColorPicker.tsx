@@ -2,6 +2,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "../../lib/cn";
 import { STOOL_COLORS } from "../../lib/constants";
 import { useTheme } from "../../contexts/ThemeContext";
+import { getLoggingLabelClassName } from "./logging-form-primitives";
 import type { StoolColor } from "../../lib/types";
 
 interface ColorPickerProps {
@@ -17,7 +18,7 @@ export function ColorPicker({ value, onChange, nightMode = false }: ColorPickerP
 
   return (
     <div>
-      <label className={cn("block text-sm font-medium mb-2", isNight ? "text-slate-100" : "text-[var(--color-text)]")}>
+      <label className={cn(getLoggingLabelClassName(isNight), "mb-2")}>
         Color
       </label>
       <div className="flex gap-3 justify-center">

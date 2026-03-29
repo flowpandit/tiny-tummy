@@ -3,7 +3,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { useChildContext } from "../contexts/ChildContext";
 import { usePoopLogs } from "../hooks/usePoopLogs";
-import { useDietLogs } from "../hooks/useDietLogs";
+import { useFeedingLogs } from "../hooks/useFeedingLogs";
 import { useAlerts } from "../hooks/useAlerts";
 import { useAlertEngine } from "../hooks/useAlertEngine";
 import { useStats } from "../hooks/useStats";
@@ -15,7 +15,7 @@ import { getChildStatus } from "../lib/tauri";
 import { buildChildDailySummary } from "../lib/child-summary";
 import { timeSince } from "../lib/utils";
 import { syncSmartRemindersForChild, syncSmartRemindersForChildren } from "../lib/notifications";
-import { getDietEntryDisplayLabel } from "../lib/feeding";
+import { getFeedingEntryDisplayLabel } from "../lib/feeding";
 import { getSymptomSeverityBadgeVariant, getSymptomSeverityLabel, getSymptomTypeLabel } from "../lib/symptom-constants";
 import * as db from "../lib/db";
 import { ChildSwitcherCard } from "../components/home/ChildSwitcherCard";
@@ -33,12 +33,12 @@ import { NoLogsYet } from "../components/empty-states/NoLogsYet";
 import { SymptomSheet } from "../components/symptoms/SymptomSheet";
 import { Badge } from "../components/ui/badge";
 import { useToast } from "../components/ui/toast";
-import type { DietEntry, DietLogDraft, FeedingType, HealthStatus, PoopEntry, PoopLogDraft } from "../lib/types";
+import type { FeedingEntry, FeedingLogDraft, FeedingType, HealthStatus, PoopEntry, PoopLogDraft } from "../lib/types";
 
 interface QuickFeedPreset {
   id: string;
   label: string;
-  draft: Partial<DietLogDraft>;
+  draft: Partial<FeedingLogDraft>;
 }
 
 interface QuickPoopPreset {
@@ -127,7 +127,7 @@ function getQuickPoopPresets(feedingType: FeedingType): QuickPoopPreset[] {
   return common;
 }
 
-function getCurrentDietTimestamp(): string {
+function getCurrentFeedingTimestamp(): string {
   const now = new Date();
   return `${now.toISOString().split("T")[0]}T${now.toTimeString().slice(0, 5)}:00`;
 }
@@ -181,7 +181,7 @@ export function Home() {
   const { activeChild, children, setActiveChildId } = useChildContext();
   const { showError, showSuccess } = useToast();
   const { logs, lastRealPoop, refresh: refreshLogs } = usePoopLogs(activeChild?.id ?? null);
-  const { logs: dietLogs, refresh: refreshDietLogs } = useDietLogs(activeChild?.id ?? null);
+  const { logs: feedingLogs, refresh: refreshFeedingLogs } = useFeedingLogs(activeChild?.id ?? null);
   const { activeEpisode, events: episodeEvents, recentEpisodes, refresh: refreshEpisodes } = useEpisodes(activeChild?.id ?? null);
   const { logs: symptomLogs, refresh: refreshSymptoms } = useSymptoms(activeChild?.id ?? null);
   const { alerts, refresh: refreshAlerts, dismiss } = useAlerts(activeChild?.id ?? null);
@@ -189,13 +189,13 @@ export function Home() {
   const { runChecks } = useAlertEngine();
   const [logFormOpen, setLogFormOpen] = useState(false);
   const [poopDraft, setPoopDraft] = useState<Partial<PoopLogDraft> | null>(null);
-  const [dietFormOpen, setDietFormOpen] = useState(false);
-  const [dietDraft, setDietDraft] = useState<Partial<DietLogDraft> | null>(null);
+  const [feedingFormOpen, setFeedingFormOpen] = useState(false);
+  const [feedingDraft, setFeedingDraft] = useState<Partial<FeedingLogDraft> | null>(null);
   const [episodeSheetOpen, setEpisodeSheetOpen] = useState(false);
   const [episodeSheetMode, setEpisodeSheetMode] = useState<"default" | "start" | "update">("default");
   const [symptomSheetOpen, setSymptomSheetOpen] = useState(false);
   const [editingPoop, setEditingPoop] = useState<PoopEntry | null>(null);
-  const [editingMeal, setEditingMeal] = useState<DietEntry | null>(null);
+  const [editingMeal, setEditingMeal] = useState<FeedingEntry | null>(null);
   const [status, setStatus] = useState<HealthStatus>("healthy");
   const [normalDesc, setNormalDesc] = useState("");
   const [childSwitcherExpanded, setChildSwitcherExpanded] = useState(false);
@@ -237,8 +237,8 @@ export function Home() {
     lastRealPoop?.id,
     lastRealPoop?.logged_at,
     lastRealPoop?.color,
-    dietLogs[0]?.id,
-    dietLogs[0]?.logged_at,
+    feedingLogs[0]?.id,
+    feedingLogs[0]?.logged_at,
     activeEpisode?.id,
     activeEpisode?.status,
     activeEpisode?.episode_type,
@@ -282,24 +282,24 @@ export function Home() {
     await syncSmartRemindersForChild(activeChild);
   };
 
-  const handleDietLogged = async () => {
-    await refreshDietLogs();
+  const handleFeedingLogged = async () => {
+    await refreshFeedingLogs();
     await syncSmartRemindersForChild(activeChild);
   };
 
-  const openDietForm = (draft?: Partial<DietLogDraft> | null) => {
-    setDietDraft(draft ?? null);
-    setDietFormOpen(true);
+  const openFeedingForm = (draft?: Partial<FeedingLogDraft> | null) => {
+    setFeedingDraft(draft ?? null);
+    setFeedingFormOpen(true);
   };
 
   const handleRepeatLastFeed = async () => {
-    const lastFeed = dietLogs[0];
+    const lastFeed = feedingLogs[0];
     if (!lastFeed) return;
 
     try {
-      await db.createDietLog({
+      await db.createFeedingLog({
         child_id: activeChild.id,
-        logged_at: getCurrentDietTimestamp(),
+        logged_at: getCurrentFeedingTimestamp(),
         food_type: lastFeed.food_type,
         food_name: lastFeed.food_name,
         amount_ml: lastFeed.amount_ml,
@@ -310,7 +310,7 @@ export function Home() {
         is_constipation_support: lastFeed.is_constipation_support,
         notes: null,
       });
-      await handleDietLogged();
+      await handleFeedingLogged();
       showSuccess("Repeated the last feed.");
     } catch {
       showError("Could not repeat the last feed. Please try again.");
@@ -361,7 +361,7 @@ export function Home() {
   const lastPoopLabel = lastRealPoop?.logged_at ? timeSince(lastRealPoop.logged_at) : null;
   const summary = buildChildDailySummary({
     poopLogs: logs,
-    dietLogs,
+    feedingLogs,
     alerts,
     activeEpisode,
     episodeEvents,
@@ -470,7 +470,7 @@ export function Home() {
             </motion.button>
             <motion.button
               whileTap={{ scale: 0.98 }}
-              onClick={() => openDietForm()}
+              onClick={() => openFeedingForm()}
               className="min-h-[104px] rounded-[18px] border border-[var(--color-border)] bg-[var(--color-surface-strong)] px-4 py-4 text-left shadow-[var(--shadow-soft)] transition-colors hover:bg-white/70"
             >
               <p className="text-[15px] font-semibold text-[var(--color-text)]">Log feed</p>
@@ -687,7 +687,7 @@ export function Home() {
 
           {lastFeed && (
             <p className="mt-3 text-[12px] text-[var(--color-text-soft)]">
-              Last feed: {getDietEntryDisplayLabel(lastFeed)}
+              Last feed: {getFeedingEntryDisplayLabel(lastFeed)}
             </p>
           )}
 
@@ -696,7 +696,7 @@ export function Home() {
               <button
                 key={preset.id}
                 type="button"
-                onClick={() => openDietForm(preset.draft)}
+                onClick={() => openFeedingForm(preset.draft)}
                 className="rounded-[16px] border border-[var(--color-border)] bg-[var(--color-surface-strong)] px-4 py-3 text-left text-[14px] font-medium text-[var(--color-text)] transition-colors hover:bg-white/70"
               >
                 {preset.label}
@@ -707,10 +707,10 @@ export function Home() {
       </div>
 
       {/* Recent activity */}
-      {(logs.length > 0 || dietLogs.length > 0) && (
+      {(logs.length > 0 || feedingLogs.length > 0) && (
         <RecentActivity
           poopLogs={logs}
-          dietLogs={dietLogs}
+          feedingLogs={feedingLogs}
           onEditPoop={setEditingPoop}
           onEditMeal={setEditingMeal}
         />
@@ -730,14 +730,14 @@ export function Home() {
 
       {/* Diet log form sheet */}
       <DietLogForm
-        open={dietFormOpen}
+        open={feedingFormOpen}
         onClose={() => {
-          setDietFormOpen(false);
-          setDietDraft(null);
+          setFeedingFormOpen(false);
+          setFeedingDraft(null);
         }}
         childId={activeChild.id}
-        onLogged={handleDietLogged}
-        initialDraft={dietDraft}
+        onLogged={handleFeedingLogged}
+        initialDraft={feedingDraft}
       />
 
       <EpisodeSheet
@@ -768,8 +768,8 @@ export function Home() {
           entry={editingPoop}
           open={!!editingPoop}
           onClose={() => setEditingPoop(null)}
-          onSaved={() => { refreshLogs(); refreshDietLogs(); }}
-          onDeleted={() => { refreshLogs(); refreshDietLogs(); }}
+          onSaved={() => { refreshLogs(); refreshFeedingLogs(); }}
+          onDeleted={() => { refreshLogs(); refreshFeedingLogs(); }}
         />
       )}
       {editingMeal && (
@@ -778,8 +778,8 @@ export function Home() {
           entry={editingMeal}
           open={!!editingMeal}
           onClose={() => setEditingMeal(null)}
-          onSaved={() => { refreshLogs(); refreshDietLogs(); }}
-          onDeleted={() => { refreshLogs(); refreshDietLogs(); }}
+          onSaved={() => { refreshLogs(); refreshFeedingLogs(); }}
+          onDeleted={() => { refreshLogs(); refreshFeedingLogs(); }}
         />
       )}
     </div>

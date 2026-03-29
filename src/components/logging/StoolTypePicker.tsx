@@ -1,6 +1,7 @@
 import { cn } from "../../lib/cn";
 import { BITSS_TYPES } from "../../lib/constants";
 import { useTheme } from "../../contexts/ThemeContext";
+import { getLoggingLabelClassName } from "./logging-form-primitives";
 
 interface StoolTypePickerProps {
   value: number | null;
@@ -13,7 +14,7 @@ export function StoolTypePicker({ value, onChange, nightMode = false }: StoolTyp
   const isNight = nightMode || resolved === "night";
   return (
     <div>
-      <label className={cn("block text-sm font-medium mb-2", isNight ? "text-slate-100" : "text-[var(--color-text)]")}>
+      <label className={cn(getLoggingLabelClassName(isNight), "mb-2")}>
         Consistency <span className="font-normal text-[var(--color-muted)]">(Bristol scale)</span>
       </label>
       <div className="grid grid-cols-4 gap-2">

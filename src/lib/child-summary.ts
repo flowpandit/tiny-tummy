@@ -1,9 +1,9 @@
 import * as db from "./db";
 import { getCaregiverNoteSettingKey } from "./caregiver-note";
-import type { Alert, DietEntry, Episode, EpisodeEvent, PoopEntry, SymptomEntry } from "./types";
+import type { Alert, Episode, EpisodeEvent, FeedingEntry, PoopEntry, SymptomEntry } from "./types";
 
 export interface ChildDailySummary {
-  lastFeed: DietEntry | null;
+  lastFeed: FeedingEntry | null;
   latestEpisodeUpdate: EpisodeEvent | null;
   latestSymptom: SymptomEntry | null;
   todayPoops: number;
@@ -28,7 +28,7 @@ export function getTodayKey(now: Date = new Date()): string {
 
 export function buildChildDailySummary(input: {
   poopLogs: PoopEntry[];
-  dietLogs: DietEntry[];
+  feedingLogs: FeedingEntry[];
   alerts: Alert[];
   activeEpisode: Episode | null;
   episodeEvents: EpisodeEvent[];
@@ -38,11 +38,11 @@ export function buildChildDailySummary(input: {
   const dayKey = input.dayKey ?? getTodayKey();
 
   return {
-    lastFeed: input.dietLogs[0] ?? null,
+    lastFeed: input.feedingLogs[0] ?? null,
     latestEpisodeUpdate: input.episodeEvents[0] ?? null,
     latestSymptom: input.symptomLogs[0] ?? null,
     todayPoops: input.poopLogs.filter((log) => log.logged_at.startsWith(dayKey) && log.is_no_poop === 0).length,
-    todayFeeds: input.dietLogs.filter((log) => log.logged_at.startsWith(dayKey)).length,
+    todayFeeds: input.feedingLogs.filter((log) => log.logged_at.startsWith(dayKey)).length,
     hasNoPoopDay: input.poopLogs.some((log) => log.logged_at.startsWith(dayKey) && log.is_no_poop === 1),
     visibleAlerts: input.alerts.slice(0, 3),
     recentSymptoms: input.symptomLogs.slice(0, 3),
@@ -54,19 +54,19 @@ export async function getChildSummarySnapshot(
   childId: string,
   options: {
     poopLimit?: number;
-    dietLimit?: number;
+    feedingLimit?: number;
     symptomLimit?: number;
     dayKey?: string;
   } = {},
 ): Promise<ChildSummarySnapshot> {
   const poopLimit = options.poopLimit ?? 100;
-  const dietLimit = options.dietLimit ?? 100;
+  const feedingLimit = options.feedingLimit ?? 100;
   const symptomLimit = options.symptomLimit ?? 10;
 
-  const [poopLogs, lastPoop, dietLogs, alerts, activeEpisode, symptomLogs, handoffNote] = await Promise.all([
+  const [poopLogs, lastPoop, feedingLogs, alerts, activeEpisode, symptomLogs, handoffNote] = await Promise.all([
     db.getPoopLogs(childId, poopLimit),
     db.getLastRealPoop(childId),
-    db.getDietLogs(childId, dietLimit),
+    db.getFeedingLogs(childId, feedingLimit),
     db.getActiveAlerts(childId),
     db.getActiveEpisode(childId),
     db.getSymptoms(childId, symptomLimit),
@@ -79,7 +79,7 @@ export async function getChildSummarySnapshot(
 
   const summary = buildChildDailySummary({
     poopLogs,
-    dietLogs,
+    feedingLogs,
     alerts,
     activeEpisode,
     episodeEvents,

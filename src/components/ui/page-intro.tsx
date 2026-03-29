@@ -12,15 +12,15 @@ interface PageIntroProps {
 
 export function PageIntro({ eyebrow, title, description, meta, action, className }: PageIntroProps) {
   return (
-    <div className={cn("my-5 rounded-[16px] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-[var(--shadow-soft)] backdrop-blur-xl", className)}>
+    <div className={cn("pb-5 border-b border-[var(--color-border)]", className)}>
       <div className="flex items-start justify-between gap-4">
-        <div>
+        <div className="min-w-0">
           <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--color-text-soft)]">{eyebrow}</p>
-          <h2 className="mt-2 font-[var(--font-display)] text-3xl font-semibold text-[var(--color-text)]">
+          <h2 className="mt-2 font-[var(--font-display)] text-3xl font-semibold tracking-[-0.02em] text-[var(--color-text)]">
             {title}
           </h2>
           {description && (
-            <p className="mt-3 text-base leading-relaxed text-[var(--color-text-secondary)]">
+            <p className="mt-3 max-w-[42ch] text-base leading-relaxed text-[var(--color-text-secondary)]">
               {description}
             </p>
           )}

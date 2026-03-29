@@ -7,7 +7,7 @@ import type {
   GrowthEntry,
   SleepEntry,
   MilestoneEntry,
-  DietEntry,
+  FeedingEntry,
   DailyFrequency,
   ConsistencyPoint,
   ColorCount,
@@ -462,9 +462,9 @@ export async function dismissAlert(id: string): Promise<void> {
   await conn.execute("UPDATE alerts SET is_dismissed = 1 WHERE id = ?", [id]);
 }
 
-// --- Diet Logs ---
+// --- Feeding Logs ---
 
-export async function createDietLog(input: {
+export async function createFeedingLog(input: {
   child_id: string;
   logged_at: string;
   food_type: string;
@@ -476,7 +476,7 @@ export async function createDietLog(input: {
   reaction_notes?: string | null;
   is_constipation_support?: number;
   notes?: string | null;
-}): Promise<DietEntry> {
+}): Promise<FeedingEntry> {
   const conn = await getDb();
   const id = generateId();
   const now = nowISO();
@@ -507,12 +507,12 @@ export async function createDietLog(input: {
     id,
     child_id: input.child_id,
     logged_at: input.logged_at,
-    food_type: input.food_type as DietEntry["food_type"],
+    food_type: input.food_type as FeedingEntry["food_type"],
     food_name: input.food_name ?? null,
     amount_ml: input.amount_ml ?? null,
     duration_minutes: input.duration_minutes ?? null,
-    breast_side: (input.breast_side as DietEntry["breast_side"]) ?? null,
-    bottle_content: (input.bottle_content as DietEntry["bottle_content"]) ?? null,
+    breast_side: (input.breast_side as FeedingEntry["breast_side"]) ?? null,
+    bottle_content: (input.bottle_content as FeedingEntry["bottle_content"]) ?? null,
     reaction_notes: input.reaction_notes ?? null,
     is_constipation_support: input.is_constipation_support ?? 0,
     notes: input.notes ?? null,
@@ -520,12 +520,12 @@ export async function createDietLog(input: {
   };
 }
 
-export async function getDietLogs(
+export async function getFeedingLogs(
   childId: string,
   limit = 100,
-): Promise<DietEntry[]> {
+): Promise<FeedingEntry[]> {
   const conn = await getDb();
-  return conn.select<DietEntry[]>(
+  return conn.select<FeedingEntry[]>(
     "SELECT * FROM diet_logs WHERE child_id = ? ORDER BY logged_at DESC LIMIT ?",
     [childId, limit],
   );
@@ -775,19 +775,25 @@ export async function getPoopLogsForRange(
   );
 }
 
-export async function getDietLogsForRange(
+export async function getFeedingLogsForRange(
   childId: string,
   startDate: string,
   endDate: string,
-): Promise<DietEntry[]> {
+): Promise<FeedingEntry[]> {
   const conn = await getDb();
-  return conn.select<DietEntry[]>(
+  return conn.select<FeedingEntry[]>(
     `SELECT * FROM diet_logs
      WHERE child_id = ? AND logged_at >= ? AND logged_at <= ?
      ORDER BY logged_at DESC`,
     [childId, startDate, endDate + "T23:59:59"],
   );
 }
+
+export const createDietLog = createFeedingLog;
+export const getDietLogs = getFeedingLogs;
+export const getDietLogsForRange = getFeedingLogsForRange;
+export const updateFeedingLog = updateDietLog;
+export const deleteFeedingLog = deleteDietLog;
 
 export async function getMilestonesForRange(
   childId: string,

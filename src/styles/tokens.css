@@ -55,6 +55,17 @@
   --color-mint: #9adbc1;
   --color-berry: #9c5a8f;
 
+  /* Data viz */
+  --color-chart-warm-start: #ffb48e;
+  --color-chart-warm-end: #ff8d69;
+  --color-chart-spectrum-mid: #f2c462;
+  --color-chart-spectrum-end: #94d6bb;
+  --color-chart-dot: #ff8d69;
+  --gradient-status-healthy: conic-gradient(from 210deg, #ff9c7c 0deg, #efc45c 120deg, #94d6bb 280deg, #ff9c7c 360deg);
+  --gradient-status-caution: conic-gradient(from 210deg, #ff9c7c 0deg, #efc45c 170deg, #efc45c 360deg);
+  --gradient-status-alert: conic-gradient(from 210deg, #ff9c7c 0deg, #ef8c7a 200deg, #d95f52 360deg);
+  --gradient-status-unknown: conic-gradient(from 210deg, #cfd7e5 0deg, #9aabc4 360deg);
+
   /* Spacing */
   --space-xs: 4px;
   --space-sm: 8px;
@@ -117,6 +128,16 @@
     --color-info: #98b5ff;
     --color-info-bg: rgba(64, 83, 126, 0.32);
 
+    --color-chart-warm-start: #ffb18d;
+    --color-chart-warm-end: #ff8b69;
+    --color-chart-spectrum-mid: #d9b164;
+    --color-chart-spectrum-end: #88c9ac;
+    --color-chart-dot: #ff9c7c;
+    --gradient-status-healthy: conic-gradient(from 210deg, #ff9d7d 0deg, #e0b962 120deg, #88c9ac 280deg, #ff9d7d 360deg);
+    --gradient-status-caution: conic-gradient(from 210deg, #ff9d7d 0deg, #d7b060 170deg, #d7b060 360deg);
+    --gradient-status-alert: conic-gradient(from 210deg, #ff9d7d 0deg, #e8927f 200deg, #f2a193 360deg);
+    --gradient-status-unknown: conic-gradient(from 210deg, #5f6f89 0deg, #8396b5 360deg);
+
     --shadow-soft: 0 14px 34px rgba(6, 10, 18, 0.32);
     --shadow-medium: 0 20px 48px rgba(6, 10, 18, 0.38);
     --shadow-lg: 0 30px 70px rgba(6, 10, 18, 0.45);
@@ -151,6 +172,16 @@
   --color-alert-bg: rgba(117, 58, 53, 0.34);
   --color-info: #98b5ff;
   --color-info-bg: rgba(64, 83, 126, 0.32);
+
+  --color-chart-warm-start: #ffb18d;
+  --color-chart-warm-end: #ff8b69;
+  --color-chart-spectrum-mid: #d9b164;
+  --color-chart-spectrum-end: #88c9ac;
+  --color-chart-dot: #ff9c7c;
+  --gradient-status-healthy: conic-gradient(from 210deg, #ff9d7d 0deg, #e0b962 120deg, #88c9ac 280deg, #ff9d7d 360deg);
+  --gradient-status-caution: conic-gradient(from 210deg, #ff9d7d 0deg, #d7b060 170deg, #d7b060 360deg);
+  --gradient-status-alert: conic-gradient(from 210deg, #ff9d7d 0deg, #e8927f 200deg, #f2a193 360deg);
+  --gradient-status-unknown: conic-gradient(from 210deg, #5f6f89 0deg, #8396b5 360deg);
 
   --shadow-soft: 0 14px 34px rgba(6, 10, 18, 0.32);
   --shadow-medium: 0 20px 48px rgba(6, 10, 18, 0.38);
@@ -190,6 +221,16 @@
   --color-gold: #8b7749;
   --color-mint: #5d7a69;
   --color-berry: #745c80;
+
+  --color-chart-warm-start: #b98773;
+  --color-chart-warm-end: #d28a68;
+  --color-chart-spectrum-mid: #b69963;
+  --color-chart-spectrum-end: #789f8a;
+  --color-chart-dot: #d28a68;
+  --gradient-status-healthy: conic-gradient(from 210deg, #d28a68 0deg, #b69963 120deg, #789f8a 280deg, #d28a68 360deg);
+  --gradient-status-caution: conic-gradient(from 210deg, #d28a68 0deg, #b69963 170deg, #b69963 360deg);
+  --gradient-status-alert: conic-gradient(from 210deg, #d28a68 0deg, #b07d74 200deg, #d89a8f 360deg);
+  --gradient-status-unknown: conic-gradient(from 210deg, #70697c 0deg, #938a9d 360deg);
 
   --shadow-soft: 0 14px 34px rgba(3, 2, 8, 0.3);
   --shadow-medium: 0 20px 48px rgba(3, 2, 8, 0.36);

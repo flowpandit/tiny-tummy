@@ -1,10 +1,11 @@
 import { useMemo, useState } from "react";
 import { useChildContext } from "../contexts/ChildContext";
 import { useSleepLogs } from "../hooks/useSleepLogs";
-import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
+import { Card, CardContent, CardHeader } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Badge } from "../components/ui/badge";
 import { PageIntro } from "../components/ui/page-intro";
+import { EmptyState, InsetPanel, PageBody, SectionHeading, StatGrid, StatTile } from "../components/ui/page-layout";
 import { SleepLogSheet } from "../components/sleep/SleepLogSheet";
 import { SleepDurationChart } from "../components/sleep/SleepDurationChart";
 import { SleepPatternTimeline } from "../components/sleep/SleepPatternTimeline";
@@ -63,7 +64,7 @@ export function Sleep() {
   if (!activeChild) return null;
 
   return (
-    <div className="px-4 py-5">
+    <PageBody>
       <PageIntro
         eyebrow="Tracking"
         title="Sleep"
@@ -73,90 +74,83 @@ export function Sleep() {
       />
 
       {logs.length === 0 ? (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[var(--color-surface-strong)]">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" strokeWidth="1.75" className="h-8 w-8">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M21 12.79A9 9 0 1 1 11.21 3c-.12.64-.21 1.3-.21 2a9 9 0 0 0 10 7.79Z" />
-              </svg>
-            </div>
-            <p className="mt-4 text-xl font-semibold text-[var(--color-text)]">Start with a simple sleep log</p>
-            <p className="mt-2 text-sm leading-relaxed text-[var(--color-text-secondary)]">
-              Track nap and night sleep blocks only. No wake windows, no predictions, no coaching.
-            </p>
-            <Button variant="primary" className="mt-5" onClick={() => setSheetOpen(true)}>
+        <EmptyState
+          icon={(
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" strokeWidth="1.75" className="h-8 w-8">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M21 12.79A9 9 0 1 1 11.21 3c-.12.64-.21 1.3-.21 2a9 9 0 0 0 10 7.79Z" />
+            </svg>
+          )}
+          title="Start with a simple sleep log"
+          description="Track nap and night sleep blocks only. No wake windows, no predictions, no coaching."
+          action={(
+            <Button variant="primary" onClick={() => setSheetOpen(true)}>
               Add first sleep log
             </Button>
-          </CardContent>
-        </Card>
+          )}
+        />
       ) : (
         <>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <Card className="border-[var(--color-info)]/20 bg-[var(--color-info-bg)]">
-              <CardContent className="py-4">
-                <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--color-text-soft)]">Today total</p>
-                <p className="mt-2 text-2xl font-semibold text-[var(--color-text)]">{formatDuration(totalTodayMinutes)}</p>
-                <p className="mt-2 text-xs text-[var(--color-text-secondary)]">All sleep logs started today.</p>
-              </CardContent>
-            </Card>
-            <Card className="border-[var(--color-peach)] bg-[var(--color-surface-tint)]">
-              <CardContent className="py-4">
-                <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--color-text-soft)]">Naps today</p>
-                <p className="mt-2 text-2xl font-semibold text-[var(--color-text)]">{formatDuration(napMinutes)}</p>
-                <p className="mt-2 text-xs text-[var(--color-text-secondary)]">{todayLogs.filter((log) => log.sleep_type === "nap").length} nap logs</p>
-              </CardContent>
-            </Card>
-            <Card className="border-[var(--color-mint)] bg-[var(--color-healthy-bg)]">
-              <CardContent className="py-4">
-                <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--color-text-soft)]">Night sleep today</p>
-                <p className="mt-2 text-2xl font-semibold text-[var(--color-text)]">{formatDuration(nightMinutes)}</p>
-                <p className="mt-2 text-xs text-[var(--color-text-secondary)]">{todayLogs.filter((log) => log.sleep_type === "night").length} night logs</p>
-              </CardContent>
-            </Card>
-          </div>
+          <StatGrid>
+            <StatTile
+              eyebrow="Today total"
+              value={formatDuration(totalTodayMinutes)}
+              description="All sleep logs started today."
+              tone="info"
+            />
+            <StatTile
+              eyebrow="Naps today"
+              value={formatDuration(napMinutes)}
+              description={`${todayLogs.filter((log) => log.sleep_type === "nap").length} nap logs`}
+              tone="cta"
+            />
+            <StatTile
+              eyebrow="Night sleep today"
+              value={formatDuration(nightMinutes)}
+              description={`${todayLogs.filter((log) => log.sleep_type === "night").length} night logs`}
+              tone="healthy"
+            />
+          </StatGrid>
 
-          <Card className="mt-4">
+          <Card>
             <CardHeader>
-              <CardTitle>Daily pattern</CardTitle>
-              <p className="text-xs text-[var(--color-text-secondary)]">
-                A simple view of how sleep blocks were spaced through the day.
-              </p>
+              <SectionHeading
+                title="Daily pattern"
+                description="A simple view of how sleep blocks were spaced through the day."
+              />
             </CardHeader>
             <CardContent>
               <SleepPatternTimeline logs={patternLogs} dayLabel={patternLabel} />
             </CardContent>
           </Card>
 
-          <Card className="mt-4">
+          <Card>
             <CardHeader>
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <CardTitle>Recent totals</CardTitle>
-                  <p className="text-xs text-[var(--color-text-secondary)]">
-                    A seven-day view of logged sleep time.
-                  </p>
-                </div>
-                <Button variant="secondary" size="sm" onClick={() => setSheetOpen(true)}>
-                  Add sleep
-                </Button>
-              </div>
+              <SectionHeading
+                title="Recent totals"
+                description="A seven-day view of logged sleep time."
+                action={(
+                  <Button variant="secondary" size="sm" onClick={() => setSheetOpen(true)}>
+                    Add sleep
+                  </Button>
+                )}
+              />
             </CardHeader>
             <CardContent>
               <SleepDurationChart logs={logs} />
             </CardContent>
           </Card>
 
-          <Card className="mt-4">
-              <CardHeader>
-                <CardTitle>Recent sleep logs</CardTitle>
-                <p className="text-xs text-[var(--color-text-secondary)]">
-                  Start, end, duration, and optional notes for quick day context.
-                </p>
-              </CardHeader>
+          <Card>
+            <CardHeader>
+              <SectionHeading
+                title="Recent sleep logs"
+                description="Start, end, duration, and optional notes for quick day context."
+              />
+            </CardHeader>
             <CardContent>
               <div className="flex flex-col gap-3">
                 {logs.map((log) => (
-                  <div key={log.id} className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg)] p-3">
+                  <InsetPanel key={log.id}>
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <p className="text-sm font-medium text-[var(--color-text)]">
@@ -175,7 +169,7 @@ export function Sleep() {
                         {log.notes}
                       </p>
                     )}
-                  </div>
+                  </InsetPanel>
                 ))}
               </div>
             </CardContent>
@@ -189,6 +183,6 @@ export function Sleep() {
         childId={activeChild.id}
         onLogged={refresh}
       />
-    </div>
+    </PageBody>
   );
 }

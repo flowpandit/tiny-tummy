@@ -1,19 +1,20 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { Button } from "../components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
+import { Card, CardContent, CardHeader } from "../components/ui/card";
 import { Badge } from "../components/ui/badge";
+import { Textarea } from "../components/ui/field";
 import { PageIntro } from "../components/ui/page-intro";
+import { InsetPanel, PageBackLink, PageBody, SectionHeading, StatGrid, StatTile } from "../components/ui/page-layout";
 import { useToast } from "../components/ui/toast";
 import { useChildContext } from "../contexts/ChildContext";
 import { usePoopLogs } from "../hooks/usePoopLogs";
-import { useDietLogs } from "../hooks/useDietLogs";
+import { useFeedingLogs } from "../hooks/useFeedingLogs";
 import { useAlerts } from "../hooks/useAlerts";
 import { useEpisodes } from "../hooks/useEpisodes";
 import { useSymptoms } from "../hooks/useSymptoms";
 import { useCaregiverNote } from "../hooks/useCaregiverNote";
 import { buildChildDailySummary } from "../lib/child-summary";
-import { getDietEntryDisplayLabel } from "../lib/feeding";
+import { getFeedingEntryDisplayLabel } from "../lib/feeding";
 import { buildHandoffSummary, getLastFeedSummary, getLastPoopSummary, getStatusLabel } from "../lib/handoff";
 import { getEpisodeEventTypeLabel, getEpisodeTypeLabel } from "../lib/episode-constants";
 import { getSymptomSeverityBadgeVariant, getSymptomSeverityLabel, getSymptomTypeLabel } from "../lib/symptom-constants";
@@ -22,10 +23,9 @@ import { formatDate } from "../lib/utils";
 import type { HealthStatus } from "../lib/types";
 
 export function Handoff() {
-  const navigate = useNavigate();
   const { activeChild } = useChildContext();
   const { logs, lastRealPoop } = usePoopLogs(activeChild?.id ?? null);
-  const { logs: dietLogs } = useDietLogs(activeChild?.id ?? null);
+  const { logs: feedingLogs } = useFeedingLogs(activeChild?.id ?? null);
   const { alerts } = useAlerts(activeChild?.id ?? null);
   const { activeEpisode, events: episodeEvents } = useEpisodes(activeChild?.id ?? null);
   const { logs: symptomLogs } = useSymptoms(activeChild?.id ?? null);
@@ -60,7 +60,7 @@ export function Handoff() {
 
   const summary = buildChildDailySummary({
     poopLogs: logs,
-    dietLogs,
+    feedingLogs,
     alerts,
     activeEpisode,
     episodeEvents,
@@ -115,16 +115,8 @@ export function Handoff() {
   };
 
   return (
-    <div className="px-4 py-5">
-      <button
-        onClick={() => navigate("/settings")}
-        className="my-4 flex items-center gap-1 text-sm text-[var(--color-primary)] cursor-pointer"
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
-          <path fillRule="evenodd" d="M17 10a.75.75 0 0 1-.75.75H5.612l4.158 3.96a.75.75 0 1 1-1.04 1.08l-5.5-5.25a.75.75 0 0 1 0-1.08l5.5-5.25a.75.75 0 1 1 1.04 1.08L5.612 9.25H16.25A.75.75 0 0 1 17 10Z" clipRule="evenodd" />
-        </svg>
-        Back to Settings
-      </button>
+    <PageBody>
+      <PageBackLink to="/settings" label="Back to Settings" className="pt-1" />
 
       <PageIntro
         eyebrow="Caregiver"
@@ -132,7 +124,7 @@ export function Handoff() {
         description="A plain-language update for your partner, nanny, grandparent, or daycare handoff."
       />
 
-      <Card className="mb-4">
+      <Card>
         <CardContent className="py-4">
           <div className="flex items-start justify-between gap-3">
             <div>
@@ -150,46 +142,29 @@ export function Handoff() {
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-2 gap-3">
-        <Card>
-          <CardContent className="py-4">
-            <p className="text-[11px] uppercase tracking-[0.14em] text-[var(--color-text-soft)]">Last poop</p>
-            <p className="mt-2 text-sm font-medium text-[var(--color-text)]">{getLastPoopSummary(lastRealPoop)}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="py-4">
-            <p className="text-[11px] uppercase tracking-[0.14em] text-[var(--color-text-soft)]">Last feed</p>
-            <p className="mt-2 text-sm font-medium text-[var(--color-text)]">{getLastFeedSummary(summary.lastFeed)}</p>
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <InsetPanel>
+          <p className="text-[11px] uppercase tracking-[0.14em] text-[var(--color-text-soft)]">Last poop</p>
+          <p className="mt-2 text-sm font-medium text-[var(--color-text)]">{getLastPoopSummary(lastRealPoop)}</p>
+        </InsetPanel>
+        <InsetPanel>
+          <p className="text-[11px] uppercase tracking-[0.14em] text-[var(--color-text-soft)]">Last feed</p>
+          <p className="mt-2 text-sm font-medium text-[var(--color-text)]">{getLastFeedSummary(summary.lastFeed)}</p>
+        </InsetPanel>
       </div>
 
-      <Card className="mt-4">
-        <CardHeader>
-          <CardTitle>Today</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-3 gap-3">
-            <div className="rounded-[var(--radius-md)] bg-[var(--color-bg)] p-3 text-center">
-              <p className="text-xl font-semibold text-[var(--color-text)]">{summary.todayPoops}</p>
-              <p className="text-xs text-[var(--color-text-secondary)]">Poops</p>
-            </div>
-            <div className="rounded-[var(--radius-md)] bg-[var(--color-bg)] p-3 text-center">
-              <p className="text-xl font-semibold text-[var(--color-text)]">{summary.todayFeeds}</p>
-              <p className="text-xs text-[var(--color-text-secondary)]">Feeds</p>
-            </div>
-            <div className="rounded-[var(--radius-md)] bg-[var(--color-bg)] p-3 text-center">
-              <p className="text-xl font-semibold text-[var(--color-text)]">{summary.hasNoPoopDay ? "Yes" : "No"}</p>
-              <p className="text-xs text-[var(--color-text-secondary)]">No-poop day</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <StatGrid>
+        <StatTile eyebrow="Poops today" value={summary.todayPoops} description="Logged bowel movements so far." />
+        <StatTile eyebrow="Feeds today" value={summary.todayFeeds} description="Logged feeds so far." tone="cta" />
+        <StatTile eyebrow="No-poop day" value={summary.hasNoPoopDay ? "Yes" : "No"} description="Whether a no-poop day marker was added." tone="info" />
+      </StatGrid>
 
-      <Card className="mt-4">
+      <Card>
         <CardHeader>
-          <CardTitle>Current Concerns</CardTitle>
+          <SectionHeading
+            title="Current concerns"
+            description="Alerts, recent symptoms, and the current episode in one scan."
+          />
         </CardHeader>
         <CardContent className="flex flex-col gap-3">
           <div>
@@ -199,10 +174,10 @@ export function Handoff() {
             ) : (
               <div className="mt-2 flex flex-col gap-2">
                 {summary.visibleAlerts.map((alert) => (
-                  <div key={alert.id} className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-2">
+                  <InsetPanel key={alert.id} className="px-3 py-2">
                     <p className="text-sm font-medium text-[var(--color-text)]">{alert.title}</p>
                     <p className="mt-1 text-xs text-[var(--color-text-secondary)]">{alert.message}</p>
-                  </div>
+                  </InsetPanel>
                 ))}
               </div>
             )}
@@ -215,7 +190,7 @@ export function Handoff() {
             ) : (
               <div className="mt-2 flex flex-col gap-2">
                 {summary.recentSymptoms.map((symptom) => (
-                  <div key={symptom.id} className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-3">
+                  <InsetPanel key={symptom.id} className="px-3 py-3">
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <p className="text-sm font-medium text-[var(--color-text)]">
@@ -234,7 +209,7 @@ export function Handoff() {
                         {symptom.notes}
                       </p>
                     )}
-                  </div>
+                  </InsetPanel>
                 ))}
               </div>
             )}
@@ -245,7 +220,7 @@ export function Handoff() {
             {!summary.activeEpisode ? (
               <p className="mt-2 text-sm text-[var(--color-text-secondary)]">No active episode.</p>
             ) : (
-              <div className="mt-2 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-3">
+              <InsetPanel className="mt-2 px-3 py-3">
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <p className="text-sm font-medium text-[var(--color-text)]">
@@ -278,23 +253,25 @@ export function Handoff() {
                     )}
                   </div>
                 )}
-              </div>
+              </InsetPanel>
             )}
           </div>
         </CardContent>
       </Card>
 
-      <Card className="mt-4">
+      <Card>
         <CardHeader>
-          <CardTitle>Note For Next Caregiver</CardTitle>
+          <SectionHeading
+            title="Note for next caregiver"
+            description="Keep this short and practical so the next handoff is immediate."
+          />
         </CardHeader>
         <CardContent>
-          <textarea
+          <Textarea
             value={handoffNote}
             onChange={(event) => setHandoffNote(event.target.value)}
             placeholder="e.g. Offer more water at lunch, watch for another poop this afternoon."
             rows={4}
-            className="w-full resize-none rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm text-[var(--color-text)] outline-none transition-colors focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20"
           />
           <div className="mt-3 flex gap-3">
             <Button variant="primary" className="flex-1" onClick={handleSaveNote} disabled={isSaving || handoffNote.trim() === savedNote.trim()}>
@@ -313,12 +290,15 @@ export function Handoff() {
       </Card>
 
       {summary.lastFeed && (
-        <Card className="mt-4">
+        <Card>
           <CardHeader>
-            <CardTitle>Most Recent Feed</CardTitle>
+            <SectionHeading
+              title="Most recent feed"
+              description="Useful if another caregiver is taking over soon."
+            />
           </CardHeader>
           <CardContent>
-            <p className="text-sm font-medium text-[var(--color-text)]">{getDietEntryDisplayLabel(summary.lastFeed)}</p>
+            <p className="text-sm font-medium text-[var(--color-text)]">{getFeedingEntryDisplayLabel(summary.lastFeed)}</p>
             <p className="mt-1 text-xs text-[var(--color-text-secondary)]">{formatDate(summary.lastFeed.logged_at)}</p>
             {summary.lastFeed.reaction_notes && (
               <p className="mt-2 text-sm leading-relaxed text-[var(--color-text-secondary)]">{summary.lastFeed.reaction_notes}</p>
@@ -326,6 +306,6 @@ export function Handoff() {
           </CardContent>
         </Card>
       )}
-    </div>
+    </PageBody>
   );
 }

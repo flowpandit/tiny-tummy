@@ -72,7 +72,7 @@ export function BottomNav() {
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-30 px-3" style={{ paddingBottom: "calc(var(--safe-area-bottom) + 8px)" }}>
-      <div className="mx-auto flex h-[72px] max-w-[560px] items-center justify-around rounded-[28px] border border-[var(--color-border)] bg-[var(--color-surface-strong)]/96 px-2 shadow-[var(--shadow-medium)] backdrop-blur-xl">
+      <div className="mx-auto flex h-[68px] max-w-[600px] items-center justify-around rounded-[24px] border border-[var(--color-border)] bg-[var(--color-surface-strong)]/92 px-2 shadow-[0_18px_42px_rgba(32,24,18,0.12)] backdrop-blur-xl">
         {NAV_ITEMS.map((item) => {
           const isActive = location.pathname === item.path;
           return (
@@ -80,13 +80,19 @@ export function BottomNav() {
               key={item.path}
               onClick={() => navigate(item.path)}
               className={cn(
-                "flex h-[60px] min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-[20px] cursor-pointer transition-all duration-200",
+                "relative flex h-[56px] min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-[18px] cursor-pointer transition-all duration-200",
                 isActive
-                  ? "bg-[var(--color-bg-elevated)] text-[var(--color-primary)] shadow-[var(--shadow-soft)]"
+                  ? "bg-[var(--color-bg-elevated)]/88 text-[var(--color-primary)]"
                   : "text-[var(--color-muted)] hover:text-[var(--color-text-secondary)]",
               )}
               aria-label={item.label}
             >
+              <span
+                className={cn(
+                  "absolute left-1/2 top-1 h-0.5 w-8 -translate-x-1/2 rounded-full transition-opacity duration-200",
+                  isActive ? "bg-[var(--color-cta)] opacity-100" : "opacity-0",
+                )}
+              />
               {item.icon(isActive)}
               <span className="text-[10px] font-semibold tracking-[0.02em] truncate max-w-full px-1">{item.label}</span>
             </button>

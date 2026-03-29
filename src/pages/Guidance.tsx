@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { getGuidanceTips } from "../lib/tauri";
 import { Card, CardContent } from "../components/ui/card";
+import { PageIntro } from "../components/ui/page-intro";
+import { PageBackLink, PageBody } from "../components/ui/page-layout";
 import { cn } from "../lib/cn";
 import type { GuidanceTip } from "../lib/types";
 
@@ -72,7 +73,6 @@ function TipCard({ tip }: { tip: GuidanceTip }) {
 const ALL_FILTER = "All";
 
 export function Guidance() {
-  const navigate = useNavigate();
   const [tips, setTips] = useState<GuidanceTip[]>([]);
   const [activeFilter, setActiveFilter] = useState(ALL_FILTER);
 
@@ -98,26 +98,14 @@ export function Guidance() {
       : tips.filter((t) => t.category === activeFilter);
 
   return (
-    <div className="px-4 py-5">
-      <button
-        onClick={() => navigate("/settings")}
-        className="mb-4 flex items-center gap-1 text-sm text-[var(--color-primary)] cursor-pointer"
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
-          <path fillRule="evenodd" d="M17 10a.75.75 0 0 1-.75.75H5.612l4.158 3.96a.75.75 0 1 1-1.04 1.08l-5.5-5.25a.75.75 0 0 1 0-1.08l5.5-5.25a.75.75 0 1 1 1.04 1.08L5.612 9.25H16.25A.75.75 0 0 1 17 10Z" clipRule="evenodd" />
-        </svg>
-        Back to Settings
-      </button>
+    <PageBody>
+      <PageBackLink to="/settings" label="Back to Settings" />
 
-      <div className="mb-5 rounded-[16px] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-[var(--shadow-soft)] backdrop-blur-xl">
-        <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--color-text-soft)]">Support</p>
-        <h2 className="mt-2 font-[var(--font-display)] text-3xl font-semibold text-[var(--color-text)]">
-          Guidance
-        </h2>
-        <p className="mt-3 text-base leading-relaxed text-[var(--color-text-secondary)]">
-          Tap a card to read more. Always consult your doctor for specific medical advice.
-        </p>
-      </div>
+      <PageIntro
+        eyebrow="Support"
+        title="Guidance"
+        description="Tap a topic to read more. Always consult your doctor for specific medical advice."
+      />
 
       {/* Category filter chips */}
       <div className="flex gap-2 overflow-x-auto pb-3 mb-4 -mx-4 px-4 scrollbar-none">
@@ -155,6 +143,6 @@ export function Guidance() {
           </div>
         );
       })}
-    </div>
+    </PageBody>
   );
 }

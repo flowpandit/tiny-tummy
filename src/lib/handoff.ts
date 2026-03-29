@@ -1,8 +1,8 @@
-import { getDietEntryDisplayLabel } from "./feeding";
+import { getFeedingEntryDisplayLabel } from "./feeding";
 import { getEpisodeTypeLabel } from "./episode-constants";
 import { getSymptomSeverityLabel, getSymptomTypeLabel } from "./symptom-constants";
 import { formatDate, timeSince } from "./utils";
-import type { Alert, DietEntry, Episode, EpisodeEvent, HealthStatus, PoopEntry, SymptomEntry } from "./types";
+import type { Alert, Episode, EpisodeEvent, FeedingEntry, HealthStatus, PoopEntry, SymptomEntry } from "./types";
 
 export function getStatusLabel(status: HealthStatus): string {
   if (status === "healthy") return "All looks normal";
@@ -16,9 +16,9 @@ export function getLastPoopSummary(lastPoop: PoopEntry | null): string {
   return `${timeSince(lastPoop.logged_at)} (${formatDate(lastPoop.logged_at)})`;
 }
 
-export function getLastFeedSummary(lastFeed: DietEntry | null): string {
+export function getLastFeedSummary(lastFeed: FeedingEntry | null): string {
   if (!lastFeed) return "No feed logged yet";
-  return `${getDietEntryDisplayLabel(lastFeed)} · ${timeSince(lastFeed.logged_at)}`;
+  return `${getFeedingEntryDisplayLabel(lastFeed)} · ${timeSince(lastFeed.logged_at)}`;
 }
 
 export function buildHandoffSummary(input: {
@@ -27,7 +27,7 @@ export function buildHandoffSummary(input: {
   normalDescription: string;
   alerts: Alert[];
   lastPoop: PoopEntry | null;
-  lastFeed: DietEntry | null;
+  lastFeed: FeedingEntry | null;
   activeEpisode: Episode | null;
   latestEpisodeUpdate: EpisodeEvent | null;
   recentSymptoms: SymptomEntry[];

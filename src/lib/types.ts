@@ -144,7 +144,7 @@ export type MilestoneType =
   | "travel_or_daycare_change"
   | "toilet_training_interest";
 
-export interface DietEntry {
+export interface FeedingEntry {
   id: string;
   child_id: string;
   logged_at: string;
@@ -160,7 +160,7 @@ export interface DietEntry {
   created_at: string;
 }
 
-export interface DietLogDraft {
+export interface FeedingLogDraft {
   food_type: FoodType | null;
   food_name: string;
   amount_ml: string;
@@ -171,6 +171,9 @@ export interface DietLogDraft {
   is_constipation_support: boolean;
   notes: string;
 }
+
+export type DietEntry = FeedingEntry;
+export type DietLogDraft = FeedingLogDraft;
 
 export type FoodType =
   | "breast_milk"
