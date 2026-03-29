@@ -224,7 +224,7 @@ function DayCard({
             fill="currentColor"
             className={cn("w-4 h-4", isExpanded ? "text-[var(--color-primary)]" : "text-[var(--color-muted)]")}
             animate={{ rotate: isExpanded ? 180 : 0 }}
-            transition={{ duration: 0.2 }}
+            transition={{ duration: 0.12, ease: [0.22, 1, 0.36, 1] }}
           >
             <path fillRule="evenodd" d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
           </motion.svg>
@@ -238,7 +238,7 @@ function DayCard({
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.2 }}
+            transition={{ duration: 0.14, ease: [0.22, 1, 0.36, 1] }}
             className="overflow-hidden"
           >
             <div className="flex flex-col gap-1.5 pt-2 pl-2">
@@ -296,14 +296,16 @@ export function History() {
 
   if (!isLoading && poopLogs.length === 0 && dietLogs.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center text-center px-8 py-20">
-        <div className="w-16 h-16 rounded-full bg-[var(--color-muted)]/10 flex items-center justify-center mb-4">
+      <div className="px-4 py-8">
+        <div className="flex flex-col items-center justify-center rounded-[16px] border border-[var(--color-border)] bg-[var(--color-surface)] px-8 py-16 text-center shadow-[var(--shadow-soft)] backdrop-blur-xl">
+        <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[var(--color-surface-strong)]">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="var(--color-muted)" className="w-8 h-8">
             <path fillRule="evenodd" d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25ZM12.75 6a.75.75 0 0 0-1.5 0v6c0 .414.336.75.75.75h4.5a.75.75 0 0 0 0-1.5h-3.75V6Z" clipRule="evenodd" />
           </svg>
         </div>
-        <p className="text-[var(--color-text)] font-medium">Your timeline will fill up here</p>
-        <p className="text-sm text-[var(--color-muted)] mt-1">Log entries from the Home screen to see your history.</p>
+        <p className="text-[var(--color-text)] text-xl font-semibold">Your timeline will fill up here</p>
+        <p className="mt-2 text-base text-[var(--color-muted)]">Log entries from the Home screen to see your history.</p>
+        </div>
       </div>
     );
   }
@@ -325,15 +327,20 @@ export function History() {
 
   return (
     <div className="px-4 py-5">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="font-[var(--font-display)] text-xl font-semibold text-[var(--color-text)]">
-          History
-        </h2>
-        <p className="text-xs text-[var(--color-muted)]">{grouped.size} day{grouped.size !== 1 ? "s" : ""}</p>
+      <div className="my-5 rounded-[16px] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-[var(--shadow-soft)] backdrop-blur-xl">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--color-text-soft)]">Timeline</p>
+            <h2 className="mt-2 font-[var(--font-display)] text-3xl font-semibold text-[var(--color-text)]">
+              History
+            </h2>
+          </div>
+          <p className="text-xs text-[var(--color-muted)]">{grouped.size} day{grouped.size !== 1 ? "s" : ""}</p>
+        </div>
       </div>
 
       {/* Date search */}
-      <div className="mb-4">
+      <div className="mb-4 rounded-[14px] border border-[var(--color-border)] bg-[var(--color-surface)] p-3 shadow-[var(--shadow-soft)] backdrop-blur-xl">
         <div className="flex items-center gap-2">
           <div className="flex-1">
             <DatePicker
@@ -342,6 +349,8 @@ export function History() {
               max={today}
               min={earliestDate}
               label="Search by date"
+              dismissOnDocumentClick
+              overlayOffsetY={48}
             />
           </div>
           {searchDate && (
@@ -357,7 +366,7 @@ export function History() {
 
       {/* Day list */}
       {displayDays.length === 0 ? (
-        <div className="text-center py-12">
+        <div className="py-12 text-center">
           <p className="text-sm text-[var(--color-muted)]">No entries for this date</p>
         </div>
       ) : (

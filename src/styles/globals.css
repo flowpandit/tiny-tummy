@@ -6,6 +6,7 @@ html, body, #root {
   height: 100%;
   margin: 0;
   padding: 0;
+  background: var(--color-bg);
 }
 
 :root {
@@ -18,17 +19,12 @@ body {
   font-size: 16px;
   line-height: 1.5;
   color: var(--color-text);
-  background-color: var(--color-bg);
+  background: var(--color-bg);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   -webkit-text-size-adjust: 100%;
   /* Prevent overscroll bounce on iOS */
   overscroll-behavior: none;
-  /* Safe area insets for notched devices */
-  padding-top: var(--safe-area-top);
-  padding-bottom: var(--safe-area-bottom);
-  padding-left: env(safe-area-inset-left, 0px);
-  padding-right: env(safe-area-inset-right, 0px);
 }
 
 /* iOS — env() works natively in Safari WebView */
@@ -42,6 +38,7 @@ body {
 #root {
   display: flex;
   flex-direction: column;
+  min-height: 100%;
 }
 
 /* Tailwind v4 theme extension */
@@ -49,30 +46,30 @@ body {
   --font-display: 'Lora', Georgia, serif;
   --font-body: 'Raleway', system-ui, sans-serif;
 
-  --color-primary: #2563EB;
-  --color-primary-hover: #1D4ED8;
-  --color-cta: #F97316;
-  --color-cta-hover: #EA580C;
-  --color-surface: #FFFFFF;
-  --color-muted: #94A3B8;
-  --color-border: #E2E8F0;
-  --color-text-secondary: #64748B;
+  --color-primary: #2b3956;
+  --color-primary-hover: #1f2a40;
+  --color-cta: #ff8b69;
+  --color-cta-hover: #f5704c;
+  --color-surface: rgba(255, 255, 255, 0.74);
+  --color-muted: #8f9ab2;
+  --color-border: rgba(112, 88, 69, 0.12);
+  --color-text-secondary: #647392;
 
-  --color-healthy: #22C55E;
-  --color-healthy-bg: #F0FDF4;
-  --color-caution: #F59E0B;
-  --color-caution-bg: #FFFBEB;
-  --color-alert: #EF4444;
-  --color-alert-bg: #FEF2F2;
-  --color-info: #3B82F6;
-  --color-info-bg: #EFF6FF;
+  --color-healthy: #2f7f62;
+  --color-healthy-bg: #d7f2df;
+  --color-caution: #b67b28;
+  --color-caution-bg: #fff1cf;
+  --color-alert: #d95f52;
+  --color-alert-bg: #ffe5df;
+  --color-info: #5675c8;
+  --color-info-bg: #eef3ff;
 
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
+  --radius-sm: 10px;
+  --radius-md: 18px;
+  --radius-lg: 14px;
 
-  --shadow-soft: 0 2px 8px rgba(0, 0, 0, 0.06);
-  --shadow-medium: 0 4px 16px rgba(0, 0, 0, 0.1);
+  --shadow-soft: 0 12px 28px rgba(214, 175, 138, 0.16);
+  --shadow-medium: 0 20px 44px rgba(122, 88, 56, 0.14);
 
   --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
   --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -84,6 +81,10 @@ button, a, [role="button"] {
   -webkit-tap-highlight-color: transparent;
   -webkit-touch-callout: none;
   user-select: none;
+}
+
+::selection {
+  background: rgba(255, 139, 105, 0.24);
 }
 
 /* Hide all scrollbars — app feels native without them */

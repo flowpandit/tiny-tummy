@@ -31,7 +31,7 @@ export function StoolTypePicker({ value, onChange }: StoolTypePickerProps) {
               className={cn(
                 "w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold",
                 value === item.type
-                  ? "bg-[var(--color-primary)] text-white"
+                  ? "bg-[var(--color-primary)] text-[var(--color-on-primary)]"
                   : "bg-[var(--color-bg)] text-[var(--color-text-secondary)]",
               )}
             >

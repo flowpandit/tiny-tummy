@@ -58,7 +58,7 @@ export function Sheet({ open, onClose, children, className }: SheetProps) {
             }}
             style={{ y: sheetY }}
             className={cn(
-              "fixed bottom-0 left-0 right-0 z-50 bg-[var(--color-surface)] rounded-t-[var(--radius-lg)] shadow-[var(--shadow-lg)]",
+              "fixed bottom-0 left-0 right-0 z-50 border border-[var(--color-border)] bg-[var(--color-surface-strong)] rounded-t-[var(--radius-lg)] shadow-[var(--shadow-lg)]",
               "max-h-[85vh] flex flex-col",
               className,
             )}

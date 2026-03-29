@@ -9,16 +9,7 @@ interface StatusCardProps {
   lastPoopAt: string | null;
 }
 
-const STATUS_CONFIG: Record<HealthStatus, { bg: string; icon: string; color: string }> = {
-  healthy: { bg: "var(--color-healthy-bg)", icon: "check", color: "var(--color-healthy)" },
-  caution: { bg: "var(--color-caution-bg)", icon: "eye", color: "var(--color-caution)" },
-  alert: { bg: "var(--color-alert-bg)", icon: "alert", color: "var(--color-alert)" },
-  unknown: { bg: "var(--color-info-bg)", icon: "info", color: "var(--color-info)" },
-};
-
 export function StatusCard({ status, normalDescription, childName, lastPoopAt }: StatusCardProps) {
-  const config = STATUS_CONFIG[status];
-
   const getMessage = () => {
     if (!lastPoopAt) return `Start tracking ${childName}'s poops to see patterns.`;
     const ago = timeSince(lastPoopAt);
@@ -35,10 +26,20 @@ export function StatusCard({ status, normalDescription, childName, lastPoopAt }:
   };
 
   return (
-    <Card className="mx-4" style={{ borderLeftWidth: 3, borderLeftColor: config.color }}>
-      <CardContent className="py-3">
-        <p className="text-sm text-[var(--color-text)] leading-relaxed">{getMessage()}</p>
-        <p className="text-xs text-[var(--color-muted)] mt-1">{normalDescription}</p>
+    <Card className="mx-0 overflow-hidden bg-transparent shadow-none border-0">
+      <CardContent className="p-0">
+        <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--color-text-soft)]">
+          Time Since Last Poop
+        </p>
+        <p className="mt-2 text-2xl font-semibold text-[var(--color-text)]">
+          {status === "healthy" ? `Still in ${childName}'s usual range` : getMessage()}
+        </p>
+        <p className="mt-3 text-lg leading-relaxed text-[var(--color-text-secondary)]">
+          {status === "healthy"
+            ? "Meals, stool type, and color are all easy to review at a glance."
+            : getMessage()}
+        </p>
+        <p className="mt-3 text-xs text-[var(--color-text-soft)]">{normalDescription}</p>
       </CardContent>
     </Card>
   );

@@ -11,7 +11,7 @@ export function ColorDistribution({ data }: ColorDistributionProps) {
 
   return (
     <div>
-      <div className="flex gap-1 h-6 rounded-[var(--radius-sm)] overflow-hidden">
+      <div className="flex h-7 gap-1 overflow-hidden rounded-full bg-[var(--color-surface-strong)] p-1">
         {data.map((item) => {
           const info = STOOL_COLORS.find((c) => c.value === item.color);
           const pct = (item.count / total) * 100;
@@ -23,6 +23,7 @@ export function ColorDistribution({ data }: ColorDistributionProps) {
                 width: `${pct}%`,
                 backgroundColor: info?.hex ?? "var(--color-muted)",
                 minWidth: pct > 0 ? 8 : 0,
+                borderRadius: "999px",
               }}
               title={`${info?.label ?? item.color}: ${item.count} (${Math.round(pct)}%)`}
             />
@@ -30,13 +31,13 @@ export function ColorDistribution({ data }: ColorDistributionProps) {
         })}
       </div>
       {/* Legend */}
-      <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2">
+      <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2">
         {data.map((item) => {
           const info = STOOL_COLORS.find((c) => c.value === item.color);
           return (
-            <div key={item.color} className="flex items-center gap-1.5">
+            <div key={item.color} className="flex items-center gap-2">
               <div
-                className="w-2.5 h-2.5 rounded-full border border-[var(--color-border)]"
+                className="h-2.5 w-2.5 rounded-full border border-[var(--color-border)]"
                 style={{ backgroundColor: info?.hex ?? "var(--color-muted)" }}
               />
               <span className="text-xs text-[var(--color-text-secondary)]">

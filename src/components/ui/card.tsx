@@ -6,7 +6,7 @@ const Card = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement>>(
     <div
       ref={ref}
       className={cn(
-        "bg-[var(--color-surface)] rounded-[var(--radius-md)] shadow-[var(--shadow-soft)] border border-[var(--color-border)]",
+        "rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[var(--shadow-soft)] backdrop-blur-xl",
         className,
       )}
       {...props}
@@ -19,7 +19,7 @@ const CardHeader = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement>>(
   ({ className, ...props }, ref) => (
     <div
       ref={ref}
-      className={cn("flex flex-col gap-1 p-4 pb-2", className)}
+      className={cn("flex flex-col gap-1 p-5 pb-2", className)}
       {...props}
     />
   ),
@@ -31,7 +31,7 @@ const CardTitle = forwardRef<HTMLHeadingElement, HTMLAttributes<HTMLHeadingEleme
     <h3
       ref={ref}
       className={cn(
-        "font-[var(--font-display)] text-lg font-semibold text-[var(--color-text)]",
+        "font-[var(--font-display)] text-lg font-semibold tracking-[-0.02em] text-[var(--color-text)]",
         className,
       )}
       {...props}
@@ -42,7 +42,7 @@ CardTitle.displayName = "CardTitle";
 
 const CardContent = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement>>(
   ({ className, ...props }, ref) => (
-    <div ref={ref} className={cn("p-4 pt-2", className)} {...props} />
+    <div ref={ref} className={cn("p-5 pt-2", className)} {...props} />
   ),
 );
 CardContent.displayName = "CardContent";

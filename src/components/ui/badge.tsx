@@ -10,12 +10,12 @@ const Badge = forwardRef<HTMLSpanElement, BadgeProps>(
     <span
       ref={ref}
       className={cn(
-        "inline-flex items-center px-2.5 py-0.5 rounded-[var(--radius-sm)] text-xs font-medium",
+        "inline-flex items-center px-3 py-1 rounded-[999px] text-[11px] font-semibold tracking-[0.02em]",
         variant === "healthy" && "bg-[var(--color-healthy-bg)] text-[var(--color-healthy)]",
         variant === "caution" && "bg-[var(--color-caution-bg)] text-[var(--color-caution)]",
         variant === "alert" && "bg-[var(--color-alert-bg)] text-[var(--color-alert)]",
         variant === "info" && "bg-[var(--color-info-bg)] text-[var(--color-info)]",
-        variant === "default" && "bg-[var(--color-bg)] text-[var(--color-text-secondary)]",
+        variant === "default" && "bg-[var(--color-surface-tint)] text-[var(--color-text-secondary)]",
         className,
       )}
       {...props}

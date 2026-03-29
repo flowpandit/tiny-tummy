@@ -17,10 +17,12 @@
     "fs:allow-exists",
     "fs:allow-mkdir",
     "fs:allow-remove",
+    "dialog:default",
     "notification:default",
     "notification:allow-notify",
     "notification:allow-request-permission",
     "os:default",
-    "os:allow-platform"
+    "os:allow-platform",
+    "fs:allow-write-text-file"
   ]
 }

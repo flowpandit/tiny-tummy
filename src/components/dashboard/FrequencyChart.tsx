@@ -8,24 +8,11 @@ import {
   Tooltip,
 } from "recharts";
 import type { DailyFrequency } from "../../lib/types";
+import { fillDailyFrequencyDays } from "../../lib/stats";
 
 interface FrequencyChartProps {
   data: DailyFrequency[];
   days: number;
-}
-
-function fillMissingDays(data: DailyFrequency[], days: number): DailyFrequency[] {
-  const map = new Map(data.map((d) => [d.date, d.count]));
-  const filled: DailyFrequency[] = [];
-  const now = new Date();
-
-  for (let i = days - 1; i >= 0; i--) {
-    const d = new Date(now);
-    d.setDate(d.getDate() - i);
-    const dateStr = d.toISOString().split("T")[0];
-    filled.push({ date: dateStr, count: map.get(dateStr) ?? 0 });
-  }
-  return filled;
 }
 
 function formatDateLabel(dateStr: string): string {
@@ -34,15 +21,21 @@ function formatDateLabel(dateStr: string): string {
 }
 
 export function FrequencyChart({ data, days }: FrequencyChartProps) {
-  const filled = fillMissingDays(data, days);
+  const filled = fillDailyFrequencyDays(data, days);
   const showEveryN = days <= 7 ? 1 : days <= 14 ? 2 : 4;
 
   return (
-    <div className="w-full h-48">
+    <div className="w-full h-52">
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={filled} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
+          <defs>
+            <linearGradient id="freqGradient" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#ffb48e" />
+              <stop offset="100%" stopColor="#ff8d69" />
+            </linearGradient>
+          </defs>
           <CartesianGrid
-            strokeDasharray="3 3"
+            strokeDasharray="4 8"
             stroke="var(--color-border)"
             vertical={false}
           />
@@ -72,8 +65,8 @@ export function FrequencyChart({ data, days }: FrequencyChartProps) {
           />
           <Bar
             dataKey="count"
-            fill="var(--color-primary)"
-            radius={[4, 4, 0, 0]}
+            fill="url(#freqGradient)"
+            radius={[18, 18, 0, 0]}
             maxBarSize={24}
           />
         </BarChart>

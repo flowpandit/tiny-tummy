@@ -79,7 +79,7 @@ export function TimePicker({ value, onChange, label }: TimePickerProps) {
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
               transition={{ duration: 0.15 }}
-              className="fixed z-50 left-4 right-4 top-1/2 -translate-y-1/2 bg-[var(--color-surface)] rounded-[var(--radius-lg)] shadow-[var(--shadow-lg)] border border-[var(--color-border)] p-4 max-w-sm mx-auto"
+              className="fixed z-50 left-4 right-4 top-1/2 -translate-y-1/2 bg-[var(--color-surface-strong)] rounded-[var(--radius-lg)] shadow-[var(--shadow-lg)] border border-[var(--color-border)] p-4 max-w-sm mx-auto"
             >
               <p className="text-base font-semibold text-[var(--color-text)] text-center mb-3">
                 Select Time
@@ -103,7 +103,7 @@ export function TimePicker({ value, onChange, label }: TimePickerProps) {
                           className={cn(
                             "w-full py-2.5 text-sm text-center cursor-pointer transition-colors duration-100 rounded-[var(--radius-sm)]",
                             isActive
-                              ? "bg-[var(--color-primary)] text-white font-semibold"
+                              ? "bg-[var(--color-primary)] text-[var(--color-on-primary)] font-semibold"
                               : "text-[var(--color-text)] hover:bg-[var(--color-border)]",
                           )}
                         >
@@ -129,7 +129,7 @@ export function TimePicker({ value, onChange, label }: TimePickerProps) {
                           className={cn(
                             "w-full py-2.5 text-sm text-center cursor-pointer transition-colors duration-100 rounded-[var(--radius-sm)]",
                             isActive
-                              ? "bg-[var(--color-primary)] text-white font-semibold"
+                              ? "bg-[var(--color-primary)] text-[var(--color-on-primary)] font-semibold"
                               : "text-[var(--color-text)] hover:bg-[var(--color-border)]",
                           )}
                         >
@@ -149,7 +149,7 @@ export function TimePicker({ value, onChange, label }: TimePickerProps) {
                 <button
                   type="button"
                   onClick={() => setOpen(false)}
-                  className="px-5 py-2 text-sm font-medium bg-[var(--color-primary)] text-white rounded-[var(--radius-md)] cursor-pointer hover:bg-[var(--color-primary-hover)] transition-colors"
+                  className="px-5 py-2 text-sm font-medium bg-[var(--color-primary)] text-[var(--color-on-primary)] rounded-[var(--radius-md)] cursor-pointer hover:bg-[var(--color-primary-hover)] transition-colors"
                 >
                   Done
                 </button>

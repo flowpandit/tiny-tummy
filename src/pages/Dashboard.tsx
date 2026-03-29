@@ -34,38 +34,44 @@ export function Dashboard() {
 
   if (realLogCount < 3) {
     return (
-      <div className="flex flex-col items-center justify-center text-center px-8 py-20">
-        <div className="w-16 h-16 rounded-full bg-[var(--color-primary)]/10 flex items-center justify-center mb-4">
+      <div className="px-4 py-8">
+        <div className="flex flex-col items-center justify-center rounded-[16px] border border-[var(--color-border)] bg-[var(--color-surface)] px-8 py-16 text-center shadow-[var(--shadow-soft)] backdrop-blur-xl">
+        <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[var(--color-surface-strong)]">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="var(--color-primary)" className="w-8 h-8">
             <path fillRule="evenodd" d="M3 6a3 3 0 0 1 3-3h12a3 3 0 0 1 3 3v12a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3V6Zm4.5 7.5a.75.75 0 0 1 .75.75v2.25a.75.75 0 0 1-1.5 0v-2.25a.75.75 0 0 1 .75-.75Zm3.75-1.5a.75.75 0 0 0-1.5 0v4.5a.75.75 0 0 0 1.5 0V12Zm2.25-3a.75.75 0 0 1 .75.75v6.75a.75.75 0 0 1-1.5 0V9.75a.75.75 0 0 1 .75-.75Zm3.75 1.5a.75.75 0 0 0-1.5 0v5.25a.75.75 0 0 0 1.5 0v-5.25Z" clipRule="evenodd" />
           </svg>
         </div>
-        <p className="text-[var(--color-text)] font-medium">
+        <p className="text-[var(--color-text)] text-xl font-semibold">
           A few more logs and we'll show you trends
         </p>
-        <p className="text-sm text-[var(--color-muted)] mt-1">
+        <p className="mt-2 text-base text-[var(--color-muted)]">
           Log at least 3 entries to see charts and patterns.
         </p>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="px-4 py-5">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="font-[var(--font-display)] text-xl font-semibold text-[var(--color-text)]">
-          Trends
-        </h2>
+      <div className="my-5 rounded-[16px] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-[var(--shadow-soft)] backdrop-blur-xl">
+        <div className="mb-4 flex items-center justify-between gap-4">
+          <div>
+            <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--color-text-soft)]">Patterns</p>
+            <h2 className="mt-2 font-[var(--font-display)] text-3xl font-semibold text-[var(--color-text)]">
+              Trends
+            </h2>
+          </div>
         {/* Period toggle */}
-        <div className="flex bg-[var(--color-bg)] rounded-[var(--radius-sm)] p-0.5 border border-[var(--color-border)]">
+        <div className="flex rounded-full border border-[var(--color-border)] bg-[var(--color-surface-strong)] p-1 shadow-[var(--shadow-soft)]">
           {PERIOD_OPTIONS.map((opt) => (
             <button
               key={opt.value}
               onClick={() => setDays(opt.value)}
               className={cn(
-                "px-2.5 py-1 text-xs font-medium rounded-[var(--radius-sm)] cursor-pointer transition-colors duration-200",
+                "rounded-full px-3 py-1.5 text-xs font-semibold cursor-pointer transition-colors duration-200",
                 days === opt.value
-                  ? "bg-[var(--color-primary)] text-white"
+                  ? "bg-[var(--color-primary)] text-[var(--color-on-primary)] shadow-[var(--shadow-soft)]"
                   : "text-[var(--color-text-secondary)] hover:text-[var(--color-text)]",
               )}
             >
@@ -73,6 +79,10 @@ export function Dashboard() {
             </button>
           ))}
         </div>
+      </div>
+      <p className="text-base leading-relaxed text-[var(--color-text-secondary)]">
+        Softer visual summaries to help you spot frequency, consistency, color, and meal correlations over time.
+      </p>
       </div>
 
       <div className="flex flex-col gap-4">
