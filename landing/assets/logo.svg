@@ -3,34 +3,28 @@
   <rect x="0" y="0" width="512" height="512" rx="115" fill="#FFF0E6"/>
 
   <!-- Head / body circle -->
-  <circle cx="256" cy="220" r="135" fill="#FFD4B8"/>
+  <circle cx="256" cy="256" r="135" fill="#FFD4B8"/>
 
   <!-- Tummy area -->
-  <ellipse cx="256" cy="245" rx="90" ry="70" fill="#FFBC94"/>
+  <ellipse cx="256" cy="281" rx="90" ry="70" fill="#FFBC94"/>
 
   <!-- Belly button -->
-  <ellipse cx="256" cy="280" rx="16" ry="10" fill="#F5C9A8" opacity="0.7"/>
+  <ellipse cx="256" cy="316" rx="16" ry="10" fill="#F5C9A8" opacity="0.7"/>
 
   <!-- Left eye -->
-  <circle cx="218" cy="190" r="14" fill="#5C4033"/>
-  <circle cx="223" cy="186" r="5" fill="#FFFFFF"/>
+  <circle cx="218" cy="226" r="14" fill="#5C4033"/>
+  <circle cx="223" cy="222" r="5" fill="#FFFFFF"/>
 
   <!-- Right eye -->
-  <circle cx="294" cy="190" r="14" fill="#5C4033"/>
-  <circle cx="299" cy="186" r="5" fill="#FFFFFF"/>
+  <circle cx="294" cy="226" r="14" fill="#5C4033"/>
+  <circle cx="299" cy="222" r="5" fill="#FFFFFF"/>
 
   <!-- Smile -->
-  <path d="M228 240 Q256 272 284 240" fill="none" stroke="#D4845A" stroke-width="8" stroke-linecap="round"/>
+  <path d="M228 276 Q256 308 284 276" fill="none" stroke="#D4845A" stroke-width="8" stroke-linecap="round"/>
 
   <!-- Left cheek blush -->
-  <circle cx="192" cy="232" r="20" fill="#FFB8B8" opacity="0.45"/>
+  <circle cx="192" cy="268" r="20" fill="#FFB8B8" opacity="0.45"/>
 
   <!-- Right cheek blush -->
-  <circle cx="320" cy="232" r="20" fill="#FFB8B8" opacity="0.45"/>
-
-  <!-- Wordmark -->
-  <text x="256" y="420" text-anchor="middle" font-family="'Nunito', 'Quicksand', 'Arial Rounded MT Bold', 'Helvetica Neue', sans-serif" font-size="52" font-weight="700" fill="#C06030">tiny tummy</text>
-
-  <!-- Tagline -->
-  <text x="256" y="462" text-anchor="middle" font-family="'Nunito', 'Quicksand', 'Helvetica Neue', sans-serif" font-size="22" font-weight="400" fill="#D4956A">baby poop tracker</text>
+  <circle cx="320" cy="268" r="20" fill="#FFB8B8" opacity="0.45"/>
 </svg>
