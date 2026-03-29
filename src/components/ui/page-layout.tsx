@@ -6,7 +6,7 @@ export function PageBody({
   className,
   ...props
 }: HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn("px-4 py-5 space-y-6", className)} {...props} />;
+  return <div className={cn("mt-5 px-4 py-5 space-y-6", className)} {...props} />;
 }
 
 export function PageBackLink({

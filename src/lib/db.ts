@@ -209,6 +209,75 @@ export async function deletePoopLog(id: string): Promise<void> {
   await conn.execute("DELETE FROM poop_logs WHERE id = ?", [id]);
 }
 
+export async function reconcileAutoNoPoopDays(childId: string): Promise<number> {
+  const conn = await getDb();
+  const now = nowISO();
+  const todayKey = new Date().toISOString().split("T")[0];
+  const redundantRows = await conn.select<{ cnt: number }[]>(
+    `SELECT COUNT(*) as cnt
+     FROM poop_logs
+     WHERE child_id = ?
+       AND is_no_poop = 1
+       AND substr(logged_at, 1, 10) IN (
+         SELECT DISTINCT substr(logged_at, 1, 10)
+         FROM poop_logs
+         WHERE child_id = ? AND is_no_poop = 0
+       )`,
+    [childId, childId],
+  );
+  const removedCount = redundantRows[0]?.cnt ?? 0;
+
+  await conn.execute(
+    `DELETE FROM poop_logs
+     WHERE child_id = ?
+       AND is_no_poop = 1
+       AND substr(logged_at, 1, 10) IN (
+         SELECT DISTINCT substr(logged_at, 1, 10)
+         FROM poop_logs
+         WHERE child_id = ? AND is_no_poop = 0
+       )`,
+    [childId, childId],
+  );
+
+  const candidateRows = await conn.select<{ day: string }[]>(
+    `SELECT DISTINCT day
+     FROM (
+       SELECT substr(logged_at, 1, 10) AS day FROM diet_logs WHERE child_id = ?
+       UNION
+       SELECT substr(logged_at, 1, 10) AS day FROM symptom_logs WHERE child_id = ?
+       UNION
+       SELECT substr(logged_at, 1, 10) AS day FROM milestone_logs WHERE child_id = ?
+       UNION
+       SELECT substr(started_at, 1, 10) AS day FROM sleep_logs WHERE child_id = ?
+       UNION
+       SELECT substr(measured_at, 1, 10) AS day FROM growth_logs WHERE child_id = ?
+       UNION
+       SELECT substr(started_at, 1, 10) AS day FROM episodes WHERE child_id = ?
+       UNION
+       SELECT substr(logged_at, 1, 10) AS day FROM episode_events WHERE child_id = ?
+     )
+     WHERE day < ?
+       AND day NOT IN (
+         SELECT DISTINCT substr(logged_at, 1, 10)
+         FROM poop_logs
+         WHERE child_id = ?
+       )
+     ORDER BY day ASC`,
+    [childId, childId, childId, childId, childId, childId, childId, todayKey, childId],
+  );
+
+  for (const row of candidateRows) {
+    await conn.execute(
+      `INSERT INTO poop_logs (
+        id, child_id, logged_at, stool_type, color, size, is_no_poop, notes, photo_path, created_at, updated_at
+      ) VALUES (?, ?, ?, NULL, NULL, NULL, 1, NULL, NULL, ?, ?)`,
+      [generateId(), childId, `${row.day}T20:00:00`, now, now],
+    );
+  }
+
+  return removedCount + candidateRows.length;
+}
+
 // --- Symptom Logs ---
 
 export async function createSymptomLog(input: {

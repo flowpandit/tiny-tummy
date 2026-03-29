@@ -13,6 +13,7 @@ import { useCaregiverNote } from "../hooks/useCaregiverNote";
 import { BITSS_TYPES, STOOL_COLORS } from "../lib/constants";
 import { getChildStatus } from "../lib/tauri";
 import { buildChildDailySummary } from "../lib/child-summary";
+import { getBreastfeedingSessionSettingKey, parseBreastfeedingSession } from "../lib/breastfeeding";
 import { timeSince } from "../lib/utils";
 import { syncSmartRemindersForChild, syncSmartRemindersForChildren } from "../lib/notifications";
 import { getFeedingEntryDisplayLabel } from "../lib/feeding";
@@ -199,6 +200,7 @@ export function Home() {
   const [status, setStatus] = useState<HealthStatus>("healthy");
   const [normalDesc, setNormalDesc] = useState("");
   const [childSwitcherExpanded, setChildSwitcherExpanded] = useState(false);
+  const [activeBreastfeedingSide, setActiveBreastfeedingSide] = useState<"left" | "right" | null>(null);
   const {
     note: handoffNote,
     setNote: setHandoffNote,
@@ -226,6 +228,61 @@ export function Home() {
       // Reminder sync is non-critical
     });
   }, [children]);
+
+  useEffect(() => {
+    if (!activeChild) {
+      setActiveBreastfeedingSide(null);
+      return;
+    }
+
+    let cancelled = false;
+
+    const refreshBreastfeedingSession = () => {
+      db.getSetting(getBreastfeedingSessionSettingKey(activeChild.id))
+        .then((raw) => {
+          if (cancelled) return;
+          const session = parseBreastfeedingSession(raw);
+          setActiveBreastfeedingSide(session?.activeSide ?? null);
+        })
+        .catch(() => {
+          if (!cancelled) {
+            setActiveBreastfeedingSide(null);
+          }
+        });
+    };
+
+    refreshBreastfeedingSession();
+
+    const handleVisibility = () => {
+      refreshBreastfeedingSession();
+    };
+
+    window.addEventListener("focus", handleVisibility);
+    document.addEventListener("visibilitychange", handleVisibility);
+
+    return () => {
+      cancelled = true;
+      window.removeEventListener("focus", handleVisibility);
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
+  }, [activeChild]);
+
+  useEffect(() => {
+    if (!activeChild) return;
+    db.reconcileAutoNoPoopDays(activeChild.id).then((changes) => {
+      if (changes > 0) {
+        void refreshLogs();
+      }
+    }).catch(() => {
+      // Auto no-poop marking is non-critical
+    });
+  }, [
+    activeChild,
+    logs[0]?.id,
+    feedingLogs[0]?.id,
+    symptomLogs[0]?.id,
+    recentEpisodes[0]?.id,
+  ]);
 
   useEffect(() => {
     if (!activeChild) return;
@@ -274,12 +331,6 @@ export function Home() {
   const openEpisodeSheet = (mode: "default" | "start" | "update" = "default") => {
     setEpisodeSheetMode(mode);
     setEpisodeSheetOpen(true);
-  };
-
-  const handleNoPoop = async () => {
-    await db.logNoPoop(activeChild.id);
-    await refreshLogs();
-    await syncSmartRemindersForChild(activeChild);
   };
 
   const handleFeedingLogged = async () => {
@@ -372,6 +423,7 @@ export function Home() {
   const repeatablePoop = getRepeatablePoopEntry(lastRealPoop);
   const quickFeedPresets = getQuickFeedPresets(activeChild.feeding_type);
   const quickPoopPresets = getQuickPoopPresets(activeChild.feeding_type);
+  const showBreastfeedAction = activeChild.feeding_type === "breast" || activeChild.feeding_type === "mixed";
   const episodeActionLabel = activeEpisode ? "Add episode update" : "Start episode";
   const episodeActionDescription = activeEpisode
     ? "Jump straight into the active episode update form."
@@ -480,12 +532,37 @@ export function Home() {
             </motion.button>
             <motion.button
               whileTap={{ scale: 0.98 }}
-              onClick={handleNoPoop}
-              className="min-h-[104px] rounded-[18px] border border-[var(--color-border)] bg-[var(--color-surface-strong)] px-4 py-4 text-left shadow-[var(--shadow-soft)] transition-colors hover:bg-white/70"
+              onClick={() => {
+                if (showBreastfeedAction) {
+                  navigate("/breastfeed");
+                  return;
+                }
+                void handleRepeatLastFeed();
+              }}
+              disabled={!showBreastfeedAction && !lastFeed}
+              className="min-h-[104px] rounded-[18px] border border-[var(--color-border)] bg-[var(--color-surface-strong)] px-4 py-4 text-left shadow-[var(--shadow-soft)] transition-colors hover:bg-white/70 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              <p className="text-[15px] font-semibold text-[var(--color-text)]">No-poop day</p>
+              <div className="flex items-center gap-2">
+                <p className="text-[15px] font-semibold text-[var(--color-text)]">
+                  {showBreastfeedAction ? "Breastfeed" : "Repeat last feed"}
+                </p>
+                {showBreastfeedAction && activeBreastfeedingSide && (
+                  <span
+                    className="inline-flex items-center gap-1 text-[12px] font-semibold text-[var(--color-primary)]"
+                    aria-label={activeBreastfeedingSide === "left" ? "Left breastfeeding timer running" : "Right breastfeeding timer running"}
+                    title={activeBreastfeedingSide === "left" ? "Left running" : "Right running"}
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm.75-11.25a.75.75 0 0 0-1.5 0V10c0 .199.079.39.22.53l2.25 2.25a.75.75 0 1 0 1.06-1.06L10.75 9.69V6.75Z" clipRule="evenodd" />
+                    </svg>
+                    {activeBreastfeedingSide === "left" ? "L" : "R"}
+                  </span>
+                )}
+              </div>
               <p className="mt-2 text-[12px] leading-relaxed text-[var(--color-text-secondary)]">
-                Mark today if nothing happened so the timeline stays accurate.
+                {showBreastfeedAction
+                  ? "Open the side-by-side timer for left and right breast."
+                  : "Reuse the last feed structure without filling the form again."}
               </p>
             </motion.button>
             <motion.button
