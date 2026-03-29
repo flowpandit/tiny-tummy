@@ -99,6 +99,12 @@ pub fn run() {
             sql: include_str!("../migrations/007_milestone_logs.sql"),
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 8,
+            description: "add quick presets",
+            sql: include_str!("../migrations/008_quick_presets.sql"),
+            kind: MigrationKind::Up,
+        },
     ];
 
     tauri::Builder::default()

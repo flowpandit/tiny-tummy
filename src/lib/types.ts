@@ -238,6 +238,21 @@ export interface ColorCount {
   count: number;
 }
 
+export type QuickPresetKind = "poop" | "feed";
+
+export interface QuickPresetEntry {
+  id: string;
+  child_id: string;
+  kind: QuickPresetKind;
+  label: string;
+  description: string | null;
+  draft_json: string;
+  sort_order: number;
+  is_enabled: number;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface TimelineEvent {
   id: string;
   type: "poop" | "meal";

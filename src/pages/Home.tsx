@@ -15,6 +15,18 @@ import { BITSS_TYPES, STOOL_COLORS } from "../lib/constants";
 import { getChildStatus } from "../lib/tauri";
 import { buildChildDailySummary } from "../lib/child-summary";
 import { getBreastfeedingSessionSettingKey, parseBreastfeedingSession } from "../lib/breastfeeding";
+import {
+  buildFeedPresetRecordInput,
+  buildPoopPresetRecordInput,
+  describeFeedPresetDraft,
+  describePoopPresetDraft,
+  getDefaultQuickFeedPresets,
+  getDefaultQuickPoopPresets,
+  hydrateFeedPresets,
+  hydratePoopPresets,
+  type QuickFeedPreset,
+  type QuickPoopPreset,
+} from "../lib/quick-presets";
 import { timeSince } from "../lib/utils";
 import { syncSmartRemindersForChild, syncSmartRemindersForChildren } from "../lib/notifications";
 import { getFeedingEntryDisplayLabel } from "../lib/feeding";
@@ -25,6 +37,7 @@ import { TimeSinceIndicator } from "../components/home/TimeSinceIndicator";
 import { WeeklyPatternCard } from "../components/home/WeeklyPatternCard";
 import { EpisodeCard } from "../components/home/EpisodeCard";
 import { RecentActivity } from "../components/home/RecentActivity";
+import { FeedPresetEditorSheet, PoopPresetEditorSheet } from "../components/home/QuickPresetCustomizerSheet";
 import { AlertBanner } from "../components/dashboard/AlertBanner";
 import { LogForm } from "../components/logging/LogForm";
 import { DietLogForm } from "../components/logging/DietLogForm";
@@ -36,99 +49,7 @@ import { SymptomSheet } from "../components/symptoms/SymptomSheet";
 import { SleepLogSheet } from "../components/sleep/SleepLogSheet";
 import { Badge } from "../components/ui/badge";
 import { useToast } from "../components/ui/toast";
-import type { FeedingEntry, FeedingLogDraft, FeedingType, HealthStatus, PoopEntry, PoopLogDraft } from "../lib/types";
-
-interface QuickFeedPreset {
-  id: string;
-  label: string;
-  draft: Partial<FeedingLogDraft>;
-}
-
-interface QuickPoopPreset {
-  id: string;
-  label: string;
-  description: string;
-  draft: Partial<PoopLogDraft>;
-}
-
-function getQuickFeedPresets(feedingType: FeedingType): QuickFeedPreset[] {
-  switch (feedingType) {
-    case "breast":
-      return [
-        { id: "breast-left", label: "Breast left", draft: { food_type: "breast_milk", breast_side: "left" } },
-        { id: "breast-right", label: "Breast right", draft: { food_type: "breast_milk", breast_side: "right" } },
-        { id: "pumping", label: "Pumping", draft: { food_type: "pumping" } },
-        { id: "bottle", label: "Bottle", draft: { food_type: "bottle" } },
-      ];
-    case "formula":
-      return [
-        { id: "formula", label: "Formula", draft: { food_type: "formula" } },
-        { id: "bottle", label: "Bottle", draft: { food_type: "bottle" } },
-        { id: "water", label: "Water", draft: { food_type: "water" } },
-        { id: "solids", label: "Solids", draft: { food_type: "solids" } },
-      ];
-    case "solids":
-      return [
-        { id: "solids", label: "Solids", draft: { food_type: "solids" } },
-        { id: "water", label: "Water", draft: { food_type: "water" } },
-        { id: "bottle", label: "Bottle", draft: { food_type: "bottle" } },
-        { id: "other", label: "Other food", draft: { food_type: "other" } },
-      ];
-    case "mixed":
-    default:
-      return [
-        { id: "breast-left", label: "Breast left", draft: { food_type: "breast_milk", breast_side: "left" } },
-        { id: "breast-right", label: "Breast right", draft: { food_type: "breast_milk", breast_side: "right" } },
-        { id: "bottle", label: "Bottle", draft: { food_type: "bottle" } },
-        { id: "solids", label: "Solids", draft: { food_type: "solids" } },
-      ];
-  }
-}
-
-function getQuickPoopPresets(feedingType: FeedingType): QuickPoopPreset[] {
-  const common: QuickPoopPreset[] = [
-    {
-      id: "normal",
-      label: "Normal",
-      description: "Type 4, medium",
-      draft: { stool_type: 4, color: feedingType === "breast" ? "yellow" : "brown", size: "medium" as const },
-    },
-    {
-      id: "hard",
-      label: "Hard",
-      description: "Type 2, smaller poop",
-      draft: { stool_type: 2, color: "brown", size: "small" as const },
-    },
-    {
-      id: "loose",
-      label: "Loose",
-      description: "Type 6, softer stool",
-      draft: { stool_type: 6, color: feedingType === "breast" ? "yellow" : null, size: "medium" as const },
-    },
-    {
-      id: "large",
-      label: "Large",
-      description: "Type 4, larger stool",
-      draft: { stool_type: 4, color: "brown", size: "large" as const },
-    },
-  ];
-
-  if (feedingType === "breast") {
-    return [
-      {
-        id: "mustard",
-        label: "Mustard",
-        description: "Type 5, yellow",
-        draft: { stool_type: 5, color: "yellow", size: "medium" },
-      },
-      common[0],
-      common[1],
-      common[2],
-    ];
-  }
-
-  return common;
-}
+import type { FeedingEntry, FeedingLogDraft, HealthStatus, PoopEntry, PoopLogDraft } from "../lib/types";
 
 function getCurrentFeedingTimestamp(): string {
   const now = new Date();
@@ -199,11 +120,15 @@ export function Home() {
   const [episodeSheetOpen, setEpisodeSheetOpen] = useState(false);
   const [episodeSheetMode, setEpisodeSheetMode] = useState<"default" | "start" | "update">("default");
   const [symptomSheetOpen, setSymptomSheetOpen] = useState(false);
+  const [poopPresetSheetOpen, setPoopPresetSheetOpen] = useState(false);
+  const [feedPresetSheetOpen, setFeedPresetSheetOpen] = useState(false);
   const [editingPoop, setEditingPoop] = useState<PoopEntry | null>(null);
   const [editingMeal, setEditingMeal] = useState<FeedingEntry | null>(null);
   const [status, setStatus] = useState<HealthStatus>("healthy");
   const [childSwitcherExpanded, setChildSwitcherExpanded] = useState(false);
   const [activeBreastfeedingSide, setActiveBreastfeedingSide] = useState<"left" | "right" | null>(null);
+  const [quickPoopPresets, setQuickPoopPresets] = useState<QuickPoopPreset[]>([]);
+  const [quickFeedPresets, setQuickFeedPresets] = useState<QuickFeedPreset[]>([]);
   const {
     note: handoffNote,
     setNote: setHandoffNote,
@@ -266,6 +191,43 @@ export function Home() {
       cancelled = true;
       window.removeEventListener("focus", handleVisibility);
       document.removeEventListener("visibilitychange", handleVisibility);
+    };
+  }, [activeChild]);
+
+  useEffect(() => {
+    if (!activeChild) {
+      setQuickPoopPresets([]);
+      setQuickFeedPresets([]);
+      return;
+    }
+
+    let cancelled = false;
+
+    setQuickPoopPresets(getDefaultQuickPoopPresets(activeChild.feeding_type));
+    setQuickFeedPresets(getDefaultQuickFeedPresets(activeChild.feeding_type));
+
+    Promise.all([
+      db.getQuickPresets(activeChild.id, "poop"),
+      db.getQuickPresets(activeChild.id, "feed"),
+    ]).then(([poopRows, feedRows]) => {
+      if (cancelled) return;
+      const hydratedPoop = hydratePoopPresets(poopRows);
+      const hydratedFeed = hydrateFeedPresets(feedRows);
+      setQuickPoopPresets(
+        hydratedPoop.length > 0 ? hydratedPoop : getDefaultQuickPoopPresets(activeChild.feeding_type),
+      );
+      setQuickFeedPresets(
+        hydratedFeed.length > 0 ? hydratedFeed : getDefaultQuickFeedPresets(activeChild.feeding_type),
+      );
+    }).catch(() => {
+      if (!cancelled) {
+        setQuickPoopPresets(getDefaultQuickPoopPresets(activeChild.feeding_type));
+        setQuickFeedPresets(getDefaultQuickFeedPresets(activeChild.feeding_type));
+      }
+    });
+
+    return () => {
+      cancelled = true;
     };
   }, [activeChild]);
 
@@ -370,6 +332,33 @@ export function Home() {
     }
   };
 
+  const handleQuickFeedPreset = async (preset: QuickFeedPreset) => {
+    if (!preset.draft.food_type) {
+      showError("This feed tile is missing a feed type.");
+      return;
+    }
+
+    try {
+      await db.createFeedingLog({
+        child_id: activeChild.id,
+        logged_at: getCurrentFeedingTimestamp(),
+        food_type: preset.draft.food_type,
+        food_name: preset.draft.food_name?.trim() ? preset.draft.food_name.trim() : null,
+        amount_ml: preset.draft.amount_ml?.trim() ? Number(preset.draft.amount_ml.trim()) : null,
+        duration_minutes: preset.draft.duration_minutes?.trim() ? Number(preset.draft.duration_minutes.trim()) : null,
+        breast_side: preset.draft.breast_side ?? null,
+        bottle_content: preset.draft.bottle_content ?? null,
+        reaction_notes: null,
+        is_constipation_support: preset.draft.is_constipation_support ? 1 : 0,
+        notes: null,
+      });
+      await handleFeedingLogged();
+      showSuccess(`${preset.label} logged.`);
+    } catch {
+      showError("Could not log that feed. Please try again.");
+    }
+  };
+
   const handleRepeatLastPoop = async () => {
     const repeatablePoop = getRepeatablePoopEntry(lastRealPoop);
     if (!repeatablePoop) return;
@@ -388,6 +377,24 @@ export function Home() {
       showSuccess("Repeated the last normal poop pattern.");
     } catch {
       showError("Could not repeat the last poop pattern. Please try again.");
+    }
+  };
+
+  const handleQuickPoopPreset = async (preset: QuickPoopPreset) => {
+    try {
+      await db.createPoopLog({
+        child_id: activeChild.id,
+        logged_at: getCurrentPoopTimestamp(),
+        stool_type: preset.draft.stool_type ?? null,
+        color: preset.draft.color ?? null,
+        size: preset.draft.size ?? null,
+        notes: null,
+        photo_path: null,
+      });
+      await handleLogged();
+      showSuccess(`${preset.label} logged.`);
+    } catch {
+      showError("Could not log that poop. Please try again.");
     }
   };
 
@@ -428,13 +435,53 @@ export function Home() {
   const lastNap = sleepLogs.find((entry) => entry.sleep_type === "nap") ?? null;
   const latestSymptom = summary.latestSymptom;
   const repeatablePoop = getRepeatablePoopEntry(lastRealPoop);
-  const quickFeedPresets = getQuickFeedPresets(activeChild.feeding_type);
-  const quickPoopPresets = getQuickPoopPresets(activeChild.feeding_type);
   const showBreastfeedAction = activeChild.feeding_type === "breast" || activeChild.feeding_type === "mixed";
   const episodeActionLabel = activeEpisode ? "Add episode update" : "Start episode";
   const episodeActionDescription = activeEpisode
     ? "Jump straight into the active episode update form."
     : "Track constipation, diarrhoea, or solids transition.";
+
+  const savePoopPresets = async (drafts: Array<Partial<PoopLogDraft>>) => {
+    const nextPresets = drafts.map((draft, index) => {
+      const preview = describePoopPresetDraft(draft);
+      return {
+        id: `poop-preset-${index}`,
+        label: preview.label,
+        description: preview.description,
+        draft,
+      };
+    });
+
+    try {
+      await db.replaceQuickPresets(activeChild.id, "poop", buildPoopPresetRecordInput(drafts));
+      setQuickPoopPresets(nextPresets);
+      setPoopPresetSheetOpen(false);
+      showSuccess("Quick poop tiles updated.");
+    } catch {
+      showError("Could not save the quick poop tiles. Please try again.");
+    }
+  };
+
+  const saveFeedPresets = async (drafts: Array<Partial<FeedingLogDraft>>) => {
+    const nextPresets = drafts.map((draft, index) => {
+      const preview = describeFeedPresetDraft(draft);
+      return {
+        id: `feed-preset-${index}`,
+        label: preview.label,
+        description: preview.description,
+        draft,
+      };
+    });
+
+    try {
+      await db.replaceQuickPresets(activeChild.id, "feed", buildFeedPresetRecordInput(drafts));
+      setQuickFeedPresets(nextPresets);
+      setFeedPresetSheetOpen(false);
+      showSuccess("Quick feed tiles updated.");
+    } catch {
+      showError("Could not save the quick feed tiles. Please try again.");
+    }
+  };
 
   return (
     <div className="flex flex-col gap-4 pb-3 pt-0.5">
@@ -728,22 +775,31 @@ export function Home() {
 
       <div className="px-4">
         <div className="mt-4 rounded-[18px] border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-[var(--shadow-soft)]">
-          <div className="flex items-start justify-between gap-3">
+          <div>
             <div>
               <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--color-text-soft)]">Quick poop start</p>
-              <p className="mt-1 text-[14px] leading-relaxed text-[var(--color-text-secondary)]">
+              <p className="mt-2 max-w-[34ch] text-[14px] leading-relaxed text-[var(--color-text-secondary)]">
                 Start with the most likely pattern, then change anything in the sheet if it is not exact.
               </p>
             </div>
-            {repeatablePoop && (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {repeatablePoop && (
+                <button
+                  type="button"
+                  onClick={handleRepeatLastPoop}
+                  className="rounded-full border border-[var(--color-primary)]/20 bg-[var(--color-primary)]/10 px-3 py-2 text-[12px] font-semibold text-[var(--color-primary)] transition-colors hover:bg-[var(--color-primary)]/15"
+                >
+                  Repeat last normal poop
+                </button>
+              )}
               <button
                 type="button"
-                onClick={handleRepeatLastPoop}
-                className="shrink-0 rounded-full border border-[var(--color-primary)]/20 bg-[var(--color-primary)]/10 px-3 py-2 text-[12px] font-semibold text-[var(--color-primary)] transition-colors hover:bg-[var(--color-primary)]/15"
+                onClick={() => setPoopPresetSheetOpen(true)}
+                className="rounded-full border border-[var(--color-border)] bg-[var(--color-surface-strong)] px-3 py-2 text-[12px] font-semibold text-[var(--color-text-secondary)] transition-colors hover:bg-white/70"
               >
-                Repeat last normal poop
+                Edit tiles
               </button>
-            )}
+            </div>
           </div>
 
           {repeatablePoop && (
@@ -757,7 +813,7 @@ export function Home() {
               <button
                 key={preset.id}
                 type="button"
-                onClick={() => openPoopForm(preset.draft)}
+                onClick={() => { void handleQuickPoopPreset(preset); }}
                 className="rounded-[16px] border border-[var(--color-border)] bg-[var(--color-surface-strong)] px-4 py-3 text-left transition-colors hover:bg-white/70"
               >
                 <p className="text-[14px] font-medium text-[var(--color-text)]">{preset.label}</p>
@@ -768,22 +824,31 @@ export function Home() {
         </div>
 
         <div className="mt-4 rounded-[18px] border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-[var(--shadow-soft)]">
-          <div className="flex items-start justify-between gap-3">
+          <div>
             <div>
               <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--color-text-soft)]">Quick feed start</p>
-              <p className="mt-1 text-[14px] leading-relaxed text-[var(--color-text-secondary)]">
+              <p className="mt-2 max-w-[34ch] text-[14px] leading-relaxed text-[var(--color-text-secondary)]">
                 Start with the type already chosen, then add details only if needed.
               </p>
             </div>
-            {lastFeed && (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {lastFeed && (
+                <button
+                  type="button"
+                  onClick={handleRepeatLastFeed}
+                  className="rounded-full border border-[var(--color-primary)]/20 bg-[var(--color-primary)]/10 px-3 py-2 text-[12px] font-semibold text-[var(--color-primary)] transition-colors hover:bg-[var(--color-primary)]/15"
+                >
+                  Repeat last feed
+                </button>
+              )}
               <button
                 type="button"
-                onClick={handleRepeatLastFeed}
-                className="shrink-0 rounded-full border border-[var(--color-primary)]/20 bg-[var(--color-primary)]/10 px-3 py-2 text-[12px] font-semibold text-[var(--color-primary)] transition-colors hover:bg-[var(--color-primary)]/15"
+                onClick={() => setFeedPresetSheetOpen(true)}
+                className="rounded-full border border-[var(--color-border)] bg-[var(--color-surface-strong)] px-3 py-2 text-[12px] font-semibold text-[var(--color-text-secondary)] transition-colors hover:bg-white/70"
               >
-                Repeat last feed
+                Edit tiles
               </button>
-            )}
+            </div>
           </div>
 
           {lastFeed && (
@@ -797,7 +862,7 @@ export function Home() {
               <button
                 key={preset.id}
                 type="button"
-                onClick={() => openFeedingForm(preset.draft)}
+                onClick={() => { void handleQuickFeedPreset(preset); }}
                 className="rounded-[16px] border border-[var(--color-border)] bg-[var(--color-surface-strong)] px-4 py-3 text-left text-[14px] font-medium text-[var(--color-text)] transition-colors hover:bg-white/70"
               >
                 {preset.label}
@@ -867,6 +932,22 @@ export function Home() {
         onClose={() => setSleepSheetOpen(false)}
         childId={activeChild.id}
         onLogged={handleSleepLogged}
+      />
+
+      <PoopPresetEditorSheet
+        open={poopPresetSheetOpen}
+        onClose={() => setPoopPresetSheetOpen(false)}
+        feedingType={activeChild.feeding_type}
+        presets={quickPoopPresets}
+        onSave={(drafts) => { void savePoopPresets(drafts); }}
+      />
+
+      <FeedPresetEditorSheet
+        open={feedPresetSheetOpen}
+        onClose={() => setFeedPresetSheetOpen(false)}
+        feedingType={activeChild.feeding_type}
+        presets={quickFeedPresets}
+        onSave={(drafts) => { void saveFeedPresets(drafts); }}
       />
 
       {/* Edit sheets */}
