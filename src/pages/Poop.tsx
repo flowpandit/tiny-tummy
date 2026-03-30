@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from "react";
-import { motion } from "framer-motion";
 import { useChildContext } from "../contexts/ChildContext";
 import { usePoopLogs } from "../hooks/usePoopLogs";
 import { useFeedingLogs } from "../hooks/useFeedingLogs";
@@ -9,19 +8,27 @@ import { useEpisodes } from "../hooks/useEpisodes";
 import { useSymptoms } from "../hooks/useSymptoms";
 import { BITSS_TYPES, STOOL_COLORS } from "../lib/constants";
 import { fillDailyFrequencyDays, formatLocalDateKey, getRecentNoPoopDates } from "../lib/stats";
+import { DAYS_IN_WEEK, addDays, formatHoursCompact, formatHoursLong, formatWeekLabel, startOfDay } from "../lib/tracker";
 import { getChildStatus } from "../lib/tauri";
 import { timeSince } from "../lib/utils";
 import { Card, CardContent, CardHeader } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { PageIntro } from "../components/ui/page-intro";
 import { EmptyState, InsetPanel, PageBody, SectionHeading } from "../components/ui/page-layout";
+import {
+  TrackerEntryRow,
+  TrackerEntryTable,
+  TrackerMetricPanel,
+  TrackerMetricRing,
+  TrackerWeekBarChart,
+  TrackerWeekRangePill,
+  TrackerWeekSwitcher,
+} from "../components/tracking/TrackerPrimitives";
 import { AlertBanner } from "../components/dashboard/AlertBanner";
 import { LogForm } from "../components/logging/LogForm";
 import { EditPoopSheet } from "../components/logging/EditPoopSheet";
 import { TimeSinceIndicator } from "../components/home/TimeSinceIndicator";
 import type { Alert, FeedingEntry, HealthStatus, PoopEntry, PoopLogDraft, SymptomEntry } from "../lib/types";
-
-const DAYS_IN_WEEK = 7;
 
 type PredictionConfidence = "low" | "medium" | "high";
 
@@ -60,32 +67,6 @@ interface PoopPrediction {
   state: "upcoming" | "due" | "overdue";
   source: "history" | "baseline";
   adjustments: PredictionAdjustment[];
-}
-
-function startOfDay(date: Date): Date {
-  const next = new Date(date);
-  next.setHours(0, 0, 0, 0);
-  return next;
-}
-
-function addDays(date: Date, days: number): Date {
-  const next = new Date(date);
-  next.setDate(next.getDate() + days);
-  return next;
-}
-
-function formatWeekLabel(startDate: Date, endDate: Date): string {
-  const sameMonth = startDate.getMonth() === endDate.getMonth();
-  const startLabel = startDate.toLocaleDateString(undefined, { month: "short", day: "numeric" });
-  const endLabel = endDate.toLocaleDateString(undefined, sameMonth ? { day: "numeric" } : { month: "short", day: "numeric" });
-  return `${startLabel} - ${endLabel}`;
-}
-
-function formatHoursToLabel(hours: number): string {
-  const roundedHours = Math.round(hours);
-  if (roundedHours < 24) return `${roundedHours} hour${roundedHours === 1 ? "" : "s"}`;
-  const days = Math.round((hours / 24) * 10) / 10;
-  return `${days} day${days === 1 ? "" : "s"}`;
 }
 
 function getAgeDays(dateOfBirth: string): number {
@@ -159,14 +140,8 @@ function getAgeBaseline(dateOfBirth: string, feedingType: string): AgeBaseline {
   };
 }
 
-function formatCompactHours(hours: number): string {
-  if (hours < 24) return `${Math.round(hours)}h`;
-  const days = Math.round((hours / 24) * 10) / 10;
-  return `${days}d`;
-}
-
 function formatBaselineRange(baseline: AgeBaseline): string {
-  return `${formatCompactHours(baseline.lowerHours)} - ${formatCompactHours(baseline.upperHours)}`;
+  return `${formatHoursCompact(baseline.lowerHours)} - ${formatHoursCompact(baseline.upperHours)}`;
 }
 
 function getRelevantFeeds(feedingLogs: FeedingEntry[], lastPoopAt: Date | null): FeedingEntry[] {
@@ -293,7 +268,7 @@ function getPrediction(
     latestAt,
     confidence,
     intervalHours: adjustedIntervalMs / 3600000,
-    intervalLabel: formatHoursToLabel(adjustedIntervalMs / 3600000),
+    intervalLabel: formatHoursLong(adjustedIntervalMs / 3600000),
     state,
     source: hasHistory ? "history" : "baseline",
     adjustments,
@@ -438,56 +413,6 @@ function getStatusBadge(status: HealthStatus): { label: string; className: strin
   return { label: "Unknown", className: "bg-[var(--color-bg-elevated)] text-[var(--color-text-secondary)]" };
 }
 
-function PoopWeekChart({
-  data,
-  noPoopDates,
-  title,
-  summary,
-}: {
-  data: Array<{ date: string; count: number; weekdayLabel: string }>;
-  noPoopDates: Set<string>;
-  title: string;
-  summary: string;
-}) {
-  const maxCount = Math.max(...data.map((day) => day.count), 0);
-
-  return (
-    <div className="rounded-[18px] border border-[var(--color-border)] bg-[var(--color-surface-strong)] p-5 shadow-[var(--shadow-soft)]">
-      <div className="flex h-[96px] items-end gap-[10px]">
-        {data.map((day) => {
-          const height = day.count === 0 ? 10 : Math.min(76, 18 + (day.count / Math.max(maxCount, 1)) * 58);
-          return (
-            <div key={day.date} className="flex flex-1 flex-col items-center justify-end gap-2">
-              <div
-                className="w-full rounded-t-[999px] bg-gradient-to-b from-[var(--color-chart-warm-start)] to-[var(--color-chart-warm-end)]"
-                style={{ height: `${height}px`, opacity: day.count === 0 ? 0.35 : 1 }}
-                title={`${day.weekdayLabel}: ${day.count} poop${day.count === 1 ? "" : "s"}`}
-              />
-              <div
-                className="h-1.5 w-1.5 rounded-full"
-                style={{ backgroundColor: noPoopDates.has(day.date) ? "var(--color-text-soft)" : "transparent" }}
-              />
-              <span className="text-[11px] uppercase tracking-[0.12em] text-[var(--color-text-soft)]">
-                {day.weekdayLabel}
-              </span>
-            </div>
-          );
-        })}
-      </div>
-
-      <div className="mt-5">
-        <p className="text-[19px] font-semibold text-[var(--color-text)]">{title}</p>
-        <p className="mt-2 text-[14px] leading-relaxed text-[var(--color-text-secondary)]">{summary}</p>
-        {noPoopDates.size > 0 && (
-          <p className="mt-2 text-[12px] text-[var(--color-text-soft)]">
-            Grey dots mark {noPoopDates.size} no-poop day{noPoopDates.size === 1 ? "" : "s"} in this week.
-          </p>
-        )}
-      </div>
-    </div>
-  );
-}
-
 function PoopLogList({
   logs,
   onEdit,
@@ -504,12 +429,7 @@ function PoopLogList({
   }
 
   return (
-    <div className="overflow-hidden rounded-[18px] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[var(--shadow-soft)]">
-      <div className="grid grid-cols-[92px_minmax(0,1fr)] gap-3 border-b border-[var(--color-border)] bg-[var(--color-surface-strong)]/55 px-4 py-2">
-        <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--color-text-soft)]">When</p>
-        <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--color-text-soft)]">Pattern</p>
-      </div>
-
+    <TrackerEntryTable mainHeader="Pattern">
       {logs.map((log) => {
         const typeInfo = log.stool_type ? BITSS_TYPES.find((item) => item.type === log.stool_type) : null;
         const colorInfo = log.color ? STOOL_COLORS.find((item) => item.value === log.color) : null;
@@ -517,11 +437,9 @@ function PoopLogList({
         const timeLabel = new Date(log.logged_at).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
 
         return (
-          <button
+          <TrackerEntryRow
             key={log.id}
-            type="button"
             onClick={() => onEdit(log)}
-            className="grid w-full grid-cols-[92px_minmax(0,1fr)] gap-3 border-t border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 text-left transition-colors first:border-t-0 hover:bg-[var(--color-bg-elevated)]"
           >
             <div>
               <p className="text-xs font-medium text-[var(--color-text-secondary)]">{dateLabel}</p>
@@ -550,68 +468,10 @@ function PoopLogList({
                 </p>
               )}
             </div>
-          </button>
+          </TrackerEntryRow>
         );
       })}
-    </div>
-  );
-}
-
-function CompactMetric({
-  eyebrow,
-  value,
-  description,
-  tone = "default",
-}: {
-  eyebrow: string;
-  value: string;
-  description: string;
-  tone?: "default" | "info" | "healthy" | "cta";
-}) {
-  const toneClassName = tone === "info"
-    ? "border-[var(--color-info)]/18 bg-[var(--color-info-bg)]"
-    : tone === "healthy"
-      ? "border-[var(--color-healthy)]/18 bg-[var(--color-healthy-bg)]"
-      : tone === "cta"
-        ? "border-[var(--color-cta)]/16 bg-[var(--color-surface-tint)]"
-        : "";
-
-  return (
-    <InsetPanel className={`p-3 ${toneClassName}`.trim()}>
-      <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--color-text-soft)]">{eyebrow}</p>
-      <p className="mt-2 text-xl font-semibold tracking-[-0.02em] text-[var(--color-text)]">{value}</p>
-      <p className="mt-1 text-xs leading-relaxed text-[var(--color-text-secondary)]">{description}</p>
-    </InsetPanel>
-  );
-}
-
-function StatusRing({
-  value,
-  unit,
-  label,
-  gradient,
-}: {
-  value: string;
-  unit: string;
-  label: string;
-  gradient: string;
-}) {
-  return (
-    <div className="flex flex-col items-center gap-2 text-center">
-      <div
-        className="relative flex h-[96px] w-[96px] items-center justify-center rounded-full shadow-[var(--shadow-soft)]"
-        style={{ background: gradient }}
-      >
-        <div className="absolute inset-[10px] rounded-full bg-[var(--color-surface-strong)] shadow-[var(--shadow-inner)]" />
-        <div className="relative z-10 flex flex-col items-center justify-center">
-          <span className="text-[1.45rem] font-bold text-[var(--color-text)]" style={{ fontFamily: "var(--font-display)" }}>
-            {value}
-          </span>
-          <span className="text-[11px] text-[var(--color-text-secondary)]">{unit}</span>
-        </div>
-      </div>
-      <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-[var(--color-text-soft)]">{label}</p>
-    </div>
+    </TrackerEntryTable>
   );
 }
 
@@ -1016,13 +876,13 @@ export function Poop() {
               />
               <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-[var(--color-text-soft)]">Last poop</p>
             </div>
-            <StatusRing
+            <TrackerMetricRing
               value={predictionRing.value}
               unit={predictionRing.unit}
               label="Next predicted"
               gradient={predictionRing.gradient}
             />
-            <StatusRing
+            <TrackerMetricRing
               value={alertRing.value}
               unit={alertRing.unit}
               label="Alerts"
@@ -1050,13 +910,13 @@ export function Poop() {
           </div>
 
           <div className="mt-3 grid grid-cols-2 gap-2.5">
-            <CompactMetric
+            <TrackerMetricPanel
               eyebrow="Age baseline"
               value={formatBaselineRange(baseline)}
               description={baseline.label}
               tone={baselineComparison.tone}
             />
-            <CompactMetric
+            <TrackerMetricPanel
               eyebrow="Due risk"
               value={dueRisk.label}
               description={dueRisk.description}
@@ -1116,35 +976,25 @@ export function Poop() {
         <CardHeader>
           <SectionHeading
             title="Weekly pattern"
-            description="The same seven-day pattern view, but with week-by-week browsing so older rhythms are easier to compare."
-            action={(
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setWeekOffset((current) => Math.min(maxWeekOffset, current + 1))}
-                  disabled={weekOffset >= maxWeekOffset}
-                  className="rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-xs font-semibold text-[var(--color-text-secondary)] transition-colors hover:bg-[var(--color-bg-elevated)] disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  Older
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setWeekOffset((current) => Math.max(0, current - 1))}
-                  disabled={weekOffset === 0}
-                  className="rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-xs font-semibold text-[var(--color-text-secondary)] transition-colors hover:bg-[var(--color-bg-elevated)] disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  Newer
-                </button>
-              </div>
-            )}
-          />
-        </CardHeader>
+                description="The same seven-day pattern view, but with week-by-week browsing so older rhythms are easier to compare."
+                action={(
+                  <TrackerWeekSwitcher
+                    weekOffset={weekOffset}
+                    maxWeekOffset={maxWeekOffset}
+                    onOlder={() => setWeekOffset((current) => Math.min(maxWeekOffset, current + 1))}
+                    onNewer={() => setWeekOffset((current) => Math.max(0, current - 1))}
+                  />
+                )}
+              />
+            </CardHeader>
         <CardContent>
-          <PoopWeekChart
-            data={filledWeek}
-            noPoopDates={noPoopDates}
+          <TrackerWeekBarChart
+            data={filledWeek.map((day) => ({ ...day, value: day.count }))}
             title={weekOffset === 0 ? "Last 7 days" : formatWeekLabel(startDate, endDate)}
             summary={weekSummaryBits.join(" • ")}
+            markerDates={noPoopDates}
+            markerLegend={`Grey dots mark ${noPoopDates.size} no-poop day${noPoopDates.size === 1 ? "" : "s"} in this week.`}
+            valueLabel={(value) => `${value} poop${value === 1 ? "" : "s"}`}
           />
         </CardContent>
       </Card>
@@ -1168,14 +1018,7 @@ export function Poop() {
                 <h3 className="font-[var(--font-display)] text-2xl font-semibold tracking-[-0.02em] text-[var(--color-text)]">
                   Week entries
                 </h3>
-                <motion.span
-                  key={weekOffset}
-                  initial={{ opacity: 0, y: 6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="inline-flex items-center rounded-full border border-[var(--color-border)] bg-[var(--color-bg-elevated)] px-2.5 py-1 text-[11px] font-medium leading-none text-[var(--color-text-secondary)]"
-                >
-                  {formatWeekLabel(startDate, endDate)}
-                </motion.span>
+                <TrackerWeekRangePill label={formatWeekLabel(startDate, endDate)} animateKey={weekOffset} />
               </div>
               <p className="mt-2 max-w-[40ch] text-sm leading-relaxed text-[var(--color-text-secondary)]">
                 Every poop log for the selected week, with quick editing when details need correcting.

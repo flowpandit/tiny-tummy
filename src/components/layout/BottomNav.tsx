@@ -38,11 +38,15 @@ const NAV_ITEMS = [
     label: "Feed",
     matches: (pathname: string) => pathname === "/feed",
     icon: (active: boolean) => (
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill={active ? "currentColor" : "none"} stroke="currentColor" strokeWidth={active ? 0 : 1.5} className="w-6 h-6">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 4.5v7.125a2.625 2.625 0 0 0 5.25 0V4.5" />
-        <path strokeLinecap="round" strokeLinejoin="round" d="M10.125 4.5V21" />
-        <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 3.75v17.5" />
-        <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5h2.25a1.5 1.5 0 0 0 1.5-1.5V3.75" />
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill={active ? "currentColor" : "none"} stroke="currentColor" strokeWidth={1.6} className="w-6 h-6">
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M5 10.5c0 3.866 3.134 7 7 7s7-3.134 7-7H5Z"
+          fill={active ? "currentColor" : "none"}
+        />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 10.5c.473-2.09 2.333-3.75 4.5-3.75 2.167 0 4.027 1.66 4.5 3.75" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 19.5h7.5" />
       </svg>
     ),
   },

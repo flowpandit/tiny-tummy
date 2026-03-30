@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import type { SleepEntry } from "../lib/types";
 import * as db from "../lib/db";
 
-export function useSleepLogs(childId: string | null) {
+export function useSleepLogs(childId: string | null, limit = 50) {
   const [logs, setLogs] = useState<SleepEntry[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const requestIdRef = useRef(0);
@@ -18,7 +18,7 @@ export function useSleepLogs(childId: string | null) {
 
     setIsLoading(true);
     try {
-      const rows = await db.getSleepLogs(childId);
+      const rows = await db.getSleepLogs(childId, limit);
       if (requestId !== requestIdRef.current) return;
       setLogs(rows);
     } catch {
@@ -29,7 +29,7 @@ export function useSleepLogs(childId: string | null) {
     if (requestId === requestIdRef.current) {
       setIsLoading(false);
     }
-  }, [childId]);
+  }, [childId, limit]);
 
   useEffect(() => {
     setLogs([]);
