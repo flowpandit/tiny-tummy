@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useChildContext } from "../contexts/ChildContext";
 import { usePoopLogs } from "../hooks/usePoopLogs";
 import { useFeedingLogs } from "../hooks/useFeedingLogs";
@@ -101,6 +101,7 @@ function getPoopPatternLabel(entry: PoopEntry): string {
 }
 
 export function Home() {
+  const location = useLocation();
   const navigate = useNavigate();
   const { activeChild, children, setActiveChildId } = useChildContext();
   const { showError, showSuccess } = useToast();
@@ -129,6 +130,7 @@ export function Home() {
   const [activeBreastfeedingSide, setActiveBreastfeedingSide] = useState<"left" | "right" | null>(null);
   const [quickPoopPresets, setQuickPoopPresets] = useState<QuickPoopPreset[]>([]);
   const [quickFeedPresets, setQuickFeedPresets] = useState<QuickFeedPreset[]>([]);
+  const opensFeedSheetFromNav = location.pathname === "/feed";
   const {
     note: handoffNote,
     setNote: setHandoffNote,
@@ -160,6 +162,13 @@ export function Home() {
       cancelled = true;
     };
   }, [activeChild, lastRealPoop]);
+
+  useEffect(() => {
+    if (opensFeedSheetFromNav) {
+      setFeedingDraft(null);
+      setFeedingFormOpen(true);
+    }
+  }, [opensFeedSheetFromNav]);
 
   useEffect(() => {
     if (children.length === 0) return;
@@ -912,6 +921,9 @@ export function Home() {
         onClose={() => {
           setFeedingFormOpen(false);
           setFeedingDraft(null);
+          if (opensFeedSheetFromNav) {
+            navigate("/");
+          }
         }}
         childId={activeChild.id}
         onLogged={handleFeedingLogged}

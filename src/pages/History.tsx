@@ -8,6 +8,7 @@ import { getFeedingEntryDetailParts, getFeedingEntryPrimaryLabel, getFeedingEntr
 import { Badge } from "../components/ui/badge";
 import { PoopIcon, MealIcon, NoPoopIcon } from "../components/ui/icons";
 import { DatePicker } from "../components/ui/date-picker";
+import { PageBackLink } from "../components/ui/page-layout";
 import { EditPoopSheet } from "../components/logging/EditPoopSheet";
 import { EditMealSheet } from "../components/logging/EditMealSheet";
 import { loadPhoto } from "../lib/photos";
@@ -328,6 +329,8 @@ export function History() {
 
   return (
     <div className="px-4 py-5">
+      <PageBackLink to="/settings" label="Back to Settings" />
+
       <div className="my-5 rounded-[16px] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-[var(--shadow-soft)] backdrop-blur-xl">
         <div className="flex items-center justify-between">
           <div>

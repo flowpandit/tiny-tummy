@@ -11,7 +11,7 @@ const pageVariants = {
 
 export function AppShell() {
   const location = useLocation();
-  const hideHeaderPaths = new Set(["/", "/guidance", "/settings"]);
+  const hideHeaderPaths = new Set(["/", "/feed", "/guidance", "/settings"]);
   const showHeader = !hideHeaderPaths.has(location.pathname);
 
   return (
