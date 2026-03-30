@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Header } from "./Header";
@@ -11,8 +12,13 @@ const pageVariants = {
 
 export function AppShell() {
   const location = useLocation();
+  const mainRef = useRef<HTMLElement | null>(null);
   const hideHeaderPaths = new Set(["/", "/guidance", "/settings"]);
   const showHeader = !hideHeaderPaths.has(location.pathname);
+
+  useEffect(() => {
+    mainRef.current?.scrollTo({ top: 0, behavior: "auto" });
+  }, [location.pathname]);
 
   return (
     <div className="relative flex min-h-[100dvh] flex-col overflow-hidden bg-[var(--color-bg)]">
@@ -33,6 +39,7 @@ export function AppShell() {
       </div>
       {showHeader && <Header />}
       <main
+        ref={mainRef}
         className="relative flex-1 overflow-y-auto overflow-x-hidden pb-24"
         style={{
           paddingTop: showHeader

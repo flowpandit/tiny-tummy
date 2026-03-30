@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader } from "../components/ui/card";
 import { Badge } from "../components/ui/badge";
 import { Textarea } from "../components/ui/field";
 import { PageIntro } from "../components/ui/page-intro";
-import { InsetPanel, PageBackLink, PageBody, SectionHeading, StatGrid, StatTile } from "../components/ui/page-layout";
+import { InsetPanel, PageBackButton, PageBody, SectionHeading, StatGrid, StatTile } from "../components/ui/page-layout";
 import { useToast } from "../components/ui/toast";
 import { useChildContext } from "../contexts/ChildContext";
 import { usePoopLogs } from "../hooks/usePoopLogs";
@@ -128,7 +128,7 @@ export function Handoff() {
 
   return (
     <PageBody>
-      <PageBackLink to="/settings" label="Back to Settings" className="pt-1" />
+      <PageBackButton fallbackTo="/settings" className="pt-1" />
 
       <PageIntro
         eyebrow="Caregiver"

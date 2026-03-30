@@ -1,6 +1,5 @@
 import { motion, useMotionValue, useTransform, AnimatePresence } from "framer-motion";
 import { useState, useEffect, useMemo, useRef, type ReactNode } from "react";
-import { useNavigate } from "react-router-dom";
 import { useChildContext } from "../contexts/ChildContext";
 import { usePoopLogs } from "../hooks/usePoopLogs";
 import { useFeedingLogs } from "../hooks/useFeedingLogs";
@@ -16,6 +15,7 @@ import { getSymptomSeverityBadgeVariant, getSymptomSeverityLabel, getSymptomType
 import { Badge } from "../components/ui/badge";
 import { PoopIcon, MealIcon, NoPoopIcon } from "../components/ui/icons";
 import { DatePicker } from "../components/ui/date-picker";
+import { PageBackButton } from "../components/ui/page-layout";
 import { EditPoopSheet } from "../components/logging/EditPoopSheet";
 import { EditMealSheet } from "../components/logging/EditMealSheet";
 import { EditSleepSheet } from "../components/sleep/EditSleepSheet";
@@ -513,7 +513,6 @@ function DayCard({
 }
 
 export function History() {
-  const navigate = useNavigate();
   const { activeChild } = useChildContext();
   const { logs: poopLogs, isLoading: poopLoading, refresh: refreshPoop } = usePoopLogs(activeChild?.id ?? null, 100);
   const { logs: feedingLogs, isLoading: feedingLoading, refresh: refreshFeeding } = useFeedingLogs(activeChild?.id ?? null, 100);
@@ -598,16 +597,7 @@ export function History() {
   if (!isLoading && !hasAnyLogs) {
     return (
       <div className="px-4 py-8">
-        <button
-          type="button"
-          onClick={() => navigate(-1)}
-          className="inline-flex items-center gap-1.5 text-sm font-medium text-[var(--color-primary)] transition-colors hover:text-[var(--color-primary-hover)]"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
-            <path fillRule="evenodd" d="M17 10a.75.75 0 0 1-.75.75H5.612l4.158 3.96a.75.75 0 1 1-1.04 1.08l-5.5-5.25a.75.75 0 0 1 0-1.08l5.5-5.25a.75.75 0 1 1 1.04 1.08L5.612 9.25H16.25A.75.75 0 0 1 17 10Z" clipRule="evenodd" />
-          </svg>
-          Back
-        </button>
+        <PageBackButton fallbackTo="/settings" />
 
         <div className="mt-4 flex flex-col items-center justify-center rounded-[16px] border border-[var(--color-border)] bg-[var(--color-surface)] px-8 py-16 text-center shadow-[var(--shadow-soft)] backdrop-blur-xl">
           <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[var(--color-surface-strong)]">
@@ -642,17 +632,8 @@ export function History() {
   const earliestDate = allDates.length > 0 ? allDates[allDates.length - 1] : today;
 
   return (
-    <div className="px-4 py-5">
-      <button
-        type="button"
-        onClick={() => navigate(-1)}
-        className="inline-flex items-center gap-1.5 text-sm font-medium text-[var(--color-primary)] transition-colors hover:text-[var(--color-primary-hover)]"
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
-          <path fillRule="evenodd" d="M17 10a.75.75 0 0 1-.75.75H5.612l4.158 3.96a.75.75 0 1 1-1.04 1.08l-5.5-5.25a.75.75 0 0 1 0-1.08l5.5-5.25a.75.75 0 1 1 1.04 1.08L5.612 9.25H16.25A.75.75 0 0 1 17 10Z" clipRule="evenodd" />
-        </svg>
-        Back
-      </button>
+    <div className="my-5 px-4 py-5">
+      <PageBackButton fallbackTo="/settings" />
 
       <div className="my-5 rounded-[16px] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-[var(--shadow-soft)] backdrop-blur-xl">
         <div className="flex items-center justify-between gap-4">

@@ -6,7 +6,7 @@ import { useChildContext } from "../contexts/ChildContext";
 import { Button } from "../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { PageIntro } from "../components/ui/page-intro";
-import { PageBody } from "../components/ui/page-layout";
+import { PageBackButton, PageBody } from "../components/ui/page-layout";
 import { DatePicker } from "../components/ui/date-picker";
 import { Badge } from "../components/ui/badge";
 import { getAgeLabelFromDob, formatDate } from "../lib/utils";
@@ -95,6 +95,8 @@ export function Report() {
 
   return (
     <PageBody>
+      <PageBackButton fallbackTo="/trend" />
+
       <PageIntro
         eyebrow="Share"
         title="Report"

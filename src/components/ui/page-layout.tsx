@@ -1,5 +1,5 @@
 import type { HTMLAttributes, ReactNode } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "../../lib/cn";
 
 export function PageBody({
@@ -31,6 +31,41 @@ export function PageBackLink({
       </svg>
       {label}
     </Link>
+  );
+}
+
+export function PageBackButton({
+  label = "Back",
+  fallbackTo = "/",
+  className,
+}: {
+  label?: string;
+  fallbackTo?: string;
+  className?: string;
+}) {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        if (location.key !== "default" && window.history.length > 1) {
+          navigate(-1);
+          return;
+        }
+        navigate(fallbackTo);
+      }}
+      className={cn(
+        "inline-flex items-center gap-1.5 text-sm font-medium text-[var(--color-primary)] transition-colors hover:text-[var(--color-primary-hover)]",
+        className,
+      )}
+    >
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
+        <path fillRule="evenodd" d="M17 10a.75.75 0 0 1-.75.75H5.612l4.158 3.96a.75.75 0 1 1-1.04 1.08l-5.5-5.25a.75.75 0 0 1 0-1.08l5.5-5.25a.75.75 0 1 1 1.04 1.08L5.612 9.25H16.25A.75.75 0 0 1 17 10Z" clipRule="evenodd" />
+      </svg>
+      {label}
+    </button>
   );
 }
 

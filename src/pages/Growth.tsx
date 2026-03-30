@@ -4,7 +4,7 @@ import { useGrowthLogs } from "../hooks/useGrowthLogs";
 import { Card, CardContent, CardHeader } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { PageIntro } from "../components/ui/page-intro";
-import { EmptyState, InsetPanel, PageBody, SectionHeading, StatGrid, StatTile } from "../components/ui/page-layout";
+import { EmptyState, InsetPanel, PageBackButton, PageBody, SectionHeading, StatGrid, StatTile } from "../components/ui/page-layout";
 import { GrowthLogSheet } from "../components/growth/GrowthLogSheet";
 import { GrowthTrendChart } from "../components/growth/GrowthTrendChart";
 import { cn } from "../lib/cn";
@@ -69,6 +69,8 @@ export function Growth() {
 
   return (
     <PageBody>
+      <PageBackButton fallbackTo="/settings" />
+
       <PageIntro
         eyebrow="Measurements"
         title="Growth"
