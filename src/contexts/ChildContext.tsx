@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, useRef, type ReactNode } from "react";
 import type { Child } from "../lib/types";
 import * as db from "../lib/db";
 
@@ -16,17 +16,31 @@ export function ChildProvider({ children: childrenProp }: { children: ReactNode 
   const [childList, setChildList] = useState<Child[]>([]);
   const [activeChildId, setActiveChildId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const requestIdRef = useRef(0);
 
   const refreshChildren = useCallback(async () => {
-    const rows = await db.getChildren();
-    setChildList(rows);
-    if (rows.length > 0 && !rows.find((c) => c.id === activeChildId)) {
-      setActiveChildId(rows[0].id);
+    const requestId = ++requestIdRef.current;
+    setIsLoading(true);
+
+    try {
+      const rows = await db.getChildren();
+      if (requestId !== requestIdRef.current) return;
+
+      setChildList(rows);
+      if (rows.length === 0) {
+        setActiveChildId(null);
+      } else if (!rows.find((c) => c.id === activeChildId)) {
+        setActiveChildId(rows[0].id);
+      }
+    } finally {
+      if (requestId === requestIdRef.current) {
+        setIsLoading(false);
+      }
     }
   }, [activeChildId]);
 
   useEffect(() => {
-    refreshChildren().finally(() => setIsLoading(false));
+    void refreshChildren();
   }, [refreshChildren]);
 
   const activeChild = childList.find((c) => c.id === activeChildId) ?? null;

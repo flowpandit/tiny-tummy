@@ -49,9 +49,22 @@ function EditChildSheet({
 
   // Load existing avatar
   useEffect(() => {
+    let cancelled = false;
+
+    setAvatarUrl(null);
     import("../lib/photos").then(({ loadAvatar }) => {
-      loadAvatar(child.id).then(setAvatarUrl);
+      loadAvatar(child.id).then((nextAvatarUrl) => {
+        if (!cancelled) {
+          setAvatarUrl(nextAvatarUrl);
+        } else if (nextAvatarUrl) {
+          URL.revokeObjectURL(nextAvatarUrl);
+        }
+      });
     });
+
+    return () => {
+      cancelled = true;
+    };
   }, [child.id]);
 
   const handleAvatarSave = async (blob: Blob) => {

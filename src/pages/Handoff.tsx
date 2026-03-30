@@ -44,16 +44,28 @@ export function Handoff() {
   const [normalDesc, setNormalDesc] = useState("");
 
   useEffect(() => {
-    if (!activeChild) return;
+    if (!activeChild) {
+      setStatus("healthy");
+      setNormalDesc("");
+      return;
+    }
+
+    let cancelled = false;
 
     getChildStatus(
       activeChild.date_of_birth,
       activeChild.feeding_type,
       lastRealPoop?.logged_at ?? null,
     ).then(([nextStatus, desc]) => {
-      setStatus(nextStatus);
-      setNormalDesc(desc);
+      if (!cancelled) {
+        setStatus(nextStatus);
+        setNormalDesc(desc);
+      }
     });
+
+    return () => {
+      cancelled = true;
+    };
   }, [activeChild, lastRealPoop]);
 
   if (!activeChild) return null;

@@ -47,6 +47,10 @@ function isScheduledNightActive(now: Date, start: string, end: string): boolean 
   return currentMinutes >= startMinutes || currentMinutes < endMinutes;
 }
 
+function getDelayUntilNextMinute(now: Date): number {
+  return ((60 - now.getSeconds()) * 1000) - now.getMilliseconds();
+}
+
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [mode, setModeState] = useState<ThemeMode>("system");
   const [systemTheme, setSystemTheme] = useState<"light" | "dark">(getSystemTheme());
@@ -54,6 +58,9 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const [nightModeStart, setNightModeStartState] = useState(DEFAULT_NIGHT_START);
   const [nightModeEnd, setNightModeEndState] = useState(DEFAULT_NIGHT_END);
   const [clockTick, setClockTick] = useState(() => Date.now());
+  const refreshClockTick = useCallback(() => {
+    setClockTick(Date.now());
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -104,12 +111,58 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    const intervalId = window.setInterval(() => {
-      setClockTick(Date.now());
-    }, 30_000);
+    let intervalId: number | null = null;
+    let timeoutId: number | null = null;
 
-    return () => window.clearInterval(intervalId);
-  }, []);
+    const startMinuteInterval = () => {
+      refreshClockTick();
+
+      if (intervalId !== null) {
+        window.clearInterval(intervalId);
+      }
+
+      intervalId = window.setInterval(() => {
+        refreshClockTick();
+      }, 60_000);
+    };
+
+    const scheduleNextMinuteTick = () => {
+      if (timeoutId !== null) {
+        window.clearTimeout(timeoutId);
+      }
+
+      timeoutId = window.setTimeout(() => {
+        startMinuteInterval();
+      }, getDelayUntilNextMinute(new Date()));
+    };
+
+    const handleVisibilityRefresh = () => {
+      refreshClockTick();
+
+      if (document.visibilityState === "visible") {
+        scheduleNextMinuteTick();
+      }
+    };
+
+    scheduleNextMinuteTick();
+    window.addEventListener("focus", handleVisibilityRefresh);
+    window.addEventListener("pageshow", handleVisibilityRefresh);
+    document.addEventListener("visibilitychange", handleVisibilityRefresh);
+
+    return () => {
+      if (timeoutId !== null) {
+        window.clearTimeout(timeoutId);
+      }
+
+      if (intervalId !== null) {
+        window.clearInterval(intervalId);
+      }
+
+      window.removeEventListener("focus", handleVisibilityRefresh);
+      window.removeEventListener("pageshow", handleVisibilityRefresh);
+      document.removeEventListener("visibilitychange", handleVisibilityRefresh);
+    };
+  }, [refreshClockTick]);
 
   const resolved = useMemo<ResolvedTheme>(() => {
     const baseTheme = mode === "system" ? systemTheme : mode;

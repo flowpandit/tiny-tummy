@@ -114,9 +114,22 @@ export function Breastfeed() {
   }, []);
 
   useEffect(() => {
-    if (!activeChild) return;
+    if (!activeChild) {
+      setDurations({ left: 0, right: 0 });
+      setActiveSide(null);
+      setActiveStartedAt(null);
+      setLastUsedSide(null);
+      setTick(Date.now());
+      return;
+    }
 
     let cancelled = false;
+
+    setDurations({ left: 0, right: 0 });
+    setActiveSide(null);
+    setActiveStartedAt(null);
+    setLastUsedSide(null);
+    setTick(Date.now());
 
     Promise.all([
       db.getSetting(getBreastfeedingSessionSettingKey(activeChild.id)),

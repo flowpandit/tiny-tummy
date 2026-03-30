@@ -21,11 +21,16 @@ export function TimeSinceIndicator({ timestamp, status = "unknown", gradient }: 
   );
 
   useEffect(() => {
-    if (!timestamp) return;
+    if (!timestamp) {
+      setTime(null);
+      return;
+    }
+
     setTime(timeSinceDetailed(timestamp));
     const interval = setInterval(() => {
       setTime(timeSinceDetailed(timestamp));
     }, 60000);
+
     return () => clearInterval(interval);
   }, [timestamp]);
 

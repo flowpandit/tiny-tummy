@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import * as db from "../lib/db";
 import { getCaregiverNoteSettingKey } from "../lib/caregiver-note";
 
@@ -6,8 +6,11 @@ export function useCaregiverNote(childId: string | null) {
   const [note, setNote] = useState("");
   const [savedNote, setSavedNote] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const requestIdRef = useRef(0);
 
   const refresh = useCallback(async () => {
+    const requestId = ++requestIdRef.current;
+
     if (!childId) {
       setNote("");
       setSavedNote("");
@@ -16,18 +19,22 @@ export function useCaregiverNote(childId: string | null) {
 
     try {
       const nextNote = await db.getSetting(getCaregiverNoteSettingKey(childId));
+      if (requestId !== requestIdRef.current) return;
       const value = nextNote ?? "";
       setNote(value);
       setSavedNote(value);
     } catch {
+      if (requestId !== requestIdRef.current) return;
       setNote("");
       setSavedNote("");
     }
   }, [childId]);
 
   useEffect(() => {
-    refresh();
-  }, [refresh]);
+    setNote("");
+    setSavedNote("");
+    void refresh();
+  }, [childId, refresh]);
 
   const save = useCallback(async () => {
     if (!childId) return "";

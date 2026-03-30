@@ -1,26 +1,33 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import type { Alert } from "../lib/types";
 import * as db from "../lib/db";
 
 export function useAlerts(childId: string | null) {
   const [alerts, setAlerts] = useState<Alert[]>([]);
+  const requestIdRef = useRef(0);
 
   const refresh = useCallback(async () => {
+    const requestId = ++requestIdRef.current;
+
     if (!childId) {
       setAlerts([]);
       return;
     }
+
     try {
       const rows = await db.getActiveAlerts(childId);
+      if (requestId !== requestIdRef.current) return;
       setAlerts(rows);
     } catch {
+      if (requestId !== requestIdRef.current) return;
       setAlerts([]);
     }
   }, [childId]);
 
   useEffect(() => {
-    refresh();
-  }, [refresh]);
+    setAlerts([]);
+    void refresh();
+  }, [childId, refresh]);
 
   const dismiss = useCallback(async (alertId: string) => {
     try {

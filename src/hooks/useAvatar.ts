@@ -36,6 +36,7 @@ export function useAvatar(childId: string | null): string | null {
 
     let cancelled = false;
     let objectUrl: string | null = null;
+    setUrl(null);
 
     loadAvatar(childId).then((result) => {
       if (cancelled) {

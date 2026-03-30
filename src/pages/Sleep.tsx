@@ -69,7 +69,10 @@ export function Sleep() {
     : `Latest logged day · ${new Date(`${patternDayKey}T00:00:00`).toLocaleDateString(undefined, { month: "short", day: "numeric" })}`;
 
   useEffect(() => {
-    if (!activeChild) return;
+    if (!activeChild) {
+      setTimerSession(null);
+      return;
+    }
 
     let cancelled = false;
     const refreshTimerSession = () => {
@@ -83,6 +86,7 @@ export function Sleep() {
         .catch(() => {
           if (!cancelled) {
             setTimerSession(null);
+            setTick(Date.now());
           }
         });
     };

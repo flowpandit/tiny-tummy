@@ -139,14 +139,26 @@ export function Home() {
   } = useCaregiverNote(activeChild?.id ?? null);
 
   useEffect(() => {
-    if (!activeChild) return;
+    if (!activeChild) {
+      setStatus("healthy");
+      return;
+    }
+
+    let cancelled = false;
+
     getChildStatus(
       activeChild.date_of_birth,
       activeChild.feeding_type,
       lastRealPoop?.logged_at ?? null,
     ).then(([s]) => {
-      setStatus(s);
+      if (!cancelled) {
+        setStatus(s);
+      }
     });
+
+    return () => {
+      cancelled = true;
+    };
   }, [activeChild, lastRealPoop]);
 
   useEffect(() => {
