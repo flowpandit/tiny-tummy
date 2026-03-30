@@ -303,27 +303,42 @@ export function Home() {
                 {activeChild.name}'s quick summary
               </p>
               <div className="mt-5 grid grid-cols-3 gap-3">
-                <div className="flex flex-col items-center gap-3 text-center">
+                <button
+                  type="button"
+                  onClick={() => navigate("/poop")}
+                  className="flex flex-col items-center gap-3 rounded-[16px] py-1 text-center transition-colors hover:bg-white/35"
+                  aria-label="Open poop page"
+                >
                   <TimeSinceIndicator
                     timestamp={lastRealPoop?.logged_at ?? null}
                     status={status === "alert" ? "unknown" : "healthy"}
                   />
                   <p className="text-[12px] font-medium uppercase tracking-[0.12em] text-[var(--color-text-soft)]">Last poop</p>
-                </div>
-                <div className="flex flex-col items-center gap-3 text-center">
+                </button>
+                <button
+                  type="button"
+                  onClick={() => navigate("/feed")}
+                  className="flex flex-col items-center gap-3 rounded-[16px] py-1 text-center transition-colors hover:bg-white/35"
+                  aria-label="Open feed page"
+                >
                   <TimeSinceIndicator
                     timestamp={lastFeed?.logged_at ?? null}
                     gradient="conic-gradient(from 210deg, var(--color-cta) 0deg, var(--color-gold) 160deg, var(--color-apricot) 360deg)"
                   />
                   <p className="text-[12px] font-medium uppercase tracking-[0.12em] text-[var(--color-text-soft)]">Last feed</p>
-                </div>
-                <div className="flex flex-col items-center gap-3 text-center">
+                </button>
+                <button
+                  type="button"
+                  onClick={() => navigate("/sleep")}
+                  className="flex flex-col items-center gap-3 rounded-[16px] py-1 text-center transition-colors hover:bg-white/35"
+                  aria-label="Open sleep page"
+                >
                   <TimeSinceIndicator
                     timestamp={lastNap?.ended_at ?? lastNap?.started_at ?? null}
                     gradient="conic-gradient(from 210deg, var(--color-info) 0deg, #8aa7ea 180deg, #c1d4ff 360deg)"
                   />
                   <p className="text-[12px] font-medium uppercase tracking-[0.12em] text-[var(--color-text-soft)]">Last nap</p>
-                </div>
+                </button>
               </div>
             </div>
           </div>
