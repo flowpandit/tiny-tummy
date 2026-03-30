@@ -21,6 +21,7 @@ import {
   TrackerWeekSwitcher,
 } from "../components/tracking/TrackerPrimitives";
 import { TimeSinceIndicator } from "../components/home/TimeSinceIndicator";
+import { EditSleepSheet } from "../components/sleep/EditSleepSheet";
 import { SleepLogSheet } from "../components/sleep/SleepLogSheet";
 import { SleepPatternTimeline } from "../components/sleep/SleepPatternTimeline";
 import type { HealthStatus, SleepEntry } from "../lib/types";
@@ -481,7 +482,13 @@ function getWakeStatusTone(wakeRisk: WakeRisk, prediction: SleepPrediction | nul
   return "healthy";
 }
 
-function SleepLogList({ logs }: { logs: SleepEntry[] }) {
+function SleepLogList({
+  logs,
+  onEdit,
+}: {
+  logs: SleepEntry[];
+  onEdit: (entry: SleepEntry) => void;
+}) {
   if (logs.length === 0) {
     return (
       <InsetPanel>
@@ -491,9 +498,9 @@ function SleepLogList({ logs }: { logs: SleepEntry[] }) {
   }
 
   return (
-    <TrackerEntryTable mainHeader="Sleep block">
+      <TrackerEntryTable mainHeader="Sleep block">
       {logs.map((log) => (
-        <TrackerEntryRow key={log.id}>
+        <TrackerEntryRow key={log.id} onClick={() => onEdit(log)}>
           <div>
             <p className="text-xs font-medium text-[var(--color-text-secondary)]">
               {new Date(log.started_at).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
@@ -532,6 +539,7 @@ export function Sleep() {
   const { activeChild } = useChildContext();
   const { logs, refresh } = useSleepLogs(activeChild?.id ?? null, 200);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [editingSleep, setEditingSleep] = useState<SleepEntry | null>(null);
   const [weekOffset, setWeekOffset] = useState(0);
   const [timerSession, setTimerSession] = useState<SleepTimerSession | null>(null);
   const [tick, setTick] = useState(Date.now());
@@ -868,12 +876,12 @@ export function Sleep() {
                 <TrackerWeekRangePill label={formatWeekLabel(startDate, endDate)} animateKey={weekOffset} />
               </div>
               <p className="mt-2 max-w-[40ch] text-sm leading-relaxed text-[var(--color-text-secondary)]">
-                Every sleep block for the selected week, in a compact read-only view for now.
+                Every sleep block for the selected week, with tap-to-edit when the timing needs correcting.
               </p>
             </div>
           </CardHeader>
           <CardContent>
-            <SleepLogList logs={weekLogs} />
+            <SleepLogList logs={weekLogs} onEdit={setEditingSleep} />
           </CardContent>
         </Card>
       )}
@@ -889,6 +897,17 @@ export function Sleep() {
         childId={activeChild.id}
         onLogged={handleLogged}
       />
+
+      {editingSleep && (
+        <EditSleepSheet
+          key={editingSleep.id}
+          entry={editingSleep}
+          open={!!editingSleep}
+          onClose={() => setEditingSleep(null)}
+          onSaved={() => { void handleLogged(); }}
+          onDeleted={() => { void handleLogged(); }}
+        />
+      )}
     </PageBody>
   );
 }

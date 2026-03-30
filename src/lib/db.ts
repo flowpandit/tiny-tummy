@@ -452,6 +452,34 @@ export async function getSleepLogs(childId: string, limit = 50): Promise<SleepEn
   );
 }
 
+export async function updateSleepLog(
+  id: string,
+  updates: {
+    sleep_type?: string;
+    started_at?: string;
+    ended_at?: string;
+    notes?: string | null;
+  },
+): Promise<void> {
+  const conn = await getDb();
+  const sets: string[] = [];
+  const params: unknown[] = [];
+
+  if (updates.sleep_type !== undefined) { sets.push("sleep_type = ?"); params.push(updates.sleep_type); }
+  if (updates.started_at !== undefined) { sets.push("started_at = ?"); params.push(updates.started_at); }
+  if (updates.ended_at !== undefined) { sets.push("ended_at = ?"); params.push(updates.ended_at); }
+  if (updates.notes !== undefined) { sets.push("notes = ?"); params.push(updates.notes); }
+
+  if (sets.length === 0) return;
+  params.push(id);
+  await conn.execute(`UPDATE sleep_logs SET ${sets.join(", ")} WHERE id = ?`, params);
+}
+
+export async function deleteSleepLog(id: string): Promise<void> {
+  const conn = await getDb();
+  await conn.execute("DELETE FROM sleep_logs WHERE id = ?", [id]);
+}
+
 // --- Milestone Logs ---
 
 export async function createMilestoneLog(input: {
