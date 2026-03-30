@@ -11,6 +11,14 @@ import { fillDailyFrequencyDays, formatLocalDateKey, getRecentNoPoopDates } from
 import { DAYS_IN_WEEK, addDays, formatHoursCompact, formatHoursLong, formatWeekLabel, startOfDay } from "../lib/tracker";
 import { getChildStatus } from "../lib/tauri";
 import { timeSince } from "../lib/utils";
+import {
+  buildPoopPresetRecordInput,
+  describePoopPresetDraft,
+  getDefaultQuickPoopPresets,
+  hydratePoopPresets,
+  type QuickPoopPreset,
+} from "../lib/quick-presets";
+import * as db from "../lib/db";
 import { Card, CardContent, CardHeader } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { PageIntro } from "../components/ui/page-intro";
@@ -25,9 +33,11 @@ import {
   TrackerWeekSwitcher,
 } from "../components/tracking/TrackerPrimitives";
 import { AlertBanner } from "../components/dashboard/AlertBanner";
+import { PoopPresetEditorSheet } from "../components/home/QuickPresetCustomizerSheet";
 import { LogForm } from "../components/logging/LogForm";
 import { EditPoopSheet } from "../components/logging/EditPoopSheet";
 import { TimeSinceIndicator } from "../components/home/TimeSinceIndicator";
+import { useToast } from "../components/ui/toast";
 import type { Alert, FeedingEntry, HealthStatus, PoopEntry, PoopLogDraft, SymptomEntry } from "../lib/types";
 
 type PredictionConfidence = "low" | "medium" | "high";
@@ -73,6 +83,50 @@ function getAgeDays(dateOfBirth: string): number {
   const birth = new Date(dateOfBirth);
   const now = new Date();
   return Math.max(0, Math.floor((now.getTime() - birth.getTime()) / 86400000));
+}
+
+function getCurrentPoopTimestamp(): string {
+  const now = new Date();
+  return `${now.toISOString().split("T")[0]}T${now.toTimeString().slice(0, 5)}:00`;
+}
+
+function getRepeatablePoopEntry(lastPoop: PoopEntry | null): PoopEntry | null {
+  if (
+    !lastPoop
+    || lastPoop.is_no_poop === 1
+    || lastPoop.stool_type === null
+    || !lastPoop.color
+    || !lastPoop.size
+  ) {
+    return null;
+  }
+
+  if (lastPoop.stool_type < 3 || lastPoop.stool_type > 5) {
+    return null;
+  }
+
+  const colorInfo = STOOL_COLORS.find((item) => item.value === lastPoop.color);
+  if (colorInfo?.isRedFlag) {
+    return null;
+  }
+
+  const ageMs = Date.now() - new Date(lastPoop.logged_at).getTime();
+  if (ageMs > 72 * 60 * 60 * 1000) {
+    return null;
+  }
+
+  return lastPoop;
+}
+
+function getPoopPatternLabel(entry: PoopEntry): string {
+  const typeLabel = entry.stool_type
+    ? BITSS_TYPES.find((item) => item.type === entry.stool_type)?.label ?? `Type ${entry.stool_type}`
+    : "Logged";
+  const colorLabel = entry.color
+    ? STOOL_COLORS.find((item) => item.value === entry.color)?.label ?? entry.color
+    : "No color";
+
+  return `Type ${entry.stool_type} · ${typeLabel} · ${colorLabel} · ${entry.size}`;
 }
 
 function getAgeBaseline(dateOfBirth: string, feedingType: string): AgeBaseline {
@@ -697,6 +751,7 @@ function buildPatternNarrative({
 
 export function Poop() {
   const { activeChild } = useChildContext();
+  const { showError, showSuccess } = useToast();
   const { logs, lastRealPoop, refresh } = usePoopLogs(activeChild?.id ?? null, 500);
   const { logs: feedingLogs } = useFeedingLogs(activeChild?.id ?? null);
   const { logs: symptomLogs } = useSymptoms(activeChild?.id ?? null);
@@ -709,6 +764,8 @@ export function Poop() {
   const [logFormOpen, setLogFormOpen] = useState(false);
   const [poopDraft, setPoopDraft] = useState<Partial<PoopLogDraft> | null>(null);
   const [editingPoop, setEditingPoop] = useState<PoopEntry | null>(null);
+  const [poopPresetSheetOpen, setPoopPresetSheetOpen] = useState(false);
+  const [quickPoopPresets, setQuickPoopPresets] = useState<QuickPoopPreset[]>([]);
 
   useEffect(() => {
     if (!activeChild) {
@@ -733,6 +790,30 @@ export function Poop() {
       cancelled = true;
     };
   }, [activeChild, lastRealPoop]);
+
+  useEffect(() => {
+    if (!activeChild) return;
+
+    let cancelled = false;
+
+    db.getQuickPresets(activeChild.id, "poop")
+      .then((rows) => {
+        if (cancelled) return;
+        const hydrated = hydratePoopPresets(rows);
+        setQuickPoopPresets(
+          hydrated.length > 0 ? hydrated : getDefaultQuickPoopPresets(activeChild.feeding_type),
+        );
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setQuickPoopPresets(getDefaultQuickPoopPresets(activeChild.feeding_type));
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeChild]);
 
   const earliestLoggedDate = useMemo(() => {
     if (logs.length === 0) return null;
@@ -841,6 +922,7 @@ export function Poop() {
   );
   const predictionRing = useMemo(() => getPredictionRingDisplay(prediction), [prediction]);
   const alertRing = useMemo(() => getAlertRingDisplay(alerts), [alerts]);
+  const repeatablePoop = useMemo(() => getRepeatablePoopEntry(lastRealPoop), [lastRealPoop]);
 
   if (!activeChild) return null;
 
@@ -854,6 +936,65 @@ export function Poop() {
     await refresh();
     await runChecks(activeChild);
     await refreshAlerts();
+  };
+
+  const handleRepeatLastPoop = async () => {
+    if (!repeatablePoop) return;
+
+    try {
+      await db.createPoopLog({
+        child_id: activeChild.id,
+        logged_at: getCurrentPoopTimestamp(),
+        stool_type: repeatablePoop.stool_type,
+        color: repeatablePoop.color,
+        size: repeatablePoop.size,
+        notes: null,
+        photo_path: null,
+      });
+      await handleRefresh();
+      showSuccess("Repeated the last normal poop pattern.");
+    } catch {
+      showError("Could not repeat the last poop pattern. Please try again.");
+    }
+  };
+
+  const handleQuickPoopPreset = async (preset: QuickPoopPreset) => {
+    try {
+      await db.createPoopLog({
+        child_id: activeChild.id,
+        logged_at: getCurrentPoopTimestamp(),
+        stool_type: preset.draft.stool_type ?? null,
+        color: preset.draft.color ?? null,
+        size: preset.draft.size ?? null,
+        notes: null,
+        photo_path: null,
+      });
+      await handleRefresh();
+      showSuccess(`${preset.label} logged.`);
+    } catch {
+      showError("Could not log that poop. Please try again.");
+    }
+  };
+
+  const savePoopPresets = async (drafts: Array<Partial<PoopLogDraft>>) => {
+    const nextPresets = drafts.map((draft, index) => {
+      const preview = describePoopPresetDraft(draft);
+      return {
+        id: `poop-preset-${index}`,
+        label: preview.label,
+        description: preview.description,
+        draft,
+      };
+    });
+
+    try {
+      await db.replaceQuickPresets(activeChild.id, "poop", buildPoopPresetRecordInput(drafts));
+      setQuickPoopPresets(nextPresets);
+      setPoopPresetSheetOpen(false);
+      showSuccess("Quick poop tiles updated.");
+    } catch {
+      showError("Could not save the quick poop tiles. Please try again.");
+    }
   };
 
   return (
@@ -893,6 +1034,57 @@ export function Poop() {
       </Card>
 
       <AlertBanner alerts={alerts} onDismiss={dismiss} />
+
+      <Card>
+        <CardContent className="p-4">
+          <div>
+            <div>
+              <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--color-text-soft)]">Quick poop start</p>
+              <p className="mt-2 max-w-[34ch] text-[14px] leading-relaxed text-[var(--color-text-secondary)]">
+                Start with the most likely pattern, then change anything in the sheet if it is not exact.
+              </p>
+            </div>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {repeatablePoop && (
+                <button
+                  type="button"
+                  onClick={() => { void handleRepeatLastPoop(); }}
+                  className="rounded-full border border-[var(--color-primary)]/20 bg-[var(--color-primary)]/10 px-3 py-2 text-[12px] font-semibold text-[var(--color-primary)] transition-colors hover:bg-[var(--color-primary)]/15"
+                >
+                  Repeat last normal poop
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setPoopPresetSheetOpen(true)}
+                className="rounded-full border border-[var(--color-border)] bg-[var(--color-surface-strong)] px-3 py-2 text-[12px] font-semibold text-[var(--color-text-secondary)] transition-colors hover:bg-white/70"
+              >
+                Edit tiles
+              </button>
+            </div>
+          </div>
+
+          {repeatablePoop && (
+            <p className="mt-3 text-[12px] text-[var(--color-text-soft)]">
+              Last safe pattern: {getPoopPatternLabel(repeatablePoop)}
+            </p>
+          )}
+
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            {quickPoopPresets.map((preset) => (
+              <button
+                key={preset.id}
+                type="button"
+                onClick={() => { void handleQuickPoopPreset(preset); }}
+                className="rounded-[16px] border border-[var(--color-border)] bg-[var(--color-surface-strong)] px-4 py-3 text-left transition-colors hover:bg-white/70"
+              >
+                <p className="text-[14px] font-medium text-[var(--color-text)]">{preset.label}</p>
+                <p className="mt-1 text-[12px] leading-relaxed text-[var(--color-text-soft)]">{preset.description}</p>
+              </button>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardContent className="p-3.5">
@@ -1052,6 +1244,14 @@ export function Poop() {
           onDeleted={() => { void handleRefresh(); }}
         />
       )}
+
+      <PoopPresetEditorSheet
+        open={poopPresetSheetOpen}
+        onClose={() => setPoopPresetSheetOpen(false)}
+        feedingType={activeChild.feeding_type}
+        presets={quickPoopPresets}
+        onSave={(drafts) => { void savePoopPresets(drafts); }}
+      />
     </PageBody>
   );
 }

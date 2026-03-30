@@ -5,7 +5,15 @@ import { useFeedingLogs } from "../hooks/useFeedingLogs";
 import { fillDailyFrequencyDays, formatLocalDateKey } from "../lib/stats";
 import { DAYS_IN_WEEK, addDays, formatHoursCompact, formatHoursLong, formatWeekLabel, startOfDay } from "../lib/tracker";
 import { getFoodTypeLabel, getFeedingEntryDetailParts, getFeedingEntryPrimaryLabel, getFeedingEntrySecondaryText } from "../lib/feeding";
+import {
+  buildFeedPresetRecordInput,
+  describeFeedPresetDraft,
+  getDefaultQuickFeedPresets,
+  hydrateFeedPresets,
+  type QuickFeedPreset,
+} from "../lib/quick-presets";
 import { timeSince } from "../lib/utils";
+import * as db from "../lib/db";
 import { Card, CardContent, CardHeader } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { PageIntro } from "../components/ui/page-intro";
@@ -19,9 +27,11 @@ import {
   TrackerWeekRangePill,
   TrackerWeekSwitcher,
 } from "../components/tracking/TrackerPrimitives";
+import { FeedPresetEditorSheet } from "../components/home/QuickPresetCustomizerSheet";
 import { TimeSinceIndicator } from "../components/home/TimeSinceIndicator";
 import { DietLogForm } from "../components/logging/DietLogForm";
 import { EditMealSheet } from "../components/logging/EditMealSheet";
+import { useToast } from "../components/ui/toast";
 import type { FeedingEntry, FeedingLogDraft, FeedingType, HealthStatus } from "../lib/types";
 
 type PredictionConfidence = "low" | "medium" | "high";
@@ -125,6 +135,11 @@ function getFeedBaseline(dateOfBirth: string, feedingType: FeedingType): FeedBas
 
 function getPredictableFeedLogs(logs: FeedingEntry[]): FeedingEntry[] {
   return logs.filter((log) => log.food_type !== "pumping");
+}
+
+function getCurrentFeedingTimestamp(): string {
+  const now = new Date();
+  return `${now.toISOString().split("T")[0]}T${now.toTimeString().slice(0, 5)}:00`;
 }
 
 function getTrackedMl(logs: FeedingEntry[]): number {
@@ -577,17 +592,47 @@ export function Feed() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { activeChild } = useChildContext();
+  const { showError, showSuccess } = useToast();
   const { logs, refresh } = useFeedingLogs(activeChild?.id ?? null, 500);
   const [weekOffset, setWeekOffset] = useState(0);
   const [formOpen, setFormOpen] = useState(false);
   const [feedDraft, setFeedDraft] = useState<Partial<FeedingLogDraft> | null>(null);
   const [editingMeal, setEditingMeal] = useState<FeedingEntry | null>(null);
+  const [feedPresetSheetOpen, setFeedPresetSheetOpen] = useState(false);
+  const [quickFeedPresets, setQuickFeedPresets] = useState<QuickFeedPreset[]>([]);
 
   useEffect(() => {
     if (searchParams.get("add") === "1") {
       setFormOpen(true);
     }
   }, [searchParams]);
+
+  useEffect(() => {
+    if (!activeChild) {
+      setQuickFeedPresets([]);
+      return;
+    }
+
+    let cancelled = false;
+
+    setQuickFeedPresets(getDefaultQuickFeedPresets(activeChild.feeding_type));
+
+    db.getQuickPresets(activeChild.id, "feed").then((feedRows) => {
+      if (cancelled) return;
+      const hydratedFeed = hydrateFeedPresets(feedRows);
+      setQuickFeedPresets(
+        hydratedFeed.length > 0 ? hydratedFeed : getDefaultQuickFeedPresets(activeChild.feeding_type),
+      );
+    }).catch(() => {
+      if (!cancelled) {
+        setQuickFeedPresets(getDefaultQuickFeedPresets(activeChild.feeding_type));
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeChild]);
 
   const predictableLogs = useMemo(() => getPredictableFeedLogs(logs), [logs]);
   const lastFeed = predictableLogs[0] ?? null;
@@ -681,6 +726,78 @@ export function Feed() {
     await refresh();
   };
 
+  const handleRepeatLastFeed = async () => {
+    if (!lastFeed) return;
+
+    try {
+      await db.createFeedingLog({
+        child_id: activeChild.id,
+        logged_at: getCurrentFeedingTimestamp(),
+        food_type: lastFeed.food_type,
+        food_name: lastFeed.food_name,
+        amount_ml: lastFeed.amount_ml,
+        duration_minutes: lastFeed.duration_minutes,
+        breast_side: lastFeed.breast_side,
+        bottle_content: lastFeed.bottle_content,
+        reaction_notes: null,
+        is_constipation_support: lastFeed.is_constipation_support,
+        notes: null,
+      });
+      await handleRefresh();
+      showSuccess("Repeated the last feed.");
+    } catch {
+      showError("Could not repeat the last feed. Please try again.");
+    }
+  };
+
+  const handleQuickFeedPreset = async (preset: QuickFeedPreset) => {
+    if (!preset.draft.food_type) {
+      showError("This feed tile is missing a feed type.");
+      return;
+    }
+
+    try {
+      await db.createFeedingLog({
+        child_id: activeChild.id,
+        logged_at: getCurrentFeedingTimestamp(),
+        food_type: preset.draft.food_type,
+        food_name: preset.draft.food_name?.trim() ? preset.draft.food_name.trim() : null,
+        amount_ml: preset.draft.amount_ml?.trim() ? Number(preset.draft.amount_ml.trim()) : null,
+        duration_minutes: preset.draft.duration_minutes?.trim() ? Number(preset.draft.duration_minutes.trim()) : null,
+        breast_side: preset.draft.breast_side ?? null,
+        bottle_content: preset.draft.bottle_content ?? null,
+        reaction_notes: null,
+        is_constipation_support: preset.draft.is_constipation_support ? 1 : 0,
+        notes: null,
+      });
+      await handleRefresh();
+      showSuccess(`${preset.label} logged.`);
+    } catch {
+      showError("Could not log that feed. Please try again.");
+    }
+  };
+
+  const saveFeedPresets = async (drafts: Array<Partial<FeedingLogDraft>>) => {
+    const nextPresets = drafts.map((draft, index) => {
+      const preview = describeFeedPresetDraft(draft);
+      return {
+        id: `feed-preset-${index}`,
+        label: preview.label,
+        description: preview.description,
+        draft,
+      };
+    });
+
+    try {
+      await db.replaceQuickPresets(activeChild.id, "feed", buildFeedPresetRecordInput(drafts));
+      setQuickFeedPresets(nextPresets);
+      setFeedPresetSheetOpen(false);
+      showSuccess("Quick feed tiles updated.");
+    } catch {
+      showError("Could not save the quick feed tiles. Please try again.");
+    }
+  };
+
   return (
     <PageBody className="space-y-4">
       <PageIntro
@@ -715,24 +832,75 @@ export function Feed() {
       </Card>
 
       <Card>
-        <CardContent className="p-3.5">
-          <div className="flex items-start justify-between gap-3">
+        <CardContent className="p-4">
+          <div>
             <div>
-              <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--color-text-soft)]">Current feed status</p>
-              <p className="mt-1.5 text-[1.4rem] font-semibold tracking-[-0.035em] text-[var(--color-text)]">
-                {dueRisk.label === "High" ? "Feed window needs attention" : dueRisk.label === "Medium" ? "Next feed is approaching" : "Rhythm looks settled"}
+              <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--color-text-soft)]">Quick feed start</p>
+              <p className="mt-2 max-w-[34ch] text-[14px] leading-relaxed text-[var(--color-text-secondary)]">
+                Start with the type already chosen, then add details only if needed.
               </p>
-              <p className="mt-1.5 max-w-[42ch] text-[13px] leading-relaxed text-[var(--color-text-secondary)]">{baseline.description}</p>
             </div>
-            <span className={`rounded-full px-3 py-1.5 text-[12px] font-semibold ${
-              dueRisk.label === "High"
-                ? "bg-[var(--color-alert-bg)] text-[var(--color-alert)]"
-                : dueRisk.label === "Medium"
-                  ? "bg-[var(--color-caution-bg)] text-[var(--color-caution)]"
-                  : "bg-[var(--color-healthy-bg)] text-[var(--color-healthy)]"
-            }`}>
-              {dueRisk.label === "High" ? "Watch now" : dueRisk.label === "Medium" ? "Soon" : "Normal"}
-            </span>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {lastFeed && (
+                <button
+                  type="button"
+                  onClick={() => { void handleRepeatLastFeed(); }}
+                  className="rounded-full border border-[var(--color-primary)]/20 bg-[var(--color-primary)]/10 px-3 py-2 text-[12px] font-semibold text-[var(--color-primary)] transition-colors hover:bg-[var(--color-primary)]/15"
+                >
+                  Repeat last feed
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setFeedPresetSheetOpen(true)}
+                className="rounded-full border border-[var(--color-border)] bg-[var(--color-surface-strong)] px-3 py-2 text-[12px] font-semibold text-[var(--color-text-secondary)] transition-colors hover:bg-white/70"
+              >
+                Edit tiles
+              </button>
+            </div>
+          </div>
+
+          {lastFeed && (
+            <p className="mt-3 text-[12px] text-[var(--color-text-soft)]">
+              Last feed: {getFeedingEntryPrimaryLabel(lastFeed)}{getFeedingEntryDetailParts(lastFeed).length > 0 ? ` · ${getFeedingEntryDetailParts(lastFeed).join(" · ")}` : ""}
+            </p>
+          )}
+
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            {quickFeedPresets.map((preset) => (
+              <button
+                key={preset.id}
+                type="button"
+                onClick={() => { void handleQuickFeedPreset(preset); }}
+                className="rounded-[16px] border border-[var(--color-border)] bg-[var(--color-surface-strong)] px-4 py-3 text-left transition-colors hover:bg-white/70"
+              >
+                <p className="text-[14px] font-medium text-[var(--color-text)]">{preset.label}</p>
+                <p className="mt-1 text-[12px] leading-relaxed text-[var(--color-text-soft)]">{preset.description}</p>
+              </button>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent className="p-3.5">
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--color-text-soft)]">Current feed status</p>
+              <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold leading-none ${
+                dueRisk.label === "High"
+                  ? "bg-[var(--color-alert-bg)] text-[var(--color-alert)]"
+                  : dueRisk.label === "Medium"
+                    ? "bg-[var(--color-caution-bg)] text-[var(--color-caution)]"
+                    : "bg-[var(--color-healthy-bg)] text-[var(--color-healthy)]"
+              }`}>
+                {dueRisk.label === "High" ? "Watch now" : dueRisk.label === "Medium" ? "Soon" : "Normal"}
+              </span>
+            </div>
+            <p className="mt-1.5 text-[1.4rem] font-semibold tracking-[-0.035em] text-[var(--color-text)]">
+              {dueRisk.label === "High" ? "Feed window needs attention" : dueRisk.label === "Medium" ? "Next feed is approaching" : "Rhythm looks settled"}
+            </p>
+            <p className="mt-1.5 max-w-[42ch] text-[13px] leading-relaxed text-[var(--color-text-secondary)]">{baseline.description}</p>
           </div>
 
           <div className="mt-3 grid grid-cols-2 gap-2.5">
@@ -923,6 +1091,14 @@ export function Feed() {
           onDeleted={() => { void handleRefresh(); }}
         />
       )}
+
+      <FeedPresetEditorSheet
+        open={feedPresetSheetOpen}
+        onClose={() => setFeedPresetSheetOpen(false)}
+        feedingType={activeChild.feeding_type}
+        presets={quickFeedPresets}
+        onSave={(drafts) => { void saveFeedPresets(drafts); }}
+      />
     </PageBody>
   );
 }
