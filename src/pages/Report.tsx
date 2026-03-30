@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { writeTextFile } from "@tauri-apps/plugin-fs";
+import { writeFile } from "@tauri-apps/plugin-fs";
 import { save } from "@tauri-apps/plugin-dialog";
 import { platform } from "@tauri-apps/plugin-os";
 import { useChildContext } from "../contexts/ChildContext";
@@ -15,7 +15,7 @@ import { getFeedingEntryDisplayLabel, getFeedingEntrySecondaryText } from "../li
 import { getEpisodeEventTypeLabel, getEpisodeTypeLabel } from "../lib/episode-constants";
 import { getMilestoneTypeLabel } from "../lib/milestone-constants";
 import { getSymptomSeverityBadgeVariant, getSymptomSeverityLabel, getSymptomTypeLabel } from "../lib/symptom-constants";
-import { buildPrintableReportHtml } from "../lib/report-export";
+import { buildReportPdfPayload } from "../lib/report-pdf";
 import {
   defaultReportOptions,
   generateReportData,
@@ -23,6 +23,7 @@ import {
   type ReportOptions,
 } from "../lib/reporting";
 import { useToast } from "../components/ui/toast";
+import { generateReportPdf, savePdfToDownloads } from "../lib/tauri";
 
 export function Report() {
   const { activeChild } = useChildContext();
@@ -43,6 +44,15 @@ export function Report() {
   const typeLabel = (type: number) => BITSS_TYPES.find((b) => b.type === type)?.label ?? `Type ${type}`;
   const colorLabel = (color: string) => STOOL_COLORS.find((c) => c.value === color)?.label ?? color;
 
+  const decodeBase64 = (value: string) => {
+    const binary = atob(value);
+    const bytes = new Uint8Array(binary.length);
+    for (let index = 0; index < binary.length; index += 1) {
+      bytes[index] = binary.charCodeAt(index);
+    }
+    return bytes;
+  };
+
   const handleGenerate = async () => {
     setIsGenerating(true);
     try {
@@ -56,22 +66,32 @@ export function Report() {
   const handlePrint = async () => {
     if (!reportData) return;
 
-    const currentPlatform = platform();
-    const isMobile = currentPlatform === "android" || currentPlatform === "ios";
-
-    if (!isMobile) {
-      window.print();
-      return;
-    }
-
     try {
-      const fileName = `tiny-tummy-report-${startDate}-to-${endDate}.html`;
+      const fileName = `tiny-tummy-report-${startDate}-to-${endDate}.pdf`;
+      const encodedPdf = await generateReportPdf(buildReportPdfPayload({
+        child: activeChild,
+        startDate,
+        endDate,
+        data: reportData,
+        options,
+      }));
+      const currentPlatform = platform();
+      const isAndroid = currentPlatform === "android";
+
+      if (isAndroid) {
+        await savePdfToDownloads(fileName, encodedPdf);
+        showSuccess(`PDF saved to Downloads as ${fileName}.`);
+        return;
+      }
+
+      const pdfBytes = decodeBase64(encodedPdf);
+
       const targetPath = await save({
         defaultPath: fileName,
         filters: [
           {
-            name: "HTML report",
-            extensions: ["html", "text/html"],
+            name: "PDF report",
+            extensions: ["pdf"],
           },
         ],
       });
@@ -80,16 +100,11 @@ export function Report() {
         return;
       }
 
-      await writeTextFile(targetPath, buildPrintableReportHtml({
-        child: activeChild,
-        startDate,
-        endDate,
-        data: reportData,
-        options,
-      }));
-      showSuccess("Report saved successfully.");
-    } catch {
-      showError("Could not save the report export. Please try again.");
+      await writeFile(targetPath, pdfBytes);
+      showSuccess("PDF report saved successfully.");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      showError(`Could not generate the PDF report: ${message}`);
     }
   };
 
@@ -635,13 +650,13 @@ export function Report() {
 
           {/* Print button */}
           <Button variant="cta" className="w-full mb-4" onClick={handlePrint}>
-            {platform() === "android" || platform() === "ios" ? "Save Report" : "Export as PDF"}
+            {platform() === "android" ? "Save PDF to Downloads" : "Save PDF"}
           </Button>
 
           <p className="text-xs text-[var(--color-muted)] text-center">
-            {platform() === "android" || platform() === "ios"
-              ? "Lets you choose where to save the report file."
-              : "Uses your browser's print dialog to save as PDF."}
+            {platform() === "android"
+              ? "Generates a PDF and saves it directly to your Downloads folder."
+              : "Generates a PDF file and lets you choose where to save it."}
           </p>
         </div>
       )}

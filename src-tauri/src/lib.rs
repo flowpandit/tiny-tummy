@@ -1,4 +1,6 @@
+mod downloads;
 mod engine;
+mod report_pdf;
 mod statusbar;
 
 use tauri_plugin_sql::{Migration, MigrationKind};
@@ -52,6 +54,11 @@ fn get_child_status(
 #[tauri::command]
 fn get_guidance_tips() -> Vec<engine::guidance::GuidanceTip> {
     engine::guidance::get_all_tips()
+}
+
+#[tauri::command]
+fn generate_report_pdf(payload: report_pdf::ReportPdfPayload) -> Result<String, String> {
+    report_pdf::generate_report_pdf(payload)
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -118,12 +125,15 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_os::init())
+        .plugin(downloads::init())
         .plugin(statusbar::init())
         .invoke_handler(tauri::generate_handler![
             check_frequency_alert,
             check_color_alert,
             get_child_status,
             get_guidance_tips,
+            generate_report_pdf,
+            downloads::save_pdf_to_downloads,
             statusbar::set_status_bar_style,
         ])
         .run(tauri::generate_context!())

@@ -12,26 +12,25 @@ use tauri::Manager;
 #[cfg(target_os = "android")]
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-struct SetStylePayload {
-    is_light: bool,
+struct SavePdfPayload {
+    file_name: String,
+    base64_data: String,
 }
 
 #[cfg(target_os = "android")]
 use tauri::plugin::PluginHandle;
 
 #[cfg(target_os = "android")]
-pub struct StatusBarHandle<R: Runtime>(pub PluginHandle<R>);
+pub struct DownloadsHandle<R: Runtime>(pub PluginHandle<R>);
 
-/// Plugin setup — registers the Android Kotlin plugin for status bar control.
-/// On desktop this is a no-op.
 pub fn init<R: Runtime>() -> TauriPlugin<R> {
-    Builder::<R, ()>::new("statusbar")
+    Builder::<R, ()>::new("downloads")
         .setup(|app, api| {
             #[cfg(target_os = "android")]
             {
                 let handle =
-                    api.register_android_plugin("com.nikhilmehral.tinytummy", "StatusBarPlugin")?;
-                app.manage(StatusBarHandle(handle));
+                    api.register_android_plugin("com.nikhilmehral.tinytummy", "DownloadsPlugin")?;
+                app.manage(DownloadsHandle(handle));
             }
             #[cfg(not(target_os = "android"))]
             {
@@ -42,20 +41,29 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
         .build()
 }
 
-/// Command callable from TypeScript via invoke("set_status_bar_style", { isLight: true })
 #[tauri::command]
-pub async fn set_status_bar_style<R: Runtime>(app: tauri::AppHandle<R>, is_light: bool) -> Result<(), String> {
+pub async fn save_pdf_to_downloads<R: Runtime>(
+    app: tauri::AppHandle<R>,
+    file_name: String,
+    base64_data: String,
+) -> Result<(), String> {
     #[cfg(target_os = "android")]
     {
-        let handle = app.state::<StatusBarHandle<R>>();
+        let handle = app.state::<DownloadsHandle<R>>();
         return handle
             .0
-            .run_mobile_plugin::<()>("setStyle", SetStylePayload { is_light })
+            .run_mobile_plugin::<()>(
+                "savePdfToDownloads",
+                SavePdfPayload {
+                    file_name,
+                    base64_data,
+                },
+            )
             .map_err(|e: tauri::plugin::mobile::PluginInvokeError| e.to_string());
     }
     #[cfg(not(target_os = "android"))]
     {
-        let _ = (app, is_light);
-        Ok(())
+        let _ = (app, file_name, base64_data);
+        Err("Saving directly to Downloads is only supported on Android.".to_string())
     }
 }
