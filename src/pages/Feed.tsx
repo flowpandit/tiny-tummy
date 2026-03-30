@@ -83,7 +83,8 @@ interface FeedMixSnapshot {
 }
 
 function getAgeDays(dateOfBirth: string): number {
-  const birth = new Date(dateOfBirth);
+  const [year, month, day] = dateOfBirth.split("-").map(Number);
+  const birth = new Date(year, (month || 1) - 1, day || 1);
   return Math.max(0, Math.floor((Date.now() - birth.getTime()) / 86400000));
 }
 

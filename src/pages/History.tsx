@@ -613,7 +613,8 @@ export function History() {
   }
 
   const handleDeletePoop = async (id: string) => {
-    await db.deletePoopLog(id);
+    const entry = poopLogs.find((log) => log.id === id);
+    await db.deletePoopLog(entry ?? id);
     await refreshPoop();
   };
 

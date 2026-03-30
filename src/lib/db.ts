@@ -15,7 +15,10 @@ import type {
   EpisodeEvent,
   QuickPresetEntry,
 } from "./types";
-import { generateId, nowISO } from "./utils";
+import { generateId, nowISO, parseLocalDate } from "./utils";
+import { getBreastfeedingLastSideSettingKey, getBreastfeedingSessionSettingKey } from "./breastfeeding";
+import { getCaregiverNoteSettingKey } from "./caregiver-note";
+import { deleteAvatar, deletePhoto } from "./photos";
 
 let db: Database | null = null;
 
@@ -84,10 +87,42 @@ export async function updateChild(
 
 export async function deleteChild(id: string): Promise<void> {
   const conn = await getDb();
-  await conn.execute("UPDATE children SET is_active = 0, updated_at = ? WHERE id = ?", [
-    nowISO(),
-    id,
-  ]);
+
+  const poopPhotoRows = await conn.select<{ photo_path: string | null }[]>(
+    "SELECT photo_path FROM poop_logs WHERE child_id = ? AND photo_path IS NOT NULL",
+    [id],
+  );
+
+  for (const row of poopPhotoRows) {
+    if (!row.photo_path) continue;
+    try {
+      await deletePhoto(row.photo_path);
+    } catch {
+      // Best-effort cleanup before removing DB rows.
+    }
+  }
+
+  try {
+    await deleteAvatar(id);
+  } catch {
+    // Best-effort cleanup before removing DB rows.
+  }
+
+  await conn.execute("DELETE FROM alerts WHERE child_id = ?", [id]);
+  await conn.execute("DELETE FROM symptom_logs WHERE child_id = ?", [id]);
+  await conn.execute("DELETE FROM episode_events WHERE child_id = ?", [id]);
+  await conn.execute("DELETE FROM episodes WHERE child_id = ?", [id]);
+  await conn.execute("DELETE FROM growth_logs WHERE child_id = ?", [id]);
+  await conn.execute("DELETE FROM sleep_logs WHERE child_id = ?", [id]);
+  await conn.execute("DELETE FROM milestone_logs WHERE child_id = ?", [id]);
+  await conn.execute("DELETE FROM quick_presets WHERE child_id = ?", [id]);
+  await conn.execute("DELETE FROM diet_logs WHERE child_id = ?", [id]);
+  await conn.execute("DELETE FROM poop_logs WHERE child_id = ?", [id]);
+  await conn.execute("DELETE FROM children WHERE id = ?", [id]);
+
+  await deleteSetting(getCaregiverNoteSettingKey(id));
+  await deleteSetting(getBreastfeedingSessionSettingKey(id));
+  await deleteSetting(getBreastfeedingLastSideSettingKey(id));
 }
 
 // --- Poop Logs ---
@@ -205,8 +240,19 @@ export async function updatePoopLog(
   await conn.execute(`UPDATE poop_logs SET ${sets.join(", ")} WHERE id = ?`, params);
 }
 
-export async function deletePoopLog(id: string): Promise<void> {
+export async function deletePoopLog(entry: Pick<PoopEntry, "id" | "photo_path"> | string): Promise<void> {
   const conn = await getDb();
+  const id = typeof entry === "string" ? entry : entry.id;
+  const photoPath = typeof entry === "string" ? null : entry.photo_path;
+
+  if (photoPath) {
+    try {
+      await deletePhoto(photoPath);
+    } catch {
+      // Ignore file cleanup failures so the log row can still be removed.
+    }
+  }
+
   await conn.execute("DELETE FROM poop_logs WHERE id = ?", [id]);
 }
 
@@ -553,6 +599,21 @@ export async function getActiveAlerts(childId: string): Promise<Alert[]> {
     "SELECT * FROM alerts WHERE child_id = ? AND is_dismissed = 0 ORDER BY triggered_at DESC",
     [childId],
   );
+}
+
+export async function hasAlertForLog(
+  childId: string,
+  alertType: string,
+  relatedLogId: string,
+): Promise<boolean> {
+  const conn = await getDb();
+  const rows = await conn.select<{ cnt: number }[]>(
+    `SELECT COUNT(*) as cnt
+     FROM alerts
+     WHERE child_id = ? AND alert_type = ? AND related_log_id = ?`,
+    [childId, alertType, relatedLogId],
+  );
+  return (rows[0]?.cnt ?? 0) > 0;
 }
 
 export async function dismissAlert(id: string): Promise<void> {
@@ -934,8 +995,8 @@ export async function getReportStats(
   const totalPoops = countRows[0]?.total ?? 0;
   const totalNoPoop = noPoopRows[0]?.total ?? 0;
 
-  const start = new Date(startDate);
-  const end = new Date(endDate);
+  const start = parseLocalDate(startDate);
+  const end = parseLocalDate(endDate);
   const daysDiff = Math.max(1, Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1);
   const avgPerDay = Math.round((totalPoops / daysDiff) * 10) / 10;
 
@@ -979,6 +1040,11 @@ export async function setSetting(key: string, value: string): Promise<void> {
     "INSERT OR REPLACE INTO app_settings (key, value) VALUES (?, ?)",
     [key, value],
   );
+}
+
+export async function deleteSetting(key: string): Promise<void> {
+  const conn = await getDb();
+  await conn.execute("DELETE FROM app_settings WHERE key = ?", [key]);
 }
 
 // --- Quick Presets ---

@@ -95,7 +95,7 @@ export function Report() {
 
   return (
     <PageBody>
-      <PageBackButton fallbackTo="/trend" />
+      <PageBackButton fallbackTo="/dashboard" />
 
       <PageIntro
         eyebrow="Share"

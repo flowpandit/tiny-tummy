@@ -54,7 +54,7 @@ export function EditPoopSheet({ entry, open, onClose, onSaved, onDeleted }: Edit
 
   const handleDelete = async () => {
     try {
-      await db.deletePoopLog(entry.id);
+      await db.deletePoopLog(entry);
       onDeleted();
       onClose();
     } catch {

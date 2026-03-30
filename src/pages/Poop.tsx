@@ -81,7 +81,8 @@ interface PoopPrediction {
 }
 
 function getAgeDays(dateOfBirth: string): number {
-  const birth = new Date(dateOfBirth);
+  const [year, month, day] = dateOfBirth.split("-").map(Number);
+  const birth = new Date(year, (month || 1) - 1, day || 1);
   const now = new Date();
   return Math.max(0, Math.floor((now.getTime() - birth.getTime()) / 86400000));
 }
@@ -1199,7 +1200,7 @@ export function Poop() {
         compact
         items={[
           {
-            to: "/trend",
+            to: "/dashboard",
             title: "Trend",
             description: "Compare longer poop patterns and color shifts.",
             tone: "info",

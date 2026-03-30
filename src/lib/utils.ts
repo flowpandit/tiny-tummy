@@ -1,5 +1,10 @@
+export function parseLocalDate(value: string): Date {
+  const [year, month, day] = value.split("-").map(Number);
+  return new Date(year, (month || 1) - 1, day || 1);
+}
+
 export function getAgeLabelFromDob(dob: string): string {
-  const birth = new Date(dob);
+  const birth = parseLocalDate(dob);
   const now = new Date();
   const diffMs = now.getTime() - birth.getTime();
   const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
