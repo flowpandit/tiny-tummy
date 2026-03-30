@@ -34,6 +34,7 @@ import { SymptomSheet } from "../components/symptoms/SymptomSheet";
 import { SleepLogSheet } from "../components/sleep/SleepLogSheet";
 import { Badge } from "../components/ui/badge";
 import { useToast } from "../components/ui/toast";
+import { DiscoveryLinks } from "../components/discovery/DiscoveryLinks";
 import type { FeedingEntry, FeedingLogDraft, HealthStatus, PoopEntry, PoopLogDraft } from "../lib/types";
 
 export function Home() {
@@ -570,6 +571,38 @@ export function Home() {
           onEditMeal={setEditingMeal}
         />
       )}
+
+      <div className="px-4">
+        <DiscoveryLinks
+          eyebrow="Care tools"
+          title="Open the right surface"
+          description="The less-frequent pages stay one tap away without taking over the bottom nav."
+          items={[
+            {
+              to: "/history",
+              title: "History",
+              description: "Review the full timeline across logs.",
+            },
+            {
+              to: "/growth",
+              title: "Growth",
+              description: "Check weight, length, and head trends.",
+              tone: "info",
+            },
+            {
+              to: "/milestones",
+              title: "Milestones",
+              description: "See context like solids, illness, or teething.",
+            },
+            {
+              to: "/handoff",
+              title: "Caregiver handoff",
+              description: "Share the current state with the next person.",
+              tone: "healthy",
+            },
+          ]}
+        />
+      </div>
 
       {/* Log form sheet */}
       <LogForm

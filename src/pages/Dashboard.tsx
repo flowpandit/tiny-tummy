@@ -1,12 +1,11 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { useChildContext } from "../contexts/ChildContext";
 import { useStats } from "../hooks/useStats";
 import { usePoopLogs } from "../hooks/usePoopLogs";
 import { useFeedingLogs } from "../hooks/useFeedingLogs";
 import { Card, CardHeader, CardTitle, CardContent } from "../components/ui/card";
-import { Button } from "../components/ui/button";
 import { PageBody, EmptyState } from "../components/ui/page-layout";
+import { DiscoveryLinks } from "../components/discovery/DiscoveryLinks";
 import { FrequencyChart } from "../components/dashboard/FrequencyChart";
 import { ConsistencyTrend } from "../components/dashboard/ConsistencyTrend";
 import { ColorDistribution } from "../components/dashboard/ColorDistribution";
@@ -21,7 +20,6 @@ const PERIOD_OPTIONS = [
 
 export function Dashboard() {
   const { activeChild } = useChildContext();
-  const navigate = useNavigate();
   const [days, setDays] = useState(7);
   const { logs } = usePoopLogs(activeChild?.id ?? null);
   const { logs: feedingLogs } = useFeedingLogs(activeChild?.id ?? null);
@@ -143,16 +141,37 @@ export function Dashboard() {
           </CardContent>
         </Card>
 
-        <Button
-          variant="secondary"
-          className="w-full"
-          onClick={() => navigate("/report")}
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
-            <path fillRule="evenodd" d="M4.5 2A1.5 1.5 0 0 0 3 3.5v13A1.5 1.5 0 0 0 4.5 18h11a1.5 1.5 0 0 0 1.5-1.5V7.621a1.5 1.5 0 0 0-.44-1.06l-4.12-4.122A1.5 1.5 0 0 0 11.378 2H4.5Zm2.25 8.5a.75.75 0 0 0 0 1.5h6.5a.75.75 0 0 0 0-1.5h-6.5Zm0 3a.75.75 0 0 0 0 1.5h6.5a.75.75 0 0 0 0-1.5h-6.5Z" clipRule="evenodd" />
-          </svg>
-          Generate report for doctor
-        </Button>
+        <DiscoveryLinks
+          eyebrow="Next"
+          title="Use trends with the right follow-up"
+          description="Trend is the analysis surface. These adjacent pages help turn patterns into action."
+          compact
+          items={[
+            {
+              to: "/report",
+              title: "Generate report",
+              description: "Prepare a summary for your doctor.",
+              tone: "cta",
+            },
+            {
+              to: "/history",
+              title: "History",
+              description: "Inspect the timeline behind the charts.",
+            },
+            {
+              to: "/growth",
+              title: "Growth",
+              description: "Check whether body trends line up too.",
+              tone: "info",
+            },
+            {
+              to: "/guidance",
+              title: "Guidance",
+              description: "Open evidence-based context when needed.",
+              tone: "healthy",
+            },
+          ]}
+        />
       </div>
     </PageBody>
   );

@@ -33,6 +33,7 @@ import {
   TrackerWeekSwitcher,
 } from "../components/tracking/TrackerPrimitives";
 import { AlertBanner } from "../components/dashboard/AlertBanner";
+import { DiscoveryLinks } from "../components/discovery/DiscoveryLinks";
 import { PoopPresetEditorSheet } from "../components/home/QuickPresetCustomizerSheet";
 import { LogForm } from "../components/logging/LogForm";
 import { EditPoopSheet } from "../components/logging/EditPoopSheet";
@@ -1190,6 +1191,32 @@ export function Poop() {
           />
         </CardContent>
       </Card>
+
+      <DiscoveryLinks
+        eyebrow="Related"
+        title="Keep the picture connected"
+        description="Use the adjacent pages when you need more context than the poop page alone."
+        compact
+        items={[
+          {
+            to: "/trend",
+            title: "Trend",
+            description: "Compare longer poop patterns and color shifts.",
+            tone: "info",
+          },
+          {
+            to: "/history",
+            title: "History",
+            description: "See the full timeline around this week.",
+          },
+          {
+            to: "/guidance",
+            title: "Guidance",
+            description: "Check what colors and patterns may mean.",
+            tone: "healthy",
+          },
+        ]}
+      />
 
       {logs.length === 0 ? (
         <EmptyState

@@ -778,6 +778,14 @@ export async function getEpisodeEvents(episodeId: string): Promise<EpisodeEvent[
   );
 }
 
+export async function getEpisodeEventsByChild(childId: string, limit = 100): Promise<EpisodeEvent[]> {
+  const conn = await getDb();
+  return conn.select<EpisodeEvent[]>(
+    "SELECT * FROM episode_events WHERE child_id = ? ORDER BY logged_at DESC LIMIT ?",
+    [childId, limit],
+  );
+}
+
 export async function getEpisodesForRange(
   childId: string,
   startDate: string,
