@@ -233,10 +233,7 @@ The `.ipa` is generated in `src-tauri/gen/apple/build/`. Upload to [App Store Co
 
 - **Status bar overlap**: Android WebView doesn't support `env(safe-area-inset-top)`. The app detects Android via user agent in `index.html` and sets `--safe-area-top: 36px` as a CSS variable. If content still overlaps the status bar on a specific device, adjust this value.
 
-- **App icon shows Tauri default**: After running `cargo tauri android init`, the generated project has Tauri's default icons. You must copy custom icons manually:
-  ```bash
-  cp -r src-tauri/icons/android/* src-tauri/gen/android/app/src/main/res/
-  ```
+- **App icon shows Tauri default**: Rerun `./scripts/setup-android.sh`. It regenerates Android icons from `src-tauri/icons/icon-manifest.json` into a temporary folder and copies them into `src-tauri/gen/android/app/src/main/res/`.
 
 - **Status bar icon color (light/dark)**: Tauri's default `enableEdgeToEdge()` installs an `OnPreDrawListener` that continuously overrides status bar icon appearance, making it impossible to control via XML themes or `WindowInsetsController`. The fix has two parts, both applied by `./scripts/setup-android.sh`:
 
