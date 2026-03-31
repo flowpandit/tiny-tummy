@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useChildContext } from "../contexts/ChildContext";
 import { usePoopLogs } from "../hooks/usePoopLogs";
 import { useFeedingLogs } from "../hooks/useFeedingLogs";
@@ -39,6 +39,8 @@ import type { FeedingEntry, FeedingLogDraft, HealthStatus, PoopEntry, PoopLogDra
 
 export function Home() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const navigateWithOrigin = (path: string) => navigate(path, { state: { origin: location.pathname } });
   const { activeChild, children, setActiveChildId } = useChildContext();
   const { showError, showSuccess } = useToast();
   const { logs, lastRealPoop, refresh: refreshLogs } = usePoopLogs(activeChild?.id ?? null);
@@ -318,7 +320,7 @@ export function Home() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => navigate("/feed")}
+                  onClick={() => navigateWithOrigin("/feed")}
                   className="flex flex-col items-center gap-3 rounded-[16px] py-1 text-center transition-colors hover:bg-white/35"
                   aria-label="Open feed page"
                 >
@@ -380,15 +382,15 @@ export function Home() {
                 Start a feed or meal log with quick presets.
               </p>
             </motion.button>
-            <motion.button
-              whileTap={{ scale: 0.98 }}
-              onClick={() => {
-                if (showBreastfeedAction) {
-                  navigate("/breastfeed");
-                  return;
-                }
-                navigate("/feed");
-              }}
+              <motion.button
+                whileTap={{ scale: 0.98 }}
+                onClick={() => {
+                  if (showBreastfeedAction) {
+                    navigateWithOrigin("/breastfeed");
+                    return;
+                  }
+                  navigateWithOrigin("/feed");
+                }}
               disabled={!showBreastfeedAction && !lastFeed}
               className="min-h-[104px] rounded-[18px] border border-[var(--color-border)] bg-[var(--color-surface-strong)] px-4 py-4 text-left shadow-[var(--shadow-soft)] transition-colors hover:bg-white/70 disabled:cursor-not-allowed disabled:opacity-50"
             >

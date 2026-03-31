@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { useChildContext } from "../contexts/ChildContext";
 import { useUnits } from "../contexts/UnitsContext";
 import { useFeedingLogs } from "../hooks/useFeedingLogs";
@@ -16,6 +16,7 @@ import {
 } from "../lib/quick-presets";
 import { timeSince } from "../lib/utils";
 import { formatVolumeValue, getVolumeDisplayParts } from "../lib/units";
+import { getBreastfeedingSessionSettingKey, parseBreastfeedingSession } from "../lib/breastfeeding";
 import * as db from "../lib/db";
 import { Card, CardContent, CardHeader } from "../components/ui/card";
 import { Button } from "../components/ui/button";
@@ -601,6 +602,7 @@ export function Feed() {
   const [searchParams] = useSearchParams();
   const { activeChild } = useChildContext();
   const { unitSystem } = useUnits();
+  const location = useLocation();
   const { showError, showSuccess } = useToast();
   const { logs, refresh } = useFeedingLogs(activeChild?.id ?? null, 500);
   const [weekOffset, setWeekOffset] = useState(0);
@@ -609,6 +611,8 @@ export function Feed() {
   const [editingMeal, setEditingMeal] = useState<FeedingEntry | null>(null);
   const [feedPresetSheetOpen, setFeedPresetSheetOpen] = useState(false);
   const [quickFeedPresets, setQuickFeedPresets] = useState<QuickFeedPreset[]>([]);
+  const [activeBreastfeedingSide, setActiveBreastfeedingSide] = useState<"left" | "right" | null>(null);
+  const navigateWithOrigin = (path: string) => navigate(path, { state: { origin: location.pathname } });
 
   useEffect(() => {
     if (searchParams.get("add") === "1") {
@@ -654,6 +658,41 @@ export function Feed() {
       cancelled = true;
     };
   }, [activeChild, unitSystem]);
+
+  useEffect(() => {
+    if (!activeChild) {
+      setActiveBreastfeedingSide(null);
+      return;
+    }
+
+    let cancelled = false;
+
+    const refreshSession = () => {
+      db.getSetting(getBreastfeedingSessionSettingKey(activeChild.id))
+        .then((raw) => {
+          if (cancelled) return;
+          const session = parseBreastfeedingSession(raw);
+          setActiveBreastfeedingSide(session?.activeSide ?? null);
+        })
+        .catch(() => {
+          if (!cancelled) {
+            setActiveBreastfeedingSide(null);
+          }
+        });
+    };
+
+    refreshSession();
+
+    const handleVisibility = () => refreshSession();
+    window.addEventListener("focus", handleVisibility);
+    document.addEventListener("visibilitychange", handleVisibility);
+
+    return () => {
+      cancelled = true;
+      window.removeEventListener("focus", handleVisibility);
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
+  }, [activeChild]);
 
   const predictableLogs = useMemo(() => getPredictableFeedLogs(logs), [logs]);
   const lastFeed = predictableLogs[0] ?? null;
@@ -736,6 +775,7 @@ export function Feed() {
   const feedMix = useMemo(() => getFeedMixSnapshot(weekLogs), [weekLogs]);
   const weekTrackedMl = useMemo(() => getTrackedMl(weekLogs), [weekLogs]);
   const dominantType = [...getFeedTypeCounts(weeklyPredictableLogs).entries()].sort((left, right) => right[1] - left[1])[0]?.[0] ?? null;
+  const showBreastfeedAction = activeChild?.feeding_type === "breast" || activeChild?.feeding_type === "mixed";
 
   const weekSummaryBits = [
     weeklyPredictableLogs.length === 0 ? "No feeds logged in this week" : `${weeklyPredictableLogs.length} feed${weeklyPredictableLogs.length === 1 ? "" : "s"} in this week`,
@@ -878,6 +918,23 @@ export function Feed() {
               >
                 Edit tiles
               </button>
+              {showBreastfeedAction && (
+                <button
+                  type="button"
+                  onClick={() => navigateWithOrigin("/breastfeed")}
+                  className="rounded-full border border-[var(--color-border)] bg-[var(--color-surface-strong)] px-3 py-2 text-[12px] font-semibold text-[var(--color-text-secondary)] transition-colors hover:bg-white/70 flex items-center gap-2"
+                >
+                  <span>Breastfeed timer</span>
+                  {activeBreastfeedingSide && (
+                    <span
+                      className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-[var(--color-primary)] text-[10px] font-semibold text-[var(--color-primary)]"
+                      aria-label={activeBreastfeedingSide === "left" ? "Left breastfeeding timer running" : "Right breastfeeding timer running"}
+                    >
+                      {activeBreastfeedingSide === "left" ? "L" : "R"}
+                    </span>
+                  )}
+                </button>
+              )}
             </div>
           </div>
 

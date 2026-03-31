@@ -45,6 +45,9 @@ export function PageBackButton({
 }) {
   const navigate = useNavigate();
   const location = useLocation();
+  const originPath = location.state && typeof location.state === "object" && "origin" in location.state
+    ? (location.state as { origin?: string }).origin
+    : undefined;
 
   return (
     <button
@@ -54,7 +57,7 @@ export function PageBackButton({
           navigate(-1);
           return;
         }
-        navigate(fallbackTo);
+        navigate(originPath ?? fallbackTo);
       }}
       className={cn(
         "inline-flex items-center gap-1.5 text-sm font-medium text-[var(--color-primary)] transition-colors hover:text-[var(--color-primary-hover)]",
