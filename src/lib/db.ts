@@ -442,6 +442,20 @@ export async function getGrowthLogs(childId: string, limit = 50): Promise<Growth
   );
 }
 
+export async function getGrowthLogsForRange(
+  childId: string,
+  startDate: string,
+  endDate: string,
+): Promise<GrowthEntry[]> {
+  const conn = await getDb();
+  return conn.select<GrowthEntry[]>(
+    `SELECT * FROM growth_logs
+     WHERE child_id = ? AND measured_at >= ? AND measured_at <= ?
+     ORDER BY measured_at DESC`,
+    [childId, startDate, `${endDate}T23:59:59`],
+  );
+}
+
 export async function getLatestGrowthLog(childId: string): Promise<GrowthEntry | null> {
   const conn = await getDb();
   const rows = await conn.select<GrowthEntry[]>(
@@ -1021,6 +1035,33 @@ export async function getReportStats(
     mostCommonType: typeRows[0]?.stool_type ?? null,
     mostCommonColor: colorRows[0]?.color ?? null,
   };
+}
+
+export async function getLatestReportActivityDate(childId: string): Promise<string | null> {
+  const conn = await getDb();
+  const rows = await conn.select<{ logged_at: string }[]>(
+    `SELECT MAX(logged_at) as logged_at
+     FROM (
+       SELECT logged_at FROM poop_logs WHERE child_id = ?
+       UNION ALL
+       SELECT logged_at FROM diet_logs WHERE child_id = ?
+       UNION ALL
+       SELECT logged_at FROM symptom_logs WHERE child_id = ?
+       UNION ALL
+       SELECT logged_at FROM milestone_logs WHERE child_id = ?
+       UNION ALL
+       SELECT measured_at as logged_at FROM growth_logs WHERE child_id = ?
+       UNION ALL
+       SELECT started_at as logged_at FROM sleep_logs WHERE child_id = ?
+       UNION ALL
+       SELECT started_at as logged_at FROM episodes WHERE child_id = ?
+       UNION ALL
+       SELECT logged_at FROM episode_events WHERE child_id = ?
+     )`,
+    [childId, childId, childId, childId, childId, childId, childId, childId],
+  );
+
+  return rows[0]?.logged_at ?? null;
 }
 
 // --- App Settings ---
