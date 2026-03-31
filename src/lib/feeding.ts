@@ -1,5 +1,6 @@
 import { BOTTLE_CONTENTS, BREAST_SIDES, FOOD_TYPES } from "./diet-constants";
-import type { BottleContent, BreastSide, FeedingEntry, FoodType } from "./types";
+import { formatVolumeValue } from "./units";
+import type { BottleContent, BreastSide, FeedingEntry, FoodType, UnitSystem } from "./types";
 
 export function getFoodTypeLabel(foodType: FoodType): string {
   return FOOD_TYPES.find((item) => item.value === foodType)?.label ?? foodType;
@@ -28,7 +29,7 @@ export function getFeedingEntryPrimaryLabel(entry: FeedingEntry): string {
   return getFoodTypeLabel(entry.food_type);
 }
 
-export function getFeedingEntryDetailParts(entry: FeedingEntry): string[] {
+export function getFeedingEntryDetailParts(entry: FeedingEntry, unitSystem: UnitSystem = "metric"): string[] {
   const parts: string[] = [];
 
   if (entry.breast_side) {
@@ -36,7 +37,7 @@ export function getFeedingEntryDetailParts(entry: FeedingEntry): string[] {
   }
 
   if (entry.amount_ml !== null) {
-    parts.push(`${entry.amount_ml} ml`);
+    parts.push(formatVolumeValue(entry.amount_ml, unitSystem));
   }
 
   if (entry.duration_minutes !== null) {
@@ -50,8 +51,8 @@ export function getFeedingEntryDetailParts(entry: FeedingEntry): string[] {
   return parts;
 }
 
-export function getFeedingEntryDisplayLabel(entry: FeedingEntry): string {
-  const details = getFeedingEntryDetailParts(entry);
+export function getFeedingEntryDisplayLabel(entry: FeedingEntry, unitSystem: UnitSystem = "metric"): string {
+  const details = getFeedingEntryDetailParts(entry, unitSystem);
   const primary = getFeedingEntryPrimaryLabel(entry);
   return details.length > 0 ? `${primary} · ${details.join(" · ")}` : primary;
 }

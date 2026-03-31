@@ -1,3 +1,4 @@
+import { useUnits } from "../../contexts/UnitsContext";
 import type { FeedingEntry, PoopEntry } from "../../lib/types";
 import { formatDate } from "../../lib/utils";
 import { BITSS_TYPES, STOOL_COLORS } from "../../lib/constants";
@@ -15,6 +16,7 @@ interface RecentActivityProps {
 }
 
 export function RecentActivity({ poopLogs, feedingLogs, onEditPoop, onEditMeal }: RecentActivityProps) {
+  const { unitSystem } = useUnits();
   const items: ActivityItem[] = [
     ...poopLogs.map((e) => ({ kind: "poop" as const, entry: e })),
     ...feedingLogs.map((e) => ({ kind: "meal" as const, entry: e })),
@@ -84,7 +86,7 @@ export function RecentActivity({ poopLogs, feedingLogs, onEditPoop, onEditMeal }
               />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-[18px] text-[var(--color-text)]">
-                  {getFeedingEntryDisplayLabel(meal)}
+                  {getFeedingEntryDisplayLabel(meal, unitSystem)}
                 </p>
               </div>
               <span className="ml-3 flex-shrink-0 text-[18px] text-[var(--color-text-secondary)]">

@@ -8,6 +8,7 @@ import { BOTTLE_CONTENTS, BREAST_SIDES, FOOD_TYPES } from "../../lib/diet-consta
 import { cn } from "../../lib/cn";
 import * as db from "../../lib/db";
 import { useTheme } from "../../contexts/ThemeContext";
+import { useUnits } from "../../contexts/UnitsContext";
 import { Input, Textarea } from "../ui/field";
 import {
   getLoggingChipClassName,
@@ -16,6 +17,7 @@ import {
   LoggingFieldGroup,
   LoggingFormHeader,
 } from "./logging-form-primitives";
+import { getVolumeUnitLabel, parseVolumeInputToMl } from "../../lib/units";
 import type { BottleContent, FoodType, BreastSide, FeedingLogDraft } from "../../lib/types";
 
 function getCurrentDate(): string {
@@ -71,7 +73,9 @@ export function DietLogForm({ open, onClose, childId, onLogged, initialDraft = n
   const [notes, setNotes] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { resolved } = useTheme();
+  const { unitSystem } = useUnits();
   const nightMode = resolved === "night";
+  const volumeUnit = getVolumeUnitLabel(unitSystem);
 
   const applyDraft = (draft?: Partial<FeedingLogDraft> | null) => {
     const nextDraft = { ...EMPTY_DRAFT, ...draft };
@@ -116,7 +120,7 @@ export function DietLogForm({ open, onClose, childId, onLogged, initialDraft = n
         logged_at: combineToISO(logDate, logTime),
         food_type: foodType,
         food_name: showsFoodName ? foodName.trim() || null : null,
-        amount_ml: showsAmount ? parseInteger(amountMl) : null,
+        amount_ml: showsAmount ? parseVolumeInputToMl(amountMl, unitSystem) : null,
         duration_minutes: showsDuration ? parseInteger(durationMinutes) : null,
         breast_side: showsBreastSide ? breastSide : null,
         bottle_content: showsBottleContent ? bottleContent : null,
@@ -203,15 +207,16 @@ export function DietLogForm({ open, onClose, childId, onLogged, initialDraft = n
 
           {foodType === "bottle" && (
             <>
-              <LoggingFieldGroup label="Amount (ml)" isNight={nightMode}>
+              <LoggingFieldGroup label={`Amount (${volumeUnit})`} isNight={nightMode}>
                 <Input
                   id="amount-ml"
                   type="number"
                   min="0"
+                  step={unitSystem === "imperial" ? "0.1" : "1"}
                   inputMode="numeric"
                   value={amountMl}
                   onChange={(e) => setAmountMl(e.target.value)}
-                  placeholder="e.g. 120"
+                  placeholder={unitSystem === "imperial" ? "e.g. 4.0" : "e.g. 120"}
                   className={getLoggingInputClassName(nightMode)}
                 />
               </LoggingFieldGroup>
@@ -234,15 +239,16 @@ export function DietLogForm({ open, onClose, childId, onLogged, initialDraft = n
           )}
 
           {(foodType === "formula" || foodType === "pumping" || foodType === "water") && (
-            <LoggingFieldGroup label="Amount (ml)" isNight={nightMode}>
+            <LoggingFieldGroup label={`Amount (${volumeUnit})`} isNight={nightMode}>
               <Input
                 id="amount-ml-other"
                 type="number"
                 min="0"
+                step={unitSystem === "imperial" ? "0.1" : "1"}
                 inputMode="numeric"
                 value={amountMl}
                 onChange={(e) => setAmountMl(e.target.value)}
-                placeholder={foodType === "pumping" ? "e.g. 90" : "e.g. 120"}
+                placeholder={unitSystem === "imperial" ? "e.g. 3.0" : foodType === "pumping" ? "e.g. 90" : "e.g. 120"}
                 className={getLoggingInputClassName(nightMode)}
               />
             </LoggingFieldGroup>

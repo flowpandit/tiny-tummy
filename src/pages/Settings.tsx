@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useChildContext } from "../contexts/ChildContext";
 import { useTheme } from "../contexts/ThemeContext";
+import { useUnits } from "../contexts/UnitsContext";
 import { Card, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { FieldLabel, Input } from "../components/ui/field";
@@ -27,7 +28,7 @@ import { AvatarUpload } from "../components/child/AvatarUpload";
 import { Avatar } from "../components/child/Avatar";
 import { saveAvatar, deleteAvatar } from "../lib/photos";
 import * as db from "../lib/db";
-import type { Child, FeedingType } from "../lib/types";
+import type { Child, FeedingType, UnitSystem } from "../lib/types";
 
 function EditChildSheet({
   child,
@@ -289,6 +290,11 @@ const THEME_OPTIONS: { value: "system" | "light" | "dark"; label: string }[] = [
   { value: "dark", label: "Dark" },
 ];
 
+const UNIT_SYSTEM_OPTIONS: { value: UnitSystem; label: string }[] = [
+  { value: "metric", label: "Metric" },
+  { value: "imperial", label: "Imperial" },
+];
+
 function formatScheduleTime(value: string) {
   const [hour, minute] = value.split(":").map(Number);
   const suffix = hour >= 12 ? "PM" : "AM";
@@ -361,6 +367,34 @@ function ThemeSection() {
               </div>
             )}
           </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function MeasurementsSection() {
+  const { unitSystem, setUnitSystem } = useUnits();
+
+  return (
+    <div className="mb-6">
+      <h3 className="text-sm font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider mb-3">
+        Measurements
+      </h3>
+      <Card>
+        <CardContent className="py-3">
+          <p className="text-sm font-medium text-[var(--color-text)] mb-2">Unit system</p>
+          <SegmentedControl
+            value={unitSystem}
+            onChange={(value) => setUnitSystem(value as UnitSystem)}
+            options={UNIT_SYSTEM_OPTIONS}
+            className="bg-[var(--color-bg)] rounded-[var(--radius-sm)] border border-[var(--color-border)] p-0.5"
+            gridClassName="grid-cols-2"
+            size="sm"
+          />
+          <p className="mt-2 text-xs text-[var(--color-text-secondary)]">
+            Feed amounts, growth measurements, quick presets, and reports will use this system.
+          </p>
         </CardContent>
       </Card>
     </div>
@@ -478,6 +512,8 @@ export function Settings() {
 
       {/* Appearance */}
       <ThemeSection />
+
+      <MeasurementsSection />
 
       {/* Notifications */}
       <NotificationSection children={children} />

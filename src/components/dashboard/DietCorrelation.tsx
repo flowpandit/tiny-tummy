@@ -1,3 +1,4 @@
+import { useUnits } from "../../contexts/UnitsContext";
 import type { FeedingEntry, PoopEntry, TimelineEvent } from "../../lib/types";
 import { STOOL_COLORS } from "../../lib/constants";
 import { getFeedingEntryDisplayLabel } from "../../lib/feeding";
@@ -12,6 +13,7 @@ function buildTimeline(
   poopLogs: PoopEntry[],
   feedingLogs: FeedingEntry[],
   days: number,
+  unitSystem: "metric" | "imperial",
 ): Map<string, TimelineEvent[]> {
   const now = new Date();
   const cutoff = new Date(now);
@@ -38,7 +40,7 @@ function buildTimeline(
       id: log.id,
       type: "meal",
       logged_at: log.logged_at,
-      label: getFeedingEntryDisplayLabel(log),
+      label: getFeedingEntryDisplayLabel(log, unitSystem),
     });
   }
 
@@ -75,7 +77,8 @@ function formatTime(dateStr: string): string {
 }
 
 export function DietCorrelation({ poopLogs, feedingLogs, days }: DietCorrelationProps) {
-  const timeline = buildTimeline(poopLogs, feedingLogs, days);
+  const { unitSystem } = useUnits();
+  const timeline = buildTimeline(poopLogs, feedingLogs, days, unitSystem);
 
   if (timeline.size === 0) {
     return (

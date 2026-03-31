@@ -3,6 +3,7 @@ import { writeFile } from "@tauri-apps/plugin-fs";
 import { save } from "@tauri-apps/plugin-dialog";
 import { platform } from "@tauri-apps/plugin-os";
 import { useChildContext } from "../contexts/ChildContext";
+import { useUnits } from "../contexts/UnitsContext";
 import { Button } from "../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { PageIntro } from "../components/ui/page-intro";
@@ -28,6 +29,7 @@ function addDays(dateString: string, delta: number): string {
 
 export function Report() {
   const { activeChild } = useChildContext();
+  const { unitSystem } = useUnits();
   const { showError, showSuccess } = useToast();
 
   const today = new Date().toISOString().split("T")[0];
@@ -70,7 +72,7 @@ export function Report() {
   const handleGenerate = async () => {
     setIsGenerating(true);
     try {
-      const data = await generateReportData(activeChild.id, startDate, endDate, options);
+      const data = await generateReportData(activeChild.id, startDate, endDate, options, unitSystem);
       setReportData(data);
     } finally {
       setIsGenerating(false);
@@ -92,6 +94,7 @@ export function Report() {
         startDate,
         endDate,
         data: reportData,
+        unitSystem,
       }));
       const currentPlatform = platform();
       const isAndroid = currentPlatform === "android";

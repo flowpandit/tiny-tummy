@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { useChildContext } from "../contexts/ChildContext";
+import { useUnits } from "../contexts/UnitsContext";
 import { useGrowthLogs } from "../hooks/useGrowthLogs";
 import { Card, CardContent, CardHeader } from "../components/ui/card";
 import { Button } from "../components/ui/button";
@@ -9,29 +10,26 @@ import { GrowthLogSheet } from "../components/growth/GrowthLogSheet";
 import { GrowthTrendChart } from "../components/growth/GrowthTrendChart";
 import { cn } from "../lib/cn";
 import { formatDate, getAgeLabelFromDob, timeSince } from "../lib/utils";
-import type { GrowthEntry } from "../lib/types";
+import { formatGrowthValue, getGrowthUnitLabel, growthMetricToDisplay } from "../lib/units";
+import type { GrowthEntry, UnitSystem } from "../lib/types";
 
 const METRIC_OPTIONS = [
-  { key: "weight_kg", label: "Weight", unit: "kg", color: "var(--color-cta)", tone: "cta" as const },
-  { key: "height_cm", label: "Length", unit: "cm", color: "var(--color-healthy)", tone: "healthy" as const },
-  { key: "head_circumference_cm", label: "Head", unit: "cm", color: "var(--color-info)", tone: "info" as const },
+  { key: "weight_kg", label: "Weight", color: "var(--color-cta)", tone: "cta" as const },
+  { key: "height_cm", label: "Length", color: "var(--color-healthy)", tone: "healthy" as const },
+  { key: "head_circumference_cm", label: "Head", color: "var(--color-info)", tone: "info" as const },
 ] as const;
 
 type MetricKey = (typeof METRIC_OPTIONS)[number]["key"];
-
-function formatMetricValue(value: number | null, unit: string): string {
-  if (value === null) return "—";
-  return `${value.toFixed(1)} ${unit}`;
-}
 
 function getPreviousValue(logs: GrowthEntry[], metric: MetricKey): number | null {
   const matches = logs.filter((log) => log[metric] !== null);
   return matches[1]?.[metric] ?? null;
 }
 
-function formatDelta(current: number | null, previous: number | null, unit: string): string | null {
+function formatDelta(current: number | null, previous: number | null, metric: MetricKey, unitSystem: UnitSystem): string | null {
   if (current === null || previous === null) return null;
-  const delta = current - previous;
+  const delta = growthMetricToDisplay(metric, current, unitSystem) - growthMetricToDisplay(metric, previous, unitSystem);
+  const unit = getGrowthUnitLabel(metric, unitSystem);
   if (Math.abs(delta) < 0.05) return `No change from the previous ${unit} check`;
   const prefix = delta > 0 ? "+" : "";
   return `${prefix}${delta.toFixed(1)} ${unit} since the previous measurement`;
@@ -44,6 +42,7 @@ function countLoggedMetrics(log: GrowthEntry | null): number {
 
 export function Growth() {
   const { activeChild } = useChildContext();
+  const { unitSystem } = useUnits();
   const { logs, latest, refresh } = useGrowthLogs(activeChild?.id ?? null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [activeMetric, setActiveMetric] = useState<MetricKey>("weight_kg");
@@ -99,20 +98,20 @@ export function Growth() {
           <StatGrid>
             <StatTile
               eyebrow="Weight"
-              value={formatMetricValue(latestWeight, "kg")}
-              description={formatDelta(latestWeight, previousWeight, "kg") ?? "Add another measurement to see change over time."}
+              value={formatGrowthValue("weight_kg", latestWeight, unitSystem)}
+              description={formatDelta(latestWeight, previousWeight, "weight_kg", unitSystem) ?? "Add another measurement to see change over time."}
               tone="cta"
             />
             <StatTile
               eyebrow="Length / height"
-              value={formatMetricValue(latestHeight, "cm")}
-              description={formatDelta(latestHeight, previousHeight, "cm") ?? "Add another measurement to see change over time."}
+              value={formatGrowthValue("height_cm", latestHeight, unitSystem)}
+              description={formatDelta(latestHeight, previousHeight, "height_cm", unitSystem) ?? "Add another measurement to see change over time."}
               tone="healthy"
             />
             <StatTile
               eyebrow="Head circumference"
-              value={formatMetricValue(latestHead, "cm")}
-              description={formatDelta(latestHead, previousHead, "cm") ?? "Add another measurement to see change over time."}
+              value={formatGrowthValue("head_circumference_cm", latestHead, unitSystem)}
+              description={formatDelta(latestHead, previousHead, "head_circumference_cm", unitSystem) ?? "Add another measurement to see change over time."}
               tone="info"
             />
           </StatGrid>
@@ -181,7 +180,7 @@ export function Growth() {
               <GrowthTrendChart
                 logs={sortedLogs}
                 metric={activeMetric}
-                unit={metricMeta.unit}
+                unit={getGrowthUnitLabel(activeMetric, unitSystem)}
                 lineColor={metricMeta.color}
               />
               <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-3">
@@ -192,7 +191,7 @@ export function Growth() {
                 <InsetPanel className="bg-[var(--color-bg)] p-3">
                   <p className="text-[11px] uppercase tracking-[0.1em] text-[var(--color-text-soft)]">Latest value</p>
                   <p className="mt-1 text-sm font-semibold text-[var(--color-text)]">
-                    {formatMetricValue(activeMetricLatest?.[activeMetric] ?? null, metricMeta.unit)}
+                    {formatGrowthValue(activeMetric, activeMetricLatest?.[activeMetric] ?? null, unitSystem)}
                   </p>
                 </InsetPanel>
                 <InsetPanel className="bg-[var(--color-bg)] p-3">
@@ -225,15 +224,15 @@ export function Growth() {
                     <div className="mt-3 grid grid-cols-3 gap-2">
                       <InsetPanel className="bg-[var(--color-surface)] p-2 text-center">
                         <p className="text-[11px] uppercase tracking-[0.1em] text-[var(--color-text-soft)]">Weight</p>
-                        <p className="mt-1 text-sm font-semibold text-[var(--color-text)]">{formatMetricValue(log.weight_kg, "kg")}</p>
+                        <p className="mt-1 text-sm font-semibold text-[var(--color-text)]">{formatGrowthValue("weight_kg", log.weight_kg, unitSystem)}</p>
                       </InsetPanel>
                       <InsetPanel className="bg-[var(--color-surface)] p-2 text-center">
                         <p className="text-[11px] uppercase tracking-[0.1em] text-[var(--color-text-soft)]">Length</p>
-                        <p className="mt-1 text-sm font-semibold text-[var(--color-text)]">{formatMetricValue(log.height_cm, "cm")}</p>
+                        <p className="mt-1 text-sm font-semibold text-[var(--color-text)]">{formatGrowthValue("height_cm", log.height_cm, unitSystem)}</p>
                       </InsetPanel>
                       <InsetPanel className="bg-[var(--color-surface)] p-2 text-center">
                         <p className="text-[11px] uppercase tracking-[0.1em] text-[var(--color-text-soft)]">Head</p>
-                        <p className="mt-1 text-sm font-semibold text-[var(--color-text)]">{formatMetricValue(log.head_circumference_cm, "cm")}</p>
+                        <p className="mt-1 text-sm font-semibold text-[var(--color-text)]">{formatGrowthValue("head_circumference_cm", log.head_circumference_cm, unitSystem)}</p>
                       </InsetPanel>
                     </div>
                     {log.notes && (

@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
+import { useUnits } from "../../contexts/UnitsContext";
 import { Sheet } from "../ui/sheet";
 import { Button } from "../ui/button";
 import { FieldLabel, Input, fieldInputClassName } from "../ui/field";
@@ -15,6 +16,7 @@ import {
   type QuickFeedPreset,
   type QuickPoopPreset,
 } from "../../lib/quick-presets";
+import { formatVolumeValue, getVolumeUnitLabel } from "../../lib/units";
 import type {
   FeedingLogDraft,
   FeedingType,
@@ -93,12 +95,39 @@ export function FeedPresetEditorSheet({
   presets,
   onSave,
 }: FeedPresetEditorSheetProps) {
+  const { unitSystem } = useUnits();
   const [drafts, setDrafts] = useState<Array<Partial<FeedingLogDraft>>>([]);
+  const volumeUnit = getVolumeUnitLabel(unitSystem);
+
+  const toEditorDraft = (draft: Partial<FeedingLogDraft>): Partial<FeedingLogDraft> => ({
+    ...draft,
+    amount_ml: draft.amount_ml?.trim()
+      ? formatVolumeValue(Number(draft.amount_ml), unitSystem, { includeUnit: false })
+      : "",
+  });
+
+  const toStoredDraft = (draft: Partial<FeedingLogDraft>): Partial<FeedingLogDraft> => {
+    const amount = draft.amount_ml?.trim();
+    if (!amount) {
+      return { ...draft, amount_ml: "" };
+    }
+
+    const parsed = Number.parseFloat(amount);
+    if (!Number.isFinite(parsed) || parsed < 0) {
+      return { ...draft, amount_ml: "" };
+    }
+
+    const canonicalMl = unitSystem === "imperial"
+      ? Math.round(parsed * 29.5735295625)
+      : Math.round(parsed);
+
+    return { ...draft, amount_ml: String(canonicalMl) };
+  };
 
   useEffect(() => {
     if (!open) return;
-    setDrafts(presets.map((preset) => ({ ...preset.draft })));
-  }, [open, presets]);
+    setDrafts(presets.map((preset) => toEditorDraft(preset.draft)));
+  }, [open, presets, unitSystem]);
 
   const updateDraft = (index: number, updates: Partial<FeedingLogDraft>) => {
     setDrafts((current) => current.map((draft, currentIndex) => (
@@ -111,7 +140,7 @@ export function FeedPresetEditorSheet({
   };
 
   const addDraft = () => {
-    setDrafts((current) => [...current, { ...getDefaultFeedDraft(feedingType) }]);
+    setDrafts((current) => [...current, toEditorDraft({ ...getDefaultFeedDraft(feedingType, unitSystem) })]);
   };
 
   return (
@@ -120,12 +149,12 @@ export function FeedPresetEditorSheet({
       onClose={onClose}
       title="Customize quick feed tiles"
       description="Choose the feed types that should appear on Home. Tile names are generated from what you enter here."
-      onReset={() => setDrafts(getDefaultQuickFeedPresets(feedingType).map((preset) => ({ ...preset.draft })))}
-      onSave={() => onSave(drafts)}
+      onReset={() => setDrafts(getDefaultQuickFeedPresets(feedingType, unitSystem).map((preset) => toEditorDraft({ ...preset.draft })))}
+      onSave={() => onSave(drafts.map(toStoredDraft))}
       saveLabel="Save feed tiles"
     >
       {drafts.map((draft, index) => {
-        const preview = describeFeedPresetDraft(draft);
+        const preview = describeFeedPresetDraft(toStoredDraft(draft), unitSystem);
         const foodType = draft.food_type ?? "bottle";
         const showFoodName = foodType === "solids" || foodType === "other";
         const showBottleContent = foodType === "bottle";
@@ -223,12 +252,12 @@ export function FeedPresetEditorSheet({
                 <div className={`grid gap-3 ${showAmount && showDuration ? "grid-cols-2" : "grid-cols-1"}`}>
                   {showAmount && (
                     <div>
-                      <FieldLabel>Amount (ml)</FieldLabel>
+                      <FieldLabel>Amount ({volumeUnit})</FieldLabel>
                       <Input
                         inputMode="numeric"
                         value={draft.amount_ml ?? ""}
                         onChange={(event) => updateDraft(index, { amount_ml: event.target.value })}
-                        placeholder="120"
+                        placeholder={unitSystem === "imperial" ? "4.0" : "120"}
                       />
                     </div>
                   )}

@@ -2,6 +2,7 @@ import { lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ChildProvider, useChildContext } from "./contexts/ChildContext";
 import { ThemeProvider } from "./contexts/ThemeContext";
+import { UnitsProvider } from "./contexts/UnitsContext";
 import { ErrorBoundary } from "./components/ui/error-boundary";
 import { ToastProvider } from "./components/ui/toast";
 import { AppShell } from "./components/layout/AppShell";
@@ -88,11 +89,13 @@ function App() {
     <ErrorBoundary>
       <BrowserRouter>
         <ThemeProvider>
-          <ToastProvider>
-            <ChildProvider>
-              <AppRoutes />
-            </ChildProvider>
-          </ToastProvider>
+          <UnitsProvider>
+            <ToastProvider>
+              <ChildProvider>
+                <AppRoutes />
+              </ChildProvider>
+            </ToastProvider>
+          </UnitsProvider>
         </ThemeProvider>
       </BrowserRouter>
     </ErrorBoundary>
