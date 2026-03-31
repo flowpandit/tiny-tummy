@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useChildContext } from "../contexts/ChildContext";
 import { useTheme } from "../contexts/ThemeContext";
 import { useUnits } from "../contexts/UnitsContext";
+import { useTrial } from "../contexts/TrialContext";
 import { Card, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { FieldLabel, Input } from "../components/ui/field";
@@ -403,6 +404,7 @@ function MeasurementsSection() {
 
 export function Settings() {
   const { children, activeChild, refreshChildren } = useChildContext();
+  const { simulateExpiration } = useTrial();
   const navigate = useNavigate();
   const [editingChild, setEditingChild] = useState<Child | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
@@ -625,15 +627,39 @@ export function Settings() {
             <p className="text-xs text-[var(--color-muted)]">
               100% offline. Your data never leaves this device.
             </p>
-            <button
-              onClick={() => navigate("/privacy")}
-              className="text-xs text-[var(--color-primary)] cursor-pointer text-left"
-            >
-              Privacy Policy
-            </button>
+            <div className="flex gap-4">
+              <button
+                onClick={() => navigate("/privacy")}
+                className="text-xs text-[var(--color-primary)] cursor-pointer text-left font-medium"
+              >
+                Privacy Policy
+              </button>
+            </div>
           </CardContent>
         </Card>
       </div>
+
+      {import.meta.env.DEV && (
+        <div className="mb-12">
+          <h3 className="text-sm font-semibold text-[var(--color-alert)] uppercase tracking-wider mb-3">
+            Developer Tools
+          </h3>
+          <Card className="border-[var(--color-alert)]/30">
+            <CardContent className="py-3 flex flex-col gap-3">
+              <p className="text-xs text-[var(--color-text-secondary)]">
+                These tools only appear during local development.
+              </p>
+              <Button 
+                variant="secondary" 
+                className="w-full text-[var(--color-alert)] border border-[var(--color-alert)]/30 hover:bg-[var(--color-alert)]/10"
+                onClick={simulateExpiration}
+              >
+                Simulate Trial Expiration
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Edit sheet */}
       {editingChild && (

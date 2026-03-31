@@ -6,6 +6,8 @@ import { UnitsProvider } from "./contexts/UnitsContext";
 import { ErrorBoundary } from "./components/ui/error-boundary";
 import { ToastProvider } from "./components/ui/toast";
 import { AppShell } from "./components/layout/AppShell";
+import { TrialProvider, useTrial } from "./contexts/TrialContext";
+import { Paywall } from "./components/ui/Paywall";
 
 
 import { Home } from "./pages/Home";
@@ -38,12 +40,24 @@ function PageLoader() {
 
 function AppRoutes() {
   const { children, isLoading } = useChildContext();
+  const { isLocked, isLoading: isTrialLoading } = useTrial();
 
-  if (isLoading) {
+  if (isLoading || isTrialLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[var(--color-bg)]">
         <div className="w-8 h-8 border-3 border-[var(--color-primary)] border-t-transparent rounded-full animate-spin" />
       </div>
+    );
+  }
+
+  if (isLocked) {
+    return (
+      <Suspense fallback={<PageLoader />}>
+        <Routes>
+          <Route path="/privacy" element={<Privacy />} />
+          <Route path="*" element={<Paywall />} />
+        </Routes>
+      </Suspense>
     );
   }
 
@@ -92,7 +106,9 @@ function App() {
           <UnitsProvider>
             <ToastProvider>
               <ChildProvider>
-                <AppRoutes />
+                <TrialProvider>
+                  <AppRoutes />
+                </TrialProvider>
               </ChildProvider>
             </ToastProvider>
           </UnitsProvider>
