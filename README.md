@@ -294,7 +294,7 @@ See the in-app privacy policy at `/privacy` for the full text.
 
 | | iOS | Android |
 |--|-----|---------|
-| Price | Free or $2.99 one-time | Free or $2.99 one-time |
+| Price | 14-day free trial, then $9.99 one-time | 14-day free trial, then $9.99 one-time |
 | Store fee | 15% (Small Business) or 30% | 15% on first $1M |
 | Min target | iOS 16 | Android 7.0 (SDK 24) |
 | App size | ~5-10 MB | ~15-28 MB |
