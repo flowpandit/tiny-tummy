@@ -40,6 +40,12 @@ export function useAlertEngine() {
 
         if (colorResult) {
           const [alertType, severity, title, message] = colorResult;
+          const hasSameAlertForLog = await db.hasAlertForLog(child.id, alertType, lastPoop.id);
+
+          if (hasSameAlertForLog) {
+            return;
+          }
+
           await db.createAlert({
             child_id: child.id,
             alert_type: alertType,

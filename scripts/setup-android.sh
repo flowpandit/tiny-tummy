@@ -23,7 +23,11 @@ echo "  ✓ MainActivity.kt (status bar icon control)"
 cp src-tauri/android-templates/StatusBarPlugin.kt "$JAVA_DIR/StatusBarPlugin.kt"
 echo "  ✓ StatusBarPlugin.kt (theme bridge)"
 
-# 3. Copy custom app icons
+# 3. Copy DownloadsPlugin.kt (Tauri plugin for native Downloads saves)
+cp src-tauri/android-templates/DownloadsPlugin.kt "$JAVA_DIR/DownloadsPlugin.kt"
+echo "  ✓ DownloadsPlugin.kt (Downloads save bridge)"
+
+# 4. Copy custom app icons
 cp -r src-tauri/icons/android/* "$RES_DIR/"
 echo "  ✓ App icons"
 

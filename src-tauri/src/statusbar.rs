@@ -1,9 +1,15 @@
-use serde::Serialize;
 use tauri::{
     plugin::{Builder, TauriPlugin},
-    Manager, Runtime,
+    Runtime,
 };
 
+#[cfg(target_os = "android")]
+use serde::Serialize;
+
+#[cfg(target_os = "android")]
+use tauri::Manager;
+
+#[cfg(target_os = "android")]
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 struct SetStylePayload {
@@ -42,14 +48,14 @@ pub async fn set_status_bar_style<R: Runtime>(app: tauri::AppHandle<R>, is_light
     #[cfg(target_os = "android")]
     {
         let handle = app.state::<StatusBarHandle<R>>();
-        handle
+        return handle
             .0
             .run_mobile_plugin::<()>("setStyle", SetStylePayload { is_light })
-            .map_err(|e: tauri::plugin::mobile::PluginInvokeError| e.to_string())?;
+            .map_err(|e: tauri::plugin::mobile::PluginInvokeError| e.to_string());
     }
     #[cfg(not(target_os = "android"))]
     {
         let _ = (app, is_light);
+        Ok(())
     }
-    Ok(())
 }

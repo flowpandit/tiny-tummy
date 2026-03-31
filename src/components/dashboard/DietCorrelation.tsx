@@ -1,16 +1,16 @@
-import type { PoopEntry, DietEntry, TimelineEvent } from "../../lib/types";
+import type { FeedingEntry, PoopEntry, TimelineEvent } from "../../lib/types";
 import { STOOL_COLORS } from "../../lib/constants";
-import { FOOD_TYPES } from "../../lib/diet-constants";
+import { getFeedingEntryDisplayLabel } from "../../lib/feeding";
 
 interface DietCorrelationProps {
   poopLogs: PoopEntry[];
-  dietLogs: DietEntry[];
+  feedingLogs: FeedingEntry[];
   days: number;
 }
 
 function buildTimeline(
   poopLogs: PoopEntry[],
-  dietLogs: DietEntry[],
+  feedingLogs: FeedingEntry[],
   days: number,
 ): Map<string, TimelineEvent[]> {
   const now = new Date();
@@ -32,14 +32,13 @@ function buildTimeline(
     });
   }
 
-  for (const log of dietLogs) {
+  for (const log of feedingLogs) {
     if (new Date(log.logged_at) < cutoff) continue;
-    const typeLabel = FOOD_TYPES.find((f) => f.value === log.food_type)?.label ?? log.food_type;
     events.push({
       id: log.id,
       type: "meal",
       logged_at: log.logged_at,
-      label: log.food_name ? `${typeLabel}: ${log.food_name}` : typeLabel,
+      label: getFeedingEntryDisplayLabel(log),
     });
   }
 
@@ -75,13 +74,13 @@ function formatTime(dateStr: string): string {
   });
 }
 
-export function DietCorrelation({ poopLogs, dietLogs, days }: DietCorrelationProps) {
-  const timeline = buildTimeline(poopLogs, dietLogs, days);
+export function DietCorrelation({ poopLogs, feedingLogs, days }: DietCorrelationProps) {
+  const timeline = buildTimeline(poopLogs, feedingLogs, days);
 
   if (timeline.size === 0) {
     return (
       <p className="text-sm text-[var(--color-muted)] text-center py-8">
-        Log meals and poops to see correlations
+        Log feeds and poops to see correlations
       </p>
     );
   }

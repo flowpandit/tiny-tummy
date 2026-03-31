@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { getGuidanceTips } from "../lib/tauri";
 import { Card, CardContent } from "../components/ui/card";
+import { PageIntro } from "../components/ui/page-intro";
+import { PageBackButton, PageBody } from "../components/ui/page-layout";
 import { cn } from "../lib/cn";
 import type { GuidanceTip } from "../lib/types";
 
@@ -96,16 +98,14 @@ export function Guidance() {
       : tips.filter((t) => t.category === activeFilter);
 
   return (
-    <div className="px-4 py-5">
-      <div className="mb-5 rounded-[16px] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-[var(--shadow-soft)] backdrop-blur-xl">
-        <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--color-text-soft)]">Support</p>
-        <h2 className="mt-2 font-[var(--font-display)] text-3xl font-semibold text-[var(--color-text)]">
-          Guidance
-        </h2>
-        <p className="mt-3 text-base leading-relaxed text-[var(--color-text-secondary)]">
-          Tap a card to read more. Always consult your doctor for specific medical advice.
-        </p>
-      </div>
+    <PageBody>
+      <PageBackButton fallbackTo="/settings" />
+
+      <PageIntro
+        eyebrow="Support"
+        title="Guidance"
+        description="Tap a topic to read more. Always consult your doctor for specific medical advice."
+      />
 
       {/* Category filter chips */}
       <div className="flex gap-2 overflow-x-auto pb-3 mb-4 -mx-4 px-4 scrollbar-none">
@@ -143,6 +143,6 @@ export function Guidance() {
           </div>
         );
       })}
-    </div>
+    </PageBody>
   );
 }

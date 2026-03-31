@@ -1,19 +1,24 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "../../lib/cn";
 import { STOOL_COLORS } from "../../lib/constants";
+import { useTheme } from "../../contexts/ThemeContext";
+import { getLoggingLabelClassName } from "./logging-form-primitives";
 import type { StoolColor } from "../../lib/types";
 
 interface ColorPickerProps {
   value: StoolColor | null;
   onChange: (color: StoolColor) => void;
+  nightMode?: boolean;
 }
 
-export function ColorPicker({ value, onChange }: ColorPickerProps) {
+export function ColorPicker({ value, onChange, nightMode = false }: ColorPickerProps) {
+  const { resolved } = useTheme();
+  const isNight = nightMode || resolved === "night";
   const selectedInfo = value ? STOOL_COLORS.find((c) => c.value === value) : null;
 
   return (
     <div>
-      <label className="block text-sm font-medium text-[var(--color-text)] mb-2">
+      <label className={cn(getLoggingLabelClassName(isNight), "mb-2")}>
         Color
       </label>
       <div className="flex gap-3 justify-center">
@@ -25,11 +30,12 @@ export function ColorPicker({ value, onChange }: ColorPickerProps) {
               type="button"
               onClick={() => onChange(color.value)}
               className={cn(
-                "w-10 h-10 rounded-full cursor-pointer transition-transform duration-200 border-2",
+                "w-10 h-10",
+                "rounded-full cursor-pointer transition-transform duration-200 border-2",
                 value === color.value
                   ? "scale-110 border-[var(--color-primary)]"
                   : needsBorder
-                    ? "border-[var(--color-border)] hover:scale-105"
+                    ? isNight ? "border-slate-600 hover:scale-105" : "border-[var(--color-border)] hover:scale-105"
                     : "border-transparent hover:scale-105",
               )}
               style={{ backgroundColor: color.hex }}
@@ -52,10 +58,13 @@ export function ColorPicker({ value, onChange }: ColorPickerProps) {
           >
             <div
               className={cn(
-                "mt-2 p-2.5 rounded-[var(--radius-sm)] border",
+                "mt-2 rounded-[var(--radius-sm)] border",
+                isNight ? "p-3" : "p-2.5",
                 selectedInfo.isRedFlag
                   ? "bg-[var(--color-alert-bg)] border-[var(--color-alert)]/20"
-                  : "bg-[var(--color-healthy-bg)] border-[var(--color-healthy)]/20",
+                  : isNight
+                    ? "bg-slate-900 border-slate-700"
+                    : "bg-[var(--color-healthy-bg)] border-[var(--color-healthy)]/20",
               )}
             >
               <div className="flex items-start gap-2">
@@ -70,7 +79,9 @@ export function ColorPicker({ value, onChange }: ColorPickerProps) {
                       "text-xs font-semibold mb-0.5",
                       selectedInfo.isRedFlag
                         ? "text-[var(--color-alert)]"
-                        : "text-[var(--color-healthy)]",
+                        : isNight
+                          ? "text-slate-100"
+                          : "text-[var(--color-healthy)]",
                     )}
                   >
                     {selectedInfo.label}
@@ -81,7 +92,9 @@ export function ColorPicker({ value, onChange }: ColorPickerProps) {
                       "text-xs leading-relaxed",
                       selectedInfo.isRedFlag
                         ? "text-[var(--color-alert)]"
-                        : "text-[var(--color-text-secondary)]",
+                        : isNight
+                          ? "text-slate-300"
+                          : "text-[var(--color-text-secondary)]",
                     )}
                   >
                     {selectedInfo.description}

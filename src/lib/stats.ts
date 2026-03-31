@@ -14,14 +14,14 @@ export function formatLocalDateKey(date: Date): string {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }
 
-export function fillDailyFrequencyDays(data: DailyFrequency[], days: number): FilledFrequencyDay[] {
+export function fillDailyFrequencyDays(data: DailyFrequency[], days: number, endDate: Date = new Date()): FilledFrequencyDay[] {
   const map = new Map(data.map((day) => [day.date, Number(day.count)]));
   const filled: FilledFrequencyDay[] = [];
-  const now = new Date();
+  const finalDate = new Date(endDate);
+  finalDate.setHours(0, 0, 0, 0);
 
   for (let offset = days - 1; offset >= 0; offset--) {
-    const date = new Date(now);
-    date.setHours(0, 0, 0, 0);
+    const date = new Date(finalDate);
     date.setDate(date.getDate() - offset);
     const key = formatLocalDateKey(date);
 
@@ -50,8 +50,8 @@ export function getDominantStoolColor(colors: ColorCount[]): string | null {
   return colors[0]?.color ?? null;
 }
 
-export function getRecentNoPoopDates(logs: PoopEntry[], days: number): Set<string> {
-  const cutoff = new Date();
+export function getRecentNoPoopDates(logs: PoopEntry[], days: number, endDate: Date = new Date()): Set<string> {
+  const cutoff = new Date(endDate);
   cutoff.setHours(0, 0, 0, 0);
   cutoff.setDate(cutoff.getDate() - (days - 1));
 

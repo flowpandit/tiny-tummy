@@ -4,6 +4,34 @@ import { generateId } from "./utils";
 
 const PHOTOS_DIR = "photos";
 
+function getMimeTypeFromPath(path: string): string {
+  const ext = path.split(".").pop()?.toLowerCase();
+
+  switch (ext) {
+    case "jpg":
+    case "jpeg":
+      return "image/jpeg";
+    case "png":
+      return "image/png";
+    case "gif":
+      return "image/gif";
+    case "webp":
+      return "image/webp";
+    case "heic":
+      return "image/heic";
+    case "heif":
+      return "image/heif";
+    case "avif":
+      return "image/avif";
+    case "bmp":
+      return "image/bmp";
+    case "svg":
+      return "image/svg+xml";
+    default:
+      return "application/octet-stream";
+  }
+}
+
 async function ensurePhotosDir() {
   const dirExists = await exists(PHOTOS_DIR, { baseDir: BaseDirectory.AppData });
   if (!dirExists) {
@@ -35,8 +63,17 @@ export async function savePhoto(file: File): Promise<string> {
  */
 export async function loadPhoto(relativePath: string): Promise<string> {
   const bytes = await readFile(relativePath, { baseDir: BaseDirectory.AppData });
-  const blob = new Blob([bytes], { type: "image/jpeg" });
+  const blob = new Blob([bytes], { type: getMimeTypeFromPath(relativePath) });
   return URL.createObjectURL(blob);
+}
+
+export async function loadPhotoDataUrl(relativePath: string): Promise<string> {
+  const bytes = await readFile(relativePath, { baseDir: BaseDirectory.AppData });
+  let binary = "";
+  for (const byte of bytes) {
+    binary += String.fromCharCode(byte);
+  }
+  return `data:${getMimeTypeFromPath(relativePath)};base64,${btoa(binary)}`;
 }
 
 /**

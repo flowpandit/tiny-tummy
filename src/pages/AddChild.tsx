@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "../components/ui/button";
 import { Card, CardContent } from "../components/ui/card";
 import { DatePicker } from "../components/ui/date-picker";
+import { FieldLabel, Input } from "../components/ui/field";
+import { SegmentedControl } from "../components/ui/segmented-control";
 import { AvatarUpload } from "../components/child/AvatarUpload";
 import { FEEDING_TYPES, AVATAR_COLORS } from "../lib/constants";
 import { cn } from "../lib/cn";
@@ -86,55 +88,37 @@ export function AddChild() {
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-5 flex-1">
         <div>
-          <label htmlFor="child-name" className="block text-sm font-medium text-[var(--color-text)] mb-1.5">
-            Baby's name
-          </label>
-          <input
+          <FieldLabel htmlFor="child-name">Baby's name</FieldLabel>
+          <Input
             id="child-name"
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="e.g. Luna"
-            className="w-full h-11 px-3 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)] text-base outline-none focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20 transition-colors"
             autoComplete="off"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-[var(--color-text)] mb-1.5">
-            Date of birth
-          </label>
+          <FieldLabel>Date of birth</FieldLabel>
           <DatePicker value={dob} onChange={setDob} max={new Date().toISOString().split("T")[0]} label="Date of birth" />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-[var(--color-text)] mb-1.5">
-            Feeding type
-          </label>
-          <div className="grid grid-cols-2 gap-2">
-            {FEEDING_TYPES.map((ft) => (
-              <button
-                key={ft.value}
-                type="button"
-                onClick={() => setFeedingType(ft.value)}
-                className={cn(
-                  "h-11 rounded-[var(--radius-md)] border text-sm font-medium transition-colors duration-200 cursor-pointer",
-                  feedingType === ft.value
-                    ? "border-[var(--color-primary)] bg-[var(--color-primary)]/10 text-[var(--color-primary)]"
-                    : "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-secondary)] hover:border-[var(--color-muted)]",
-                )}
-              >
-                {ft.label}
-              </button>
-            ))}
-          </div>
+          <FieldLabel>Feeding type</FieldLabel>
+          <SegmentedControl
+            value={feedingType}
+            onChange={setFeedingType}
+            options={FEEDING_TYPES}
+            gridClassName="grid-cols-2"
+          />
         </div>
 
         {/* Avatar photo */}
         <div>
-          <label className="block text-sm font-medium text-[var(--color-text)] mb-1.5">
+          <FieldLabel>
             Photo (optional)
-          </label>
+          </FieldLabel>
           <AvatarUpload
             currentImageUrl={avatarPreview}
             fallbackColor={avatarColor}
@@ -145,9 +129,9 @@ export function AddChild() {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-[var(--color-text)] mb-1.5">
+          <FieldLabel>
             Avatar color {avatarPreview && <span className="text-[var(--color-muted)] font-normal">(fallback)</span>}
-          </label>
+          </FieldLabel>
           <div className="flex gap-3">
             {AVATAR_COLORS.map((color) => (
               <button

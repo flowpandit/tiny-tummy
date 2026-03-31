@@ -31,7 +31,7 @@ All data stays on your device. No accounts, no cloud, no tracking, no ads. Tiny 
 **Built for Anxious Parents**
 We know the worry. "Is this normal?" "Should I call the doctor?" Tiny Tummy gives you reassurance when things are fine, and clear guidance when they're not. Designed to be used one-handed while holding your baby.
 
-**Free or $2.99**
+**14-day free trial, then $9.99 one-time**
 No subscriptions. No in-app purchases. No ads. Ever.
 
 ## Keywords

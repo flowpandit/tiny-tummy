@@ -1,23 +1,23 @@
-import type { PoopEntry, DietEntry } from "../../lib/types";
+import type { FeedingEntry, PoopEntry } from "../../lib/types";
 import { formatDate } from "../../lib/utils";
 import { BITSS_TYPES, STOOL_COLORS } from "../../lib/constants";
-import { FOOD_TYPES } from "../../lib/diet-constants";
+import { getFeedingEntryDisplayLabel } from "../../lib/feeding";
 
 type ActivityItem =
   | { kind: "poop"; entry: PoopEntry }
-  | { kind: "meal"; entry: DietEntry };
+  | { kind: "meal"; entry: FeedingEntry };
 
 interface RecentActivityProps {
   poopLogs: PoopEntry[];
-  dietLogs: DietEntry[];
+  feedingLogs: FeedingEntry[];
   onEditPoop: (entry: PoopEntry) => void;
-  onEditMeal: (entry: DietEntry) => void;
+  onEditMeal: (entry: FeedingEntry) => void;
 }
 
-export function RecentActivity({ poopLogs, dietLogs, onEditPoop, onEditMeal }: RecentActivityProps) {
+export function RecentActivity({ poopLogs, feedingLogs, onEditPoop, onEditMeal }: RecentActivityProps) {
   const items: ActivityItem[] = [
     ...poopLogs.map((e) => ({ kind: "poop" as const, entry: e })),
-    ...dietLogs.map((e) => ({ kind: "meal" as const, entry: e })),
+    ...feedingLogs.map((e) => ({ kind: "meal" as const, entry: e })),
   ]
     .sort((a, b) => new Date(b.entry.logged_at).getTime() - new Date(a.entry.logged_at).getTime())
     .slice(0, 5);
@@ -71,7 +71,6 @@ export function RecentActivity({ poopLogs, dietLogs, onEditPoop, onEditMeal }: R
           }
 
           const meal = item.entry;
-          const foodLabel = FOOD_TYPES.find((f) => f.value === meal.food_type)?.label ?? meal.food_type;
 
           return (
             <div
@@ -79,10 +78,13 @@ export function RecentActivity({ poopLogs, dietLogs, onEditPoop, onEditMeal }: R
               onClick={() => onEditMeal(meal)}
               className="flex items-center gap-4 rounded-[22px] px-2 py-1.5 cursor-pointer hover:bg-white/40 transition-colors"
             >
-              <div className="h-4 w-4 flex-shrink-0 rounded-full bg-[#f7b183]" />
+              <div
+                className="h-4 w-4 flex-shrink-0 rounded-full"
+                style={{ backgroundColor: "var(--color-primary)" }}
+              />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-[18px] text-[var(--color-text)]">
-                  {meal.food_name ? `${foodLabel}: ${meal.food_name}` : foodLabel}
+                  {getFeedingEntryDisplayLabel(meal)}
                 </p>
               </div>
               <span className="ml-3 flex-shrink-0 text-[18px] text-[var(--color-text-secondary)]">

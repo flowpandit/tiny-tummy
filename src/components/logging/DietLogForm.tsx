@@ -4,10 +4,19 @@ import { Button } from "../ui/button";
 import { DatePicker } from "../ui/date-picker";
 import { TimePicker } from "../ui/time-picker";
 import { useToast } from "../ui/toast";
-import { FOOD_TYPES } from "../../lib/diet-constants";
+import { BOTTLE_CONTENTS, BREAST_SIDES, FOOD_TYPES } from "../../lib/diet-constants";
 import { cn } from "../../lib/cn";
 import * as db from "../../lib/db";
-import type { FoodType } from "../../lib/types";
+import { useTheme } from "../../contexts/ThemeContext";
+import { Input, Textarea } from "../ui/field";
+import {
+  getLoggingChipClassName,
+  getLoggingInputClassName,
+  getLoggingTextareaClassName,
+  LoggingFieldGroup,
+  LoggingFormHeader,
+} from "./logging-form-primitives";
+import type { BottleContent, FoodType, BreastSide, FeedingLogDraft } from "../../lib/types";
 
 function getCurrentDate(): string {
   return new Date().toISOString().split("T")[0];
@@ -21,40 +30,84 @@ function combineToISO(date: string, time: string): string {
   return `${date}T${time}:00`;
 }
 
+function parseInteger(value: string): number | null {
+  if (!value.trim()) return null;
+  const parsed = Number.parseInt(value, 10);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+const EMPTY_DRAFT: FeedingLogDraft = {
+  food_type: null,
+  food_name: "",
+  amount_ml: "",
+  duration_minutes: "",
+  breast_side: null,
+  bottle_content: null,
+  reaction_notes: "",
+  is_constipation_support: false,
+  notes: "",
+};
+
 interface DietLogFormProps {
   open: boolean;
   onClose: () => void;
   childId: string;
   onLogged: () => void;
+  initialDraft?: Partial<FeedingLogDraft> | null;
 }
 
-export function DietLogForm({ open, onClose, childId, onLogged }: DietLogFormProps) {
+export function DietLogForm({ open, onClose, childId, onLogged, initialDraft = null }: DietLogFormProps) {
   const { showError } = useToast();
   const [logDate, setLogDate] = useState(getCurrentDate());
   const [logTime, setLogTime] = useState(getCurrentTime());
   const [foodType, setFoodType] = useState<FoodType | null>(null);
   const [foodName, setFoodName] = useState("");
+  const [amountMl, setAmountMl] = useState("");
+  const [durationMinutes, setDurationMinutes] = useState("");
+  const [breastSide, setBreastSide] = useState<BreastSide | null>(null);
+  const [bottleContent, setBottleContent] = useState<BottleContent | null>(null);
+  const [reactionNotes, setReactionNotes] = useState("");
+  const [isConstipationSupport, setIsConstipationSupport] = useState(false);
   const [notes, setNotes] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { resolved } = useTheme();
+  const nightMode = resolved === "night";
+
+  const applyDraft = (draft?: Partial<FeedingLogDraft> | null) => {
+    const nextDraft = { ...EMPTY_DRAFT, ...draft };
+    setLogDate(getCurrentDate());
+    setLogTime(getCurrentTime());
+    setFoodType(nextDraft.food_type);
+    setFoodName(nextDraft.food_name);
+    setAmountMl(nextDraft.amount_ml);
+    setDurationMinutes(nextDraft.duration_minutes);
+    setBreastSide(nextDraft.breast_side);
+    setBottleContent(nextDraft.bottle_content);
+    setReactionNotes(nextDraft.reaction_notes);
+    setIsConstipationSupport(nextDraft.is_constipation_support);
+    setNotes(nextDraft.notes);
+  };
 
   useEffect(() => {
     if (open) {
-      setLogDate(getCurrentDate());
-      setLogTime(getCurrentTime());
+      applyDraft(initialDraft);
     }
-  }, [open]);
+  }, [open, initialDraft]);
 
   const reset = () => {
-    setLogDate(getCurrentDate());
-    setLogTime(getCurrentTime());
-    setFoodType(null);
-    setFoodName("");
-    setNotes("");
+    applyDraft(null);
   };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!foodType || isSubmitting) return;
+
+    const showsFoodName = foodType === "solids" || foodType === "other";
+    const showsAmount = foodType === "formula" || foodType === "bottle" || foodType === "pumping" || foodType === "water";
+    const showsDuration = foodType === "breast_milk" || foodType === "pumping";
+    const showsBreastSide = foodType === "breast_milk";
+    const showsBottleContent = foodType === "bottle";
+    const showsConstipationSupport = foodType === "solids" || foodType === "other";
 
     setIsSubmitting(true);
     try {
@@ -62,12 +115,18 @@ export function DietLogForm({ open, onClose, childId, onLogged }: DietLogFormPro
         child_id: childId,
         logged_at: combineToISO(logDate, logTime),
         food_type: foodType,
-        food_name: foodName.trim() || null,
+        food_name: showsFoodName ? foodName.trim() || null : null,
+        amount_ml: showsAmount ? parseInteger(amountMl) : null,
+        duration_minutes: showsDuration ? parseInteger(durationMinutes) : null,
+        breast_side: showsBreastSide ? breastSide : null,
+        bottle_content: showsBottleContent ? bottleContent : null,
+        reaction_notes: reactionNotes.trim() || null,
+        is_constipation_support: showsConstipationSupport && isConstipationSupport ? 1 : 0,
         notes: notes.trim() || null,
       });
     } catch {
       setIsSubmitting(false);
-      showError("Failed to save meal. Please try again.");
+      showError("Failed to save feed. Please try again.");
       return;
     }
 
@@ -83,90 +142,205 @@ export function DietLogForm({ open, onClose, childId, onLogged }: DietLogFormPro
   };
 
   return (
-    <Sheet open={open} onClose={handleClose}>
+    <Sheet open={open} onClose={handleClose} tone={nightMode ? "night" : "default"}>
       <form onSubmit={handleSubmit} className="px-5 pb-8">
-        <h2 className="font-[var(--font-display)] text-lg font-semibold text-[var(--color-text)] mb-5 text-center">
-          Log a meal
-        </h2>
+        <LoggingFormHeader title="Log a feed" isNight={nightMode} />
 
         <div className="flex flex-col gap-5">
-          {/* Date & time */}
-          <div>
-            <label className="block text-sm font-medium text-[var(--color-text)] mb-1.5">
-              When
-            </label>
+          <LoggingFieldGroup label="When" isNight={nightMode}>
             <div className="grid grid-cols-2 gap-2">
-              <DatePicker value={logDate} onChange={setLogDate} max={getCurrentDate()} />
-              <TimePicker value={logTime} onChange={setLogTime} />
+              <DatePicker value={logDate} onChange={setLogDate} max={getCurrentDate()} nightMode={nightMode} />
+              <TimePicker value={logTime} onChange={setLogTime} nightMode={nightMode} />
             </div>
-          </div>
+          </LoggingFieldGroup>
 
-          {/* Food type */}
-          <div>
-            <label className="block text-sm font-medium text-[var(--color-text)] mb-2">
-              Type
-            </label>
+          <LoggingFieldGroup label="Type" isNight={nightMode}>
             <div className="flex flex-wrap gap-2">
               {FOOD_TYPES.map((ft) => (
                 <button
                   key={ft.value}
                   type="button"
                   onClick={() => setFoodType(ft.value)}
-                  className={cn(
-                    "px-4 h-10 rounded-[var(--radius-md)] border text-sm font-medium transition-colors duration-200 cursor-pointer",
-                    foodType === ft.value
-                      ? "border-[var(--color-primary)] bg-[var(--color-primary)]/10 text-[var(--color-primary)]"
-                      : "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-secondary)] hover:border-[var(--color-muted)]",
-                  )}
+                  className={getLoggingChipClassName(foodType === ft.value, nightMode)}
                 >
                   {ft.label}
                 </button>
               ))}
             </div>
-          </div>
+          </LoggingFieldGroup>
 
-          {/* Food name (for solids/other) */}
-          {(foodType === "solids" || foodType === "other") && (
-            <div>
-              <label htmlFor="food-name" className="block text-sm font-medium text-[var(--color-text)] mb-1.5">
-                What food?
-              </label>
-              <input
-                id="food-name"
-                type="text"
-                value={foodName}
-                onChange={(e) => setFoodName(e.target.value)}
-                placeholder="e.g. carrots, rice cereal"
-                className="w-full h-11 px-3 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)] text-sm outline-none focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20 transition-colors"
-                autoComplete="off"
-              />
-            </div>
+          {foodType === "breast_milk" && (
+            <>
+              <LoggingFieldGroup label="Breast side" isNight={nightMode}>
+                <div className="flex flex-wrap gap-2">
+                  {BREAST_SIDES.map((side) => (
+                    <button
+                      key={side.value}
+                      type="button"
+                      onClick={() => setBreastSide(side.value)}
+                      className={getLoggingChipClassName(breastSide === side.value, nightMode)}
+                    >
+                      {side.label}
+                    </button>
+                  ))}
+                </div>
+              </LoggingFieldGroup>
+
+              <LoggingFieldGroup label="Duration (minutes)" isNight={nightMode}>
+                <Input
+                  id="duration-minutes"
+                  type="number"
+                  min="1"
+                  inputMode="numeric"
+                  value={durationMinutes}
+                  onChange={(e) => setDurationMinutes(e.target.value)}
+                  placeholder="e.g. 12"
+                  className={getLoggingInputClassName(nightMode)}
+                />
+              </LoggingFieldGroup>
+            </>
           )}
 
-          {/* Notes */}
-          <div>
-            <label htmlFor="diet-notes" className="block text-sm font-medium text-[var(--color-text)] mb-1.5">
-              Notes (optional)
-            </label>
-            <textarea
+          {foodType === "bottle" && (
+            <>
+              <LoggingFieldGroup label="Amount (ml)" isNight={nightMode}>
+                <Input
+                  id="amount-ml"
+                  type="number"
+                  min="0"
+                  inputMode="numeric"
+                  value={amountMl}
+                  onChange={(e) => setAmountMl(e.target.value)}
+                  placeholder="e.g. 120"
+                  className={getLoggingInputClassName(nightMode)}
+                />
+              </LoggingFieldGroup>
+
+              <LoggingFieldGroup label="Bottle contents" isNight={nightMode}>
+                <div className="flex flex-wrap gap-2">
+                  {BOTTLE_CONTENTS.map((option) => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => setBottleContent(option.value)}
+                      className={getLoggingChipClassName(bottleContent === option.value, nightMode)}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              </LoggingFieldGroup>
+            </>
+          )}
+
+          {(foodType === "formula" || foodType === "pumping" || foodType === "water") && (
+            <LoggingFieldGroup label="Amount (ml)" isNight={nightMode}>
+              <Input
+                id="amount-ml-other"
+                type="number"
+                min="0"
+                inputMode="numeric"
+                value={amountMl}
+                onChange={(e) => setAmountMl(e.target.value)}
+                placeholder={foodType === "pumping" ? "e.g. 90" : "e.g. 120"}
+                className={getLoggingInputClassName(nightMode)}
+              />
+            </LoggingFieldGroup>
+          )}
+
+          {foodType === "pumping" && (
+            <LoggingFieldGroup label="Duration (minutes)" isNight={nightMode}>
+              <Input
+                id="pump-duration-minutes"
+                type="number"
+                min="1"
+                inputMode="numeric"
+                value={durationMinutes}
+                onChange={(e) => setDurationMinutes(e.target.value)}
+                placeholder="e.g. 15"
+                className={getLoggingInputClassName(nightMode)}
+              />
+            </LoggingFieldGroup>
+          )}
+
+          {(foodType === "solids" || foodType === "other") && (
+            <>
+              <LoggingFieldGroup label="What food?" isNight={nightMode}>
+                <Input
+                  id="food-name"
+                  type="text"
+                  value={foodName}
+                  onChange={(e) => setFoodName(e.target.value)}
+                  placeholder="e.g. pears, rice cereal"
+                  className={getLoggingInputClassName(nightMode)}
+                  autoComplete="off"
+                />
+              </LoggingFieldGroup>
+
+              <button
+                type="button"
+                onClick={() => setIsConstipationSupport((current) => !current)}
+                className={cn(
+                  "flex items-center justify-between rounded-[var(--radius-md)] border px-3 py-3 text-left transition-colors",
+                  isConstipationSupport
+                    ? "border-[var(--color-primary)] bg-[var(--color-primary)]/10"
+                    : nightMode
+                      ? "border-slate-700 bg-slate-900/90"
+                      : "border-[var(--color-border)] bg-[var(--color-surface)]",
+                )}
+              >
+                <div>
+                  <p className={cn("text-sm font-medium", nightMode ? "text-slate-100" : "text-[var(--color-text)]")}>Constipation support food</p>
+                  <p className={cn("text-xs", nightMode ? "text-slate-400" : "text-[var(--color-text-secondary)]")}>
+                    Mark foods like pears, prunes, peas, or extra water-rich foods.
+                  </p>
+                </div>
+                <div
+                  className={cn(
+                    "h-5 w-5 rounded-full border",
+                    isConstipationSupport
+                      ? "border-[var(--color-primary)] bg-[var(--color-primary)]"
+                      : "border-[var(--color-border)] bg-transparent",
+                  )}
+                />
+              </button>
+            </>
+          )}
+
+          {/* Reaction notes */}
+          {(foodType === "solids" || foodType === "other" || foodType === "formula" || foodType === "bottle") && (
+            <LoggingFieldGroup label="Reactions or tummy notes" isNight={nightMode}>
+              <Textarea
+                id="reaction-notes"
+                value={reactionNotes}
+                onChange={(e) => setReactionNotes(e.target.value)}
+                placeholder="e.g. seemed gassy, accepted well, refused second half"
+                rows={2}
+                className={getLoggingTextareaClassName(nightMode)}
+              />
+            </LoggingFieldGroup>
+          )}
+
+          <LoggingFieldGroup label="Notes (optional)" isNight={nightMode}>
+            <Textarea
               id="diet-notes"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Any observations..."
               rows={2}
-              className="w-full px-3 py-2 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)] text-sm resize-none outline-none focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20 transition-colors"
+              className={getLoggingTextareaClassName(nightMode)}
             />
-          </div>
+          </LoggingFieldGroup>
         </div>
 
         <Button
           type="submit"
           variant="primary"
           size="lg"
-          className="w-full mt-6"
+          className={cn("w-full mt-6", nightMode && "shadow-none")}
           disabled={!foodType || isSubmitting}
         >
-          {isSubmitting ? "Saving..." : "Save Meal"}
+          {isSubmitting ? "Saving..." : "Save Feed"}
         </Button>
       </form>
     </Sheet>

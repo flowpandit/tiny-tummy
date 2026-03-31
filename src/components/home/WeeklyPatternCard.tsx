@@ -66,7 +66,7 @@ export function WeeklyPatternCard({
           return (
             <div key={day.date} className="flex flex-1 flex-col items-center justify-end gap-2">
               <div
-                className="w-full rounded-t-[999px] bg-gradient-to-b from-[#ffb48e] to-[#ff9472]"
+                className="w-full rounded-t-[999px] bg-gradient-to-b from-[var(--color-chart-warm-start)] to-[var(--color-chart-warm-end)]"
                 style={{
                   height: `${height}px`,
                   opacity: day.count === 0 ? 0.4 : 1,

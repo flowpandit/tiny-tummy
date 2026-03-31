@@ -24,7 +24,12 @@ export function AllKids() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    let cancelled = false;
+
     async function loadAll() {
+      setIsLoading(true);
+      setSummaries([]);
+
       const results = await Promise.all(
         children.map(async (child) => {
           const lastPoop = await getLastRealPoop(child.id);
@@ -43,10 +48,18 @@ export function AllKids() {
           };
         }),
       );
-      setSummaries(results);
-      setIsLoading(false);
+
+      if (!cancelled) {
+        setSummaries(results);
+        setIsLoading(false);
+      }
     }
-    loadAll();
+
+    void loadAll();
+
+    return () => {
+      cancelled = true;
+    };
   }, [children]);
 
   const handleSelectChild = (childId: string) => {
