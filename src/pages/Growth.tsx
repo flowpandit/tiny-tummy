@@ -362,6 +362,9 @@ export function Growth() {
                 metric={activeMetric}
                 unit={getGrowthUnitLabel(activeMetric, unitSystem)}
                 lineColor={metricMeta.color}
+                dateOfBirth={activeChild.date_of_birth}
+                sex={activeChild.sex}
+                countryCode={growthCountryCode}
               />
               <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-3">
                 <InsetPanel className="bg-[var(--color-bg)] p-3">

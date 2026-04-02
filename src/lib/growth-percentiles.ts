@@ -7,11 +7,11 @@ import whoBoyWeightRaw from "./growth-data/who-boy-wtage.csv?raw";
 import whoGirlHeadRaw from "./growth-data/who-girl-hc.csv?raw";
 import whoGirlHeightRaw from "./growth-data/who-girl-length.csv?raw";
 import whoGirlWeightRaw from "./growth-data/who-girl-wtage.csv?raw";
-import { calculateZScore, formatPercentileRank, getAgeInMonths, normalCdf } from "./growth-percentile-math";
+import { calculateZScore, formatPercentileRank, getAgeInMonths, getMeasurementFromZScore, getZScoreForPercentile, normalCdf } from "./growth-percentile-math";
 import { getGrowthReference, type GrowthReference } from "./growth-reference";
 import type { ChildSex, GrowthEntry } from "./types";
 
-type GrowthMetric = keyof Pick<GrowthEntry, "weight_kg" | "height_cm" | "head_circumference_cm">;
+export type GrowthMetric = keyof Pick<GrowthEntry, "weight_kg" | "height_cm" | "head_circumference_cm">;
 
 interface LmsPoint {
   ageMonths: number;
@@ -27,6 +27,12 @@ interface GrowthPercentileInput {
   measuredAt: string;
   metric: GrowthMetric;
   value: number | null;
+}
+
+export interface GrowthPercentileCurvePoint {
+  ageMonths: number;
+  value: number;
+  percentile: number;
 }
 
 export interface GrowthPercentileResult {
@@ -121,6 +127,14 @@ function interpolateLms(points: LmsPoint[], ageMonths: number): LmsPoint | null 
   return points[points.length - 1] ?? null;
 }
 
+function getDatasetBounds(points: LmsPoint[]): { minAgeMonths: number; maxAgeMonths: number } | null {
+  if (points.length === 0) return null;
+  return {
+    minAgeMonths: points[0].ageMonths,
+    maxAgeMonths: points[points.length - 1].ageMonths,
+  };
+}
+
 export function getGrowthPercentile(input: GrowthPercentileInput): GrowthPercentileResult | null {
   if (!input.sex || input.value === null || input.value <= 0) return null;
 
@@ -142,4 +156,51 @@ export function getGrowthPercentile(input: GrowthPercentileInput): GrowthPercent
     reference,
     ageMonths,
   };
+}
+
+export function getGrowthPercentileCurve(input: {
+  countryCode: string | null;
+  sex: ChildSex | null;
+  metric: GrowthMetric;
+  ageMonthsStart: number;
+  ageMonthsEnd: number;
+  percentiles: number[];
+  samples?: number;
+}): { reference: GrowthReference; curves: Record<number, GrowthPercentileCurvePoint[]> } | null {
+  if (!input.sex) return null;
+
+  const reference = getGrowthReference(input.countryCode ?? "", input.ageMonthsEnd / 12);
+  const points = datasets[reference][input.sex][input.metric];
+  if (!points || points.length === 0) return null;
+
+  const bounds = getDatasetBounds(points);
+  if (!bounds) return null;
+
+  const start = Math.max(bounds.minAgeMonths, input.ageMonthsStart);
+  const end = Math.min(bounds.maxAgeMonths, input.ageMonthsEnd);
+  if (end <= start) return null;
+
+  const samples = Math.max(8, input.samples ?? 24);
+  const curves = Object.fromEntries(
+    input.percentiles.map((percentile) => [percentile, [] as GrowthPercentileCurvePoint[]]),
+  ) as Record<number, GrowthPercentileCurvePoint[]>;
+
+  for (let index = 0; index < samples; index += 1) {
+    const ageMonths = start + ((end - start) * index) / (samples - 1);
+    const lms = interpolateLms(points, ageMonths);
+    if (!lms) continue;
+
+    for (const percentile of input.percentiles) {
+      const zScore = getZScoreForPercentile(percentile);
+      if (zScore === null) continue;
+
+      curves[percentile].push({
+        ageMonths,
+        value: getMeasurementFromZScore(zScore, lms),
+        percentile,
+      });
+    }
+  }
+
+  return { reference, curves };
 }
