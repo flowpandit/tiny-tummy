@@ -12,11 +12,11 @@ interface PageIntroProps {
 
 export function PageIntro({ eyebrow, title, description, meta, action, className }: PageIntroProps) {
   return (
-    <div className={cn("pb-5 border-b border-[var(--color-border)]", className)}>
+    <div className={cn("rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)]/88 p-5 shadow-[var(--shadow-soft)]", className)}>
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
           <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--color-text-soft)]">{eyebrow}</p>
-          <h2 className="mt-2 font-[var(--font-display)] text-3xl font-semibold tracking-[-0.02em] text-[var(--color-text)]">
+          <h2 className="mt-2 font-[var(--font-display)] text-[2.35rem] font-semibold leading-[0.96] tracking-[-0.04em] text-[var(--color-text)]">
             {title}
           </h2>
           {description && (

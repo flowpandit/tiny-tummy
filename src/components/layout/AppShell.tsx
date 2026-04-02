@@ -25,17 +25,20 @@ export function AppShell() {
       <div
         className="pointer-events-none fixed inset-x-0 top-0 z-[25]"
         style={{
-          height: "calc(var(--safe-area-top) + 18px)",
+          height: "calc(var(--safe-area-top) + 26px)",
           background:
-            "linear-gradient(180deg, var(--color-surface-strong) 0%, color-mix(in srgb, var(--color-surface-strong) 72%, transparent) 72%, transparent 100%)",
-          backdropFilter: "blur(22px) saturate(1.02)",
-          WebkitBackdropFilter: "blur(22px) saturate(1.02)",
+            "linear-gradient(180deg, rgba(255,250,243,0.95) 0%, rgba(255,250,243,0.55) 74%, transparent 100%)",
+          backdropFilter: "blur(24px) saturate(1.02)",
+          WebkitBackdropFilter: "blur(24px) saturate(1.02)",
         }}
       />
       <div className="pointer-events-none absolute inset-0">
-        <div className="absolute -left-16 top-16 h-56 w-56 rounded-full bg-[var(--color-peach)]/26 blur-3xl" />
-        <div className="absolute right-[-88px] top-44 h-64 w-64 rounded-full bg-[var(--color-apricot)]/18 blur-3xl" />
-        <div className="absolute bottom-24 right-[-52px] h-52 w-52 rounded-full bg-[var(--color-mint)]/18 blur-3xl" />
+        <div className="absolute inset-x-0 top-0 h-[300px]" style={{ background: "var(--gradient-sunrise)" }} />
+        <div className="absolute inset-x-0 top-0 h-[280px]" style={{ background: "var(--gradient-dawn)" }} />
+        <div className="absolute -left-12 top-20 h-56 w-56 rounded-full bg-[var(--color-peach)]/26 blur-3xl" />
+        <div className="absolute right-[-64px] top-16 h-64 w-64 rounded-full bg-[var(--color-dawn)]/38 blur-3xl" />
+        <div className="absolute right-[-72px] top-52 h-64 w-64 rounded-full bg-[var(--color-apricot)]/14 blur-3xl" />
+        <div className="absolute bottom-20 left-[-44px] h-52 w-52 rounded-full bg-[var(--color-sky-wash)]/22 blur-3xl" />
       </div>
       {showHeader && <Header />}
       <main
@@ -43,8 +46,8 @@ export function AppShell() {
         className="relative flex-1 overflow-y-auto overflow-x-hidden pb-24"
         style={{
           paddingTop: showHeader
-            ? "calc(var(--safe-area-top) + 74px)"
-            : "calc(var(--safe-area-top) + 12px)",
+            ? "calc(var(--safe-area-top) + 86px)"
+            : "var(--safe-area-top)",
         }}
       >
         <AnimatePresence mode="wait">

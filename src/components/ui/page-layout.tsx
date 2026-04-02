@@ -6,7 +6,7 @@ export function PageBody({
   className,
   ...props
 }: HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn("mt-5 px-4 py-5 space-y-6", className)} {...props} />;
+  return <div className={cn("mt-4 space-y-6 px-4 py-5", className)} {...props} />;
 }
 
 export function PageBackLink({
@@ -93,7 +93,7 @@ export function SectionHeading({
             {eyebrow}
           </p>
         )}
-        <h3 className="mt-1 font-[var(--font-display)] text-2xl font-semibold tracking-[-0.02em] text-[var(--color-text)]">
+        <h3 className="mt-1 font-[var(--font-display)] text-[2rem] font-semibold tracking-[-0.03em] text-[var(--color-text)]">
           {title}
         </h3>
         {description && (

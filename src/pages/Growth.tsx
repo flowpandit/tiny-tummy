@@ -148,6 +148,14 @@ export function Growth() {
     : latest
       ? "The latest measurements now show where this child sits on the selected official growth reference, while the trend card below keeps the raw history visible."
       : "Once a first growth entry is logged, this page will show the latest values, percentile context, and trend direction together.";
+  const growthStoryHeadline = sexMissing
+    ? `${activeChild.name}'s growth story needs one missing detail`
+    : activeMetricPercentile
+      ? `${activeChild.name}'s ${metricMeta.label.toLowerCase()} is following a ${activeMetricPercentile.percentileLabel.toLowerCase()} path`
+      : `${activeChild.name}'s growth story is starting to take shape`;
+  const growthStoryDescription = latest
+    ? `The latest check-in from ${formatDate(latest.measured_at)} is grounded against ${growthReference}, while the chart keeps the raw measurement history visible.`
+    : "Add the first growth check-in to start building a story across weight, length, and head circumference.";
 
   const openAddSheet = () => {
     setEditingLog(null);
@@ -170,8 +178,8 @@ export function Growth() {
 
       <PageIntro
         eyebrow="Measurements"
-        title="Growth"
-        description="A calmer growth record with a cleaner latest snapshot, trend context, and editable measurement history."
+        title="Growth story"
+        description="A warmer growth record that keeps the raw measurements visible while turning percentile context into something easier to understand."
         meta={`${activeChild.name} · ${getAgeLabelFromDob(activeChild.date_of_birth)}${latest ? ` · last logged ${timeSince(latest.measured_at)}` : ""}`}
         action={<Button variant="cta" size="sm" onClick={openAddSheet}>Add</Button>}
       />
@@ -193,9 +201,31 @@ export function Growth() {
         />
       ) : (
         <>
-          <Card>
-            <CardContent className="p-4">
-              <div className="grid grid-cols-3 gap-3">
+          <Card className="overflow-hidden">
+            <CardContent className="p-0">
+              <div className="relative overflow-hidden px-4 pb-4 pt-5">
+                <div className="pointer-events-none absolute inset-x-0 top-0 h-40 bg-[linear-gradient(180deg,rgba(241,201,176,0.5)_0%,rgba(255,252,247,0)_100%)]" />
+                <div className="relative flex items-start justify-between gap-3 px-1">
+                  <div className="min-w-0">
+                    <p className="text-[11px] uppercase tracking-[0.18em] text-[var(--color-text-soft)]">Narrative overview</p>
+                    <p className="mt-2 max-w-[12ch] font-[var(--font-display)] text-[2.1rem] font-semibold leading-[0.96] tracking-[-0.04em] text-[var(--color-text)]">
+                      {growthStoryHeadline}
+                    </p>
+                    <p className="mt-3 max-w-[40ch] text-[14px] leading-relaxed text-[var(--color-text-secondary)]">
+                      {growthStoryDescription}
+                    </p>
+                  </div>
+                  <span className={cn(
+                    "rounded-full px-3 py-1.5 text-[12px] font-semibold shadow-[var(--shadow-soft)]",
+                    sexMissing
+                      ? "bg-[var(--color-caution-bg)] text-[var(--color-caution)]"
+                      : "bg-[var(--color-surface-tint)] text-[var(--color-primary)]",
+                  )}>
+                    {sexMissing ? "Needs profile detail" : growthReference}
+                  </span>
+                </div>
+
+                <div className="mt-5 grid grid-cols-3 gap-3">
                 <TrackerMetricRing
                   value={weightRing.value}
                   unit={weightRing.unit}
@@ -217,19 +247,20 @@ export function Growth() {
                   label="Head"
                   gradient={headRing.gradient}
                 />
+                </div>
               </div>
             </CardContent>
           </Card>
 
           <Card>
-            <CardContent className="p-3.5">
+            <CardContent className="p-4">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--color-text-soft)]">Current growth status</p>
-                  <p className="mt-1.5 text-[1.4rem] font-semibold tracking-[-0.035em] text-[var(--color-text)]">
+                  <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--color-text-soft)]">Current growth read</p>
+                  <p className="mt-2 font-[var(--font-display)] text-[2rem] font-semibold leading-[0.98] tracking-[-0.04em] text-[var(--color-text)]">
                     {growthStatusHeadline}
                   </p>
-                  <p className="mt-1.5 max-w-[42ch] text-[13px] leading-relaxed text-[var(--color-text-secondary)]">
+                  <p className="mt-2 max-w-[42ch] text-[13px] leading-relaxed text-[var(--color-text-secondary)]">
                     {growthStatusDescription}
                   </p>
                 </div>
@@ -239,11 +270,11 @@ export function Growth() {
                     ? "bg-[var(--color-caution-bg)] text-[var(--color-caution)]"
                     : "bg-[var(--color-healthy-bg)] text-[var(--color-healthy)]",
                 )}>
-                  {sexMissing ? "Needs sex" : growthReference}
+                  {sexMissing ? "Needs sex" : "On reference"}
                 </span>
               </div>
 
-              <div className="mt-3 grid grid-cols-2 gap-2.5">
+              <div className="mt-4 grid grid-cols-2 gap-3">
                 <TrackerMetricPanel
                   eyebrow="Weight percentile"
                   value={latestWeightPercentile?.percentileLabel ?? "Unavailable"}
@@ -268,11 +299,11 @@ export function Growth() {
                   description={latest ? `Latest session on ${formatDate(latest.measured_at)}` : "Add a first growth check-in."}
                   tone={latestMetricCount === 3 ? "healthy" : "info"}
                 />
-                <InsetPanel className="col-span-2 border-[var(--color-info)]/18 bg-[var(--color-info-bg)] p-3">
+                <InsetPanel className="col-span-2 border-[var(--color-border)] bg-[linear-gradient(180deg,rgba(240,246,255,0.88)_0%,rgba(255,251,244,0.88)_100%)] p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--color-text-soft)]">Latest growth read</p>
-                      <p className="mt-2 text-xl font-semibold tracking-[-0.02em] text-[var(--color-text)]">
+                      <p className="mt-2 font-[var(--font-display)] text-[1.7rem] font-semibold leading-[1] tracking-[-0.03em] text-[var(--color-text)]">
                         {latest ? formatGrowthSummary(latest, unitSystem) : "No current growth read"}
                       </p>
                       <p className="mt-1 text-xs leading-relaxed text-[var(--color-text-secondary)]">
@@ -293,20 +324,20 @@ export function Growth() {
                     )}
                   </div>
                   <div className="mt-3 flex flex-wrap gap-2">
-                    <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-text-secondary)]">
+                    <span className="rounded-full border border-[var(--color-border)] bg-white/70 px-2.5 py-1 text-[11px] font-medium text-[var(--color-text-secondary)]">
                       Reference: {growthReference}
                     </span>
-                    <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-text-secondary)]">
+                    <span className="rounded-full border border-[var(--color-border)] bg-white/70 px-2.5 py-1 text-[11px] font-medium text-[var(--color-text-secondary)]">
                       Baseline: {oldestLog ? formatDate(oldestLog.measured_at) : "No baseline"}
                     </span>
-                    <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-text-secondary)]">
+                    <span className="rounded-full border border-[var(--color-border)] bg-white/70 px-2.5 py-1 text-[11px] font-medium text-[var(--color-text-secondary)]">
                       Total measures: {totalMeasurementsLogged}
                     </span>
-                    <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-text-secondary)]">
+                    <span className="rounded-full border border-[var(--color-border)] bg-white/70 px-2.5 py-1 text-[11px] font-medium text-[var(--color-text-secondary)]">
                       Trend focus: {metricMeta.label}
                     </span>
                     {activeMetricPercentile && (
-                      <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-text-secondary)]">
+                      <span className="rounded-full border border-[var(--color-border)] bg-white/70 px-2.5 py-1 text-[11px] font-medium text-[var(--color-text-secondary)]">
                         Current {metricMeta.label.toLowerCase()}: {activeMetricPercentile.percentileLabel}
                       </span>
                     )}
@@ -325,8 +356,8 @@ export function Growth() {
           <Card>
             <CardHeader>
               <SectionHeading
-                title="Growth trend"
-                description="The same raw measurement view, but with percentile context kept nearby instead of taking over the chart."
+                title="The trend line"
+                description="Raw measurements stay in the foreground, while percentile context stays close enough to make the story easier to read."
                 action={(
                   <Button
                     variant="secondary"
@@ -349,7 +380,7 @@ export function Growth() {
                     className={cn(
                       "rounded-full border px-3 py-2 text-xs font-semibold transition-colors",
                       activeMetric === item.key
-                        ? "border-[var(--color-primary)] bg-[var(--color-primary)]/10 text-[var(--color-primary)]"
+                        ? "border-[var(--color-border-strong)] bg-[var(--color-surface-tint)] text-[var(--color-primary)]"
                         : "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-secondary)]",
                     )}
                   >

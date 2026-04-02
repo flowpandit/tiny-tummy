@@ -1,4 +1,5 @@
 import { motion, useMotionValue, useTransform, AnimatePresence } from "framer-motion";
+import { useLocation } from "react-router-dom";
 import type { Alert } from "../../lib/types";
 
 interface AlertBannerProps {
@@ -42,7 +43,7 @@ function SwipeableAlert({
       initial={{ opacity: 0, x: -20 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -200, transition: { duration: 0.3 } }}
-      className="rounded-[24px] p-3.5 border cursor-grab active:cursor-grabbing touch-pan-y shadow-[var(--shadow-soft)] backdrop-blur-xl"
+      className="pointer-events-auto rounded-[24px] border p-3.5 shadow-[var(--shadow-soft)] backdrop-blur-xl cursor-grab touch-pan-y active:cursor-grabbing"
       style={{ backgroundColor: bgColor, borderLeftColor: borderColor, x, opacity }}
     >
       <div className="flex items-start justify-between gap-2">
@@ -65,15 +66,28 @@ function SwipeableAlert({
 }
 
 export function AlertBanner({ alerts, onDismiss }: AlertBannerProps) {
+  const location = useLocation();
+  const hideHeaderPaths = new Set(["/", "/guidance", "/settings"]);
+  const showHeader = !hideHeaderPaths.has(location.pathname);
+
   if (alerts.length === 0) return null;
 
   return (
-    <div className="flex flex-col gap-2 px-4">
-      <AnimatePresence>
-        {alerts.map((alert) => (
-          <SwipeableAlert key={alert.id} alert={alert} onDismiss={onDismiss} />
-        ))}
-      </AnimatePresence>
+    <div
+      className="pointer-events-none fixed inset-x-0 z-[40] px-4"
+      style={{
+        top: showHeader
+          ? "calc(var(--safe-area-top) + 92px)"
+          : "calc(var(--safe-area-top) + 12px)",
+      }}
+    >
+      <div className="mx-auto flex max-w-[600px] flex-col gap-2">
+        <AnimatePresence>
+          {alerts.map((alert) => (
+            <SwipeableAlert key={alert.id} alert={alert} onDismiss={onDismiss} />
+          ))}
+        </AnimatePresence>
+      </div>
     </div>
   );
 }

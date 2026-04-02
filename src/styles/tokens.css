@@ -18,54 +18,59 @@
 
 :root {
   /* Brand */
-  --color-primary: #2b3956;
-  --color-primary-hover: #1f2a40;
+  --color-primary: #5f4a3c;
+  --color-primary-hover: #49372d;
   --color-on-primary: #ffffff;
-  --color-cta: #ff8b69;
-  --color-cta-hover: #f5704c;
+  --color-cta: #ef9d7b;
+  --color-cta-hover: #e58c67;
 
   /* Backgrounds & surfaces */
-  --color-bg: #fff8f1;
-  --color-bg-elevated: #fff3e8;
-  --color-surface: rgba(255, 255, 255, 0.74);
-  --color-surface-strong: #fffdf9;
-  --color-surface-tint: #fff7f0;
-  --color-muted: #8f9ab2;
-  --color-border: rgba(112, 88, 69, 0.12);
+  --color-bg: #fbf5ea;
+  --color-bg-elevated: #fffaf2;
+  --color-surface: rgba(255, 251, 244, 0.76);
+  --color-surface-strong: rgba(255, 252, 247, 0.96);
+  --color-surface-tint: #fff1e5;
+  --color-muted: #9a8e84;
+  --color-border: rgba(120, 92, 69, 0.12);
+  --color-border-strong: rgba(120, 92, 69, 0.18);
 
   /* Text */
-  --color-text: #2b3956;
-  --color-text-secondary: #647392;
-  --color-text-soft: #7b88a0;
+  --color-text: #46372d;
+  --color-text-secondary: #766457;
+  --color-text-soft: #9b8a7f;
 
   /* Health states */
-  --color-healthy: #2f7f62;
-  --color-healthy-bg: #d7f2df;
-  --color-caution: #b67b28;
-  --color-caution-bg: #fff1cf;
-  --color-alert: #d95f52;
-  --color-alert-bg: #ffe5df;
-  --color-info: #5675c8;
-  --color-info-bg: #eef3ff;
+  --color-healthy: #6d9d7f;
+  --color-healthy-bg: #e5f2e7;
+  --color-caution: #bb8d4a;
+  --color-caution-bg: #fff0d6;
+  --color-alert: #cb7f74;
+  --color-alert-bg: #ffe7e2;
+  --color-info: #8ca8d8;
+  --color-info-bg: #edf2fb;
 
   /* Decorative accents */
-  --color-peach: #ffcfba;
-  --color-apricot: #ffb48e;
-  --color-gold: #e7cb6d;
-  --color-mint: #9adbc1;
-  --color-berry: #9c5a8f;
+  --color-peach: #f5c3a7;
+  --color-apricot: #efb184;
+  --color-gold: #e9c87d;
+  --color-mint: #bcdcb9;
+  --color-berry: #b88ea8;
+  --color-dawn: #f9ddbf;
+  --color-sky-wash: #dce8f7;
 
   /* Data viz */
-  --color-chart-warm-start: #ffb48e;
-  --color-chart-warm-end: #ff8d69;
-  --color-chart-spectrum-mid: #f2c462;
-  --color-chart-spectrum-end: #94d6bb;
-  --color-chart-dot: #ff8d69;
-  --gradient-status-healthy: conic-gradient(from 210deg, #ff9c7c 0deg, #efc45c 120deg, #94d6bb 280deg, #ff9c7c 360deg);
-  --gradient-status-caution: conic-gradient(from 210deg, #ff9c7c 0deg, #efc45c 170deg, #efc45c 360deg);
-  --gradient-status-head: conic-gradient(from 210deg, #7ba7ff 0deg, #79d2cf 180deg, #5d76d6 360deg);
-  --gradient-status-alert: conic-gradient(from 210deg, #ff9c7c 0deg, #ef8c7a 200deg, #d95f52 360deg);
-  --gradient-status-unknown: conic-gradient(from 210deg, #cfd7e5 0deg, #9aabc4 360deg);
+  --color-chart-warm-start: #f2b28f;
+  --color-chart-warm-end: #e99672;
+  --color-chart-spectrum-mid: #e8c989;
+  --color-chart-spectrum-end: #accfb4;
+  --color-chart-dot: #e99672;
+  --gradient-status-healthy: conic-gradient(from 210deg, #e5b08b 0deg, #e4ca8a 120deg, #b8d5bc 280deg, #e5b08b 360deg);
+  --gradient-status-caution: conic-gradient(from 210deg, #e7ab86 0deg, #e2c286 170deg, #e2c286 360deg);
+  --gradient-status-head: conic-gradient(from 210deg, #b4c6eb 0deg, #b6d7d3 180deg, #92a7d9 360deg);
+  --gradient-status-alert: conic-gradient(from 210deg, #e6a486 0deg, #d9958b 200deg, #cb7f74 360deg);
+  --gradient-status-unknown: conic-gradient(from 210deg, #dcd4cc 0deg, #b7a99c 360deg);
+  --gradient-dawn: radial-gradient(circle at top, rgba(255, 245, 220, 0.9) 0%, rgba(245, 195, 167, 0.48) 36%, rgba(239, 177, 132, 0.22) 62%, rgba(251, 245, 234, 0) 100%);
+  --gradient-sunrise: linear-gradient(180deg, #f7c7ab 0%, #f6d7b9 38%, #fbf5ea 82%);
 
   /* Spacing */
   --space-xs: 4px;
@@ -76,16 +81,17 @@
   --space-2xl: 48px;
 
   /* Radii */
-  --radius-sm: 10px;
-  --radius-md: 18px;
-  --radius-lg: 14px;
+  --radius-sm: 12px;
+  --radius-md: 22px;
+  --radius-lg: 28px;
   --radius-full: 9999px;
 
   /* Shadows */
-  --shadow-soft: 0 12px 28px rgba(214, 175, 138, 0.16);
-  --shadow-medium: 0 20px 44px rgba(122, 88, 56, 0.14);
-  --shadow-lg: 0 28px 60px rgba(122, 88, 56, 0.18);
-  --shadow-inner: inset 0 1px 0 rgba(255, 255, 255, 0.75);
+  --shadow-soft: 0 14px 32px rgba(183, 143, 109, 0.15);
+  --shadow-medium: 0 22px 48px rgba(168, 127, 96, 0.18);
+  --shadow-lg: 0 32px 72px rgba(140, 106, 81, 0.22);
+  --shadow-inner: inset 0 1px 0 rgba(255, 255, 255, 0.78);
+  --shadow-card: 0 18px 46px rgba(180, 146, 117, 0.16);
 
   /* Touch */
   --touch-target: 44px;

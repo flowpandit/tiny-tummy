@@ -20,17 +20,17 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
           variant === "primary" &&
             "bg-[var(--color-primary)] text-[var(--color-on-primary)] hover:bg-[var(--color-primary-hover)] active:scale-[0.98] shadow-[var(--shadow-soft)]",
           variant === "secondary" &&
-            "bg-[var(--color-surface-strong)] text-[var(--color-text)] border border-[var(--color-border)] hover:bg-[var(--color-surface)] active:scale-[0.98] shadow-[var(--shadow-soft)]",
+            "border border-[var(--color-border)] bg-[var(--color-surface-strong)] text-[var(--color-text)] hover:bg-[var(--color-surface)] active:scale-[0.98] shadow-[var(--shadow-soft)]",
           variant === "ghost" &&
             "bg-transparent text-[var(--color-text-secondary)] hover:bg-[var(--color-surface)] active:scale-[0.98]",
           variant === "cta" &&
-            "bg-[var(--color-cta)] text-white hover:bg-[var(--color-cta-hover)] active:scale-[0.98] shadow-[var(--shadow-soft)]",
+            "bg-[var(--color-cta)] text-white hover:bg-[var(--color-cta-hover)] active:scale-[0.98] shadow-[var(--shadow-medium)]",
           variant === "danger" &&
             "bg-[var(--color-alert)] text-white hover:opacity-90 active:scale-[0.98]",
           // Sizes
-          size === "sm" && "h-9 px-3.5 text-sm rounded-[999px]",
-          size === "md" && "h-11 px-5 text-base rounded-[999px]",
-          size === "lg" && "h-13 px-6 text-lg rounded-[999px]",
+          size === "sm" && "h-10 px-4 text-sm rounded-[999px]",
+          size === "md" && "h-12 px-5 text-base rounded-[999px]",
+          size === "lg" && "h-14 px-6 text-lg rounded-[999px]",
           size === "icon" && "h-10 w-10 rounded-[var(--radius-full)]",
           className,
         )}
