@@ -1,4 +1,5 @@
 import type { Child } from "./types";
+import type { UnitSystem } from "./types";
 import type {
   ReportChartPoint,
   ReportContextSection,
@@ -8,6 +9,7 @@ import type {
   ReportTimelineRow,
 } from "./reporting";
 import { getAgeLabelFromDob } from "./utils";
+import { getVolumeUnitLabel } from "./units";
 
 export interface ReportPdfPayload {
   title: string;
@@ -115,8 +117,9 @@ export function buildReportPdfPayload(input: {
   startDate: string;
   endDate: string;
   data: ReportData;
+  unitSystem: UnitSystem;
 }): ReportPdfPayload {
-  const { child, startDate, endDate, data } = input;
+  const { child, startDate, endDate, data, unitSystem } = input;
 
   return {
     title: `${child.name}'s Health Log`,
@@ -135,7 +138,7 @@ export function buildReportPdfPayload(input: {
       {
         title: "Feed Activity (Last 7 Days)",
         primaryLabel: "Sessions",
-        secondaryLabel: "Logged ml",
+        secondaryLabel: `Logged ${getVolumeUnitLabel(unitSystem)}`,
         points: mapPoints(data.chartData.feedActivity),
       },
     ],

@@ -4,7 +4,9 @@ import { Button } from "../ui/button";
 import { DatePicker } from "../ui/date-picker";
 import { TimePicker } from "../ui/time-picker";
 import { useToast } from "../ui/toast";
+import { useUnits } from "../../contexts/UnitsContext";
 import * as db from "../../lib/db";
+import { getGrowthUnitLabel, parseGrowthInputToMetric } from "../../lib/units";
 
 interface GrowthLogSheetProps {
   open: boolean;
@@ -27,6 +29,7 @@ function combineToISO(date: string, time: string): string {
 
 export function GrowthLogSheet({ open, onClose, childId, onLogged }: GrowthLogSheetProps) {
   const { showError, showSuccess } = useToast();
+  const { unitSystem } = useUnits();
   const [measureDate, setMeasureDate] = useState(getCurrentDate());
   const [measureTime, setMeasureTime] = useState(getCurrentTime());
   const [weightKg, setWeightKg] = useState("");
@@ -57,9 +60,9 @@ export function GrowthLogSheet({ open, onClose, childId, onLogged }: GrowthLogSh
       await db.createGrowthLog({
         child_id: childId,
         measured_at: combineToISO(measureDate, measureTime),
-        weight_kg: weightKg.trim() ? Number(weightKg) : null,
-        height_cm: heightCm.trim() ? Number(heightCm) : null,
-        head_circumference_cm: headCircumferenceCm.trim() ? Number(headCircumferenceCm) : null,
+        weight_kg: parseGrowthInputToMetric("weight_kg", weightKg, unitSystem),
+        height_cm: parseGrowthInputToMetric("height_cm", heightCm, unitSystem),
+        head_circumference_cm: parseGrowthInputToMetric("head_circumference_cm", headCircumferenceCm, unitSystem),
         notes: notes.trim() || null,
       });
       await onLogged();
@@ -72,6 +75,9 @@ export function GrowthLogSheet({ open, onClose, childId, onLogged }: GrowthLogSh
   };
 
   const inputClassName = "w-full rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-3 text-sm text-[var(--color-text)] outline-none transition-colors focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20";
+  const weightUnit = getGrowthUnitLabel("weight_kg", unitSystem);
+  const lengthUnit = getGrowthUnitLabel("height_cm", unitSystem);
+  const headUnit = getGrowthUnitLabel("head_circumference_cm", unitSystem);
 
   return (
     <Sheet open={open} onClose={onClose}>
@@ -95,12 +101,12 @@ export function GrowthLogSheet({ open, onClose, childId, onLogged }: GrowthLogSh
           <div className="grid grid-cols-1 gap-3">
             <div>
               <label htmlFor="growth-weight" className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">
-                Weight (kg)
+                Weight ({weightUnit})
               </label>
               <input
                 id="growth-weight"
                 inputMode="decimal"
-                placeholder="e.g. 6.4"
+                placeholder={unitSystem === "imperial" ? "e.g. 14.1" : "e.g. 6.4"}
                 value={weightKg}
                 onChange={(event) => setWeightKg(event.target.value)}
                 className={inputClassName}
@@ -108,12 +114,12 @@ export function GrowthLogSheet({ open, onClose, childId, onLogged }: GrowthLogSh
             </div>
             <div>
               <label htmlFor="growth-height" className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">
-                Length / height (cm)
+                Length / height ({lengthUnit})
               </label>
               <input
                 id="growth-height"
                 inputMode="decimal"
-                placeholder="e.g. 63.5"
+                placeholder={unitSystem === "imperial" ? "e.g. 25.0" : "e.g. 63.5"}
                 value={heightCm}
                 onChange={(event) => setHeightCm(event.target.value)}
                 className={inputClassName}
@@ -121,12 +127,12 @@ export function GrowthLogSheet({ open, onClose, childId, onLogged }: GrowthLogSh
             </div>
             <div>
               <label htmlFor="growth-head" className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">
-                Head circumference (cm)
+                Head circumference ({headUnit})
               </label>
               <input
                 id="growth-head"
                 inputMode="decimal"
-                placeholder="e.g. 41.2"
+                placeholder={unitSystem === "imperial" ? "e.g. 16.2" : "e.g. 41.2"}
                 value={headCircumferenceCm}
                 onChange={(event) => setHeadCircumferenceCm(event.target.value)}
                 className={inputClassName}

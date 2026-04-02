@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { Button } from "../components/ui/button";
 import { PageIntro } from "../components/ui/page-intro";
-import { InsetPanel, PageBackLink, PageBody } from "../components/ui/page-layout";
+import { InsetPanel, PageBackButton, PageBody } from "../components/ui/page-layout";
 import { useToast } from "../components/ui/toast";
 import { useChildContext } from "../contexts/ChildContext";
 import { syncSmartRemindersForChild } from "../lib/notifications";
@@ -87,6 +87,7 @@ function BreastSideButton({
 
 export function Breastfeed() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { activeChild } = useChildContext();
   const { showError, showSuccess } = useToast();
   const [durations, setDurations] = useState<SessionDurations>({ left: 0, right: 0 });
@@ -96,6 +97,9 @@ export function Breastfeed() {
   const [tick, setTick] = useState(Date.now());
   const [isSaving, setIsSaving] = useState(false);
   const supportsBreastfeeding = activeChild?.feeding_type === "breast" || activeChild?.feeding_type === "mixed";
+  const originPath = location.state && typeof location.state === "object" && "origin" in location.state
+    ? (location.state as { origin?: string }).origin
+    : undefined;
 
   useEffect(() => {
     if (!activeSide) return;
@@ -285,7 +289,7 @@ export function Breastfeed() {
       await persistSession(clearedSession);
       await syncSmartRemindersForChild(activeChild);
       showSuccess("Breastfeeding session saved.");
-      navigate("/");
+      navigate(originPath ?? "/");
     } catch {
       showError("Could not save the breastfeeding session.");
       setDurations(finalSession.durations);
@@ -296,7 +300,7 @@ export function Breastfeed() {
 
   return (
     <PageBody>
-      <PageBackLink to="/" label="Back to Home" />
+      <PageBackButton fallbackTo="/" />
 
       <PageIntro
         eyebrow="Feeding"

@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useChildContext } from "../contexts/ChildContext";
 import { useTheme } from "../contexts/ThemeContext";
+import { useUnits } from "../contexts/UnitsContext";
+import { useTrial } from "../contexts/TrialContext";
 import { Card, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { FieldLabel, Input } from "../components/ui/field";
@@ -27,7 +29,7 @@ import { AvatarUpload } from "../components/child/AvatarUpload";
 import { Avatar } from "../components/child/Avatar";
 import { saveAvatar, deleteAvatar } from "../lib/photos";
 import * as db from "../lib/db";
-import type { Child, FeedingType } from "../lib/types";
+import type { Child, FeedingType, UnitSystem } from "../lib/types";
 
 function EditChildSheet({
   child,
@@ -289,6 +291,11 @@ const THEME_OPTIONS: { value: "system" | "light" | "dark"; label: string }[] = [
   { value: "dark", label: "Dark" },
 ];
 
+const UNIT_SYSTEM_OPTIONS: { value: UnitSystem; label: string }[] = [
+  { value: "metric", label: "Metric" },
+  { value: "imperial", label: "Imperial" },
+];
+
 function formatScheduleTime(value: string) {
   const [hour, minute] = value.split(":").map(Number);
   const suffix = hour >= 12 ? "PM" : "AM";
@@ -367,8 +374,37 @@ function ThemeSection() {
   );
 }
 
+function MeasurementsSection() {
+  const { unitSystem, setUnitSystem } = useUnits();
+
+  return (
+    <div className="mb-6">
+      <h3 className="text-sm font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider mb-3">
+        Measurements
+      </h3>
+      <Card>
+        <CardContent className="py-3">
+          <p className="text-sm font-medium text-[var(--color-text)] mb-2">Unit system</p>
+          <SegmentedControl
+            value={unitSystem}
+            onChange={(value) => setUnitSystem(value as UnitSystem)}
+            options={UNIT_SYSTEM_OPTIONS}
+            className="bg-[var(--color-bg)] rounded-[var(--radius-sm)] border border-[var(--color-border)] p-0.5"
+            gridClassName="grid-cols-2"
+            size="sm"
+          />
+          <p className="mt-2 text-xs text-[var(--color-text-secondary)]">
+            Feed amounts, growth measurements, quick presets, and reports will use this system.
+          </p>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 export function Settings() {
   const { children, activeChild, refreshChildren } = useChildContext();
+  const { simulateExpiration } = useTrial();
   const navigate = useNavigate();
   const [editingChild, setEditingChild] = useState<Child | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
@@ -478,6 +514,8 @@ export function Settings() {
 
       {/* Appearance */}
       <ThemeSection />
+
+      <MeasurementsSection />
 
       {/* Notifications */}
       <NotificationSection children={children} />
@@ -589,15 +627,39 @@ export function Settings() {
             <p className="text-xs text-[var(--color-muted)]">
               100% offline. Your data never leaves this device.
             </p>
-            <button
-              onClick={() => navigate("/privacy")}
-              className="text-xs text-[var(--color-primary)] cursor-pointer text-left"
-            >
-              Privacy Policy
-            </button>
+            <div className="flex gap-4">
+              <button
+                onClick={() => navigate("/privacy")}
+                className="text-xs text-[var(--color-primary)] cursor-pointer text-left font-medium"
+              >
+                Privacy Policy
+              </button>
+            </div>
           </CardContent>
         </Card>
       </div>
+
+      {import.meta.env.DEV && (
+        <div className="mb-12">
+          <h3 className="text-sm font-semibold text-[var(--color-alert)] uppercase tracking-wider mb-3">
+            Developer Tools
+          </h3>
+          <Card className="border-[var(--color-alert)]/30">
+            <CardContent className="py-3 flex flex-col gap-3">
+              <p className="text-xs text-[var(--color-text-secondary)]">
+                These tools only appear during local development.
+              </p>
+              <Button 
+                variant="secondary" 
+                className="w-full text-[var(--color-alert)] border border-[var(--color-alert)]/30 hover:bg-[var(--color-alert)]/10"
+                onClick={simulateExpiration}
+              >
+                Simulate Trial Expiration
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Edit sheet */}
       {editingChild && (

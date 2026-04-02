@@ -32,7 +32,7 @@ All data stays on your device. No accounts, no cloud, no tracking, no ads. Tiny 
 We know the worry. "Is this normal?" "Should I call the doctor?" Tiny Tummy gives you reassurance when things are fine, and clear guidance when they're not. Designed to be used one-handed while holding your baby.
 
 **14-day free trial, then $9.99 one-time**
-No subscriptions. No in-app purchases. No ads. Ever.
+No subscriptions. No ads. One-time unlock only.
 
 ## Keywords
 baby poop tracker, infant constipation, BITSS scale, baby health, diaper log, stool tracker, baby bowel, newborn poop, breastfed baby, formula baby, toddler constipation, doctor report, offline baby tracker, baby diet tracker, poop color chart
@@ -47,6 +47,13 @@ Health & Fitness (primary), Medical (secondary)
 - Data Not Collected
 - Data Not Linked to You
 - No Third-Party Tracking
+
+## Release Blockers
+- Replace the current mocked paywall with a real store-managed payment flow before release.
+- Wire actual one-time purchase and restore-purchases behavior on both iOS and Android.
+- Verify that premium entitlement is driven by the store receipt or billing state, not local developer settings.
+- Remove or disable all developer-only paywall shortcuts before submitting to the App Store or Google Play.
+- Re-review this metadata before launch so pricing and purchase wording exactly match the final billing implementation.
 
 ## What's New (v0.1.0)
 Initial release! Track your baby's bowel health with age-adjusted intelligence, beautiful charts, and complete privacy.

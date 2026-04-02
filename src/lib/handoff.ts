@@ -2,7 +2,7 @@ import { getFeedingEntryDisplayLabel } from "./feeding";
 import { getEpisodeTypeLabel } from "./episode-constants";
 import { getSymptomSeverityLabel, getSymptomTypeLabel } from "./symptom-constants";
 import { formatDate, timeSince } from "./utils";
-import type { Alert, Episode, EpisodeEvent, FeedingEntry, HealthStatus, PoopEntry, SymptomEntry } from "./types";
+import type { Alert, Episode, EpisodeEvent, FeedingEntry, HealthStatus, PoopEntry, SymptomEntry, UnitSystem } from "./types";
 
 export function getStatusLabel(status: HealthStatus): string {
   if (status === "healthy") return "All looks normal";
@@ -16,9 +16,9 @@ export function getLastPoopSummary(lastPoop: PoopEntry | null): string {
   return `${timeSince(lastPoop.logged_at)} (${formatDate(lastPoop.logged_at)})`;
 }
 
-export function getLastFeedSummary(lastFeed: FeedingEntry | null): string {
+export function getLastFeedSummary(lastFeed: FeedingEntry | null, unitSystem: UnitSystem = "metric"): string {
   if (!lastFeed) return "No feed logged yet";
-  return `${getFeedingEntryDisplayLabel(lastFeed)} · ${timeSince(lastFeed.logged_at)}`;
+  return `${getFeedingEntryDisplayLabel(lastFeed, unitSystem)} · ${timeSince(lastFeed.logged_at)}`;
 }
 
 export function buildHandoffSummary(input: {
@@ -35,6 +35,7 @@ export function buildHandoffSummary(input: {
   todayFeeds: number;
   hasNoPoopDay: boolean;
   handoffNote: string | null;
+  unitSystem?: UnitSystem;
 }): string {
   const alertLine = input.alerts.length > 0
     ? input.alerts.map((alert) => alert.title).join("; ")
@@ -56,7 +57,7 @@ export function buildHandoffSummary(input: {
     input.normalDescription ? `Expected range: ${input.normalDescription}` : null,
     "",
     `Last poop: ${getLastPoopSummary(input.lastPoop)}`,
-    `Last feed: ${getLastFeedSummary(input.lastFeed)}`,
+    `Last feed: ${getLastFeedSummary(input.lastFeed, input.unitSystem ?? "metric")}`,
     `Today so far: ${input.todayPoops} poop${input.todayPoops !== 1 ? "s" : ""}, ${input.todayFeeds} feed${input.todayFeeds !== 1 ? "s" : ""}${input.hasNoPoopDay ? ", no-poop day marked" : ""}`,
     "",
     `Current concern: ${alertLine}`,

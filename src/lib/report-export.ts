@@ -13,7 +13,7 @@ import {
   getSymptomTypeLabel,
 } from "./symptom-constants";
 import { formatDate, getAgeLabelFromDob } from "./utils";
-import type { Child } from "./types";
+import type { Child, UnitSystem } from "./types";
 import type { ReportData, ReportOptions } from "./reporting";
 
 function typeLabel(type: number) {
@@ -39,8 +39,9 @@ export function buildPrintableReportHtml(input: {
   endDate: string;
   data: ReportData;
   options: ReportOptions;
+  unitSystem?: UnitSystem;
 }): string {
-  const { child, startDate, endDate, data, options } = input;
+  const { child, startDate, endDate, data, options, unitSystem = "metric" } = input;
   const logEntries = data.logs.filter((log) => !log.is_no_poop || log.is_no_poop === 1);
 
   const entriesHtml = data.logs.length === 0
@@ -71,7 +72,7 @@ export function buildPrintableReportHtml(input: {
     : data.feedingLogs.map((log) => `
         <tr>
           <td class="date">${escapeHtml(formatDate(log.logged_at))}</td>
-          <td class="entry">${escapeHtml(getFeedingEntryDisplayLabel(log))}</td>
+          <td class="entry">${escapeHtml(getFeedingEntryDisplayLabel(log, unitSystem))}</td>
           <td class="size">${escapeHtml(options.includeNotes ? (getFeedingEntrySecondaryText(log) ?? "—") : "—")}</td>
         </tr>
       `).join("");

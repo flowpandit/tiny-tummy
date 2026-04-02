@@ -1,5 +1,6 @@
 import { BITSS_TYPES, STOOL_COLORS } from "./constants";
 import { getBottleContentLabel, getFoodTypeLabel, getBreastSideLabel } from "./feeding";
+import { formatVolumeValue } from "./units";
 import type {
   BottleContent,
   BreastSide,
@@ -10,6 +11,7 @@ import type {
   QuickPresetEntry,
   StoolColor,
   StoolSize,
+  UnitSystem,
 } from "./types";
 
 export interface QuickFeedPreset {
@@ -33,7 +35,37 @@ export interface QuickPresetRecordInput {
   sort_order: number;
 }
 
-export function getDefaultQuickFeedPresets(feedingType: FeedingType): QuickFeedPreset[] {
+function getRequiredFeedTypes(feedingType: FeedingType): FoodType[] {
+  if (feedingType === "breast" || feedingType === "mixed") {
+    return ["breast_milk"];
+  }
+  if (feedingType === "formula") {
+    return ["formula"];
+  }
+  return ["solids"];
+}
+
+export function ensureEssentialFeedPresets(
+  presets: QuickFeedPreset[],
+  feedingType: FeedingType,
+  unitSystem: UnitSystem = "metric",
+): QuickFeedPreset[] {
+  const nextPresets = [...presets];
+  const existingTypes = new Set(nextPresets.map((preset) => preset.draft.food_type).filter(Boolean));
+  const defaultPresets = getDefaultQuickFeedPresets(feedingType, unitSystem);
+
+  for (const requiredType of getRequiredFeedTypes(feedingType)) {
+    if (existingTypes.has(requiredType)) continue;
+    const fallbackPreset = defaultPresets.find((preset) => preset.draft.food_type === requiredType);
+    if (!fallbackPreset) continue;
+    nextPresets.unshift(fallbackPreset);
+    existingTypes.add(requiredType);
+  }
+
+  return nextPresets.slice(0, 4);
+}
+
+export function getDefaultQuickFeedPresets(feedingType: FeedingType, unitSystem: UnitSystem = "metric"): QuickFeedPreset[] {
   const base: Array<Partial<FeedingLogDraft>> = feedingType === "breast"
     ? [
         { food_type: "breast_milk", breast_side: "left" },
@@ -63,7 +95,7 @@ export function getDefaultQuickFeedPresets(feedingType: FeedingType): QuickFeedP
           ];
 
   return base.map((draft, index) => {
-    const preview = describeFeedPresetDraft(draft);
+    const preview = describeFeedPresetDraft(draft, unitSystem);
     return {
       id: `default-feed-${index}`,
       label: preview.label,
@@ -100,7 +132,7 @@ export function getDefaultQuickPoopPresets(feedingType: FeedingType): QuickPoopP
   });
 }
 
-export function describeFeedPresetDraft(draft: Partial<FeedingLogDraft>): {
+export function describeFeedPresetDraft(draft: Partial<FeedingLogDraft>, unitSystem: UnitSystem = "metric"): {
   label: string;
   description: string;
 } {
@@ -127,14 +159,14 @@ export function describeFeedPresetDraft(draft: Partial<FeedingLogDraft>): {
       : "Bottle";
     return {
       label: content,
-      description: draft.amount_ml?.trim() ? `${draft.amount_ml.trim()} ml` : "Bottle feed",
+      description: draft.amount_ml?.trim() ? formatVolumeValue(Number(draft.amount_ml.trim()), unitSystem) : "Bottle feed",
     };
   }
 
   return {
     label: getFoodTypeLabel(foodType as FoodType),
     description: draft.amount_ml?.trim()
-      ? `${draft.amount_ml.trim()} ml`
+      ? formatVolumeValue(Number(draft.amount_ml.trim()), unitSystem)
       : draft.duration_minutes?.trim()
         ? `${draft.duration_minutes.trim()} min`
         : "Quick feed",
@@ -187,16 +219,16 @@ function parsePoopDraft(raw: string): Partial<PoopLogDraft> | null {
   }
 }
 
-export function hydrateFeedPresets(entries: QuickPresetEntry[]): QuickFeedPreset[] {
+export function hydrateFeedPresets(entries: QuickPresetEntry[], unitSystem: UnitSystem = "metric"): QuickFeedPreset[] {
   return entries
     .map((entry) => {
       const draft = parseFeedDraft(entry.draft_json);
       if (!draft) return null;
-      const preview = describeFeedPresetDraft(draft);
+      const preview = describeFeedPresetDraft(draft, unitSystem);
       return {
         id: entry.id,
         label: entry.label || preview.label,
-        description: entry.description ?? preview.description,
+        description: preview.description,
         draft,
       };
     })
@@ -221,10 +253,11 @@ export function hydratePoopPresets(entries: QuickPresetEntry[]): QuickPoopPreset
 
 export function buildFeedPresetRecordInput(
   presets: Array<QuickFeedPreset | Partial<FeedingLogDraft>>,
+  unitSystem: UnitSystem = "metric",
 ): QuickPresetRecordInput[] {
   return presets.map((preset, index) => {
     const draft = "draft" in preset ? preset.draft : preset;
-    const preview = describeFeedPresetDraft(draft);
+    const preview = describeFeedPresetDraft(draft, unitSystem);
     return {
       label: preview.label,
       description: preview.description,
@@ -249,8 +282,8 @@ export function buildPoopPresetRecordInput(
   });
 }
 
-export function getDefaultFeedDraft(feedingType: FeedingType): Partial<FeedingLogDraft> {
-  return getDefaultQuickFeedPresets(feedingType)[0]?.draft ?? { food_type: "bottle" };
+export function getDefaultFeedDraft(feedingType: FeedingType, unitSystem: UnitSystem = "metric"): Partial<FeedingLogDraft> {
+  return getDefaultQuickFeedPresets(feedingType, unitSystem)[0]?.draft ?? { food_type: "bottle" };
 }
 
 export function getDefaultPoopDraft(feedingType: FeedingType): Partial<PoopLogDraft> {

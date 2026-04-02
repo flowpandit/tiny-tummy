@@ -7,6 +7,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { growthMetricToDisplay } from "../../lib/units";
 import type { GrowthEntry } from "../../lib/types";
 
 interface GrowthTrendChartProps {
@@ -22,12 +23,13 @@ function formatDateLabel(dateStr: string): string {
 }
 
 export function GrowthTrendChart({ logs, metric, unit, lineColor }: GrowthTrendChartProps) {
+  const unitSystem = unit === "lb" || unit === "in" ? "imperial" : "metric";
   const data = [...logs]
     .filter((log) => log[metric] !== null)
     .sort((left, right) => new Date(left.measured_at).getTime() - new Date(right.measured_at).getTime())
     .map((log) => ({
       measured_at: log.measured_at,
-      value: log[metric],
+      value: growthMetricToDisplay(metric, log[metric]!, unitSystem),
     }));
 
   if (data.length === 0) {

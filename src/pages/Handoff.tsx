@@ -7,6 +7,7 @@ import { PageIntro } from "../components/ui/page-intro";
 import { InsetPanel, PageBackButton, PageBody, SectionHeading, StatGrid, StatTile } from "../components/ui/page-layout";
 import { useToast } from "../components/ui/toast";
 import { useChildContext } from "../contexts/ChildContext";
+import { useUnits } from "../contexts/UnitsContext";
 import { usePoopLogs } from "../hooks/usePoopLogs";
 import { useFeedingLogs } from "../hooks/useFeedingLogs";
 import { useAlerts } from "../hooks/useAlerts";
@@ -24,6 +25,7 @@ import type { HealthStatus } from "../lib/types";
 
 export function Handoff() {
   const { activeChild } = useChildContext();
+  const { unitSystem } = useUnits();
   const { logs, lastRealPoop } = usePoopLogs(activeChild?.id ?? null);
   const { logs: feedingLogs } = useFeedingLogs(activeChild?.id ?? null);
   const { alerts } = useAlerts(activeChild?.id ?? null);
@@ -93,6 +95,7 @@ export function Handoff() {
     todayFeeds: summary.todayFeeds,
     hasNoPoopDay: summary.hasNoPoopDay,
     handoffNote: savedNote || null,
+    unitSystem,
   });
 
   const handleSaveNote = async () => {
@@ -161,7 +164,7 @@ export function Handoff() {
         </InsetPanel>
         <InsetPanel>
           <p className="text-[11px] uppercase tracking-[0.14em] text-[var(--color-text-soft)]">Last feed</p>
-          <p className="mt-2 text-sm font-medium text-[var(--color-text)]">{getLastFeedSummary(summary.lastFeed)}</p>
+          <p className="mt-2 text-sm font-medium text-[var(--color-text)]">{getLastFeedSummary(summary.lastFeed, unitSystem)}</p>
         </InsetPanel>
       </div>
 
@@ -310,7 +313,7 @@ export function Handoff() {
             />
           </CardHeader>
           <CardContent>
-            <p className="text-sm font-medium text-[var(--color-text)]">{getFeedingEntryDisplayLabel(summary.lastFeed)}</p>
+            <p className="text-sm font-medium text-[var(--color-text)]">{getFeedingEntryDisplayLabel(summary.lastFeed, unitSystem)}</p>
             <p className="mt-1 text-xs text-[var(--color-text-secondary)]">{formatDate(summary.lastFeed.logged_at)}</p>
             {summary.lastFeed.reaction_notes && (
               <p className="mt-2 text-sm leading-relaxed text-[var(--color-text-secondary)]">{summary.lastFeed.reaction_notes}</p>

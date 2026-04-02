@@ -9,6 +9,8 @@ export interface Child {
   updated_at: string;
 }
 
+export type UnitSystem = "metric" | "imperial";
+
 export type FeedingType = "breast" | "formula" | "mixed" | "solids";
 
 export interface PoopEntry {

@@ -7,6 +7,8 @@ import { BOTTLE_CONTENTS, BREAST_SIDES, FOOD_TYPES } from "../../lib/diet-consta
 import { cn } from "../../lib/cn";
 import { useToast } from "../ui/toast";
 import * as db from "../../lib/db";
+import { useUnits } from "../../contexts/UnitsContext";
+import { formatVolumeValue, getVolumeUnitLabel, parseVolumeInputToMl } from "../../lib/units";
 import type { BottleContent, BreastSide, DietEntry, FoodType } from "../../lib/types";
 
 interface EditMealSheetProps {
@@ -29,11 +31,12 @@ function parseInteger(value: string): number | null {
 
 export function EditMealSheet({ entry, open, onClose, onSaved, onDeleted }: EditMealSheetProps) {
   const { showError } = useToast();
+  const { unitSystem } = useUnits();
   const [logDate, setLogDate] = useState(entry.logged_at.split("T")[0]);
   const [logTime, setLogTime] = useState(entry.logged_at.split("T")[1]?.slice(0, 5) ?? "12:00");
   const [foodType, setFoodType] = useState<FoodType>(entry.food_type);
   const [foodName, setFoodName] = useState(entry.food_name ?? "");
-  const [amountMl, setAmountMl] = useState(entry.amount_ml?.toString() ?? "");
+  const [amountMl, setAmountMl] = useState(() => entry.amount_ml !== null ? formatVolumeValue(entry.amount_ml, unitSystem, { includeUnit: false }) : "");
   const [durationMinutes, setDurationMinutes] = useState(entry.duration_minutes?.toString() ?? "");
   const [breastSide, setBreastSide] = useState<BreastSide | null>(entry.breast_side);
   const [bottleContent, setBottleContent] = useState<BottleContent | null>(entry.bottle_content);
@@ -42,6 +45,7 @@ export function EditMealSheet({ entry, open, onClose, onSaved, onDeleted }: Edit
   const [notes, setNotes] = useState(entry.notes ?? "");
   const [isSaving, setIsSaving] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const volumeUnit = getVolumeUnitLabel(unitSystem);
 
   const handleSave = async (e: FormEvent) => {
     e.preventDefault();
@@ -58,7 +62,7 @@ export function EditMealSheet({ entry, open, onClose, onSaved, onDeleted }: Edit
         logged_at: `${logDate}T${logTime}:00`,
         food_type: foodType,
         food_name: showsFoodName ? foodName.trim() || null : null,
-        amount_ml: showsAmount ? parseInteger(amountMl) : null,
+        amount_ml: showsAmount ? parseVolumeInputToMl(amountMl, unitSystem) : null,
         duration_minutes: showsDuration ? parseInteger(durationMinutes) : null,
         breast_side: showsBreastSide ? breastSide : null,
         bottle_content: showsBottleContent ? bottleContent : null,
@@ -168,16 +172,17 @@ export function EditMealSheet({ entry, open, onClose, onSaved, onDeleted }: Edit
             <>
               <div>
                 <label htmlFor="edit-bottle-amount" className="block text-sm font-medium text-[var(--color-text)] mb-1.5">
-                  Amount (ml)
+                  Amount ({volumeUnit})
                 </label>
                 <input
                   id="edit-bottle-amount"
                   type="number"
                   min="0"
+                  step={unitSystem === "imperial" ? "0.1" : "1"}
                   inputMode="numeric"
                   value={amountMl}
                   onChange={(e) => setAmountMl(e.target.value)}
-                  placeholder="e.g. 120"
+                  placeholder={unitSystem === "imperial" ? "e.g. 4.0" : "e.g. 120"}
                   className="w-full h-11 px-3 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)] text-sm outline-none focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20 transition-colors"
                 />
               </div>
@@ -208,16 +213,17 @@ export function EditMealSheet({ entry, open, onClose, onSaved, onDeleted }: Edit
           {(foodType === "formula" || foodType === "pumping" || foodType === "water") && (
             <div>
               <label htmlFor="edit-amount-ml" className="block text-sm font-medium text-[var(--color-text)] mb-1.5">
-                Amount (ml)
+                Amount ({volumeUnit})
               </label>
               <input
                 id="edit-amount-ml"
                 type="number"
                 min="0"
+                step={unitSystem === "imperial" ? "0.1" : "1"}
                 inputMode="numeric"
                 value={amountMl}
                 onChange={(e) => setAmountMl(e.target.value)}
-                placeholder={foodType === "pumping" ? "e.g. 90" : "e.g. 120"}
+                placeholder={unitSystem === "imperial" ? "e.g. 3.0" : foodType === "pumping" ? "e.g. 90" : "e.g. 120"}
                 className="w-full h-11 px-3 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)] text-sm outline-none focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20 transition-colors"
               />
             </div>

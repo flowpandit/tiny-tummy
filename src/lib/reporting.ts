@@ -4,6 +4,7 @@ import { getEpisodeTypeLabel } from "./episode-constants";
 import { getFeedingEntryDisplayLabel } from "./feeding";
 import { getMilestoneTypeLabel } from "./milestone-constants";
 import { getSymptomSeverityLabel, getSymptomTypeLabel } from "./symptom-constants";
+import { formatGrowthValue, formatVolumeValue, volumeMlToDisplay } from "./units";
 import * as db from "./db";
 import type {
   Episode,
@@ -13,6 +14,7 @@ import type {
   MilestoneEntry,
   PoopEntry,
   SymptomEntry,
+  UnitSystem,
 } from "./types";
 
 export interface EpisodeReportGroup {
@@ -270,6 +272,7 @@ function buildDashboardStats(input: {
   growthLogs: GrowthEntry[];
   activeEpisodeGroup: EpisodeReportGroup | null;
   dayCount: number;
+  unitSystem: UnitSystem;
 }): ReportDashboardStat[] {
   const actualPoops = input.logs.filter((log) => log.is_no_poop === 0);
   const avgStoolsPerDay = actualPoops.length / input.dayCount;
@@ -300,7 +303,7 @@ function buildDashboardStats(input: {
   if (bottleVolumePerDay > 0) {
     stats.push({
       label: "Bottle volume / day",
-      value: `${Math.round(bottleVolumePerDay)} ml`,
+      value: formatVolumeValue(bottleVolumePerDay, input.unitSystem, { maximumFractionDigits: input.unitSystem === "imperial" ? 1 : 0 }),
       detail: "Only logged bottle amounts are counted",
     });
   } else if (breastfeedingMinutesPerDay > 0) {
@@ -362,7 +365,7 @@ function buildLegacyStats(logs: PoopEntry[], dayCount: number) {
   };
 }
 
-function buildChartData(endDate: string, logs: PoopEntry[], feedingLogs: FeedingEntry[]) {
+function buildChartData(endDate: string, logs: PoopEntry[], feedingLogs: FeedingEntry[], unitSystem: UnitSystem) {
   const dates = buildLastNDates(endDate, 7);
 
   return {
@@ -376,7 +379,7 @@ function buildChartData(endDate: string, logs: PoopEntry[], feedingLogs: Feeding
       return {
         label: formatShortDayLabel(day),
         primaryValue: dayFeeds.length,
-        secondaryValue: dayFeeds.reduce((sum, log) => sum + (log.amount_ml ?? 0), 0),
+        secondaryValue: volumeMlToDisplay(dayFeeds.reduce((sum, log) => sum + (log.amount_ml ?? 0), 0), unitSystem),
       };
     }),
   };
@@ -392,6 +395,7 @@ function buildContextSections(input: {
   caregiverNote: string | null;
   options: ReportOptions;
   dayCount: number;
+  unitSystem: UnitSystem;
 }): ReportContextSection[] {
   const sections: ReportContextSection[] = [];
 
@@ -451,7 +455,7 @@ function buildContextSections(input: {
     if (avgBottleVolume > 0) {
       rows.push({
         title: "Average bottle volume per day",
-        detail: `${Math.round(avgBottleVolume)} ml`,
+        detail: formatVolumeValue(avgBottleVolume, input.unitSystem, { maximumFractionDigits: input.unitSystem === "imperial" ? 1 : 0 }),
       });
     }
 
@@ -464,7 +468,7 @@ function buildContextSections(input: {
 
     rows.push(
       ...input.feedingLogs.slice(0, 4).map((log) => ({
-        title: getFeedingEntryDisplayLabel(log),
+        title: getFeedingEntryDisplayLabel(log, input.unitSystem),
         meta: formatDate(log.logged_at),
         detail: log.reaction_notes ?? log.notes ?? undefined,
       })),
@@ -483,9 +487,9 @@ function buildContextSections(input: {
       emptyText: "No growth entries were logged in this date range.",
       rows: input.growthLogs.slice(0, 6).map((log) => ({
         title: [
-          log.weight_kg !== null ? `${log.weight_kg.toFixed(2)} kg` : null,
-          log.height_cm !== null ? `${log.height_cm.toFixed(1)} cm` : null,
-          log.head_circumference_cm !== null ? `HC ${log.head_circumference_cm.toFixed(1)} cm` : null,
+          log.weight_kg !== null ? formatGrowthValue("weight_kg", log.weight_kg, input.unitSystem, { maximumFractionDigits: 2 }) : null,
+          log.height_cm !== null ? formatGrowthValue("height_cm", log.height_cm, input.unitSystem, { maximumFractionDigits: 1 }) : null,
+          log.head_circumference_cm !== null ? `HC ${formatGrowthValue("head_circumference_cm", log.head_circumference_cm, input.unitSystem, { maximumFractionDigits: 1 })}` : null,
         ].filter(Boolean).join(" · "),
         meta: formatDate(log.measured_at),
         detail: log.notes ?? undefined,
@@ -524,6 +528,7 @@ function buildTimeline(input: {
   growthLogs: GrowthEntry[];
   episodeGroups: EpisodeReportGroup[];
   options: ReportOptions;
+  unitSystem: UnitSystem;
 }): ReportTimelineRow[] {
   const rows: Array<ReportTimelineRow & { sortAt: string }> = [];
 
@@ -551,7 +556,7 @@ function buildTimeline(input: {
         sortAt: log.logged_at,
         dateTime: formatDate(log.logged_at),
         eventType: "Feed",
-        details: getFeedingEntryDisplayLabel(log),
+        details: getFeedingEntryDisplayLabel(log, input.unitSystem),
         note: input.options.includeNotes ? log.reaction_notes ?? log.notes ?? undefined : undefined,
       });
     }
@@ -588,9 +593,9 @@ function buildTimeline(input: {
         dateTime: formatDate(log.measured_at),
         eventType: "Growth",
         details: [
-          log.weight_kg !== null ? `${log.weight_kg.toFixed(2)} kg` : null,
-          log.height_cm !== null ? `${log.height_cm.toFixed(1)} cm` : null,
-          log.head_circumference_cm !== null ? `HC ${log.head_circumference_cm.toFixed(1)} cm` : null,
+          log.weight_kg !== null ? formatGrowthValue("weight_kg", log.weight_kg, input.unitSystem, { maximumFractionDigits: 2 }) : null,
+          log.height_cm !== null ? formatGrowthValue("height_cm", log.height_cm, input.unitSystem, { maximumFractionDigits: 1 }) : null,
+          log.head_circumference_cm !== null ? `HC ${formatGrowthValue("head_circumference_cm", log.head_circumference_cm, input.unitSystem, { maximumFractionDigits: 1 })}` : null,
         ].filter(Boolean).join(" · "),
         note: input.options.includeNotes ? log.notes ?? undefined : undefined,
       });
@@ -629,6 +634,7 @@ export async function generateReportData(
   startDate: string,
   endDate: string,
   options: ReportOptions = defaultReportOptions,
+  unitSystem: UnitSystem = "metric",
 ): Promise<ReportData> {
   const dayCount = getDateRangeLength(startDate, endDate);
 
@@ -668,8 +674,9 @@ export async function generateReportData(
       growthLogs,
       activeEpisodeGroup,
       dayCount,
+      unitSystem,
     }),
-    chartData: buildChartData(endDate, logs, feedingLogs),
+    chartData: buildChartData(endDate, logs, feedingLogs, unitSystem),
     contextSections: buildContextSections({
       feedingLogs,
       symptomLogs,
@@ -680,6 +687,7 @@ export async function generateReportData(
       caregiverNote,
       options,
       dayCount,
+      unitSystem,
     }),
     timeline: buildTimeline({
       logs,
@@ -689,6 +697,7 @@ export async function generateReportData(
       growthLogs,
       episodeGroups,
       options,
+      unitSystem,
     }),
   };
 }

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { useChildContext } from "../contexts/ChildContext";
+import { useUnits } from "../contexts/UnitsContext";
 import { useFeedingLogs } from "../hooks/useFeedingLogs";
 import { fillDailyFrequencyDays, formatLocalDateKey } from "../lib/stats";
 import { DAYS_IN_WEEK, addDays, formatHoursCompact, formatHoursLong, formatWeekLabel, startOfDay } from "../lib/tracker";
@@ -8,11 +9,14 @@ import { getFoodTypeLabel, getFeedingEntryDetailParts, getFeedingEntryPrimaryLab
 import {
   buildFeedPresetRecordInput,
   describeFeedPresetDraft,
+  ensureEssentialFeedPresets,
   getDefaultQuickFeedPresets,
   hydrateFeedPresets,
   type QuickFeedPreset,
 } from "../lib/quick-presets";
 import { timeSince } from "../lib/utils";
+import { formatVolumeValue, getVolumeDisplayParts } from "../lib/units";
+import { getBreastfeedingSessionSettingKey, parseBreastfeedingSession } from "../lib/breastfeeding";
 import * as db from "../lib/db";
 import { Card, CardContent, CardHeader } from "../components/ui/card";
 import { Button } from "../components/ui/button";
@@ -33,7 +37,7 @@ import { DietLogForm } from "../components/logging/DietLogForm";
 import { EditMealSheet } from "../components/logging/EditMealSheet";
 import { DiscoveryLinks } from "../components/discovery/DiscoveryLinks";
 import { useToast } from "../components/ui/toast";
-import type { FeedingEntry, FeedingLogDraft, FeedingType, HealthStatus } from "../lib/types";
+import type { FeedingEntry, FeedingLogDraft, FeedingType, HealthStatus, UnitSystem } from "../lib/types";
 
 type PredictionConfidence = "low" | "medium" | "high";
 
@@ -514,16 +518,17 @@ function getTodayFeedRingDisplay(todayFeedCount: number): { value: string; unit:
   };
 }
 
-function getTodayIntakeRingDisplay(todayTrackedMl: number, todayFeedCount: number): {
+function getTodayIntakeRingDisplay(todayTrackedMl: number, todayFeedCount: number, unitSystem: UnitSystem): {
   value: string;
   unit: string;
   label: string;
   gradient: string;
 } {
   if (todayTrackedMl > 0) {
+    const parts = getVolumeDisplayParts(todayTrackedMl, unitSystem);
     return {
-      value: `${todayTrackedMl}`,
-      unit: "ml today",
+      value: parts.value,
+      unit: `${parts.unit} today`,
       label: "Tracked intake",
       gradient: "var(--gradient-status-healthy)",
     };
@@ -544,9 +549,11 @@ function getTimeSinceStatus(dueRisk: FeedRisk, prediction: FeedPrediction | null
 function FeedLogList({
   logs,
   onEdit,
+  unitSystem,
 }: {
   logs: FeedingEntry[];
   onEdit: (entry: FeedingEntry) => void;
+  unitSystem: UnitSystem;
 }) {
   if (logs.length === 0) {
     return (
@@ -561,7 +568,7 @@ function FeedLogList({
       {logs.map((log) => {
         const dateLabel = new Date(log.logged_at).toLocaleDateString(undefined, { month: "short", day: "numeric" });
         const timeLabel = new Date(log.logged_at).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
-        const detailLabel = getFeedingEntryDetailParts(log).join(" · ");
+        const detailLabel = getFeedingEntryDetailParts(log, unitSystem).join(" · ");
         const secondary = getFeedingEntrySecondaryText(log);
 
         return (
@@ -594,6 +601,8 @@ export function Feed() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { activeChild } = useChildContext();
+  const { unitSystem } = useUnits();
+  const location = useLocation();
   const { showError, showSuccess } = useToast();
   const { logs, refresh } = useFeedingLogs(activeChild?.id ?? null, 500);
   const [weekOffset, setWeekOffset] = useState(0);
@@ -602,6 +611,8 @@ export function Feed() {
   const [editingMeal, setEditingMeal] = useState<FeedingEntry | null>(null);
   const [feedPresetSheetOpen, setFeedPresetSheetOpen] = useState(false);
   const [quickFeedPresets, setQuickFeedPresets] = useState<QuickFeedPreset[]>([]);
+  const [activeBreastfeedingSide, setActiveBreastfeedingSide] = useState<"left" | "right" | null>(null);
+  const navigateWithOrigin = (path: string) => navigate(path, { state: { origin: location.pathname } });
 
   useEffect(() => {
     if (searchParams.get("add") === "1") {
@@ -617,22 +628,69 @@ export function Feed() {
 
     let cancelled = false;
 
-    setQuickFeedPresets(getDefaultQuickFeedPresets(activeChild.feeding_type));
+    setQuickFeedPresets(ensureEssentialFeedPresets(
+      getDefaultQuickFeedPresets(activeChild.feeding_type, unitSystem),
+      activeChild.feeding_type,
+      unitSystem,
+    ));
 
     db.getQuickPresets(activeChild.id, "feed").then((feedRows) => {
       if (cancelled) return;
-      const hydratedFeed = hydrateFeedPresets(feedRows);
+      const hydratedFeed = hydrateFeedPresets(feedRows, unitSystem);
       setQuickFeedPresets(
-        hydratedFeed.length > 0 ? hydratedFeed : getDefaultQuickFeedPresets(activeChild.feeding_type),
+        ensureEssentialFeedPresets(
+          hydratedFeed.length > 0 ? hydratedFeed : getDefaultQuickFeedPresets(activeChild.feeding_type, unitSystem),
+          activeChild.feeding_type,
+          unitSystem,
+        ),
       );
     }).catch(() => {
       if (!cancelled) {
-        setQuickFeedPresets(getDefaultQuickFeedPresets(activeChild.feeding_type));
+        setQuickFeedPresets(ensureEssentialFeedPresets(
+          getDefaultQuickFeedPresets(activeChild.feeding_type, unitSystem),
+          activeChild.feeding_type,
+          unitSystem,
+        ));
       }
     });
 
     return () => {
       cancelled = true;
+    };
+  }, [activeChild, unitSystem]);
+
+  useEffect(() => {
+    if (!activeChild) {
+      setActiveBreastfeedingSide(null);
+      return;
+    }
+
+    let cancelled = false;
+
+    const refreshSession = () => {
+      db.getSetting(getBreastfeedingSessionSettingKey(activeChild.id))
+        .then((raw) => {
+          if (cancelled) return;
+          const session = parseBreastfeedingSession(raw);
+          setActiveBreastfeedingSide(session?.activeSide ?? null);
+        })
+        .catch(() => {
+          if (!cancelled) {
+            setActiveBreastfeedingSide(null);
+          }
+        });
+    };
+
+    refreshSession();
+
+    const handleVisibility = () => refreshSession();
+    window.addEventListener("focus", handleVisibility);
+    document.addEventListener("visibilitychange", handleVisibility);
+
+    return () => {
+      cancelled = true;
+      window.removeEventListener("focus", handleVisibility);
+      document.removeEventListener("visibilitychange", handleVisibility);
     };
   }, [activeChild]);
 
@@ -707,8 +765,8 @@ export function Feed() {
   );
   const predictionRing = useMemo(() => getPredictionRingDisplay(prediction), [prediction]);
   const todayIntakeRing = useMemo(
-    () => getTodayIntakeRingDisplay(todayTrackedMl, todayFeedCount),
-    [todayFeedCount, todayTrackedMl],
+    () => getTodayIntakeRingDisplay(todayTrackedMl, todayFeedCount, unitSystem),
+    [todayFeedCount, todayTrackedMl, unitSystem],
   );
   const statusTone = useMemo(() => getTimeSinceStatus(dueRisk, prediction), [dueRisk, prediction]);
 
@@ -717,11 +775,12 @@ export function Feed() {
   const feedMix = useMemo(() => getFeedMixSnapshot(weekLogs), [weekLogs]);
   const weekTrackedMl = useMemo(() => getTrackedMl(weekLogs), [weekLogs]);
   const dominantType = [...getFeedTypeCounts(weeklyPredictableLogs).entries()].sort((left, right) => right[1] - left[1])[0]?.[0] ?? null;
+  const showBreastfeedAction = activeChild?.feeding_type === "breast" || activeChild?.feeding_type === "mixed";
 
   const weekSummaryBits = [
     weeklyPredictableLogs.length === 0 ? "No feeds logged in this week" : `${weeklyPredictableLogs.length} feed${weeklyPredictableLogs.length === 1 ? "" : "s"} in this week`,
     dominantType ? `Mostly ${getFoodTypeLabel(dominantType).toLowerCase()}` : null,
-    weekTrackedMl > 0 ? `${weekTrackedMl} ml tracked` : null,
+    weekTrackedMl > 0 ? `${formatVolumeValue(weekTrackedMl, unitSystem)} tracked` : null,
   ].filter(Boolean);
 
   const handleRefresh = async () => {
@@ -781,7 +840,7 @@ export function Feed() {
 
   const saveFeedPresets = async (drafts: Array<Partial<FeedingLogDraft>>) => {
     const nextPresets = drafts.map((draft, index) => {
-      const preview = describeFeedPresetDraft(draft);
+      const preview = describeFeedPresetDraft(draft, unitSystem);
       return {
         id: `feed-preset-${index}`,
         label: preview.label,
@@ -791,8 +850,8 @@ export function Feed() {
     });
 
     try {
-      await db.replaceQuickPresets(activeChild.id, "feed", buildFeedPresetRecordInput(drafts));
-      setQuickFeedPresets(nextPresets);
+      await db.replaceQuickPresets(activeChild.id, "feed", buildFeedPresetRecordInput(drafts, unitSystem));
+      setQuickFeedPresets(ensureEssentialFeedPresets(nextPresets, activeChild.feeding_type, unitSystem));
       setFeedPresetSheetOpen(false);
       showSuccess("Quick feed tiles updated.");
     } catch {
@@ -859,12 +918,29 @@ export function Feed() {
               >
                 Edit tiles
               </button>
+              {showBreastfeedAction && (
+                <button
+                  type="button"
+                  onClick={() => navigateWithOrigin("/breastfeed")}
+                  className="rounded-full border border-[var(--color-border)] bg-[var(--color-surface-strong)] px-3 py-2 text-[12px] font-semibold text-[var(--color-text-secondary)] transition-colors hover:bg-white/70 flex items-center gap-2"
+                >
+                  <span>Breastfeed timer</span>
+                  {activeBreastfeedingSide && (
+                    <span
+                      className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-[var(--color-primary)] text-[10px] font-semibold text-[var(--color-primary)]"
+                      aria-label={activeBreastfeedingSide === "left" ? "Left breastfeeding timer running" : "Right breastfeeding timer running"}
+                    >
+                      {activeBreastfeedingSide === "left" ? "L" : "R"}
+                    </span>
+                  )}
+                </button>
+              )}
             </div>
           </div>
 
           {lastFeed && (
             <p className="mt-3 text-[12px] text-[var(--color-text-soft)]">
-              Last feed: {getFeedingEntryPrimaryLabel(lastFeed)}{getFeedingEntryDetailParts(lastFeed).length > 0 ? ` · ${getFeedingEntryDetailParts(lastFeed).join(" · ")}` : ""}
+              Last feed: {getFeedingEntryPrimaryLabel(lastFeed)}{getFeedingEntryDetailParts(lastFeed, unitSystem).length > 0 ? ` · ${getFeedingEntryDetailParts(lastFeed, unitSystem).join(" · ")}` : ""}
             </p>
           )}
 
@@ -953,7 +1029,7 @@ export function Feed() {
                   ))}
                   {weekTrackedMl > 0 && (
                     <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-text-secondary)]">
-                      {weekTrackedMl} ml tracked
+                      {formatVolumeValue(weekTrackedMl, unitSystem)} tracked
                     </span>
                   )}
                 </div>
@@ -1090,7 +1166,7 @@ export function Feed() {
             </div>
           </CardHeader>
           <CardContent>
-            <FeedLogList logs={weekLogs} onEdit={setEditingMeal} />
+            <FeedLogList logs={weekLogs} onEdit={setEditingMeal} unitSystem={unitSystem} />
           </CardContent>
         </Card>
       )}

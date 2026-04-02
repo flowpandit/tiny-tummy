@@ -1,6 +1,7 @@
 import { motion, useMotionValue, useTransform, AnimatePresence } from "framer-motion";
 import { useState, useEffect, useMemo, useRef, type ReactNode } from "react";
 import { useChildContext } from "../contexts/ChildContext";
+import { useUnits } from "../contexts/UnitsContext";
 import { usePoopLogs } from "../hooks/usePoopLogs";
 import { useFeedingLogs } from "../hooks/useFeedingLogs";
 import { useSleepLogs } from "../hooks/useSleepLogs";
@@ -21,6 +22,7 @@ import { EditMealSheet } from "../components/logging/EditMealSheet";
 import { EditSleepSheet } from "../components/sleep/EditSleepSheet";
 import { loadPhoto } from "../lib/photos";
 import { cn } from "../lib/cn";
+import { formatGrowthSummary as formatGrowthSummaryWithUnits } from "../lib/units";
 import * as db from "../lib/db";
 import type {
   Episode,
@@ -88,16 +90,6 @@ function formatSleepDuration(entry: SleepEntry): string {
   if (hours === 0) return `${remainder}m`;
   if (remainder === 0) return `${hours}h`;
   return `${hours}h ${remainder}m`;
-}
-
-function formatGrowthSummary(entry: GrowthEntry): string {
-  const parts = [
-    entry.weight_kg !== null ? `${entry.weight_kg} kg` : null,
-    entry.height_cm !== null ? `${entry.height_cm} cm` : null,
-    entry.head_circumference_cm !== null ? `head ${entry.head_circumference_cm} cm` : null,
-  ].filter(Boolean);
-
-  return parts.length > 0 ? parts.join(" • ") : "Measurement logged";
 }
 
 function SleepGlyph() {
@@ -304,8 +296,8 @@ function PoopItem({ log, onTap }: { log: PoopEntry; onTap: () => void }) {
   );
 }
 
-function MealItem({ meal, onTap }: { meal: FeedingEntry; onTap: () => void }) {
-  const detailText = getFeedingEntryDetailParts(meal).join(" · ");
+function MealItem({ meal, unitSystem, onTap }: { meal: FeedingEntry; unitSystem: "metric" | "imperial"; onTap: () => void }) {
+  const detailText = getFeedingEntryDetailParts(meal, unitSystem).join(" · ");
   const secondaryText = [detailText, getFeedingEntrySecondaryText(meal)].filter(Boolean).join(" • ");
 
   return (
@@ -345,13 +337,13 @@ function SymptomItem({ entry }: { entry: SymptomEntry }) {
   );
 }
 
-function GrowthItem({ entry }: { entry: GrowthEntry }) {
+function GrowthItem({ entry, unitSystem }: { entry: GrowthEntry; unitSystem: "metric" | "imperial" }) {
   return (
     <BaseItem
       icon={<GrowthGlyph />}
       time={formatTime(entry.measured_at)}
       title="Growth check"
-      subtitle={[formatGrowthSummary(entry), entry.notes].filter(Boolean).join(" • ")}
+      subtitle={[formatGrowthSummaryWithUnits(entry, unitSystem), entry.notes].filter(Boolean).join(" • ")}
       tail={<Badge variant="healthy">growth</Badge>}
     />
   );
@@ -408,6 +400,7 @@ function DayCard({
   onEditPoop,
   onEditMeal,
   onEditSleep,
+  unitSystem,
 }: {
   date: string;
   events: TimelineEvent[];
@@ -419,6 +412,7 @@ function DayCard({
   onEditPoop: (entry: PoopEntry) => void;
   onEditMeal: (entry: FeedingEntry) => void;
   onEditSleep: (entry: SleepEntry) => void;
+  unitSystem: "metric" | "imperial";
 }) {
   const poopCount = events.filter((event) => event.kind === "poop" && event.entry.is_no_poop === 0).length;
   const feedCount = events.filter((event) => event.kind === "meal").length;
@@ -483,7 +477,7 @@ function DayCard({
                   case "meal":
                     return (
                       <SwipeableItem key={`meal-${event.entry.id}`} onDelete={() => onDeleteMeal(event.entry.id)}>
-                        <MealItem meal={event.entry} onTap={() => onEditMeal(event.entry)} />
+                        <MealItem meal={event.entry} unitSystem={unitSystem} onTap={() => onEditMeal(event.entry)} />
                       </SwipeableItem>
                     );
                   case "sleep":
@@ -495,7 +489,7 @@ function DayCard({
                   case "symptom":
                     return <SymptomItem key={`symptom-${event.entry.id}`} entry={event.entry} />;
                   case "growth":
-                    return <GrowthItem key={`growth-${event.entry.id}`} entry={event.entry} />;
+                    return <GrowthItem key={`growth-${event.entry.id}`} entry={event.entry} unitSystem={unitSystem} />;
                   case "milestone":
                     return <MilestoneItem key={`milestone-${event.entry.id}`} entry={event.entry} />;
                   case "episode":
@@ -514,6 +508,7 @@ function DayCard({
 
 export function History() {
   const { activeChild } = useChildContext();
+  const { unitSystem } = useUnits();
   const { logs: poopLogs, isLoading: poopLoading, refresh: refreshPoop } = usePoopLogs(activeChild?.id ?? null, 100);
   const { logs: feedingLogs, isLoading: feedingLoading, refresh: refreshFeeding } = useFeedingLogs(activeChild?.id ?? null, 100);
   const { logs: sleepLogs, isLoading: sleepLoading, refresh: refreshSleep } = useSleepLogs(activeChild?.id ?? null, 100);
@@ -694,6 +689,7 @@ export function History() {
               onEditPoop={setEditingPoop}
               onEditMeal={setEditingMeal}
               onEditSleep={setEditingSleep}
+              unitSystem={unitSystem}
             />
           ))}
         </div>
