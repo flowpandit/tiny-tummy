@@ -1,9 +1,6 @@
-import { useState, useEffect, type ReactNode } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useLocation, useNavigate } from "react-router-dom";
-import watercolorClouds from "../assets/watercolor-clouds.svg";
-import watercolorMountains from "../assets/watercolor-mountains.svg";
-import watercolorSun from "../assets/watercolor-sun.svg";
 import { useChildContext } from "../contexts/ChildContext";
 import { usePoopLogs } from "../hooks/usePoopLogs";
 import { useDiaperLogs } from "../hooks/useDiaperLogs";
@@ -22,7 +19,7 @@ import { timeSince } from "../lib/utils";
 import { syncSmartRemindersForChild, syncSmartRemindersForChildren } from "../lib/notifications";
 import { getSymptomSeverityBadgeVariant, getSymptomSeverityLabel, getSymptomTypeLabel } from "../lib/symptom-constants";
 import * as db from "../lib/db";
-import { Avatar } from "../components/child/Avatar";
+import { HomeTopSection } from "../components/home/HomeTopSection";
 import { WeeklyPatternCard } from "../components/home/WeeklyPatternCard";
 import { EpisodeCard } from "../components/home/EpisodeCard";
 import { RecentActivity } from "../components/home/RecentActivity";
@@ -41,153 +38,6 @@ import { DiscoveryLinks } from "../components/discovery/DiscoveryLinks";
 import { DiaperLogForm } from "../components/logging/DiaperLogForm";
 import { EditDiaperSheet } from "../components/logging/EditDiaperSheet";
 import type { DiaperEntry, DiaperLogDraft, FeedingEntry, FeedingLogDraft, PoopEntry, PoopLogDraft } from "../lib/types";
-
-function QuickSummaryRing({
-  icon,
-  label,
-  value,
-  progress,
-  detail,
-  glow,
-}: {
-  icon: ReactNode;
-  label: string;
-  value: string;
-  progress: number;
-  detail: string;
-  glow: string;
-}) {
-  const size = 92;
-  const stroke = 9;
-  const radius = (size - stroke) / 2;
-  const circumference = 2 * Math.PI * radius;
-  const normalizedProgress = Math.max(0.08, Math.min(progress, 1));
-  const dashOffset = circumference * (1 - normalizedProgress);
-
-  return (
-    <div className="text-center">
-      <div className="mx-auto flex w-fit items-center justify-center">
-        <div
-          className="relative flex h-[92px] w-[92px] items-center justify-center rounded-full"
-          style={{
-            background: "radial-gradient(circle, rgba(255,255,255,0.96) 0%, rgba(255,252,247,0.98) 62%, rgba(255,248,241,0.84) 100%)",
-            boxShadow: "0 0 0 5px rgba(255,239,230,0.88), 0 10px 24px rgba(232, 182, 153, 0.14)",
-          }}
-        >
-          <div
-            className="pointer-events-none absolute -inset-4 rounded-full blur-[18px]"
-            style={{ background: `radial-gradient(circle, rgba(255,255,255,0) 48%, ${glow} 68%, rgba(255,255,255,0) 100%)` }}
-          />
-          <svg viewBox={`0 0 ${size} ${size}`} className="absolute inset-0 h-full w-full -rotate-90" aria-hidden="true">
-            <circle
-              cx={size / 2}
-              cy={size / 2}
-              r={radius}
-              fill="none"
-              stroke="rgba(243, 211, 195, 0.72)"
-              strokeWidth={stroke}
-            />
-            <circle
-              cx={size / 2}
-              cy={size / 2}
-              r={radius}
-              fill="none"
-              stroke="rgba(239,157,123,0.98)"
-              strokeWidth={stroke}
-              strokeLinecap="round"
-              strokeDasharray={circumference}
-              strokeDashoffset={dashOffset}
-              style={{
-                filter: "drop-shadow(0 0 6px rgba(239,157,123,0.24))",
-                transition: "stroke-dashoffset 280ms var(--ease-out-soft)",
-              }}
-            />
-          </svg>
-          <div className="relative z-10 flex max-w-[58px] flex-col items-center">
-            <div className="flex h-5 items-center justify-center">{icon}</div>
-            <p className="mt-1 text-[0.6rem] font-extrabold leading-[1.15] tracking-[-0.02em] text-[var(--color-text)]">
-              {label}: {value}
-            </p>
-          </div>
-        </div>
-      </div>
-      <p className="mt-2 text-[12px] font-semibold tracking-[-0.01em] text-[var(--color-text-secondary)]">{detail}</p>
-    </div>
-  );
-}
-
-function SunMoodIcon() {
-  return (
-    <svg viewBox="0 0 48 48" className="h-9 w-9" aria-hidden="true">
-      <circle cx="24" cy="24" r="9.5" fill="#F6D97B" stroke="#E6B25F" strokeWidth="2" />
-      {[
-        [24, 5, 24, 11],
-        [24, 37, 24, 43],
-        [5, 24, 11, 24],
-        [37, 24, 43, 24],
-        [11.2, 11.2, 15.5, 15.5],
-        [32.5, 32.5, 36.8, 36.8],
-        [11.2, 36.8, 15.5, 32.5],
-        [32.5, 15.5, 36.8, 11.2],
-      ].map(([x1, y1, x2, y2], index) => (
-        <line key={index} x1={x1} y1={y1} x2={x2} y2={y2} stroke="#F0C98A" strokeWidth="2.4" strokeLinecap="round" />
-      ))}
-      <path d="M20.5 27.1c.9 1.1 2.1 1.6 3.5 1.6 1.5 0 2.7-.5 3.5-1.6" fill="none" stroke="#9F6F3A" strokeWidth="1.9" strokeLinecap="round" />
-      <circle cx="20" cy="22" r="1.3" fill="#9F6F3A" />
-      <circle cx="28" cy="22" r="1.3" fill="#9F6F3A" />
-    </svg>
-  );
-}
-
-function RainbowMoodIcon() {
-  return (
-    <svg viewBox="0 0 48 48" className="h-9 w-9" aria-hidden="true">
-      <path d="M11 30a13 13 0 0 1 26 0" fill="none" stroke="#F08D7E" strokeWidth="4" strokeLinecap="round" />
-      <path d="M14 30a10 10 0 0 1 20 0" fill="none" stroke="#F2C97D" strokeWidth="4" strokeLinecap="round" />
-      <path d="M17 30a7 7 0 0 1 14 0" fill="none" stroke="#8FC4E8" strokeWidth="4" strokeLinecap="round" />
-      <path d="M13 31c0-3.5 2.9-6.4 6.4-6.4 2.3 0 4.2 1 5.3 2.8 1.1-1.8 3-2.8 5.3-2.8 3.5 0 6.4 2.9 6.4 6.4 0 3.1-2.5 5.6-5.6 5.6H18.6A5.6 5.6 0 0 1 13 31Z" fill="#F7F8FB" stroke="#BFD0E6" strokeWidth="1.8" />
-    </svg>
-  );
-}
-
-function MoonMoodIcon() {
-  return (
-    <svg viewBox="0 0 48 48" className="h-9 w-9" aria-hidden="true">
-      <path d="M29.8 10.4c-6.8 1.2-12 7.2-12 14.4 0 3.8 1.4 7.2 3.8 9.9-6.3-.7-11.2-6-11.2-12.5 0-7 5.7-12.7 12.7-12.7 2.5 0 4.8.7 6.7 1.9Z" fill="#F4D38A" stroke="#C89749" strokeWidth="1.8" strokeLinejoin="round" />
-      <path d="m33.5 13 1 2.4 2.4 1-2.4 1-1 2.4-1-2.4-2.4-1 2.4-1 1-2.4Z" fill="#F4D38A" />
-      <path d="m38 19 1.1 2.7 2.7 1.1-2.7 1.1-1.1 2.7-1.1-2.7-2.7-1.1 2.7-1.1L38 19Z" fill="#F8E8BD" />
-    </svg>
-  );
-}
-
-function DiaperSummaryIcon() {
-  return (
-    <svg viewBox="0 0 32 32" className="h-7 w-7" aria-hidden="true">
-      <path d="M8 9.5c0 1.4-.3 3-.9 4.5-.8 2-1.1 4-.8 5.9l.3 1.7c.2 1.3 1.3 2.3 2.7 2.3h13.4c1.3 0 2.5-1 2.7-2.3l.3-1.7c.3-1.9 0-3.9-.8-5.9-.6-1.5-.9-3.1-.9-4.5H21c0 2.2-1.8 4-4 4h-2c-2.2 0-4-1.8-4-4H8Z" fill="none" stroke="#93A7B9" strokeWidth="1.9" strokeLinejoin="round" />
-      <path d="M11 9.5h10" stroke="#93A7B9" strokeWidth="1.9" strokeLinecap="round" />
-      <path d="M12.2 18.5c1.3 1.1 2.5 1.6 3.8 1.6 1.3 0 2.5-.5 3.8-1.6" fill="none" stroke="#C7A36B" strokeWidth="1.7" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function BottleSummaryIcon() {
-  return (
-    <svg viewBox="0 0 32 32" className="h-7 w-7" aria-hidden="true">
-      <path d="M13 5h6v3.4l1.7 1.8c1 1 1.5 2.3 1.5 3.7V24a3 3 0 0 1-3 3h-6.4a3 3 0 0 1-3-3V13.9c0-1.4.5-2.7 1.5-3.7L13 8.4V5Z" fill="none" stroke="#D9A16D" strokeWidth="1.8" strokeLinejoin="round" />
-      <path d="M12 15h8M12 19h8" stroke="#D9A16D" strokeWidth="1.6" strokeLinecap="round" />
-      <path d="M15 5h2" stroke="#D9A16D" strokeWidth="1.8" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function SleepSummaryIcon() {
-  return (
-    <svg viewBox="0 0 32 32" className="h-7 w-7" aria-hidden="true">
-      <path d="M21.9 7.6c-4.8.8-8.4 5-8.4 10 0 2.5.9 4.9 2.6 6.8-4.4-.5-7.8-4.2-7.8-8.7 0-4.9 4-8.9 8.9-8.9 1.7 0 3.3.5 4.7 1.3Z" fill="#D9C8EE" stroke="#A892C8" strokeWidth="1.8" strokeLinejoin="round" />
-      <path d="m22.8 10.2.8 1.8 1.8.8-1.8.8-.8 1.8-.8-1.8-1.8-.8 1.8-.8.8-1.8Z" fill="#EADDF7" />
-    </svg>
-  );
-}
 
 export function Home() {
   const navigate = useNavigate();
@@ -412,13 +262,8 @@ export function Home() {
   const sleepSummaryLabel = sleepSummaryHours > 0
     ? `${Math.floor(sleepSummaryHours / (1000 * 60 * 60))}h ${Math.round((sleepSummaryHours % (1000 * 60 * 60)) / (1000 * 60))}m`
     : "0h";
-  const totalDiapers = summary.todayWetDiapers + summary.todayDirtyDiapers;
   const sleepSummaryHoursValue = sleepSummaryHours / (1000 * 60 * 60);
-  const moodCards = [
-    { label: "Feeling Good", icon: <SunMoodIcon />, tone: "bg-[rgba(255,237,222,0.9)]" },
-    { label: "Managing Okay", icon: <RainbowMoodIcon />, tone: "bg-[rgba(255,252,247,0.95)]" },
-    { label: "Need a Moment", icon: <MoonMoodIcon />, tone: "bg-[rgba(255,252,247,0.95)]" },
-  ];
+  const sleepNapCount = sleepLogs.filter((entry) => entry.sleep_type === "nap").length;
 
   return (
     <div className="flex flex-col gap-0 pb-3 pt-0.5">
@@ -426,104 +271,14 @@ export function Home() {
       <AlertBanner alerts={alerts} onDismiss={dismiss} />
 
       {hasLogs ? (
-        <>
-          <section className="-mx-4 -mt-2 overflow-hidden px-4 pb-3 pt-1">
-            <svg width="0" height="0" className="absolute" aria-hidden="true" focusable="false">
-              <defs>
-                <clipPath id="home-hero-curve" clipPathUnits="objectBoundingBox">
-                  <path d="M0,0 H1 V0.62 Q0.6,0.74 0,0.64 Z" />
-                </clipPath>
-              </defs>
-            </svg>
-            <div
-              className="relative h-[350px] overflow-hidden px-4 pt-6"
-              style={{ clipPath: "url(#home-hero-curve)" }}
-            >
-              <div className="pointer-events-none absolute inset-x-0 top-0 h-72 bg-[radial-gradient(circle_at_76%_18%,rgba(255,214,119,0.58)_0%,rgba(255,214,119,0.2)_20%,rgba(255,255,255,0)_50%)]" />
-              <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(248,204,170,0.14)_0%,rgba(255,255,255,0)_44%)]" />
-              <img src={watercolorClouds} alt="" aria-hidden="true" className="pointer-events-none absolute left-[-14px] top-[18px] w-[calc(100%+28px)] opacity-95" />
-              <img src={watercolorSun} alt="" aria-hidden="true" className="pointer-events-none absolute right-[14px] top-[10px] w-[130px] opacity-95" />
-              <img src={watercolorMountains} alt="" aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-[74px] w-full scale-[1.12] opacity-100" />
-              <div className="pointer-events-none absolute inset-x-[-6%] top-[86px] h-[165px] bg-[linear-gradient(180deg,rgba(255,255,255,0)_0%,rgba(245,221,208,0.08)_40%,rgba(238,183,155,0.2)_100%)]" />
-              <div className="pointer-events-none absolute left-[12px] top-[106px] h-12 w-20 rounded-full bg-white/46 blur-[8px]" />
-              <div className="pointer-events-none absolute left-[42px] top-[112px] h-8 w-8 rounded-full bg-white/54 blur-[6px]" />
-              <div className="pointer-events-none absolute left-[72px] top-[108px] h-9 w-9 rounded-full bg-white/36 blur-[8px]" />
-              <div className="pointer-events-none absolute inset-x-0 bottom-0 h-28 bg-[linear-gradient(180deg,rgba(251,245,234,0)_0%,rgba(251,245,234,0.56)_68%,rgba(251,245,234,0.92)_100%)]" />
-              <div className="relative flex h-full items-start pt-8">
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.34, ease: [0.22, 1, 0.36, 1] }}
-                  className="w-full pr-[102px]"
-                >
-                  <h1 className="font-[var(--font-display)] text-[2.05rem] font-extrabold leading-[1.1] tracking-[-0.05em] text-[#E79A88]">
-                    How are you holding up today?
-                  </h1>
-                  <p className="mt-2 text-[0.98rem] leading-tight tracking-[-0.02em] text-[var(--color-text)]">
-                    Daily Check-in: Parent & Baby Care
-                  </p>
-                  <div className="mt-5 flex items-center gap-3">
-                    <Avatar
-                      childId={activeChild.id}
-                      name={activeChild.name}
-                      color={activeChild.avatar_color}
-                      size="sm"
-                      className="h-10 w-10 border-2 border-white/70 shadow-[var(--shadow-soft)]"
-                    />
-                    <div>
-                      <p className="text-[1.05rem] font-semibold text-[var(--color-text)]">{activeChild.name}</p>
-                    </div>
-                  </div>
-                </motion.div>
-              </div>
-            </div>
-
-            <div className="px-4">
-              <div className="-mt-24 grid grid-cols-3 gap-3">
-                {moodCards.map((card) => (
-                  <button
-                    key={card.label}
-                    type="button"
-                    className={`min-h-[96px] rounded-[20px] border border-[rgba(155,126,102,0.14)] px-2 py-3 text-center shadow-[0_24px_44px_rgba(188,146,114,0.28),0_10px_22px_rgba(233,197,170,0.26),0_2px_10px_rgba(255,255,255,0.68)] ${card.tone}`}
-                  >
-                    <div className="flex justify-center">{card.icon}</div>
-                    <p className="mt-2 text-[0.92rem] font-semibold leading-tight text-[var(--color-text)]">{card.label}</p>
-                  </button>
-                ))}
-              </div>
-
-              <div className="mt-4 rounded-[22px] border border-[rgba(155,126,102,0.14)] bg-[rgba(255,252,247,0.94)] p-4 shadow-[0_14px_28px_rgba(184,146,118,0.11)]">
-                <p className="text-[0.9rem] font-medium text-[var(--color-text)]">Quick Summary (Last 24h)</p>
-                <div className="mt-3 grid grid-cols-3 gap-2">
-                  <QuickSummaryRing
-                    icon={<DiaperSummaryIcon />}
-                    label="Diapers"
-                    value={String(totalDiapers)}
-                    progress={Math.min(totalDiapers / 8, 1)}
-                    detail={`${summary.todayWetDiapers} Wet, ${summary.todayDirtyDiapers} Dirty`}
-                    glow="rgba(244, 218, 113, 0.34)"
-                  />
-                  <QuickSummaryRing
-                    icon={<BottleSummaryIcon />}
-                    label="Feeds"
-                    value={String(summary.todayFeeds)}
-                    progress={Math.min(summary.todayFeeds / 10, 1)}
-                    detail={lastFeed ? `Last ${timeSince(lastFeed.logged_at)}` : "No feed yet"}
-                    glow="rgba(239, 169, 118, 0.3)"
-                  />
-                  <QuickSummaryRing
-                    icon={<SleepSummaryIcon />}
-                    label="Sleep"
-                    value={sleepSummaryLabel}
-                    progress={Math.min(sleepSummaryHoursValue / 16, 1)}
-                    detail={sleepLogs.length > 0 ? `${sleepLogs.filter((entry) => entry.sleep_type === "nap").length} Naps` : "No sleep logs"}
-                    glow="rgba(208, 192, 239, 0.32)"
-                  />
-                </div>
-              </div>
-            </div>
-          </section>
-        </>
+        <HomeTopSection
+          activeChild={activeChild}
+          summary={summary}
+          sleepSummaryLabel={sleepSummaryLabel}
+          sleepSummaryHoursValue={sleepSummaryHoursValue}
+          sleepNapCount={sleepNapCount}
+          onContinueToDashboard={() => navigate("/dashboard")}
+        />
       ) : (
         <NoLogsYet
           childName={activeChild.name}
