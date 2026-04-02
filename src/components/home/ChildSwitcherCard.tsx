@@ -9,7 +9,7 @@ interface ChildSwitcherCardProps {
   activeChild: Child;
   children: Child[];
   expanded: boolean;
-  lastPoopLabel: string | null;
+  secondaryLabel: string | null;
   collapsible?: boolean;
   onToggle?: () => void;
   onSelectChild: (id: string) => void;
@@ -19,7 +19,7 @@ export function ChildSwitcherCard({
   activeChild,
   children,
   expanded,
-  lastPoopLabel,
+  secondaryLabel,
   collapsible = true,
   onToggle,
   onSelectChild,
@@ -91,10 +91,10 @@ export function ChildSwitcherCard({
           </p>
           <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-[var(--color-text-secondary)]">
             <span>{ageLabel}</span>
-            {lastPoopLabel && (
+            {secondaryLabel && (
               <>
                 <span className="h-2 w-2 rounded-full bg-[var(--color-healthy)]" />
-                <span className="text-[var(--color-healthy)]">{lastPoopLabel}</span>
+                <span className="text-[var(--color-healthy)]">{secondaryLabel}</span>
               </>
             )}
           </div>

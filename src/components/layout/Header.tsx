@@ -6,7 +6,7 @@ import { ChildSwitcherCard } from "../home/ChildSwitcherCard";
 
 export function Header() {
   const { activeChild, children, setActiveChildId } = useChildContext();
-  const [lastPoopLabel, setLastPoopLabel] = useState<string | null>(null);
+  const [secondaryLabel, setSecondaryLabel] = useState<string | null>(null);
 
   useEffect(() => {
     if (!activeChild) return;
@@ -17,7 +17,7 @@ export function Header() {
       const lastPoop = await getLastRealPoop(activeChild!.id);
       const lastAt = lastPoop?.logged_at ?? null;
       if (cancelled) return;
-      setLastPoopLabel(lastAt ? timeSince(lastAt) : null);
+      setSecondaryLabel(lastAt ? timeSince(lastAt) : null);
     }
 
     load();
@@ -41,7 +41,7 @@ export function Header() {
           children={children}
           expanded
           collapsible={false}
-          lastPoopLabel={lastPoopLabel}
+          secondaryLabel={secondaryLabel}
           onSelectChild={setActiveChildId}
         />
       </div>

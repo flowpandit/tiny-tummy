@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useChildContext } from "../contexts/ChildContext";
 import { usePoopLogs } from "../hooks/usePoopLogs";
+import { useDiaperLogs } from "../hooks/useDiaperLogs";
 import { useFeedingLogs } from "../hooks/useFeedingLogs";
 import { useSleepLogs } from "../hooks/useSleepLogs";
 import { useAlerts } from "../hooks/useAlerts";
@@ -11,9 +12,11 @@ import { useStats } from "../hooks/useStats";
 import { useEpisodes } from "../hooks/useEpisodes";
 import { useSymptoms } from "../hooks/useSymptoms";
 import { useCaregiverNote } from "../hooks/useCaregiverNote";
+import { useEliminationPreference } from "../hooks/useEliminationPreference";
 import { getChildStatus } from "../lib/tauri";
 import { buildChildDailySummary } from "../lib/child-summary";
 import { getBreastfeedingSessionSettingKey, parseBreastfeedingSession } from "../lib/breastfeeding";
+import { getDiaperTypeLabel } from "../lib/diaper";
 import { timeSince } from "../lib/utils";
 import { syncSmartRemindersForChild, syncSmartRemindersForChildren } from "../lib/notifications";
 import { getSymptomSeverityBadgeVariant, getSymptomSeverityLabel, getSymptomTypeLabel } from "../lib/symptom-constants";
@@ -35,15 +38,23 @@ import { SleepLogSheet } from "../components/sleep/SleepLogSheet";
 import { Badge } from "../components/ui/badge";
 import { useToast } from "../components/ui/toast";
 import { DiscoveryLinks } from "../components/discovery/DiscoveryLinks";
-import type { FeedingEntry, FeedingLogDraft, HealthStatus, PoopEntry, PoopLogDraft } from "../lib/types";
+import { DiaperLogForm } from "../components/logging/DiaperLogForm";
+import { EditDiaperSheet } from "../components/logging/EditDiaperSheet";
+import type { DiaperEntry, DiaperLogDraft, FeedingEntry, FeedingLogDraft, HealthStatus, PoopEntry, PoopLogDraft } from "../lib/types";
 
 export function Home() {
   const navigate = useNavigate();
   const location = useLocation();
   const navigateWithOrigin = (path: string) => navigate(path, { state: { origin: location.pathname } });
   const { activeChild, children, setActiveChildId } = useChildContext();
+  const { experience } = useEliminationPreference(activeChild);
   const { showError, showSuccess } = useToast();
   const { logs, lastRealPoop, refresh: refreshLogs } = usePoopLogs(activeChild?.id ?? null);
+  const {
+    logs: diaperLogs,
+    lastDiaper,
+    refresh: refreshDiaperLogs,
+  } = useDiaperLogs(activeChild?.id ?? null);
   const { logs: feedingLogs, refresh: refreshFeedingLogs } = useFeedingLogs(activeChild?.id ?? null);
   const { logs: sleepLogs, refresh: refreshSleepLogs } = useSleepLogs(activeChild?.id ?? null);
   const { activeEpisode, events: episodeEvents, recentEpisodes, refresh: refreshEpisodes } = useEpisodes(activeChild?.id ?? null);
@@ -53,6 +64,8 @@ export function Home() {
   const { runChecks } = useAlertEngine();
   const [logFormOpen, setLogFormOpen] = useState(false);
   const [poopDraft, setPoopDraft] = useState<Partial<PoopLogDraft> | null>(null);
+  const [diaperFormOpen, setDiaperFormOpen] = useState(false);
+  const [diaperDraft, setDiaperDraft] = useState<Partial<DiaperLogDraft> | null>(null);
   const [feedingFormOpen, setFeedingFormOpen] = useState(false);
   const [feedingDraft, setFeedingDraft] = useState<Partial<FeedingLogDraft> | null>(null);
   const [sleepSheetOpen, setSleepSheetOpen] = useState(false);
@@ -60,6 +73,7 @@ export function Home() {
   const [episodeSheetMode, setEpisodeSheetMode] = useState<"default" | "start" | "update">("default");
   const [symptomSheetOpen, setSymptomSheetOpen] = useState(false);
   const [editingPoop, setEditingPoop] = useState<PoopEntry | null>(null);
+  const [editingDiaper, setEditingDiaper] = useState<DiaperEntry | null>(null);
   const [editingMeal, setEditingMeal] = useState<FeedingEntry | null>(null);
   const [status, setStatus] = useState<HealthStatus>("healthy");
   const [childSwitcherExpanded, setChildSwitcherExpanded] = useState(false);
@@ -192,6 +206,7 @@ export function Home() {
 
   const handleLogged = async () => {
     await refreshLogs();
+    await refreshDiaperLogs();
     await runChecks(activeChild);
     await refreshAlerts();
     await syncSmartRemindersForChild(activeChild);
@@ -200,6 +215,11 @@ export function Home() {
   const openPoopForm = (draft?: Partial<PoopLogDraft> | null) => {
     setPoopDraft(draft ?? null);
     setLogFormOpen(true);
+  };
+
+  const openDiaperForm = (draft?: Partial<DiaperLogDraft> | null) => {
+    setDiaperDraft(draft ?? null);
+    setDiaperFormOpen(true);
   };
 
   const openEpisodeSheet = (mode: "default" | "start" | "update" = "default") => {
@@ -240,10 +260,14 @@ export function Home() {
     await refreshSleepLogs();
   };
 
-  const hasLogs = logs.length > 0;
-  const lastPoopLabel = lastRealPoop?.logged_at ? timeSince(lastRealPoop.logged_at) : null;
+  const hasDiaperLogs = diaperLogs.length > 0;
+  const hasLogs = experience.mode === "diaper" ? hasDiaperLogs : logs.length > 0;
+  const lastSummaryLabel = experience.mode === "diaper"
+    ? (lastDiaper?.logged_at ? `${getDiaperTypeLabel(lastDiaper.diaper_type)} · ${timeSince(lastDiaper.logged_at)}` : null)
+    : (lastRealPoop?.logged_at ? timeSince(lastRealPoop.logged_at) : null);
   const summary = buildChildDailySummary({
     poopLogs: logs,
+    diaperLogs,
     feedingLogs,
     alerts,
     activeEpisode,
@@ -272,7 +296,7 @@ export function Home() {
                 activeChild={activeChild}
                 children={children}
                 expanded={childSwitcherExpanded}
-                lastPoopLabel={lastPoopLabel}
+                secondaryLabel={lastSummaryLabel}
                 onToggle={() => setChildSwitcherExpanded((open) => !open)}
                 onSelectChild={(childId) => {
                   setActiveChildId(childId);
@@ -308,15 +332,17 @@ export function Home() {
               <div className="mt-5 grid grid-cols-3 gap-3">
                 <button
                   type="button"
-                  onClick={() => navigate("/poop")}
+                  onClick={() => navigate(experience.route)}
                   className="flex flex-col items-center gap-3 rounded-[16px] py-1 text-center transition-colors hover:bg-white/35"
-                  aria-label="Open poop page"
+                  aria-label={experience.mode === "diaper" ? "Open diaper page" : "Open poop page"}
                 >
                   <TimeSinceIndicator
-                    timestamp={lastRealPoop?.logged_at ?? null}
+                    timestamp={(experience.mode === "diaper" ? lastDiaper?.logged_at : lastRealPoop?.logged_at) ?? null}
                     status={status === "alert" ? "unknown" : "healthy"}
                   />
-                  <p className="text-[12px] font-medium uppercase tracking-[0.12em] text-[var(--color-text-soft)]">Last poop</p>
+                  <p className="text-[12px] font-medium uppercase tracking-[0.12em] text-[var(--color-text-soft)]">
+                    {experience.mode === "diaper" ? "Last diaper" : "Last poop"}
+                  </p>
                 </button>
                 <button
                   type="button"
@@ -349,7 +375,7 @@ export function Home() {
       ) : (
         <NoLogsYet
           childName={activeChild.name}
-          onLogFirst={() => openPoopForm()}
+          onLogFirst={() => experience.mode === "diaper" ? openDiaperForm({ diaper_type: "wet", urine_color: "normal" }) : openPoopForm()}
         />
       )}
 
@@ -364,12 +390,14 @@ export function Home() {
           <div className="mt-4 grid grid-cols-2 gap-3">
             <motion.button
               whileTap={{ scale: 0.98 }}
-              onClick={() => openPoopForm()}
+              onClick={() => experience.mode === "diaper" ? openDiaperForm({ diaper_type: "wet", urine_color: "normal" }) : openPoopForm()}
               className="min-h-[104px] rounded-[18px] bg-[var(--color-cta)] px-4 py-4 text-left text-white shadow-[var(--shadow-medium)] transition-colors hover:bg-[var(--color-cta-hover)]"
             >
-              <p className="text-[15px] font-semibold">Log poop</p>
+              <p className="text-[15px] font-semibold">{experience.mode === "diaper" ? "Log diaper" : "Log poop"}</p>
               <p className="mt-2 text-[12px] leading-relaxed text-white/80">
-                Open the full poop logger with presets and notes.
+                {experience.mode === "diaper"
+                  ? "Start with wet, dirty, or mixed in the young-baby workflow."
+                  : "Open the full poop logger with presets and notes."}
               </p>
             </motion.button>
             <motion.button
@@ -567,9 +595,11 @@ export function Home() {
       {/* Recent activity */}
       {(logs.length > 0 || feedingLogs.length > 0) && (
         <RecentActivity
-          poopLogs={logs}
+          poopLogs={experience.mode === "diaper" ? [] : logs}
+          diaperLogs={experience.mode === "diaper" ? diaperLogs : []}
           feedingLogs={feedingLogs}
           onEditPoop={setEditingPoop}
+          onEditDiaper={setEditingDiaper}
           onEditMeal={setEditingMeal}
         />
       )}
@@ -616,6 +646,17 @@ export function Home() {
         childId={activeChild.id}
         onLogged={handleLogged}
         initialDraft={poopDraft}
+      />
+
+      <DiaperLogForm
+        open={diaperFormOpen}
+        onClose={() => {
+          setDiaperFormOpen(false);
+          setDiaperDraft(null);
+        }}
+        childId={activeChild.id}
+        onLogged={handleLogged}
+        initialDraft={diaperDraft}
       />
 
       {/* Diet log form sheet */}
@@ -667,6 +708,16 @@ export function Home() {
           onClose={() => setEditingPoop(null)}
           onSaved={() => { refreshLogs(); refreshFeedingLogs(); }}
           onDeleted={() => { refreshLogs(); refreshFeedingLogs(); }}
+        />
+      )}
+      {editingDiaper && (
+        <EditDiaperSheet
+          key={editingDiaper.id}
+          entry={editingDiaper}
+          open={!!editingDiaper}
+          onClose={() => setEditingDiaper(null)}
+          onSaved={() => { setEditingDiaper(null); void handleLogged(); }}
+          onDeleted={() => { setEditingDiaper(null); void handleLogged(); }}
         />
       )}
       {editingMeal && (

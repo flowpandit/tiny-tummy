@@ -1,4 +1,6 @@
 import { useLocation, useNavigate } from "react-router-dom";
+import { useChildContext } from "../../contexts/ChildContext";
+import { useEliminationPreference } from "../../hooks/useEliminationPreference";
 import { cn } from "../../lib/cn";
 
 const iconClassName = "h-5 w-5";
@@ -92,11 +94,23 @@ const NAV_ITEMS = [
 export function BottomNav() {
   const location = useLocation();
   const navigate = useNavigate();
+  const { activeChild } = useChildContext();
+  const { experience } = useEliminationPreference(activeChild);
+
+  const navItems = NAV_ITEMS.map((item) => {
+    if (item.path !== "/poop") return item;
+    return {
+      ...item,
+      path: experience.route,
+      label: experience.navLabel,
+      matches: (pathname: string) => pathname === "/poop" || pathname === "/diaper",
+    };
+  });
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-30 px-3" style={{ paddingBottom: "calc(var(--safe-area-bottom) + 8px)" }}>
       <div className="mx-auto flex h-[68px] max-w-[600px] items-center justify-around rounded-[24px] border border-[var(--color-border)] bg-[var(--color-surface-strong)]/92 px-2 shadow-[0_18px_42px_rgba(32,24,18,0.12)] backdrop-blur-xl">
-        {NAV_ITEMS.map((item) => {
+        {navItems.map((item) => {
           const isActive = item.matches(location.pathname);
           return (
             <button

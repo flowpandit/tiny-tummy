@@ -16,6 +16,7 @@ import { Onboarding } from "./pages/Onboarding";
 // Lazy loaded (non-critical)
 const History = lazy(() => import("./pages/History").then((m) => ({ default: m.History })));
 const Poop = lazy(() => import("./pages/Poop").then((m) => ({ default: m.Poop })));
+const Diaper = lazy(() => import("./pages/Diaper").then((m) => ({ default: m.Diaper })));
 const Feed = lazy(() => import("./pages/Feed").then((m) => ({ default: m.Feed })));
 const Dashboard = lazy(() => import("./pages/Dashboard").then((m) => ({ default: m.Dashboard })));
 const Growth = lazy(() => import("./pages/Growth").then((m) => ({ default: m.Growth })));
@@ -76,6 +77,7 @@ function AppRoutes() {
         <Route element={<AppShell />}>
           <Route path="/" element={<Home />} />
           <Route path="/poop" element={<Poop />} />
+          <Route path="/diaper" element={<Diaper />} />
           <Route path="/feed" element={<Feed />} />
           <Route path="/history" element={<History />} />
           <Route path="/dashboard" element={<Dashboard />} />

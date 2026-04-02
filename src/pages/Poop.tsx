@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useChildContext } from "../contexts/ChildContext";
 import { usePoopLogs } from "../hooks/usePoopLogs";
 import { useFeedingLogs } from "../hooks/useFeedingLogs";
@@ -6,6 +7,7 @@ import { useAlerts } from "../hooks/useAlerts";
 import { useAlertEngine } from "../hooks/useAlertEngine";
 import { useEpisodes } from "../hooks/useEpisodes";
 import { useSymptoms } from "../hooks/useSymptoms";
+import { useEliminationPreference } from "../hooks/useEliminationPreference";
 import { BITSS_TYPES, STOOL_COLORS } from "../lib/constants";
 import { fillDailyFrequencyDays, formatLocalDateKey, getRecentNoPoopDates } from "../lib/stats";
 import { DAYS_IN_WEEK, addDays, formatHoursCompact, formatHoursLong, formatWeekLabel, startOfDay } from "../lib/tracker";
@@ -752,7 +754,9 @@ function buildPatternNarrative({
 }
 
 export function Poop() {
+  const navigate = useNavigate();
   const { activeChild } = useChildContext();
+  const { experience } = useEliminationPreference(activeChild);
   const { showError, showSuccess } = useToast();
   const { logs, lastRealPoop, refresh } = usePoopLogs(activeChild?.id ?? null, 500);
   const { logs: feedingLogs } = useFeedingLogs(activeChild?.id ?? null);
@@ -768,6 +772,12 @@ export function Poop() {
   const [editingPoop, setEditingPoop] = useState<PoopEntry | null>(null);
   const [poopPresetSheetOpen, setPoopPresetSheetOpen] = useState(false);
   const [quickPoopPresets, setQuickPoopPresets] = useState<QuickPoopPreset[]>([]);
+
+  useEffect(() => {
+    if (experience.mode === "diaper") {
+      navigate("/diaper", { replace: true });
+    }
+  }, [experience.mode, navigate]);
 
   useEffect(() => {
     if (!activeChild) {
@@ -927,6 +937,7 @@ export function Poop() {
   const repeatablePoop = useMemo(() => getRepeatablePoopEntry(lastRealPoop), [lastRealPoop]);
 
   if (!activeChild) return null;
+  if (experience.mode === "diaper") return null;
 
   const weekSummaryBits = [
     totalPoops === 0 ? "No poops logged in this week" : `${totalPoops} poop${totalPoops === 1 ? "" : "s"} in this week`,

@@ -28,6 +28,7 @@ import {
 import { AvatarUpload } from "../components/child/AvatarUpload";
 import { Avatar } from "../components/child/Avatar";
 import { saveAvatar, deleteAvatar } from "../lib/photos";
+import { getEliminationViewSettingKey, type EliminationViewPreference } from "../lib/diaper";
 import * as db from "../lib/db";
 import type { Child, FeedingType, UnitSystem } from "../lib/types";
 
@@ -402,6 +403,61 @@ function MeasurementsSection() {
   );
 }
 
+const ELIMINATION_VIEW_OPTIONS: { value: EliminationViewPreference; label: string }[] = [
+  { value: "auto", label: "Auto" },
+  { value: "diaper", label: "Diaper" },
+  { value: "poop", label: "Poop" },
+];
+
+function EliminationSection({ child }: { child: Child | null }) {
+  const [value, setValue] = useState<EliminationViewPreference>("auto");
+
+  useEffect(() => {
+    if (!child) {
+      setValue("auto");
+      return;
+    }
+
+    db.getSetting(getEliminationViewSettingKey(child.id)).then((stored) => {
+      if (stored === "auto" || stored === "diaper" || stored === "poop") {
+        setValue(stored);
+      } else {
+        setValue("auto");
+      }
+    });
+  }, [child]);
+
+  if (!child) return null;
+
+  return (
+    <div className="mb-6">
+      <h3 className="text-sm font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider mb-3">
+        Elimination
+      </h3>
+      <Card>
+        <CardContent className="py-3">
+          <p className="text-sm font-medium text-[var(--color-text)] mb-2">Main tracking page</p>
+          <SegmentedControl
+            value={value}
+            onChange={(next) => {
+              const preference = next as EliminationViewPreference;
+              setValue(preference);
+              void db.setSetting(getEliminationViewSettingKey(child.id), preference);
+            }}
+            options={ELIMINATION_VIEW_OPTIONS}
+            className="bg-[var(--color-bg)] rounded-[var(--radius-sm)] border border-[var(--color-border)] p-0.5"
+            gridClassName="grid-cols-3"
+            size="sm"
+          />
+          <p className="mt-2 text-xs text-[var(--color-text-secondary)]">
+            Auto uses the diaper view through the first year, then switches back to the poop page.
+          </p>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 export function Settings() {
   const { children, activeChild, refreshChildren } = useChildContext();
   const { simulateExpiration } = useTrial();
@@ -517,6 +573,8 @@ export function Settings() {
 
       <MeasurementsSection />
 
+      <EliminationSection child={activeChild} />
+
       {/* Notifications */}
       <NotificationSection children={children} />
 
@@ -536,7 +594,7 @@ export function Settings() {
               <div>
                 <p className="text-sm font-medium text-[var(--color-text)]">History</p>
                 <p className="text-xs text-[var(--color-text-secondary)]">
-                  Timeline of poop and feed entries
+                  Timeline of logged entries
                 </p>
               </div>
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="var(--color-muted)" className="w-5 h-5">

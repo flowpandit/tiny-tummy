@@ -112,6 +112,12 @@ pub fn run() {
             sql: include_str!("../migrations/008_quick_presets.sql"),
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 9,
+            description: "add diaper logs",
+            sql: include_str!("../migrations/009_diaper_logs.sql"),
+            kind: MigrationKind::Up,
+        },
     ];
 
     tauri::Builder::default()
