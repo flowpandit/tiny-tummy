@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useChildContext } from "../contexts/ChildContext";
@@ -19,6 +19,7 @@ import { timeSince } from "../lib/utils";
 import { syncSmartRemindersForChild, syncSmartRemindersForChildren } from "../lib/notifications";
 import { getSymptomSeverityBadgeVariant, getSymptomSeverityLabel, getSymptomTypeLabel } from "../lib/symptom-constants";
 import * as db from "../lib/db";
+import { Avatar } from "../components/child/Avatar";
 import { HomeTopSection } from "../components/home/HomeTopSection";
 import { WeeklyPatternCard } from "../components/home/WeeklyPatternCard";
 import { EpisodeCard } from "../components/home/EpisodeCard";
@@ -72,6 +73,10 @@ export function Home() {
   const [editingDiaper, setEditingDiaper] = useState<DiaperEntry | null>(null);
   const [editingMeal, setEditingMeal] = useState<FeedingEntry | null>(null);
   const [activeBreastfeedingSide, setActiveBreastfeedingSide] = useState<"left" | "right" | null>(null);
+  const [showStickyChildBar, setShowStickyChildBar] = useState(false);
+  const avatarAnchorRef = useRef<HTMLDivElement | null>(null);
+  const hasDiaperLogs = diaperLogs.length > 0;
+  const hasLogs = experience.mode === "diaper" ? hasDiaperLogs : logs.length > 0;
   const {
     note: handoffNote,
     setNote: setHandoffNote,
@@ -125,6 +130,34 @@ export function Home() {
       document.removeEventListener("visibilitychange", handleVisibility);
     };
   }, [activeChild]);
+
+  useEffect(() => {
+    if (!hasLogs) {
+      setShowStickyChildBar(false);
+      return;
+    }
+
+    const avatarAnchor = avatarAnchorRef.current;
+    if (!avatarAnchor) return;
+
+    const scrollRoot = avatarAnchor.closest("main");
+    if (!(scrollRoot instanceof HTMLElement)) return;
+
+    const updateStickyBar = () => {
+      const rootTop = scrollRoot.getBoundingClientRect().top;
+      const anchorTop = avatarAnchor.getBoundingClientRect().top;
+      setShowStickyChildBar(anchorTop <= rootTop + 12);
+    };
+
+    updateStickyBar();
+    scrollRoot.addEventListener("scroll", updateStickyBar, { passive: true });
+    window.addEventListener("resize", updateStickyBar);
+
+    return () => {
+      scrollRoot.removeEventListener("scroll", updateStickyBar);
+      window.removeEventListener("resize", updateStickyBar);
+    };
+  }, [activeChild, hasLogs]);
 
   useEffect(() => {
     if (!activeChild) return;
@@ -230,9 +263,6 @@ export function Home() {
   const handleSleepLogged = async () => {
     await refreshSleepLogs();
   };
-
-  const hasDiaperLogs = diaperLogs.length > 0;
-  const hasLogs = experience.mode === "diaper" ? hasDiaperLogs : logs.length > 0;
   const summary = buildChildDailySummary({
     poopLogs: logs,
     diaperLogs,
@@ -269,6 +299,34 @@ export function Home() {
     <div className="flex flex-col gap-0 pb-3 pt-0.5">
       {/* Alerts */}
       <AlertBanner alerts={alerts} onDismiss={dismiss} />
+      {hasLogs && (
+        <div
+          className={`pointer-events-none fixed inset-x-0 z-30 transition-all duration-200 ${showStickyChildBar ? "translate-y-0 opacity-100" : "-translate-y-4 opacity-0"}`}
+          style={{
+            top: 0,
+            height: "calc(var(--safe-area-top) + 74px)",
+            background: "linear-gradient(180deg, rgba(255,250,243,0.95) 0%, rgba(255,250,243,0.55) 74%, transparent 100%)",
+            backdropFilter: "blur(24px) saturate(1.02)",
+            WebkitBackdropFilter: "blur(24px) saturate(1.02)",
+          }}
+        >
+          <div
+            className="mx-auto flex max-w-[600px] items-center bg-transparent px-4 py-3"
+            style={{ marginTop: "calc(var(--safe-area-top) + 16px)" }}
+          >
+            <div className="flex items-center gap-3">
+              <Avatar
+                childId={activeChild.id}
+                name={activeChild.name}
+                color={activeChild.avatar_color}
+                size="sm"
+                className="h-9 w-9 border-2 border-white/80"
+              />
+              <p className="text-[0.98rem] font-semibold text-[var(--color-text)]">{activeChild.name}</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {hasLogs ? (
         <HomeTopSection
@@ -278,6 +336,7 @@ export function Home() {
           sleepSummaryHoursValue={sleepSummaryHoursValue}
           sleepNapCount={sleepNapCount}
           onContinueToDashboard={() => navigate("/dashboard")}
+          avatarAnchorRef={avatarAnchorRef}
         />
       ) : (
         <NoLogsYet

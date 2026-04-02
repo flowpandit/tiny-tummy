@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { ReactNode, RefObject } from "react";
 import { motion } from "framer-motion";
 import watercolorClouds from "../../assets/watercolor-clouds.svg";
 import watercolorMountains from "../../assets/watercolor-mountains.svg";
@@ -97,6 +97,7 @@ export function HomeTopSection({
   sleepSummaryHoursValue,
   sleepNapCount,
   onContinueToDashboard,
+  avatarAnchorRef,
 }: {
   activeChild: Child;
   summary: ChildDailySummary;
@@ -104,6 +105,7 @@ export function HomeTopSection({
   sleepSummaryHoursValue: number;
   sleepNapCount: number;
   onContinueToDashboard: () => void;
+  avatarAnchorRef: RefObject<HTMLDivElement | null>;
 }) {
   const totalDiapers = summary.todayWetDiapers + summary.todayDirtyDiapers;
   const moodCards = [
@@ -148,7 +150,7 @@ export function HomeTopSection({
             <p className="mt-2 text-[0.98rem] leading-tight tracking-[-0.02em] text-[var(--color-text)]">
               Daily Check-in: Parent & Baby Care
             </p>
-            <div className="mt-5 flex items-center gap-3">
+            <div ref={avatarAnchorRef} className="mt-5 flex items-center gap-3">
               <Avatar
                 childId={activeChild.id}
                 name={activeChild.name}
