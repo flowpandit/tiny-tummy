@@ -34,7 +34,6 @@ export function AppShell() {
       />
       <div className="pointer-events-none absolute inset-0">
         <div className="absolute inset-x-0 top-0 h-[300px]" style={{ background: "var(--gradient-sunrise)" }} />
-        <div className="absolute inset-x-0 top-0 h-[280px]" style={{ background: "var(--gradient-dawn)" }} />
         <div className="absolute -left-12 top-20 h-56 w-56 rounded-full bg-[var(--color-peach)]/26 blur-3xl" />
         <div className="absolute right-[-64px] top-16 h-64 w-64 rounded-full bg-[var(--color-dawn)]/38 blur-3xl" />
         <div className="absolute right-[-72px] top-52 h-64 w-64 rounded-full bg-[var(--color-apricot)]/14 blur-3xl" />

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, type ReactNode } from "react";
 import { motion } from "framer-motion";
 import { useLocation, useNavigate } from "react-router-dom";
 import watercolorClouds from "../assets/watercolor-clouds.svg";
@@ -41,6 +41,74 @@ import { DiscoveryLinks } from "../components/discovery/DiscoveryLinks";
 import { DiaperLogForm } from "../components/logging/DiaperLogForm";
 import { EditDiaperSheet } from "../components/logging/EditDiaperSheet";
 import type { DiaperEntry, DiaperLogDraft, FeedingEntry, FeedingLogDraft, PoopEntry, PoopLogDraft } from "../lib/types";
+
+function QuickSummaryRing({
+  icon,
+  label,
+  value,
+  progress,
+  detail,
+}: {
+  icon: ReactNode;
+  label: string;
+  value: string;
+  progress: number;
+  detail: string;
+}) {
+  const size = 92;
+  const stroke = 9;
+  const radius = (size - stroke) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const normalizedProgress = Math.max(0.08, Math.min(progress, 1));
+  const dashOffset = circumference * (1 - normalizedProgress);
+
+  return (
+    <div className="text-center">
+      <div className="mx-auto flex w-fit items-center justify-center">
+        <div
+          className="relative flex h-[92px] w-[92px] items-center justify-center rounded-full"
+          style={{
+            background: "radial-gradient(circle, rgba(255,255,255,0.96) 0%, rgba(255,252,247,0.98) 62%, rgba(255,248,241,0.84) 100%)",
+            boxShadow: "0 0 0 5px rgba(255,239,230,0.9), 0 10px 24px rgba(232, 182, 153, 0.18), 0 0 22px rgba(239,157,123,0.18)",
+          }}
+        >
+          <svg viewBox={`0 0 ${size} ${size}`} className="absolute inset-0 h-full w-full -rotate-90" aria-hidden="true">
+            <circle
+              cx={size / 2}
+              cy={size / 2}
+              r={radius}
+              fill="none"
+              stroke="rgba(243, 211, 195, 0.72)"
+              strokeWidth={stroke}
+            />
+            <circle
+              cx={size / 2}
+              cy={size / 2}
+              r={radius}
+              fill="none"
+              stroke="rgba(239,157,123,0.98)"
+              strokeWidth={stroke}
+              strokeLinecap="round"
+              strokeDasharray={circumference}
+              strokeDashoffset={dashOffset}
+              style={{
+                filter: "drop-shadow(0 0 6px rgba(239,157,123,0.24))",
+                transition: "stroke-dashoffset 280ms var(--ease-out-soft)",
+              }}
+            />
+          </svg>
+          <div className="relative z-10 flex max-w-[58px] flex-col items-center">
+            <div className="flex h-5 items-center justify-center">{icon}</div>
+            <p className="mt-1 text-[0.6rem] font-extrabold leading-[1.15] tracking-[-0.02em] text-[var(--color-text)]">
+              {label}: {value}
+            </p>
+          </div>
+        </div>
+      </div>
+      <p className="mt-2 text-[12px] font-semibold tracking-[-0.01em] text-[var(--color-text-secondary)]">{detail}</p>
+    </div>
+  );
+}
 
 function SunMoodIcon() {
   return (
@@ -338,6 +406,8 @@ export function Home() {
   const sleepSummaryLabel = sleepSummaryHours > 0
     ? `${Math.floor(sleepSummaryHours / (1000 * 60 * 60))}h ${Math.round((sleepSummaryHours % (1000 * 60 * 60)) / (1000 * 60))}m`
     : "0h";
+  const totalDiapers = summary.todayWetDiapers + summary.todayDirtyDiapers;
+  const sleepSummaryHoursValue = sleepSummaryHours / (1000 * 60 * 60);
   const moodCards = [
     { label: "Feeling Good", icon: <SunMoodIcon />, tone: "bg-[rgba(255,237,222,0.9)]" },
     { label: "Managing Okay", icon: <RainbowMoodIcon />, tone: "bg-[rgba(255,252,247,0.95)]" },
@@ -345,7 +415,7 @@ export function Home() {
   ];
 
   return (
-    <div className="flex flex-col gap-4 pb-3 pt-0.5">
+    <div className="flex flex-col gap-0 pb-3 pt-0.5">
       {/* Alerts */}
       <AlertBanner alerts={alerts} onDismiss={dismiss} />
 
@@ -372,7 +442,7 @@ export function Home() {
               <div className="pointer-events-none absolute left-[12px] top-[106px] h-12 w-20 rounded-full bg-white/46 blur-[8px]" />
               <div className="pointer-events-none absolute left-[42px] top-[112px] h-8 w-8 rounded-full bg-white/54 blur-[6px]" />
               <div className="pointer-events-none absolute left-[72px] top-[108px] h-9 w-9 rounded-full bg-white/36 blur-[8px]" />
-              <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-[linear-gradient(180deg,rgba(251,245,234,0)_0%,rgba(251,245,234,0.62)_72%,rgba(251,245,234,0.94)_100%)]" />
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 h-28 bg-[linear-gradient(180deg,rgba(251,245,234,0)_0%,rgba(251,245,234,0.56)_68%,rgba(251,245,234,0.92)_100%)]" />
               <div className="relative flex h-full items-start pt-8">
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
@@ -408,7 +478,7 @@ export function Home() {
                   <button
                     key={card.label}
                     type="button"
-                    className={`min-h-[96px] rounded-[20px] border border-[rgba(155,126,102,0.14)] px-2 py-3 text-center shadow-[0_10px_22px_rgba(184,146,118,0.12)] ${card.tone}`}
+                    className={`min-h-[96px] rounded-[20px] border border-[rgba(155,126,102,0.14)] px-2 py-3 text-center shadow-[0_14px_30px_rgba(191,151,121,0.18),0_2px_8px_rgba(255,255,255,0.55)] ${card.tone}`}
                   >
                     <div className="flex justify-center">{card.icon}</div>
                     <p className="mt-2 text-[0.92rem] font-semibold leading-tight text-[var(--color-text)]">{card.label}</p>
@@ -417,47 +487,31 @@ export function Home() {
               </div>
 
               <div className="mt-4 rounded-[22px] border border-[rgba(155,126,102,0.14)] bg-[rgba(255,252,247,0.94)] p-4 shadow-[0_14px_28px_rgba(184,146,118,0.11)]">
-                <p className="text-[1.05rem] font-medium text-[var(--color-text)]">Quick Summary (Last 24h)</p>
+                <p className="text-[0.9rem] font-medium text-[var(--color-text)]">Quick Summary (Last 24h)</p>
                 <div className="mt-3 grid grid-cols-3 gap-2">
-                  <div className="text-center">
-                    <div className="mx-auto flex h-[84px] w-[84px] items-center justify-center rounded-full border-[5px] border-[rgba(240,158,126,0.9)] bg-white shadow-[0_0_0_4px_rgba(255,237,228,0.78)]">
-                      <div className="flex flex-col items-center">
-                        <DiaperSummaryIcon />
-                        <p className="mt-1 text-[0.9rem] font-semibold leading-none text-[var(--color-text)]">Diapers: {summary.todayWetDiapers + summary.todayDirtyDiapers}</p>
-                      </div>
-                    </div>
-                    <p className="mt-2 text-[12px] text-[var(--color-text-secondary)]">{summary.todayWetDiapers} Wet, {summary.todayDirtyDiapers} Dirty</p>
-                  </div>
-                  <div className="text-center">
-                    <div className="mx-auto flex h-[84px] w-[84px] items-center justify-center rounded-full border-[5px] border-[rgba(240,158,126,0.9)] bg-white shadow-[0_0_0_4px_rgba(255,237,228,0.78)]">
-                      <div className="flex flex-col items-center">
-                        <BottleSummaryIcon />
-                        <p className="mt-1 text-[0.9rem] font-semibold leading-none text-[var(--color-text)]">Feeds: {summary.todayFeeds}</p>
-                      </div>
-                    </div>
-                    <p className="mt-2 text-[12px] text-[var(--color-text-secondary)]">{lastFeed ? `Last ${timeSince(lastFeed.logged_at)}` : "No feed yet"}</p>
-                  </div>
-                  <div className="text-center">
-                    <div className="mx-auto flex h-[84px] w-[84px] items-center justify-center rounded-full border-[5px] border-[rgba(240,158,126,0.9)] bg-white shadow-[0_0_0_4px_rgba(255,237,228,0.78)]">
-                      <div className="flex flex-col items-center">
-                        <SleepSummaryIcon />
-                        <p className="mt-1 text-[0.88rem] font-semibold leading-none text-[var(--color-text)]">Sleep: {sleepSummaryLabel}</p>
-                      </div>
-                    </div>
-                    <p className="mt-2 text-[12px] text-[var(--color-text-secondary)]">
-                      {sleepLogs.length > 0 ? `${sleepLogs.filter((entry) => entry.sleep_type === "nap").length} Naps` : "No sleep logs"}
-                    </p>
-                  </div>
+                  <QuickSummaryRing
+                    icon={<DiaperSummaryIcon />}
+                    label="Diapers"
+                    value={String(totalDiapers)}
+                    progress={Math.min(totalDiapers / 8, 1)}
+                    detail={`${summary.todayWetDiapers} Wet, ${summary.todayDirtyDiapers} Dirty`}
+                  />
+                  <QuickSummaryRing
+                    icon={<BottleSummaryIcon />}
+                    label="Feeds"
+                    value={String(summary.todayFeeds)}
+                    progress={Math.min(summary.todayFeeds / 10, 1)}
+                    detail={lastFeed ? `Last ${timeSince(lastFeed.logged_at)}` : "No feed yet"}
+                  />
+                  <QuickSummaryRing
+                    icon={<SleepSummaryIcon />}
+                    label="Sleep"
+                    value={sleepSummaryLabel}
+                    progress={Math.min(sleepSummaryHoursValue / 16, 1)}
+                    detail={sleepLogs.length > 0 ? `${sleepLogs.filter((entry) => entry.sleep_type === "nap").length} Naps` : "No sleep logs"}
+                  />
                 </div>
               </div>
-
-              <button
-                type="button"
-                onClick={() => navigate("/dashboard")}
-                className="mt-4 h-12 w-full rounded-full bg-[var(--color-cta)] px-5 text-[0.98rem] font-semibold text-white shadow-[var(--shadow-medium)]"
-              >
-                Continue to Dashboard
-              </button>
             </div>
           </section>
         </>
@@ -468,7 +522,7 @@ export function Home() {
         />
       )}
 
-      <div className="px-4">
+      <div className="px-4 pt-2">
         <div className="rounded-[28px] border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-[var(--shadow-card)]">
           <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--color-text-soft)]">Quick actions</p>
           <p className="mt-2 font-[var(--font-display)] text-[2rem] font-semibold leading-[0.98] tracking-[-0.035em] text-[var(--color-text)]">Log the next thing gently</p>
