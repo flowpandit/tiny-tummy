@@ -14,7 +14,7 @@ import { DatePicker } from "../components/ui/date-picker";
 import { TimePicker } from "../components/ui/time-picker";
 import { Sheet } from "../components/ui/sheet";
 import { useToast } from "../components/ui/toast";
-import { FEEDING_TYPES, AVATAR_COLORS } from "../lib/constants";
+import { FEEDING_TYPES, AVATAR_COLORS, CHILD_SEX_OPTIONS } from "../lib/constants";
 import { getAgeLabelFromDob } from "../lib/utils";
 import { cn } from "../lib/cn";
 import {
@@ -30,7 +30,7 @@ import { Avatar } from "../components/child/Avatar";
 import { saveAvatar, deleteAvatar } from "../lib/photos";
 import { getEliminationViewSettingKey, type EliminationViewPreference } from "../lib/diaper";
 import * as db from "../lib/db";
-import type { Child, FeedingType, UnitSystem } from "../lib/types";
+import type { Child, ChildSex, FeedingType, UnitSystem } from "../lib/types";
 
 function EditChildSheet({
   child,
@@ -45,6 +45,7 @@ function EditChildSheet({
 }) {
   const [name, setName] = useState(child.name);
   const [dob, setDob] = useState(child.date_of_birth);
+  const [sex, setSex] = useState<ChildSex | null>(child.sex);
   const [feedingType, setFeedingType] = useState<FeedingType>(child.feeding_type);
   const [avatarColor, setAvatarColor] = useState(child.avatar_color);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
@@ -87,6 +88,7 @@ function EditChildSheet({
     await db.updateChild(child.id, {
       name: name.trim(),
       date_of_birth: dob,
+      sex,
       feeding_type: feedingType,
       avatar_color: avatarColor,
     });
@@ -126,6 +128,20 @@ function EditChildSheet({
           <div>
             <FieldLabel>Date of birth</FieldLabel>
             <DatePicker value={dob} onChange={setDob} max={new Date().toISOString().split("T")[0]} label="Date of birth" />
+          </div>
+
+          <div>
+            <FieldLabel>Sex</FieldLabel>
+            <SegmentedControl
+              value={sex}
+              onChange={(value) => setSex(value as ChildSex)}
+              options={CHILD_SEX_OPTIONS}
+              gridClassName="grid-cols-2"
+              size="sm"
+            />
+            <p className="mt-2 text-xs text-[var(--color-text-secondary)]">
+              Growth percentiles need this to match the right chart.
+            </p>
           </div>
 
           <div>
@@ -510,7 +526,9 @@ export function Settings() {
                       )}
                     </div>
                     <p className="text-xs text-[var(--color-text-secondary)]">
-                      {getAgeLabelFromDob(child.date_of_birth)} · {FEEDING_TYPES.find((f) => f.value === child.feeding_type)?.label}
+                      {[getAgeLabelFromDob(child.date_of_birth), child.sex ? CHILD_SEX_OPTIONS.find((option) => option.value === child.sex)?.label : null, FEEDING_TYPES.find((f) => f.value === child.feeding_type)?.label]
+                        .filter(Boolean)
+                        .join(" · ")}
                     </p>
                   </div>
                   <div className="flex gap-1">

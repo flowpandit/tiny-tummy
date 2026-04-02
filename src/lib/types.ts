@@ -2,6 +2,7 @@ export interface Child {
   id: string;
   name: string;
   date_of_birth: string;
+  sex: ChildSex | null;
   feeding_type: FeedingType;
   avatar_color: string;
   is_active: number;
@@ -10,6 +11,7 @@ export interface Child {
 }
 
 export type UnitSystem = "metric" | "imperial";
+export type ChildSex = "male" | "female";
 
 export type FeedingType = "breast" | "formula" | "mixed" | "solids";
 

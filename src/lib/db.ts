@@ -36,6 +36,7 @@ async function getDb(): Promise<Database> {
 export async function createChild(input: {
   name: string;
   date_of_birth: string;
+  sex?: Child["sex"];
   feeding_type: string;
   avatar_color?: string;
 }): Promise<Child> {
@@ -45,14 +46,15 @@ export async function createChild(input: {
   const avatarColor = input.avatar_color ?? "#2563EB";
 
   await conn.execute(
-    "INSERT INTO children (id, name, date_of_birth, feeding_type, avatar_color, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
-    [id, input.name, input.date_of_birth, input.feeding_type, avatarColor, now, now],
+    "INSERT INTO children (id, name, date_of_birth, sex, feeding_type, avatar_color, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+    [id, input.name, input.date_of_birth, input.sex ?? null, input.feeding_type, avatarColor, now, now],
   );
 
   return {
     id,
     name: input.name,
     date_of_birth: input.date_of_birth,
+    sex: input.sex ?? null,
     feeding_type: input.feeding_type as Child["feeding_type"],
     avatar_color: avatarColor,
     is_active: 1,
@@ -70,7 +72,7 @@ export async function getChildren(): Promise<Child[]> {
 
 export async function updateChild(
   id: string,
-  updates: Partial<Pick<Child, "name" | "date_of_birth" | "feeding_type" | "avatar_color">>,
+  updates: Partial<Pick<Child, "name" | "date_of_birth" | "sex" | "feeding_type" | "avatar_color">>,
 ): Promise<void> {
   const conn = await getDb();
   const sets: string[] = ["updated_at = ?"];
@@ -691,6 +693,37 @@ export async function getLatestGrowthLog(childId: string): Promise<GrowthEntry |
     [childId],
   );
   return rows[0] ?? null;
+}
+
+export async function updateGrowthLog(
+  id: string,
+  updates: {
+    measured_at?: string;
+    weight_kg?: number | null;
+    height_cm?: number | null;
+    head_circumference_cm?: number | null;
+    notes?: string | null;
+  },
+): Promise<void> {
+  const conn = await getDb();
+  const sets: string[] = [];
+  const params: unknown[] = [];
+
+  if (updates.measured_at !== undefined) { sets.push("measured_at = ?"); params.push(updates.measured_at); }
+  if (updates.weight_kg !== undefined) { sets.push("weight_kg = ?"); params.push(updates.weight_kg); }
+  if (updates.height_cm !== undefined) { sets.push("height_cm = ?"); params.push(updates.height_cm); }
+  if (updates.head_circumference_cm !== undefined) { sets.push("head_circumference_cm = ?"); params.push(updates.head_circumference_cm); }
+  if (updates.notes !== undefined) { sets.push("notes = ?"); params.push(updates.notes); }
+
+  if (sets.length === 0) return;
+
+  params.push(id);
+  await conn.execute(`UPDATE growth_logs SET ${sets.join(", ")} WHERE id = ?`, params);
+}
+
+export async function deleteGrowthLog(id: string): Promise<void> {
+  const conn = await getDb();
+  await conn.execute("DELETE FROM growth_logs WHERE id = ?", [id]);
 }
 
 // --- Sleep Logs ---

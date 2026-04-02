@@ -6,13 +6,16 @@ import { TimePicker } from "../ui/time-picker";
 import { useToast } from "../ui/toast";
 import { useUnits } from "../../contexts/UnitsContext";
 import * as db from "../../lib/db";
-import { getGrowthUnitLabel, parseGrowthInputToMetric } from "../../lib/units";
+import { formatGrowthValue, getGrowthUnitLabel, parseGrowthInputToMetric } from "../../lib/units";
+import type { GrowthEntry } from "../../lib/types";
 
 interface GrowthLogSheetProps {
   open: boolean;
   onClose: () => void;
   childId: string;
   onLogged: () => Promise<void> | void;
+  entry?: GrowthEntry | null;
+  onDeleted?: () => Promise<void> | void;
 }
 
 function getCurrentDate(): string {
@@ -27,9 +30,10 @@ function combineToISO(date: string, time: string): string {
   return `${date}T${time}:00`;
 }
 
-export function GrowthLogSheet({ open, onClose, childId, onLogged }: GrowthLogSheetProps) {
+export function GrowthLogSheet({ open, onClose, childId, onLogged, entry = null, onDeleted }: GrowthLogSheetProps) {
   const { showError, showSuccess } = useToast();
   const { unitSystem } = useUnits();
+  const isEditing = Boolean(entry);
   const [measureDate, setMeasureDate] = useState(getCurrentDate());
   const [measureTime, setMeasureTime] = useState(getCurrentTime());
   const [weightKg, setWeightKg] = useState("");
@@ -37,17 +41,19 @@ export function GrowthLogSheet({ open, onClose, childId, onLogged }: GrowthLogSh
   const [headCircumferenceCm, setHeadCircumferenceCm] = useState("");
   const [notes, setNotes] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   useEffect(() => {
     if (!open) return;
-    setMeasureDate(getCurrentDate());
-    setMeasureTime(getCurrentTime());
-    setWeightKg("");
-    setHeightCm("");
-    setHeadCircumferenceCm("");
-    setNotes("");
+    setMeasureDate(entry?.measured_at.split("T")[0] ?? getCurrentDate());
+    setMeasureTime(entry?.measured_at.split("T")[1]?.slice(0, 5) ?? getCurrentTime());
+    setWeightKg(entry?.weight_kg !== null && entry?.weight_kg !== undefined ? formatGrowthValue("weight_kg", entry.weight_kg, unitSystem, { includeUnit: false }) : "");
+    setHeightCm(entry?.height_cm !== null && entry?.height_cm !== undefined ? formatGrowthValue("height_cm", entry.height_cm, unitSystem, { includeUnit: false }) : "");
+    setHeadCircumferenceCm(entry?.head_circumference_cm !== null && entry?.head_circumference_cm !== undefined ? formatGrowthValue("head_circumference_cm", entry.head_circumference_cm, unitSystem, { includeUnit: false }) : "");
+    setNotes(entry?.notes ?? "");
     setIsSubmitting(false);
-  }, [open]);
+    setConfirmDelete(false);
+  }, [entry, open, unitSystem]);
 
   const hasAnyMeasurement = weightKg.trim() || heightCm.trim() || headCircumferenceCm.trim();
 
@@ -57,21 +63,43 @@ export function GrowthLogSheet({ open, onClose, childId, onLogged }: GrowthLogSh
 
     setIsSubmitting(true);
     try {
-      await db.createGrowthLog({
-        child_id: childId,
+      const payload = {
         measured_at: combineToISO(measureDate, measureTime),
         weight_kg: parseGrowthInputToMetric("weight_kg", weightKg, unitSystem),
         height_cm: parseGrowthInputToMetric("height_cm", heightCm, unitSystem),
         head_circumference_cm: parseGrowthInputToMetric("head_circumference_cm", headCircumferenceCm, unitSystem),
         notes: notes.trim() || null,
-      });
+      };
+
+      if (entry) {
+        await db.updateGrowthLog(entry.id, payload);
+      } else {
+        await db.createGrowthLog({
+          child_id: childId,
+          ...payload,
+        });
+      }
+
       await onLogged();
-      showSuccess("Growth measurement saved.");
+      showSuccess(entry ? "Growth measurement updated." : "Growth measurement saved.");
       onClose();
     } catch {
-      showError("Could not save the growth measurement. Please try again.");
+      showError(entry ? "Could not update the growth measurement. Please try again." : "Could not save the growth measurement. Please try again.");
     }
     setIsSubmitting(false);
+  };
+
+  const handleDelete = async () => {
+    if (!entry || !onDeleted) return;
+
+    try {
+      await db.deleteGrowthLog(entry.id);
+      await onDeleted();
+      showSuccess("Growth measurement deleted.");
+      onClose();
+    } catch {
+      showError("Could not delete the growth measurement. Please try again.");
+    }
   };
 
   const inputClassName = "w-full rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-3 text-sm text-[var(--color-text)] outline-none transition-colors focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20";
@@ -83,10 +111,10 @@ export function GrowthLogSheet({ open, onClose, childId, onLogged }: GrowthLogSh
     <Sheet open={open} onClose={onClose}>
       <form onSubmit={handleSubmit} className="px-5 pb-8">
         <h2 className="mb-2 text-center font-[var(--font-display)] text-lg font-semibold text-[var(--color-text)]">
-          Add growth measurement
+          {isEditing ? "Edit growth measurement" : "Add growth measurement"}
         </h2>
         <p className="mb-5 text-center text-sm text-[var(--color-text-secondary)]">
-          Keep this lightweight: log only the measurements you have today.
+          {isEditing ? "Adjust the numbers, timing, or note without losing the original entry." : "Keep this lightweight: log only the measurements you have today."}
         </p>
 
         <div className="flex flex-col gap-5">
@@ -156,8 +184,31 @@ export function GrowthLogSheet({ open, onClose, childId, onLogged }: GrowthLogSh
         </div>
 
         <Button type="submit" variant="cta" size="lg" className="mt-6 w-full" disabled={!hasAnyMeasurement || isSubmitting}>
-          {isSubmitting ? "Saving..." : "Save Measurement"}
+          {isSubmitting ? (isEditing ? "Saving..." : "Adding...") : isEditing ? "Save Changes" : "Save Measurement"}
         </Button>
+
+        {isEditing && onDeleted && (
+          <div className="mt-4 flex justify-center">
+            {confirmDelete ? (
+              <div className="flex gap-3">
+                <Button type="button" variant="danger" size="sm" onClick={handleDelete}>
+                  Confirm Delete
+                </Button>
+                <Button type="button" variant="ghost" size="sm" onClick={() => setConfirmDelete(false)}>
+                  Cancel
+                </Button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setConfirmDelete(true)}
+                className="text-sm text-[var(--color-alert)] cursor-pointer"
+              >
+                Delete this entry
+              </button>
+            )}
+          </div>
+        )}
       </form>
     </Sheet>
   );

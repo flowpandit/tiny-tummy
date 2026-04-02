@@ -6,13 +6,13 @@ import { DatePicker } from "../components/ui/date-picker";
 import { FieldLabel, Input } from "../components/ui/field";
 import { SegmentedControl } from "../components/ui/segmented-control";
 import { AvatarUpload } from "../components/child/AvatarUpload";
-import { FEEDING_TYPES, AVATAR_COLORS } from "../lib/constants";
+import { FEEDING_TYPES, AVATAR_COLORS, CHILD_SEX_OPTIONS } from "../lib/constants";
 import { cn } from "../lib/cn";
 import * as db from "../lib/db";
 import { saveAvatar } from "../lib/photos";
 import { useChildContext } from "../contexts/ChildContext";
 import { useToast } from "../components/ui/toast";
-import type { FeedingType } from "../lib/types";
+import type { ChildSex, FeedingType } from "../lib/types";
 
 export function AddChild() {
   const navigate = useNavigate();
@@ -20,13 +20,14 @@ export function AddChild() {
   const { showError } = useToast();
   const [name, setName] = useState("");
   const [dob, setDob] = useState(new Date().toISOString().split("T")[0]);
+  const [sex, setSex] = useState<ChildSex | null>(null);
   const [feedingType, setFeedingType] = useState<FeedingType>("breast");
   const [avatarColor, setAvatarColor] = useState(AVATAR_COLORS[0]);
   const [avatarBlob, setAvatarBlob] = useState<Blob | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const isValid = name.trim().length > 0 && dob.length > 0;
+  const isValid = name.trim().length > 0 && dob.length > 0 && sex !== null;
 
   const handleAvatarSave = async (blob: Blob) => {
     setAvatarBlob(blob);
@@ -43,6 +44,7 @@ export function AddChild() {
       const child = await db.createChild({
         name: name.trim(),
         date_of_birth: dob,
+        sex,
         feeding_type: feedingType,
         avatar_color: avatarColor,
       });
@@ -105,6 +107,19 @@ export function AddChild() {
         </div>
 
         <div>
+          <FieldLabel>Sex</FieldLabel>
+          <SegmentedControl
+            value={sex}
+            onChange={(value) => setSex(value as ChildSex)}
+            options={CHILD_SEX_OPTIONS}
+            gridClassName="grid-cols-2"
+          />
+          <p className="mt-2 text-xs text-[var(--color-text-secondary)]">
+            Used for official growth percentile calculations.
+          </p>
+        </div>
+
+        <div>
           <FieldLabel>Feeding type</FieldLabel>
           <SegmentedControl
             value={feedingType}
@@ -161,7 +176,9 @@ export function AddChild() {
               <div>
                 <p className="font-medium text-[var(--color-text)]">{name.trim()}</p>
                 <p className="text-xs text-[var(--color-text-secondary)]">
-                  {FEEDING_TYPES.find((f) => f.value === feedingType)?.label}
+                  {[sex ? CHILD_SEX_OPTIONS.find((option) => option.value === sex)?.label : null, FEEDING_TYPES.find((f) => f.value === feedingType)?.label]
+                    .filter(Boolean)
+                    .join(" · ")}
                 </p>
               </div>
             </CardContent>

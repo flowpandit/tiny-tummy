@@ -63,6 +63,7 @@
   --color-chart-dot: #ff8d69;
   --gradient-status-healthy: conic-gradient(from 210deg, #ff9c7c 0deg, #efc45c 120deg, #94d6bb 280deg, #ff9c7c 360deg);
   --gradient-status-caution: conic-gradient(from 210deg, #ff9c7c 0deg, #efc45c 170deg, #efc45c 360deg);
+  --gradient-status-head: conic-gradient(from 210deg, #7ba7ff 0deg, #79d2cf 180deg, #5d76d6 360deg);
   --gradient-status-alert: conic-gradient(from 210deg, #ff9c7c 0deg, #ef8c7a 200deg, #d95f52 360deg);
   --gradient-status-unknown: conic-gradient(from 210deg, #cfd7e5 0deg, #9aabc4 360deg);
 
@@ -135,6 +136,7 @@
     --color-chart-dot: #ff9c7c;
     --gradient-status-healthy: conic-gradient(from 210deg, #ff9d7d 0deg, #e0b962 120deg, #88c9ac 280deg, #ff9d7d 360deg);
     --gradient-status-caution: conic-gradient(from 210deg, #ff9d7d 0deg, #d7b060 170deg, #d7b060 360deg);
+    --gradient-status-head: conic-gradient(from 210deg, #8fb4ff 0deg, #78c7c0 180deg, #8a96ef 360deg);
     --gradient-status-alert: conic-gradient(from 210deg, #ff9d7d 0deg, #e8927f 200deg, #f2a193 360deg);
     --gradient-status-unknown: conic-gradient(from 210deg, #5f6f89 0deg, #8396b5 360deg);
 
@@ -180,6 +182,7 @@
   --color-chart-dot: #ff9c7c;
   --gradient-status-healthy: conic-gradient(from 210deg, #ff9d7d 0deg, #e0b962 120deg, #88c9ac 280deg, #ff9d7d 360deg);
   --gradient-status-caution: conic-gradient(from 210deg, #ff9d7d 0deg, #d7b060 170deg, #d7b060 360deg);
+  --gradient-status-head: conic-gradient(from 210deg, #8fb4ff 0deg, #78c7c0 180deg, #8a96ef 360deg);
   --gradient-status-alert: conic-gradient(from 210deg, #ff9d7d 0deg, #e8927f 200deg, #f2a193 360deg);
   --gradient-status-unknown: conic-gradient(from 210deg, #5f6f89 0deg, #8396b5 360deg);
 
@@ -229,6 +232,7 @@
   --color-chart-dot: #d28a68;
   --gradient-status-healthy: conic-gradient(from 210deg, #d28a68 0deg, #b69963 120deg, #789f8a 280deg, #d28a68 360deg);
   --gradient-status-caution: conic-gradient(from 210deg, #d28a68 0deg, #b69963 170deg, #b69963 360deg);
+  --gradient-status-head: conic-gradient(from 210deg, #7e89cf 0deg, #729a93 180deg, #6774bc 360deg);
   --gradient-status-alert: conic-gradient(from 210deg, #d28a68 0deg, #b07d74 200deg, #d89a8f 360deg);
   --gradient-status-unknown: conic-gradient(from 210deg, #70697c 0deg, #938a9d 360deg);
 

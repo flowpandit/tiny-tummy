@@ -1,4 +1,4 @@
-import type { StoolColor, FeedingType } from "./types";
+import type { StoolColor, FeedingType, ChildSex } from "./types";
 
 export const BITSS_TYPES = [
   { type: 1, label: "Hard lumps", description: "Separate hard lumps, like nuts (constipation)" },
@@ -79,6 +79,11 @@ export const FEEDING_TYPES: { value: FeedingType; label: string }[] = [
   { value: "formula", label: "Formula" },
   { value: "mixed", label: "Mixed" },
   { value: "solids", label: "Solids" },
+];
+
+export const CHILD_SEX_OPTIONS: { value: ChildSex; label: string }[] = [
+  { value: "female", label: "Girl" },
+  { value: "male", label: "Boy" },
 ];
 
 export const AVATAR_COLORS = [
