@@ -1,6 +1,5 @@
 import { type KeyboardEvent, type MouseEvent } from "react";
 import { motion } from "framer-motion";
-import { useNavigate } from "react-router-dom";
 import { Avatar } from "../child/Avatar";
 import { getAgeLabelFromDob } from "../../lib/utils";
 import type { Child } from "../../lib/types";
@@ -24,7 +23,6 @@ export function ChildSwitcherCard({
   onToggle,
   onSelectChild,
 }: ChildSwitcherCardProps) {
-  const navigate = useNavigate();
   const ageLabel = getAgeLabelFromDob(activeChild.date_of_birth);
   const otherChildren = children.filter((child) => child.id !== activeChild.id);
   const isExpanded = collapsible ? expanded : true;
@@ -35,11 +33,6 @@ export function ChildSwitcherCard({
       event.preventDefault();
       onToggle();
     }
-  };
-
-  const handleAddChild = (event: MouseEvent<HTMLButtonElement>) => {
-    event.stopPropagation();
-    navigate("/add-child");
   };
 
   const handleSelectChild = (event: MouseEvent<HTMLButtonElement>, childId: string) => {
@@ -127,15 +120,6 @@ export function ChildSwitcherCard({
               />
             </button>
           ))}
-
-          <button
-            type="button"
-            aria-label="Add a child"
-            onClick={handleAddChild}
-            className="flex h-14 w-14 items-center justify-center rounded-full border border-[var(--color-border-strong)] bg-[var(--color-surface-tint)] text-[30px] font-light leading-none text-[var(--color-text-secondary)] transition-colors hover:bg-white"
-          >
-            +
-          </button>
         </motion.div>
       </div>
     </div>

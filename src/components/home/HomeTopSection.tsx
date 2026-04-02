@@ -14,7 +14,7 @@ import {
 } from "../ui/icons";
 import type { Child } from "../../lib/types";
 import type { ChildDailySummary } from "../../lib/child-summary";
-import { timeSince } from "../../lib/utils";
+import { getAgeLabelFromDob, timeSince } from "../../lib/utils";
 
 function QuickSummaryRing({
   icon,
@@ -160,6 +160,9 @@ export function HomeTopSection({
               />
               <div>
                 <p className="text-[1.05rem] font-semibold text-[var(--color-text)]">{activeChild.name}</p>
+                <p className="text-[0.82rem] leading-tight text-[var(--color-text-secondary)]">
+                  {getAgeLabelFromDob(activeChild.date_of_birth)}
+                </p>
               </div>
             </div>
           </motion.div>

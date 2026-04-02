@@ -15,7 +15,7 @@ import { useCaregiverNote } from "../hooks/useCaregiverNote";
 import { useEliminationPreference } from "../hooks/useEliminationPreference";
 import { buildChildDailySummary } from "../lib/child-summary";
 import { getBreastfeedingSessionSettingKey, parseBreastfeedingSession } from "../lib/breastfeeding";
-import { timeSince } from "../lib/utils";
+import { getAgeLabelFromDob, timeSince } from "../lib/utils";
 import { syncSmartRemindersForChild, syncSmartRemindersForChildren } from "../lib/notifications";
 import { getSymptomSeverityBadgeVariant, getSymptomSeverityLabel, getSymptomTypeLabel } from "../lib/symptom-constants";
 import * as db from "../lib/db";
@@ -44,7 +44,7 @@ export function Home() {
   const navigate = useNavigate();
   const location = useLocation();
   const navigateWithOrigin = (path: string) => navigate(path, { state: { origin: location.pathname } });
-  const { activeChild, children } = useChildContext();
+  const { activeChild, children, setActiveChildId } = useChildContext();
   const { experience } = useEliminationPreference(activeChild);
   const { showError, showSuccess } = useToast();
   const { logs, lastRealPoop, refresh: refreshLogs } = usePoopLogs(activeChild?.id ?? null);
@@ -294,6 +294,7 @@ export function Home() {
     : "0h";
   const sleepSummaryHoursValue = sleepSummaryHours / (1000 * 60 * 60);
   const sleepNapCount = sleepLogs.filter((entry) => entry.sleep_type === "nap").length;
+  const otherChildren = children.filter((child) => child.id !== activeChild.id);
 
   return (
     <div className="flex flex-col gap-0 pb-3 pt-0.5">
@@ -311,7 +312,7 @@ export function Home() {
           }}
         >
           <div
-            className="mx-auto flex max-w-[600px] items-center bg-transparent px-4 py-3"
+            className="mx-auto flex max-w-[600px] items-center justify-between gap-3 bg-transparent px-4 py-3"
             style={{ marginTop: "calc(var(--safe-area-top) + 16px)" }}
           >
             <div className="flex items-center gap-3">
@@ -322,8 +323,34 @@ export function Home() {
                 size="sm"
                 className="h-9 w-9 border-2 border-white/80"
               />
-              <p className="text-[0.98rem] font-semibold text-[var(--color-text)]">{activeChild.name}</p>
+              <div>
+                <p className="text-[0.98rem] font-semibold text-[var(--color-text)]">{activeChild.name}</p>
+                <p className="text-[0.76rem] leading-tight text-[var(--color-text-secondary)]">
+                  {getAgeLabelFromDob(activeChild.date_of_birth)}
+                </p>
+              </div>
             </div>
+            {otherChildren.length > 0 && (
+              <div className="pointer-events-auto flex items-center gap-2">
+                {otherChildren.map((child) => (
+                  <button
+                    key={child.id}
+                    type="button"
+                    aria-label={`Switch to ${child.name}`}
+                    onClick={() => setActiveChildId(child.id)}
+                    className="rounded-full transition-transform hover:scale-[1.03]"
+                  >
+                    <Avatar
+                      childId={child.id}
+                      name={child.name}
+                      color={child.avatar_color}
+                      size="sm"
+                      className="h-8 w-8 border border-white/80 bg-white/40 shadow-[var(--shadow-soft)]"
+                    />
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}
