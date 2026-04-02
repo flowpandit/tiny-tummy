@@ -48,12 +48,14 @@ function QuickSummaryRing({
   value,
   progress,
   detail,
+  glow,
 }: {
   icon: ReactNode;
   label: string;
   value: string;
   progress: number;
   detail: string;
+  glow: string;
 }) {
   const size = 92;
   const stroke = 9;
@@ -69,9 +71,13 @@ function QuickSummaryRing({
           className="relative flex h-[92px] w-[92px] items-center justify-center rounded-full"
           style={{
             background: "radial-gradient(circle, rgba(255,255,255,0.96) 0%, rgba(255,252,247,0.98) 62%, rgba(255,248,241,0.84) 100%)",
-            boxShadow: "0 0 0 5px rgba(255,239,230,0.9), 0 10px 24px rgba(232, 182, 153, 0.18), 0 0 22px rgba(239,157,123,0.18)",
+            boxShadow: "0 0 0 5px rgba(255,239,230,0.88), 0 10px 24px rgba(232, 182, 153, 0.14)",
           }}
         >
+          <div
+            className="pointer-events-none absolute -inset-4 rounded-full blur-[18px]"
+            style={{ background: `radial-gradient(circle, rgba(255,255,255,0) 48%, ${glow} 68%, rgba(255,255,255,0) 100%)` }}
+          />
           <svg viewBox={`0 0 ${size} ${size}`} className="absolute inset-0 h-full w-full -rotate-90" aria-hidden="true">
             <circle
               cx={size / 2}
@@ -478,7 +484,7 @@ export function Home() {
                   <button
                     key={card.label}
                     type="button"
-                    className={`min-h-[96px] rounded-[20px] border border-[rgba(155,126,102,0.14)] px-2 py-3 text-center shadow-[0_14px_30px_rgba(191,151,121,0.18),0_2px_8px_rgba(255,255,255,0.55)] ${card.tone}`}
+                    className={`min-h-[96px] rounded-[20px] border border-[rgba(155,126,102,0.14)] px-2 py-3 text-center shadow-[0_24px_44px_rgba(188,146,114,0.28),0_10px_22px_rgba(233,197,170,0.26),0_2px_10px_rgba(255,255,255,0.68)] ${card.tone}`}
                   >
                     <div className="flex justify-center">{card.icon}</div>
                     <p className="mt-2 text-[0.92rem] font-semibold leading-tight text-[var(--color-text)]">{card.label}</p>
@@ -495,6 +501,7 @@ export function Home() {
                     value={String(totalDiapers)}
                     progress={Math.min(totalDiapers / 8, 1)}
                     detail={`${summary.todayWetDiapers} Wet, ${summary.todayDirtyDiapers} Dirty`}
+                    glow="rgba(244, 218, 113, 0.34)"
                   />
                   <QuickSummaryRing
                     icon={<BottleSummaryIcon />}
@@ -502,6 +509,7 @@ export function Home() {
                     value={String(summary.todayFeeds)}
                     progress={Math.min(summary.todayFeeds / 10, 1)}
                     detail={lastFeed ? `Last ${timeSince(lastFeed.logged_at)}` : "No feed yet"}
+                    glow="rgba(239, 169, 118, 0.3)"
                   />
                   <QuickSummaryRing
                     icon={<SleepSummaryIcon />}
@@ -509,6 +517,7 @@ export function Home() {
                     value={sleepSummaryLabel}
                     progress={Math.min(sleepSummaryHoursValue / 16, 1)}
                     detail={sleepLogs.length > 0 ? `${sleepLogs.filter((entry) => entry.sleep_type === "nap").length} Naps` : "No sleep logs"}
+                    glow="rgba(208, 192, 239, 0.32)"
                   />
                 </div>
               </div>
