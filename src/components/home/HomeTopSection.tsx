@@ -45,8 +45,16 @@ function QuickSummaryRing({
           }}
         >
           <div
-            className="pointer-events-none absolute -inset-4 rounded-full blur-[18px]"
-            style={{ background: `radial-gradient(circle, rgba(255,255,255,0) 48%, ${glow} 68%, rgba(255,255,255,0) 100%)` }}
+            className="pointer-events-none absolute -inset-8 rounded-full opacity-90 blur-[30px]"
+            style={{
+              background: `radial-gradient(circle, rgba(255,255,255,0) 18%, rgba(255,255,255,0.02) 34%, ${glow} 52%, rgba(255,255,255,0.1) 68%, rgba(255,255,255,0) 100%)`,
+            }}
+          />
+          <div
+            className="pointer-events-none absolute -inset-5 rounded-full opacity-70 blur-[16px]"
+            style={{
+              background: `radial-gradient(circle, rgba(255,255,255,0) 34%, ${glow} 58%, rgba(255,255,255,0) 86%)`,
+            }}
           />
           <svg viewBox={`0 0 ${size} ${size}`} className="absolute inset-0 h-full w-full -rotate-90" aria-hidden="true">
             <circle
