@@ -335,6 +335,7 @@ export function Breastfeed() {
           </Button>
         )}
         className="overflow-hidden"
+        scene="breastfeed"
       />
 
       <div className="space-y-4 px-4 py-5">

@@ -4,7 +4,7 @@ import { useUnits } from "../contexts/UnitsContext";
 import { useGrowthLogs } from "../hooks/useGrowthLogs";
 import { Card, CardContent, CardHeader } from "../components/ui/card";
 import { Button } from "../components/ui/button";
-import { PageIntro } from "../components/ui/page-intro";
+import { ScenicHero } from "../components/layout/ScenicHero";
 import { EmptyState, InsetPanel, PageBody, SectionHeading } from "../components/ui/page-layout";
 import { GrowthLogSheet } from "../components/growth/GrowthLogSheet";
 import { GrowthTrendChart } from "../components/growth/GrowthTrendChart";
@@ -12,7 +12,7 @@ import { TrackerEntryRow, TrackerEntryTable, TrackerMetricPanel, TrackerMetricRi
 import { cn } from "../lib/cn";
 import { getGrowthPercentile } from "../lib/growth-percentiles";
 import { detectGrowthCountryCode, getGrowthReferenceForAge } from "../lib/growth-reference";
-import { formatDate, getAgeLabelFromDob, timeSince } from "../lib/utils";
+import { formatDate, timeSince } from "../lib/utils";
 import { formatGrowthSummary, formatGrowthValue, getGrowthUnitLabel } from "../lib/units";
 import type { GrowthEntry } from "../lib/types";
 
@@ -173,15 +173,17 @@ export function Growth() {
   };
 
   return (
-    <PageBody>
-      <PageIntro
-        eyebrow="Measurements"
+    <PageBody className="mt-0 space-y-0 px-0 py-0">
+      <ScenicHero
+        child={activeChild}
         title="Growth story"
-        description="A warmer growth record that keeps the raw measurements visible while turning percentile context into something easier to understand."
-        meta={`${activeChild.name} · ${getAgeLabelFromDob(activeChild.date_of_birth)}${latest ? ` · last logged ${timeSince(latest.measured_at)}` : ""}`}
+        description="Track measurements and percentile context in one place."
         action={<Button variant="cta" size="sm" onClick={openAddSheet}>Add</Button>}
+        className="overflow-hidden"
+        scene="growth"
       />
 
+      <div className="space-y-4 px-4 py-5">
       {sortedLogs.length === 0 ? (
         <EmptyState
           icon={(
@@ -484,6 +486,7 @@ export function Growth() {
           </Card>
         </>
       )}
+      </div>
 
       <GrowthLogSheet
         open={sheetOpen}

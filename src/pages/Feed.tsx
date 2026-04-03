@@ -866,6 +866,7 @@ export function Feed() {
         description="Feeds, meals, and the next likely window in one place."
         action={<Button variant="cta" size="sm" onClick={() => setFormOpen(true)}>Add</Button>}
         className="overflow-hidden"
+        scene="feed"
       />
 
       <div className="space-y-4 px-4 py-5">

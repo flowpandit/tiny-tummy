@@ -1017,6 +1017,7 @@ export function Poop() {
         description="Pattern, timing, and alerts in one place."
         action={<Button variant="cta" size="sm" onClick={() => setLogFormOpen(true)}>Add</Button>}
         className="overflow-hidden"
+        scene="poop"
       />
 
       <div className="space-y-4 px-4 py-5">

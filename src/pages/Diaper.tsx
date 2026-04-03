@@ -204,6 +204,7 @@ export function Diaper() {
           </Button>
         )}
         className="overflow-hidden"
+        scene="diaper"
       />
 
       <div className="space-y-4 px-4 py-5">

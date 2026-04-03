@@ -7,6 +7,11 @@ import watercolorMountainsDark from "../../assets/watercolor-mountains-dark.svg"
 import watercolorMoon from "../../assets/watercolor-moon.svg";
 import watercolorSun from "../../assets/watercolor-sun.svg";
 import heroBackgroundArt from "../../assets/svg-assets/hero-background.svg";
+import breastfeedingSceneArt from "../../assets/svg-assets/breastfeeding.svg";
+import diaperSceneArt from "../../assets/svg-assets/diaper.svg";
+import feedSceneArt from "../../assets/svg-assets/feed.svg";
+import growthSceneArt from "../../assets/svg-assets/growth.svg";
+import poopSceneArt from "../../assets/svg-assets/poop.svg";
 import sleepSceneArt from "../../assets/svg-assets/sleep.svg";
 import homeCloud1 from "../../assets/svg-assets/hero-pieces/cloud-1.svg";
 import homeCloud3 from "../../assets/svg-assets/hero-pieces/cloud-3.svg";
@@ -26,7 +31,7 @@ type ScenicHeroProps = {
   avatarAnchorRef?: RefObject<HTMLDivElement | null>;
   showChildInfo?: boolean;
   className?: string;
-  scene?: "default" | "home" | "sleep";
+  scene?: "default" | "home" | "sleep" | "feed" | "breastfeed" | "diaper" | "poop" | "growth";
 };
 
 export function ScenicHero({
@@ -48,6 +53,11 @@ export function ScenicHero({
   const homeOrbArt = isDarkArtwork ? watercolorMoon : sceneSun;
   const useHomeScene = scene === "home";
   const useSleepScene = scene === "sleep";
+  const useFeedScene = scene === "feed";
+  const useBreastfeedScene = scene === "breastfeed";
+  const useDiaperScene = scene === "diaper";
+  const usePoopScene = scene === "poop";
+  const useGrowthScene = scene === "growth";
 
   return (
     <section className={className}>
@@ -170,6 +180,196 @@ export function ScenicHero({
             <div
               className="pointer-events-none absolute left-[10%] top-[122px] h-[110px] w-[34%] rounded-full blur-[20px]"
               style={{ background: isDarkArtwork ? "rgba(141, 161, 202, 0.08)" : "rgba(255, 232, 212, 0.28)" }}
+            />
+          </>
+        ) : useFeedScene ? (
+          <>
+            <img
+              src={heroBackgroundArt}
+              alt=""
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-x-[-12%] top-[-44px] w-[128%] max-w-none opacity-72"
+              style={{
+                filter: isDarkArtwork
+                  ? "saturate(0.46) hue-rotate(176deg) brightness(0.34)"
+                  : "saturate(0.94) hue-rotate(4deg) brightness(1.02)",
+              }}
+            />
+            <div
+              className="pointer-events-none absolute inset-0"
+              style={{
+                background: isDarkArtwork
+                  ? "radial-gradient(circle at 76% 24%, rgba(188, 207, 244, 0.16) 0%, rgba(20, 28, 40, 0) 30%), linear-gradient(180deg, rgba(37, 46, 63, 0.06) 0%, rgba(20, 28, 40, 0.16) 100%)"
+                  : "radial-gradient(circle at 74% 20%, rgba(255, 244, 214, 0.46) 0%, rgba(255, 255, 255, 0) 30%), linear-gradient(180deg, rgba(255, 255, 255, 0.06) 0%, rgba(246, 223, 214, 0.1) 100%)",
+              }}
+            />
+            <img
+              src={feedSceneArt}
+              alt=""
+              aria-hidden="true"
+              className="pointer-events-none absolute right-[-6%] bottom-[26px] w-[82%] max-w-none md:right-[0%] md:w-[68%]"
+              style={{
+                opacity: isDarkArtwork ? 0.82 : 0.92,
+                filter: isDarkArtwork
+                  ? "saturate(0.52) hue-rotate(182deg) brightness(0.76)"
+                  : "saturate(0.96) hue-rotate(2deg) brightness(0.98)",
+              }}
+            />
+            <div
+              className="pointer-events-none absolute left-[8%] top-[114px] h-[118px] w-[40%] rounded-full blur-[22px]"
+              style={{ background: isDarkArtwork ? "rgba(141, 161, 202, 0.06)" : "rgba(255, 234, 216, 0.24)" }}
+            />
+          </>
+        ) : useBreastfeedScene ? (
+          <>
+            <img
+              src={heroBackgroundArt}
+              alt=""
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-x-[-12%] top-[-42px] w-[126%] max-w-none opacity-72"
+              style={{
+                filter: isDarkArtwork
+                  ? "saturate(0.46) hue-rotate(176deg) brightness(0.34)"
+                  : "saturate(0.94) hue-rotate(4deg) brightness(1.02)",
+              }}
+            />
+            <div
+              className="pointer-events-none absolute inset-0"
+              style={{
+                background: isDarkArtwork
+                  ? "radial-gradient(circle at 72% 24%, rgba(206, 195, 233, 0.14) 0%, rgba(20, 28, 40, 0) 32%), linear-gradient(180deg, rgba(36, 42, 58, 0.06) 0%, rgba(20, 28, 40, 0.14) 100%)"
+                  : "radial-gradient(circle at 74% 22%, rgba(255, 239, 214, 0.4) 0%, rgba(255, 255, 255, 0) 30%), linear-gradient(180deg, rgba(255, 255, 255, 0.06) 0%, rgba(246, 223, 214, 0.1) 100%)",
+              }}
+            />
+            <img
+              src={breastfeedingSceneArt}
+              alt=""
+              aria-hidden="true"
+              className="pointer-events-none absolute right-[-14%] bottom-[10px] w-[76%] max-w-none md:right-[-6%] md:w-[62%]"
+              style={{
+                opacity: isDarkArtwork ? 0.84 : 0.92,
+                filter: isDarkArtwork
+                  ? "saturate(0.5) hue-rotate(182deg) brightness(0.74)"
+                  : "saturate(0.94) hue-rotate(2deg) brightness(0.98)",
+              }}
+            />
+            <div
+              className="pointer-events-none absolute left-[10%] top-[118px] h-[112px] w-[38%] rounded-full blur-[20px]"
+              style={{ background: isDarkArtwork ? "rgba(169, 160, 201, 0.06)" : "rgba(255, 232, 212, 0.22)" }}
+            />
+          </>
+        ) : useDiaperScene ? (
+          <>
+            <img
+              src={heroBackgroundArt}
+              alt=""
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-x-[-12%] top-[-42px] w-[126%] max-w-none opacity-72"
+              style={{
+                filter: isDarkArtwork
+                  ? "saturate(0.44) hue-rotate(174deg) brightness(0.34)"
+                  : "saturate(0.94) hue-rotate(4deg) brightness(1.02)",
+              }}
+            />
+            <div
+              className="pointer-events-none absolute inset-0"
+              style={{
+                background: isDarkArtwork
+                  ? "radial-gradient(circle at 76% 22%, rgba(188, 207, 244, 0.14) 0%, rgba(20, 28, 40, 0) 30%), linear-gradient(180deg, rgba(36, 42, 58, 0.06) 0%, rgba(20, 28, 40, 0.14) 100%)"
+                  : "radial-gradient(circle at 72% 22%, rgba(255, 241, 214, 0.42) 0%, rgba(255, 255, 255, 0) 30%), linear-gradient(180deg, rgba(255, 255, 255, 0.06) 0%, rgba(246, 223, 214, 0.1) 100%)",
+              }}
+            />
+            <img
+              src={diaperSceneArt}
+              alt=""
+              aria-hidden="true"
+              className="pointer-events-none absolute right-[-10%] bottom-[20px] w-[72%] max-w-none md:right-[-4%] md:w-[58%]"
+              style={{
+                opacity: isDarkArtwork ? 0.84 : 0.92,
+                filter: isDarkArtwork
+                  ? "saturate(0.48) hue-rotate(180deg) brightness(0.76)"
+                  : "saturate(0.96) hue-rotate(2deg) brightness(0.98)",
+              }}
+            />
+            <div
+              className="pointer-events-none absolute left-[8%] top-[116px] h-[112px] w-[40%] rounded-full blur-[20px]"
+              style={{ background: isDarkArtwork ? "rgba(141, 161, 202, 0.06)" : "rgba(255, 232, 212, 0.22)" }}
+            />
+          </>
+        ) : usePoopScene ? (
+          <>
+            <img
+              src={heroBackgroundArt}
+              alt=""
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-x-[-12%] top-[-42px] w-[126%] max-w-none opacity-72"
+              style={{
+                filter: isDarkArtwork
+                  ? "saturate(0.44) hue-rotate(174deg) brightness(0.34)"
+                  : "saturate(0.94) hue-rotate(4deg) brightness(1.02)",
+              }}
+            />
+            <div
+              className="pointer-events-none absolute inset-0"
+              style={{
+                background: isDarkArtwork
+                  ? "radial-gradient(circle at 76% 22%, rgba(188, 207, 244, 0.12) 0%, rgba(20, 28, 40, 0) 32%), linear-gradient(180deg, rgba(36, 42, 58, 0.06) 0%, rgba(20, 28, 40, 0.14) 100%)"
+                  : "radial-gradient(circle at 72% 20%, rgba(255, 238, 212, 0.38) 0%, rgba(255, 255, 255, 0) 30%), linear-gradient(180deg, rgba(255, 255, 255, 0.06) 0%, rgba(246, 223, 214, 0.1) 100%)",
+              }}
+            />
+            <img
+              src={poopSceneArt}
+              alt=""
+              aria-hidden="true"
+              className="pointer-events-none absolute right-[1%] bottom-[72px] w-[44%] max-w-none md:right-[4%] md:w-[36%]"
+              style={{
+                opacity: isDarkArtwork ? 0.84 : 0.92,
+                filter: isDarkArtwork
+                  ? "saturate(0.48) hue-rotate(180deg) brightness(0.76)"
+                  : "saturate(0.96) hue-rotate(2deg) brightness(0.98)",
+              }}
+            />
+            <div
+              className="pointer-events-none absolute left-[10%] top-[120px] h-[108px] w-[38%] rounded-full blur-[20px]"
+              style={{ background: isDarkArtwork ? "rgba(169, 160, 201, 0.05)" : "rgba(255, 232, 212, 0.2)" }}
+            />
+          </>
+        ) : useGrowthScene ? (
+          <>
+            <img
+              src={heroBackgroundArt}
+              alt=""
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-x-[-12%] top-[-42px] w-[126%] max-w-none opacity-72"
+              style={{
+                filter: isDarkArtwork
+                  ? "saturate(0.44) hue-rotate(174deg) brightness(0.34)"
+                  : "saturate(0.94) hue-rotate(4deg) brightness(1.02)",
+              }}
+            />
+            <div
+              className="pointer-events-none absolute inset-0"
+              style={{
+                background: isDarkArtwork
+                  ? "radial-gradient(circle at 74% 18%, rgba(188, 207, 244, 0.16) 0%, rgba(20, 28, 40, 0) 30%), linear-gradient(180deg, rgba(36, 42, 58, 0.06) 0%, rgba(20, 28, 40, 0.14) 100%)"
+                  : "radial-gradient(circle at 72% 18%, rgba(255, 241, 214, 0.44) 0%, rgba(255, 255, 255, 0) 30%), linear-gradient(180deg, rgba(255, 255, 255, 0.06) 0%, rgba(246, 223, 214, 0.1) 100%)",
+              }}
+            />
+            <img
+              src={growthSceneArt}
+              alt=""
+              aria-hidden="true"
+              className="pointer-events-none absolute right-[-1%] bottom-[24px] w-[32%] max-w-none md:right-[2%] md:w-[38%]"
+              style={{
+                opacity: isDarkArtwork ? 0.84 : 0.92,
+                filter: isDarkArtwork
+                  ? "saturate(0.48) hue-rotate(180deg) brightness(0.76)"
+                  : "saturate(0.96) hue-rotate(2deg) brightness(0.98)",
+              }}
+            />
+            <div
+              className="pointer-events-none absolute left-[8%] top-[116px] h-[112px] w-[40%] rounded-full blur-[20px]"
+              style={{ background: isDarkArtwork ? "rgba(141, 161, 202, 0.06)" : "rgba(255, 232, 212, 0.22)" }}
             />
           </>
         ) : (
