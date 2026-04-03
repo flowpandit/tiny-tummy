@@ -24,7 +24,8 @@ export function AppShell() {
     "/report": "/dashboard",
   };
   const revealOnScrollPaths = new Set(["/poop", "/diaper", "/feed", "/sleep"]);
-  const showHeader = location.pathname !== "/";
+  const hideHeaderPaths = new Set(["/", "/settings"]);
+  const showHeader = !hideHeaderPaths.has(location.pathname);
   const headerFallbackTo = headerBackFallbackByPath[location.pathname];
   const showHeaderBackButton = Boolean(headerFallbackTo);
   const revealHeaderOnScroll = revealOnScrollPaths.has(location.pathname);

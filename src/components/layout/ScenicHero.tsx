@@ -13,6 +13,7 @@ type ScenicHeroProps = {
   description: string;
   action?: ReactNode;
   avatarAnchorRef?: RefObject<HTMLDivElement | null>;
+  showChildInfo?: boolean;
   className?: string;
 };
 
@@ -22,6 +23,7 @@ export function ScenicHero({
   description,
   action,
   avatarAnchorRef,
+  showChildInfo = true,
   className,
 }: ScenicHeroProps) {
   const clipPathId = useId();
@@ -67,21 +69,23 @@ export function ScenicHero({
               </div>
               {action ? <div className="shrink-0 pt-1">{action}</div> : null}
             </div>
-            <div ref={avatarAnchorRef} className="mt-5 flex items-center gap-3">
-              <Avatar
-                childId={child.id}
-                name={child.name}
-                color={child.avatar_color}
-                size="sm"
-                className="h-10 w-10 border-2 border-white/70 shadow-[var(--shadow-soft)]"
-              />
-              <div>
-                <p className="text-[1.05rem] font-semibold text-[var(--color-text)]">{child.name}</p>
-                <p className="text-[0.82rem] leading-tight text-[var(--color-text-secondary)]">
-                  {getAgeLabelFromDob(child.date_of_birth)}
-                </p>
+            {showChildInfo && (
+              <div ref={avatarAnchorRef} className="mt-5 flex items-center gap-3">
+                <Avatar
+                  childId={child.id}
+                  name={child.name}
+                  color={child.avatar_color}
+                  size="sm"
+                  className="h-10 w-10 border-2 border-white/70 shadow-[var(--shadow-soft)]"
+                />
+                <div>
+                  <p className="text-[1.05rem] font-semibold text-[var(--color-text)]">{child.name}</p>
+                  <p className="text-[0.82rem] leading-tight text-[var(--color-text-secondary)]">
+                    {getAgeLabelFromDob(child.date_of_birth)}
+                  </p>
+                </div>
               </div>
-            </div>
+            )}
           </motion.div>
         </div>
       </div>
