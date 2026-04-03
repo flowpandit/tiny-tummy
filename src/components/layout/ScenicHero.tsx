@@ -1,11 +1,9 @@
 import { useId, type ReactNode, type RefObject } from "react";
 import { motion } from "framer-motion";
-import watercolorClouds from "../../assets/watercolor-clouds.svg";
-import watercolorCloudsDark from "../../assets/watercolor-clouds-dark.svg";
-import watercolorMountains from "../../assets/watercolor-mountains.svg";
-import watercolorMountainsDark from "../../assets/watercolor-mountains-dark.svg";
-import watercolorMoon from "../../assets/watercolor-moon.svg";
-import watercolorSun from "../../assets/watercolor-sun.svg";
+import watercolorClouds from "../../assets/svg-assets/hero-pieces/watercolor-clouds.svg";
+import watercolorCloudsDark from "../../assets/svg-assets/hero-pieces/watercolor-clouds-dark.svg";
+import watercolorMountains from "../../assets/svg-assets/hero-pieces/watercolor-mountains.svg";
+import watercolorMountainsDark from "../../assets/svg-assets/hero-pieces/watercolor-mountains-dark.svg";
 import heroBackgroundArt from "../../assets/svg-assets/hero-background.svg";
 import heroBackgroundArtDark from "../../assets/svg-assets/hero-background-dark.svg";
 import breastfeedingSceneArt from "../../assets/svg-assets/breastfeeding.svg";
@@ -14,10 +12,6 @@ import feedSceneArt from "../../assets/svg-assets/feed.svg";
 import growthSceneArt from "../../assets/svg-assets/growth.svg";
 import poopSceneArt from "../../assets/svg-assets/poop.svg";
 import sleepSceneArt from "../../assets/svg-assets/sleep.svg";
-import homeCloud1 from "../../assets/svg-assets/hero-pieces/cloud-1.svg";
-import homeCloud3 from "../../assets/svg-assets/hero-pieces/cloud-3.svg";
-import homeCloud5 from "../../assets/svg-assets/hero-pieces/cloud-5.svg";
-import homeMount1 from "../../assets/svg-assets/hero-pieces/mount-1.svg";
 import sceneMoon from "../../assets/svg-assets/moon.svg";
 import sceneSun from "../../assets/svg-assets/sun.svg";
 import type { Child } from "../../lib/types";
@@ -51,7 +45,7 @@ export function ScenicHero({
   const isDarkArtwork = resolved !== "light";
   const skyArt = isDarkArtwork ? watercolorCloudsDark : watercolorClouds;
   const ridgeArt = isDarkArtwork ? watercolorMountainsDark : watercolorMountains;
-  const orbArt = isDarkArtwork ? watercolorMoon : watercolorSun;
+  const orbArt = isDarkArtwork ? sceneMoon : sceneSun;
   const homeOrbArt = isDarkArtwork ? sceneMoon : sceneSun;
   const sceneBackgroundArt = isDarkArtwork ? heroBackgroundArtDark : heroBackgroundArt;
   const useHomeScene = scene === "home";
@@ -88,22 +82,16 @@ export function ScenicHero({
               }}
             />
             <img
-              src={homeCloud1}
+              src={skyArt}
               alt=""
               aria-hidden="true"
-              className={isDarkArtwork
-                ? "pointer-events-none absolute left-[-18px] top-[18px] w-[174px] md:w-[204px]"
-                : "pointer-events-none absolute left-[-34px] top-[18px] w-[188px] md:w-[228px]"}
-              style={{ opacity: isDarkArtwork ? 0.2 : 0.62 }}
-            />
-            <img
-              src={homeCloud3}
-              alt=""
-              aria-hidden="true"
-              className={isDarkArtwork
-                ? "pointer-events-none absolute left-1/2 top-[58px] w-[188px] -translate-x-1/2 md:w-[216px]"
-                : "pointer-events-none absolute left-[118px] top-[42px] w-[176px] md:w-[204px]"}
-              style={{ opacity: isDarkArtwork ? 0.16 : 0.52 }}
+              className="pointer-events-none absolute left-[-20px] top-[14px] w-[calc(100%+40px)] max-w-none"
+              style={{
+                opacity: isDarkArtwork ? 0.82 : 0.96,
+                filter: isDarkArtwork
+                  ? "brightness(1.08) contrast(1.02)"
+                  : "brightness(1.02)",
+              }}
             />
             <img
               src={homeOrbArt}
@@ -115,26 +103,15 @@ export function ScenicHero({
               style={{ opacity: isDarkArtwork ? 0.72 : 0.95 }}
             />
             <img
-              src={homeCloud5}
+              src={ridgeArt}
               alt=""
               aria-hidden="true"
-              className={isDarkArtwork
-                ? "pointer-events-none absolute right-[96px] bottom-[112px] w-[144px] md:right-[118px] md:w-[172px]"
-                : "pointer-events-none absolute left-1/2 bottom-[112px] w-[168px] -translate-x-1/2 md:w-[196px]"}
-              style={{ opacity: isDarkArtwork ? 0.1 : 0.22 }}
-            />
-            <img
-              src={homeMount1}
-              alt=""
-              aria-hidden="true"
-              className={isDarkArtwork
-                ? "pointer-events-none absolute left-1/2 bottom-[26px] w-[220%] max-w-none -translate-x-1/2"
-                : "pointer-events-none absolute left-1/2 bottom-[26px] w-[250%] max-w-none -translate-x-1/2"}
+              className="pointer-events-none absolute left-1/2 bottom-[1px] w-[200%] max-w-none -translate-x-1/2 md:w-[220%]"
               style={{
-                opacity: isDarkArtwork ? 0.9 : 0.94,
+                opacity: isDarkArtwork ? 0.96 : 0.98,
                 filter: isDarkArtwork
-                  ? "sepia(28%) saturate(100%) hue-rotate(174deg) brightness(0.78)"
-                  : "sepia(10%) saturate(100%) hue-rotate(0deg) brightness(0.90)",
+                  ? "brightness(0.88) contrast(1.04)"
+                  : "brightness(0.94) contrast(1.02)",
               }}
             />
             <div

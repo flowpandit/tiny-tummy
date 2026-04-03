@@ -4,14 +4,16 @@
       <feGaussianBlur stdDeviation="16"/>
     </filter>
     <radialGradient id="nightCloudA" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(150 120) rotate(90) scale(112 184)">
-      <stop offset="0" stop-color="#EDF3FF" stop-opacity="0.28"/>
-      <stop offset="0.52" stop-color="#AEBBDA" stop-opacity="0.18"/>
-      <stop offset="1" stop-color="#6E7FAD" stop-opacity="0"/>
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.68"/>
+      <stop offset="0.4" stop-color="#EEF1F4" stop-opacity="0.5"/>
+      <stop offset="0.74" stop-color="#D4D8DE" stop-opacity="0.22"/>
+      <stop offset="1" stop-color="#A7ADB7" stop-opacity="0"/>
     </radialGradient>
     <radialGradient id="nightCloudB" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(286 122) rotate(90) scale(98 158)">
-      <stop offset="0" stop-color="#E8EEFF" stop-opacity="0.2"/>
-      <stop offset="0.58" stop-color="#98A6CA" stop-opacity="0.12"/>
-      <stop offset="1" stop-color="#98A6CA" stop-opacity="0"/>
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.56"/>
+      <stop offset="0.44" stop-color="#E8EBEF" stop-opacity="0.36"/>
+      <stop offset="0.76" stop-color="#C8CDD5" stop-opacity="0.16"/>
+      <stop offset="1" stop-color="#A4AAB4" stop-opacity="0"/>
     </radialGradient>
   </defs>
   <g filter="url(#cloudBlurDark)">

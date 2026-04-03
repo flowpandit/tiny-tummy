@@ -499,6 +499,7 @@ export function Settings() {
           description="Preferences, children, reminders, and everyday app setup in one place."
           showChildInfo={false}
           className="overflow-hidden"
+          scene="home"
         />
       )}
 
