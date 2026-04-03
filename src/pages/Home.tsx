@@ -119,6 +119,7 @@ export function Home() {
 
     const handleVisibility = () => {
       refreshBreastfeedingSession();
+      void refreshFeedingLogs();
     };
 
     window.addEventListener("focus", handleVisibility);
@@ -129,7 +130,7 @@ export function Home() {
       window.removeEventListener("focus", handleVisibility);
       document.removeEventListener("visibilitychange", handleVisibility);
     };
-  }, [activeChild]);
+  }, [activeChild, refreshFeedingLogs]);
 
   useEffect(() => {
     if (!hasLogs) {

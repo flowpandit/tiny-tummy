@@ -18,21 +18,11 @@ import {
   getRoundedDurationMinutes,
   parseBreastfeedingSession,
 } from "../lib/breastfeeding";
+import { combineLocalDateAndTimeToUtcIso, getCurrentLocalDate, getCurrentLocalTime } from "../lib/utils";
 import * as db from "../lib/db";
 import type { BreastSide } from "../lib/types";
 
 type SessionDurations = Record<"left" | "right", number>;
-
-function getLocalLoggedAt(offsetSeconds = 0): string {
-  const date = new Date(Date.now() + offsetSeconds * 1000);
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  const hours = String(date.getHours()).padStart(2, "0");
-  const minutes = String(date.getMinutes()).padStart(2, "0");
-  const seconds = String(date.getSeconds()).padStart(2, "0");
-  return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
-}
 
 function BreastSideButton({
   side,
@@ -295,7 +285,7 @@ export function Breastfeed() {
 
       await db.createFeedingLog({
         child_id: activeChild.id,
-        logged_at: getLocalLoggedAt(),
+        logged_at: combineLocalDateAndTimeToUtcIso(getCurrentLocalDate(), getCurrentLocalTime()),
         food_type: "breast_milk",
         duration_minutes: getRoundedDurationMinutes(totalDurationMs),
         breast_side: breastSide,
