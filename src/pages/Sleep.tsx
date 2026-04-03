@@ -690,6 +690,7 @@ export function Sleep() {
         description="Wake windows, next likely rest, and the week in one place."
         action={<Button variant="cta" size="sm" onClick={() => setSheetOpen(true)}>Add</Button>}
         className="overflow-hidden"
+        scene="sleep"
       />
 
       <div className="space-y-4 px-4 py-5">

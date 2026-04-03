@@ -6,12 +6,12 @@ import watercolorMountains from "../../assets/watercolor-mountains.svg";
 import watercolorMountainsDark from "../../assets/watercolor-mountains-dark.svg";
 import watercolorMoon from "../../assets/watercolor-moon.svg";
 import watercolorSun from "../../assets/watercolor-sun.svg";
+import heroBackgroundArt from "../../assets/svg-assets/hero-background.svg";
+import sleepSceneArt from "../../assets/svg-assets/sleep.svg";
 import homeCloud1 from "../../assets/svg-assets/hero-pieces/cloud-1.svg";
 import homeCloud3 from "../../assets/svg-assets/hero-pieces/cloud-3.svg";
 import homeCloud5 from "../../assets/svg-assets/hero-pieces/cloud-5.svg";
-import homeCloud6 from "../../assets/svg-assets/hero-pieces/cloud-6.svg";
 import homeMount1 from "../../assets/svg-assets/hero-pieces/mount-1.svg";
-import homeMount2 from "../../assets/svg-assets/hero-pieces/mount-2.svg";
 import sceneSun from "../../assets/svg-assets/sun.svg";
 import type { Child } from "../../lib/types";
 import { getAgeLabelFromDob } from "../../lib/utils";
@@ -26,7 +26,7 @@ type ScenicHeroProps = {
   avatarAnchorRef?: RefObject<HTMLDivElement | null>;
   showChildInfo?: boolean;
   className?: string;
-  scene?: "default" | "home";
+  scene?: "default" | "home" | "sleep";
 };
 
 export function ScenicHero({
@@ -47,6 +47,7 @@ export function ScenicHero({
   const orbArt = isDarkArtwork ? watercolorMoon : watercolorSun;
   const homeOrbArt = isDarkArtwork ? watercolorMoon : sceneSun;
   const useHomeScene = scene === "home";
+  const useSleepScene = scene === "sleep";
 
   return (
     <section className={className}>
@@ -131,6 +132,44 @@ export function ScenicHero({
             <div
               className="pointer-events-none absolute inset-x-[-10%] top-[122px] h-[164px]"
               style={{ background: "var(--gradient-hero-ridge)", opacity: isDarkArtwork ? 0.48 : 0.34 }}
+            />
+          </>
+        ) : useSleepScene ? (
+          <>
+            <img
+              src={heroBackgroundArt}
+              alt=""
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-x-[-10%] top-[-36px] w-[124%] max-w-none opacity-70"
+              style={{
+                filter: isDarkArtwork
+                  ? "saturate(0.42) hue-rotate(178deg) brightness(0.34)"
+                  : "saturate(0.88) hue-rotate(8deg) brightness(1.02)",
+              }}
+            />
+            <div
+              className="pointer-events-none absolute inset-0"
+              style={{
+                background: isDarkArtwork
+                  ? "radial-gradient(circle at 74% 18%, rgba(230, 238, 255, 0.22) 0%, rgba(20, 28, 40, 0) 30%), linear-gradient(180deg, rgba(25, 33, 49, 0.06) 0%, rgba(20, 28, 40, 0.22) 100%)"
+                  : "radial-gradient(circle at 72% 18%, rgba(255, 247, 224, 0.48) 0%, rgba(255, 255, 255, 0) 28%), linear-gradient(180deg, rgba(255, 255, 255, 0.06) 0%, rgba(246, 223, 214, 0.12) 100%)",
+              }}
+            />
+            <img
+              src={sleepSceneArt}
+              alt=""
+              aria-hidden="true"
+              className="pointer-events-none absolute right-[-4%] bottom-[90px] w-[74%] max-w-none md:right-[2%] md:w-[62%]"
+              style={{
+                opacity: isDarkArtwork ? 0.78 : 0.88,
+                filter: isDarkArtwork
+                  ? "saturate(0.52) hue-rotate(182deg) brightness(0.7)"
+                  : "saturate(0.92) hue-rotate(4deg) brightness(0.96)",
+              }}
+            />
+            <div
+              className="pointer-events-none absolute left-[10%] top-[122px] h-[110px] w-[34%] rounded-full blur-[20px]"
+              style={{ background: isDarkArtwork ? "rgba(141, 161, 202, 0.08)" : "rgba(255, 232, 212, 0.28)" }}
             />
           </>
         ) : (
