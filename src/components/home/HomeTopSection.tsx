@@ -117,6 +117,7 @@ export function HomeTopSection({
         title="How are you feeling today?"
         description="Daily Check-in: Parent & Baby Care"
         avatarAnchorRef={avatarAnchorRef}
+        scene="home"
       />
 
       <div className="px-4">

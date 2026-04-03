@@ -6,6 +6,13 @@ import watercolorMountains from "../../assets/watercolor-mountains.svg";
 import watercolorMountainsDark from "../../assets/watercolor-mountains-dark.svg";
 import watercolorMoon from "../../assets/watercolor-moon.svg";
 import watercolorSun from "../../assets/watercolor-sun.svg";
+import homeCloud1 from "../../assets/svg-assets/hero-pieces/cloud-1.svg";
+import homeCloud3 from "../../assets/svg-assets/hero-pieces/cloud-3.svg";
+import homeCloud5 from "../../assets/svg-assets/hero-pieces/cloud-5.svg";
+import homeCloud6 from "../../assets/svg-assets/hero-pieces/cloud-6.svg";
+import homeMount1 from "../../assets/svg-assets/hero-pieces/mount-1.svg";
+import homeMount2 from "../../assets/svg-assets/hero-pieces/mount-2.svg";
+import sceneSun from "../../assets/svg-assets/sun.svg";
 import type { Child } from "../../lib/types";
 import { getAgeLabelFromDob } from "../../lib/utils";
 import { useTheme } from "../../contexts/ThemeContext";
@@ -19,6 +26,7 @@ type ScenicHeroProps = {
   avatarAnchorRef?: RefObject<HTMLDivElement | null>;
   showChildInfo?: boolean;
   className?: string;
+  scene?: "default" | "home";
 };
 
 export function ScenicHero({
@@ -29,6 +37,7 @@ export function ScenicHero({
   avatarAnchorRef,
   showChildInfo = true,
   className,
+  scene = "default",
 }: ScenicHeroProps) {
   const clipPathId = useId();
   const { resolved } = useTheme();
@@ -36,6 +45,8 @@ export function ScenicHero({
   const skyArt = isDarkArtwork ? watercolorCloudsDark : watercolorClouds;
   const ridgeArt = isDarkArtwork ? watercolorMountainsDark : watercolorMountains;
   const orbArt = isDarkArtwork ? watercolorMoon : watercolorSun;
+  const homeOrbArt = isDarkArtwork ? watercolorMoon : sceneSun;
+  const useHomeScene = scene === "home";
 
   return (
     <section className={className}>
@@ -52,10 +63,84 @@ export function ScenicHero({
       >
         <div className="pointer-events-none absolute inset-x-0 top-0 h-72" style={{ background: "var(--gradient-hero-glow)" }} />
         <div className="pointer-events-none absolute inset-0" style={{ background: "var(--gradient-hero-wash)" }} />
-        <img src={skyArt} alt="" aria-hidden="true" className="pointer-events-none absolute left-[-14px] top-[18px] w-[calc(100%+28px)] opacity-95" />
-        <img src={orbArt} alt="" aria-hidden="true" className="pointer-events-none absolute right-[14px] top-[10px] w-[130px] opacity-95" />
-        <img src={ridgeArt} alt="" aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-[74px] w-full scale-[1.12] opacity-100" />
-        <div className="pointer-events-none absolute inset-x-[-6%] top-[86px] h-[165px]" style={{ background: "var(--gradient-hero-ridge)" }} />
+        {useHomeScene ? (
+          <>
+            <div
+              className="pointer-events-none absolute inset-0"
+              style={{
+                background: isDarkArtwork
+                  ? "radial-gradient(circle at 28% 24%, rgba(214, 226, 247, 0.16) 0%, rgba(20, 28, 40, 0) 46%)"
+                  : "radial-gradient(circle at 22% 24%, rgba(255, 248, 239, 0.82) 0%, rgba(255, 255, 255, 0) 52%)",
+              }}
+            />
+            <img
+              src={homeCloud1}
+              alt=""
+              aria-hidden="true"
+              className={isDarkArtwork
+                ? "pointer-events-none absolute left-[-18px] top-[18px] w-[174px] md:w-[204px]"
+                : "pointer-events-none absolute left-[-34px] top-[18px] w-[188px] md:w-[228px]"}
+              style={{ opacity: isDarkArtwork ? 0.2 : 0.62 }}
+            />
+            <img
+              src={homeCloud3}
+              alt=""
+              aria-hidden="true"
+              className={isDarkArtwork
+                ? "pointer-events-none absolute left-1/2 top-[58px] w-[188px] -translate-x-1/2 md:w-[216px]"
+                : "pointer-events-none absolute left-[118px] top-[42px] w-[176px] md:w-[204px]"}
+              style={{ opacity: isDarkArtwork ? 0.16 : 0.52 }}
+            />
+            <img
+              src={homeOrbArt}
+              alt=""
+              aria-hidden="true"
+              className="pointer-events-none absolute right-[14px] top-[14px] w-[118px] opacity-95 md:w-[132px]"
+            />
+            <img
+              src={homeCloud5}
+              alt=""
+              aria-hidden="true"
+              className={isDarkArtwork
+                ? "pointer-events-none absolute right-[96px] bottom-[112px] w-[144px] md:right-[118px] md:w-[172px]"
+                : "pointer-events-none absolute left-1/2 bottom-[112px] w-[168px] -translate-x-1/2 md:w-[196px]"}
+              style={{ opacity: isDarkArtwork ? 0.1 : 0.22 }}
+            />
+            <img
+              src={homeMount1}
+              alt=""
+              aria-hidden="true"
+              className={isDarkArtwork
+                ? "pointer-events-none absolute left-1/2 bottom-[26px] w-[220%] max-w-none -translate-x-1/2"
+                : "pointer-events-none absolute left-1/2 bottom-[26px] w-[250%] max-w-none -translate-x-1/2"}
+              style={{
+                opacity: isDarkArtwork ? 0.9 : 0.94,
+                filter: isDarkArtwork
+                  ? "sepia(28%) saturate(100%) hue-rotate(174deg) brightness(0.78)"
+                  : "sepia(10%) saturate(100%) hue-rotate(0deg) brightness(0.90)",
+              }}
+            />
+            <div
+              className="pointer-events-none absolute inset-x-0 bottom-[18px] h-[132px]"
+              style={{
+                background: isDarkArtwork
+                  ? "linear-gradient(180deg, rgba(17, 28, 42, 0) 0%, rgba(17, 28, 42, 0.18) 100%)"
+                  : "linear-gradient(180deg, rgba(160, 102, 66, 0) 0%, rgba(160, 102, 66, 0.12) 100%)",
+              }}
+            />
+            <div
+              className="pointer-events-none absolute inset-x-[-10%] top-[122px] h-[164px]"
+              style={{ background: "var(--gradient-hero-ridge)", opacity: isDarkArtwork ? 0.48 : 0.34 }}
+            />
+          </>
+        ) : (
+          <>
+            <img src={skyArt} alt="" aria-hidden="true" className="pointer-events-none absolute left-[-14px] top-[18px] w-[calc(100%+28px)] opacity-95" />
+            <img src={orbArt} alt="" aria-hidden="true" className="pointer-events-none absolute right-[14px] top-[10px] w-[130px] opacity-95" />
+            <img src={ridgeArt} alt="" aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-[74px] w-full scale-[1.12] opacity-100" />
+            <div className="pointer-events-none absolute inset-x-[-6%] top-[86px] h-[165px]" style={{ background: "var(--gradient-hero-ridge)" }} />
+          </>
+        )}
         <div className="pointer-events-none absolute left-[12px] top-[106px] h-12 w-20 rounded-full blur-[8px]" style={{ background: "var(--color-hero-cloud)" }} />
         <div className="pointer-events-none absolute left-[42px] top-[112px] h-8 w-8 rounded-full blur-[6px]" style={{ background: "var(--color-hero-cloud-strong)" }} />
         <div className="pointer-events-none absolute left-[72px] top-[108px] h-9 w-9 rounded-full blur-[8px]" style={{ background: "var(--color-hero-cloud-soft)" }} />
