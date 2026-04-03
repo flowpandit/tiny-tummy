@@ -105,9 +105,21 @@ export function HomeTopSection({
 }) {
   const totalDiapers = summary.todayWetDiapers + summary.todayDirtyDiapers;
   const moodCards = [
-    { label: "Feeling Good", icon: <HomeMoodSunIcon />, tone: "var(--color-home-mood-warm)" },
-    { label: "Managing Okay", icon: <HomeMoodRainbowIcon />, tone: "var(--color-home-mood-calm)" },
-    { label: "Need a Moment", icon: <HomeMoodMoonIcon />, tone: "var(--color-home-mood-calm)" },
+    {
+      label: "Feeling Good",
+      icon: <HomeMoodSunIcon className="h-9 w-9" />,
+      tone: "var(--color-home-mood-warm)",
+    },
+    {
+      label: "Managing Okay",
+      icon: <HomeMoodRainbowIcon className="h-11 w-11" />,
+      tone: "var(--color-home-mood-calm)",
+    },
+    {
+      label: "Need a Moment",
+      icon: <HomeMoodMoonIcon className="h-8 w-8" />,
+      tone: "var(--color-home-mood-calm)",
+    },
   ];
 
   return (
@@ -129,7 +141,7 @@ export function HomeTopSection({
               className="min-h-[96px] rounded-[20px] border border-[var(--color-border)] px-2 py-3 text-center shadow-[var(--shadow-medium)]"
               style={{ background: card.tone }}
             >
-              <div className="flex justify-center">{card.icon}</div>
+              <div className="flex h-10 items-center justify-center">{card.icon}</div>
               <p className="mt-2 text-[0.92rem] font-semibold leading-tight text-[var(--color-text)]">{card.label}</p>
             </button>
           ))}
