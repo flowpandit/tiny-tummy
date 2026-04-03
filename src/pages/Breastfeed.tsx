@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Button } from "../components/ui/button";
 import { PageIntro } from "../components/ui/page-intro";
-import { InsetPanel, PageBackButton, PageBody } from "../components/ui/page-layout";
+import { InsetPanel, PageBody } from "../components/ui/page-layout";
 import { useToast } from "../components/ui/toast";
 import { useChildContext } from "../contexts/ChildContext";
 import { syncSmartRemindersForChild } from "../lib/notifications";
@@ -300,8 +300,6 @@ export function Breastfeed() {
 
   return (
     <PageBody>
-      <PageBackButton fallbackTo="/" />
-
       <PageIntro
         eyebrow="Feeding"
         title="Breastfeed"

@@ -7,7 +7,7 @@ import { useUnits } from "../contexts/UnitsContext";
 import { Button } from "../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { PageIntro } from "../components/ui/page-intro";
-import { PageBackButton, PageBody } from "../components/ui/page-layout";
+import { PageBody } from "../components/ui/page-layout";
 import { DatePicker } from "../components/ui/date-picker";
 import { buildReportPdfPayload } from "../lib/report-pdf";
 import {
@@ -130,8 +130,6 @@ export function Report() {
 
   return (
     <PageBody>
-      <PageBackButton fallbackTo="/dashboard" />
-
       <PageIntro
         eyebrow="Share"
         title="Pediatrician Report"

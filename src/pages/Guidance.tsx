@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { getGuidanceTips } from "../lib/tauri";
 import { Card, CardContent } from "../components/ui/card";
 import { PageIntro } from "../components/ui/page-intro";
-import { PageBackButton, PageBody } from "../components/ui/page-layout";
+import { PageBody } from "../components/ui/page-layout";
 import { cn } from "../lib/cn";
 import type { GuidanceTip } from "../lib/types";
 
@@ -99,8 +99,6 @@ export function Guidance() {
 
   return (
     <PageBody>
-      <PageBackButton fallbackTo="/settings" />
-
       <PageIntro
         eyebrow="Support"
         title="Guidance"

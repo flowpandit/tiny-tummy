@@ -16,7 +16,6 @@ import { getSymptomSeverityBadgeVariant, getSymptomSeverityLabel, getSymptomType
 import { Badge } from "../components/ui/badge";
 import { PoopIcon, MealIcon, NoPoopIcon } from "../components/ui/icons";
 import { DatePicker } from "../components/ui/date-picker";
-import { PageBackButton } from "../components/ui/page-layout";
 import { EditPoopSheet } from "../components/logging/EditPoopSheet";
 import { EditMealSheet } from "../components/logging/EditMealSheet";
 import { EditSleepSheet } from "../components/sleep/EditSleepSheet";
@@ -592,8 +591,6 @@ export function History() {
   if (!isLoading && !hasAnyLogs) {
     return (
       <div className="px-4 py-8">
-        <PageBackButton fallbackTo="/settings" />
-
         <div className="mt-4 flex flex-col items-center justify-center rounded-[16px] border border-[var(--color-border)] bg-[var(--color-surface)] px-8 py-16 text-center shadow-[var(--shadow-soft)] backdrop-blur-xl">
           <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[var(--color-surface-strong)]">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="var(--color-muted)" className="h-8 w-8">
@@ -629,8 +626,6 @@ export function History() {
 
   return (
     <div className="my-5 px-4 py-5">
-      <PageBackButton fallbackTo="/settings" />
-
       <div className="my-5 rounded-[16px] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-[var(--shadow-soft)] backdrop-blur-xl">
         <div className="flex items-center justify-between gap-4">
           <div>

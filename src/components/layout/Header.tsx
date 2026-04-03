@@ -1,48 +1,53 @@
-import { useEffect, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useChildContext } from "../../contexts/ChildContext";
-import { timeSince } from "../../lib/utils";
-import { getLastRealPoop } from "../../lib/db";
-import { ChildSwitcherCard } from "../home/ChildSwitcherCard";
+import { CompactChildNav } from "./CompactChildNav";
 
-export function Header() {
+type HeaderProps = {
+  showBackButton?: boolean;
+  fallbackTo?: string;
+};
+
+export function Header({ showBackButton = false, fallbackTo = "/" }: HeaderProps) {
   const { activeChild, children, setActiveChildId } = useChildContext();
-  const [secondaryLabel, setSecondaryLabel] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!activeChild) return;
-
-    let cancelled = false;
-
-    async function load() {
-      const lastPoop = await getLastRealPoop(activeChild!.id);
-      const lastAt = lastPoop?.logged_at ?? null;
-      if (cancelled) return;
-      setSecondaryLabel(lastAt ? timeSince(lastAt) : null);
-    }
-
-    load();
-    const interval = setInterval(load, 60000);
-    return () => {
-      cancelled = true;
-      clearInterval(interval);
-    };
-  }, [activeChild]);
+  const navigate = useNavigate();
+  const location = useLocation();
 
   if (!activeChild) return null;
 
+  const otherChildren = children.filter((child) => child.id !== activeChild.id);
+  const originPath = location.state && typeof location.state === "object" && "origin" in location.state
+    ? (location.state as { origin?: string }).origin
+    : undefined;
+
+  const handleBack = () => {
+    if (location.key !== "default" && window.history.length > 1) {
+      navigate(-1);
+      return;
+    }
+    navigate(originPath ?? fallbackTo);
+  };
+
   return (
     <header
-      className="fixed top-0 left-0 right-0 z-20 px-4"
-      style={{ paddingTop: "calc(var(--safe-area-top) + 18px)" }}
+      className="fixed inset-x-0 top-0 z-30"
+      style={{
+        height: "calc(var(--safe-area-top) + 74px)",
+        background: "linear-gradient(180deg, rgba(255,250,243,0.95) 0%, rgba(255,250,243,0.55) 74%, transparent 100%)",
+        backdropFilter: "blur(24px) saturate(1.02)",
+        WebkitBackdropFilter: "blur(24px) saturate(1.02)",
+      }}
     >
-      <div className="mx-auto max-w-[560px]">
-        <ChildSwitcherCard
+      <div
+        className="mx-auto flex max-w-[600px] items-center justify-between gap-3 bg-transparent px-4 py-3"
+        style={{ marginTop: "calc(var(--safe-area-top) + 16px)" }}
+      >
+        <CompactChildNav
           activeChild={activeChild}
-          children={children}
-          expanded
-          collapsible={false}
-          secondaryLabel={secondaryLabel}
+          otherChildren={otherChildren}
           onSelectChild={setActiveChildId}
+          showBackButton={showBackButton}
+          onBack={showBackButton ? handleBack : undefined}
+          className="flex w-full items-center justify-between gap-3"
         />
       </div>
     </header>

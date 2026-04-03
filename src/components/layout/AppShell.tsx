@@ -13,8 +13,18 @@ const pageVariants = {
 export function AppShell() {
   const location = useLocation();
   const mainRef = useRef<HTMLElement | null>(null);
-  const hideHeaderPaths = new Set(["/", "/guidance", "/settings"]);
-  const showHeader = !hideHeaderPaths.has(location.pathname);
+  const headerBackFallbackByPath: Record<string, string> = {
+    "/breastfeed": "/",
+    "/growth": "/settings",
+    "/guidance": "/settings",
+    "/handoff": "/settings",
+    "/history": "/settings",
+    "/milestones": "/settings",
+    "/report": "/dashboard",
+  };
+  const showHeader = location.pathname !== "/";
+  const headerFallbackTo = headerBackFallbackByPath[location.pathname];
+  const showHeaderBackButton = Boolean(headerFallbackTo);
 
   useEffect(() => {
     mainRef.current?.scrollTo({ top: 0, behavior: "auto" });
@@ -39,7 +49,7 @@ export function AppShell() {
         <div className="absolute right-[-72px] top-52 h-64 w-64 rounded-full bg-[var(--color-apricot)]/14 blur-3xl" />
         <div className="absolute bottom-20 left-[-44px] h-52 w-52 rounded-full bg-[var(--color-sky-wash)]/22 blur-3xl" />
       </div>
-      {showHeader && <Header />}
+      {showHeader && <Header showBackButton={showHeaderBackButton} fallbackTo={headerFallbackTo} />}
       <main
         ref={mainRef}
         className="relative flex-1 overflow-y-auto overflow-x-hidden pb-24"
