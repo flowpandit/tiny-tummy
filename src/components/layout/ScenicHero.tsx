@@ -7,6 +7,7 @@ import watercolorMountainsDark from "../../assets/watercolor-mountains-dark.svg"
 import watercolorMoon from "../../assets/watercolor-moon.svg";
 import watercolorSun from "../../assets/watercolor-sun.svg";
 import heroBackgroundArt from "../../assets/svg-assets/hero-background.svg";
+import heroBackgroundArtDark from "../../assets/svg-assets/hero-background-dark.svg";
 import breastfeedingSceneArt from "../../assets/svg-assets/breastfeeding.svg";
 import diaperSceneArt from "../../assets/svg-assets/diaper.svg";
 import feedSceneArt from "../../assets/svg-assets/feed.svg";
@@ -51,6 +52,7 @@ export function ScenicHero({
   const ridgeArt = isDarkArtwork ? watercolorMountainsDark : watercolorMountains;
   const orbArt = isDarkArtwork ? watercolorMoon : watercolorSun;
   const homeOrbArt = isDarkArtwork ? watercolorMoon : sceneSun;
+  const sceneBackgroundArt = isDarkArtwork ? heroBackgroundArtDark : heroBackgroundArt;
   const useHomeScene = scene === "home";
   const useSleepScene = scene === "sleep";
   const useFeedScene = scene === "feed";
@@ -147,13 +149,13 @@ export function ScenicHero({
         ) : useSleepScene ? (
           <>
             <img
-              src={heroBackgroundArt}
+              src={sceneBackgroundArt}
               alt=""
               aria-hidden="true"
               className="pointer-events-none absolute inset-x-[-10%] top-[-36px] w-[124%] max-w-none opacity-70"
               style={{
                 filter: isDarkArtwork
-                  ? "saturate(0.42) hue-rotate(178deg) brightness(0.34)"
+                  ? "none"
                   : "saturate(0.88) hue-rotate(8deg) brightness(1.02)",
               }}
             />
@@ -173,7 +175,7 @@ export function ScenicHero({
               style={{
                 opacity: isDarkArtwork ? 0.78 : 0.88,
                 filter: isDarkArtwork
-                  ? "saturate(0.52) hue-rotate(182deg) brightness(0.7)"
+                  ? "none"
                   : "saturate(0.92) hue-rotate(4deg) brightness(0.96)",
               }}
             />
@@ -185,13 +187,13 @@ export function ScenicHero({
         ) : useFeedScene ? (
           <>
             <img
-              src={heroBackgroundArt}
+              src={sceneBackgroundArt}
               alt=""
               aria-hidden="true"
               className="pointer-events-none absolute inset-x-[-12%] top-[-44px] w-[128%] max-w-none opacity-72"
               style={{
                 filter: isDarkArtwork
-                  ? "saturate(0.46) hue-rotate(176deg) brightness(0.34)"
+                  ? "none"
                   : "saturate(0.94) hue-rotate(4deg) brightness(1.02)",
               }}
             />
@@ -211,7 +213,7 @@ export function ScenicHero({
               style={{
                 opacity: isDarkArtwork ? 0.82 : 0.92,
                 filter: isDarkArtwork
-                  ? "saturate(0.52) hue-rotate(182deg) brightness(0.76)"
+                  ? "none"
                   : "saturate(0.96) hue-rotate(2deg) brightness(0.98)",
               }}
             />
@@ -223,13 +225,13 @@ export function ScenicHero({
         ) : useBreastfeedScene ? (
           <>
             <img
-              src={heroBackgroundArt}
+              src={sceneBackgroundArt}
               alt=""
               aria-hidden="true"
               className="pointer-events-none absolute inset-x-[-12%] top-[-42px] w-[126%] max-w-none opacity-72"
               style={{
                 filter: isDarkArtwork
-                  ? "saturate(0.46) hue-rotate(176deg) brightness(0.34)"
+                  ? "none"
                   : "saturate(0.94) hue-rotate(4deg) brightness(1.02)",
               }}
             />
@@ -249,7 +251,7 @@ export function ScenicHero({
               style={{
                 opacity: isDarkArtwork ? 0.84 : 0.92,
                 filter: isDarkArtwork
-                  ? "saturate(0.5) hue-rotate(182deg) brightness(0.74)"
+                  ? "none"
                   : "saturate(0.94) hue-rotate(2deg) brightness(0.98)",
               }}
             />
@@ -261,13 +263,13 @@ export function ScenicHero({
         ) : useDiaperScene ? (
           <>
             <img
-              src={heroBackgroundArt}
+              src={sceneBackgroundArt}
               alt=""
               aria-hidden="true"
               className="pointer-events-none absolute inset-x-[-12%] top-[-42px] w-[126%] max-w-none opacity-72"
               style={{
                 filter: isDarkArtwork
-                  ? "saturate(0.44) hue-rotate(174deg) brightness(0.34)"
+                  ? "none"
                   : "saturate(0.94) hue-rotate(4deg) brightness(1.02)",
               }}
             />
@@ -287,7 +289,7 @@ export function ScenicHero({
               style={{
                 opacity: isDarkArtwork ? 0.84 : 0.92,
                 filter: isDarkArtwork
-                  ? "saturate(0.48) hue-rotate(180deg) brightness(0.76)"
+                  ? "none"
                   : "saturate(0.96) hue-rotate(2deg) brightness(0.98)",
               }}
             />
@@ -299,13 +301,13 @@ export function ScenicHero({
         ) : usePoopScene ? (
           <>
             <img
-              src={heroBackgroundArt}
+              src={sceneBackgroundArt}
               alt=""
               aria-hidden="true"
               className="pointer-events-none absolute inset-x-[-12%] top-[-42px] w-[126%] max-w-none opacity-72"
               style={{
                 filter: isDarkArtwork
-                  ? "saturate(0.44) hue-rotate(174deg) brightness(0.34)"
+                  ? "none"
                   : "saturate(0.94) hue-rotate(4deg) brightness(1.02)",
               }}
             />
@@ -325,7 +327,7 @@ export function ScenicHero({
               style={{
                 opacity: isDarkArtwork ? 0.84 : 0.92,
                 filter: isDarkArtwork
-                  ? "saturate(0.48) hue-rotate(180deg) brightness(0.76)"
+                  ? "none"
                   : "saturate(0.96) hue-rotate(2deg) brightness(0.98)",
               }}
             />
@@ -337,13 +339,13 @@ export function ScenicHero({
         ) : useGrowthScene ? (
           <>
             <img
-              src={heroBackgroundArt}
+              src={sceneBackgroundArt}
               alt=""
               aria-hidden="true"
               className="pointer-events-none absolute inset-x-[-12%] top-[-42px] w-[126%] max-w-none opacity-72"
               style={{
                 filter: isDarkArtwork
-                  ? "saturate(0.44) hue-rotate(174deg) brightness(0.34)"
+                  ? "none"
                   : "saturate(0.94) hue-rotate(4deg) brightness(1.02)",
               }}
             />
@@ -363,7 +365,7 @@ export function ScenicHero({
               style={{
                 opacity: isDarkArtwork ? 0.84 : 0.92,
                 filter: isDarkArtwork
-                  ? "saturate(0.48) hue-rotate(180deg) brightness(0.76)"
+                  ? "none"
                   : "saturate(0.96) hue-rotate(2deg) brightness(0.98)",
               }}
             />
