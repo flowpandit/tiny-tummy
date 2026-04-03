@@ -109,7 +109,7 @@ export function BottomNav() {
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-30 px-3" style={{ paddingBottom: "calc(var(--safe-area-bottom) + 8px)" }}>
-      <div className="mx-auto flex h-[76px] max-w-[600px] items-center justify-around rounded-[30px] border border-[var(--color-border)] bg-[rgba(255,251,244,0.92)] px-2 shadow-[var(--shadow-lg)] backdrop-blur-[20px]">
+      <div className="mx-auto flex h-[76px] max-w-[600px] items-center justify-around rounded-[30px] border border-[var(--color-border)] px-2 shadow-[var(--shadow-lg)] backdrop-blur-[20px]" style={{ background: "var(--color-nav-surface)" }}>
         {navItems.map((item) => {
           const isActive = item.matches(location.pathname);
           return (
@@ -119,9 +119,10 @@ export function BottomNav() {
               className={cn(
                 "relative flex h-[62px] min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-[22px] cursor-pointer transition-all duration-200",
                 isActive
-                  ? "bg-[linear-gradient(180deg,rgba(255,241,229,0.92)_0%,rgba(255,248,239,0.92)_100%)] text-[var(--color-primary)] shadow-[var(--shadow-soft)]"
-                  : "text-[var(--color-muted)] hover:text-[var(--color-text-secondary)]",
+                  ? "text-[var(--color-primary)] shadow-[var(--shadow-soft)]"
+                  : "text-[var(--color-nav-inactive)] hover:text-[var(--color-nav-inactive-hover)]",
               )}
+              style={isActive ? { background: "var(--gradient-nav-active)" } : undefined}
               aria-label={item.label}
               >
                 <span

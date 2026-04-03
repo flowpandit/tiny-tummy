@@ -55,7 +55,7 @@ export function RecentActivity({ poopLogs, diaperLogs, feedingLogs, onEditPoop, 
               <div
                 key={`poop-${log.id}`}
                 onClick={() => onEditPoop(log)}
-                className="flex items-center gap-4 rounded-[22px] px-2 py-1.5 cursor-pointer hover:bg-white/40 transition-colors"
+                className="flex cursor-pointer items-center gap-4 rounded-[22px] px-2 py-1.5 transition-colors hover:bg-[var(--color-home-hover-surface)]"
               >
                 <div
                   className="h-4 w-4 flex-shrink-0 rounded-full"
@@ -92,7 +92,7 @@ export function RecentActivity({ poopLogs, diaperLogs, feedingLogs, onEditPoop, 
               <div
                 key={`diaper-${diaper.id}`}
                 onClick={() => onEditDiaper(diaper)}
-                className="flex items-center gap-4 rounded-[22px] px-2 py-1.5 cursor-pointer hover:bg-white/40 transition-colors"
+                className="flex cursor-pointer items-center gap-4 rounded-[22px] px-2 py-1.5 transition-colors hover:bg-[var(--color-home-hover-surface)]"
               >
                 <div
                   className="h-4 w-4 flex-shrink-0 rounded-full"
@@ -116,7 +116,7 @@ export function RecentActivity({ poopLogs, diaperLogs, feedingLogs, onEditPoop, 
             <div
               key={`meal-${meal.id}`}
               onClick={() => onEditMeal(meal)}
-              className="flex items-center gap-4 rounded-[22px] px-2 py-1.5 cursor-pointer hover:bg-white/40 transition-colors"
+              className="flex cursor-pointer items-center gap-4 rounded-[22px] px-2 py-1.5 transition-colors hover:bg-[var(--color-home-hover-surface)]"
             >
               <div
                 className="h-4 w-4 flex-shrink-0 rounded-full"

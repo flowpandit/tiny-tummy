@@ -40,8 +40,8 @@ function QuickSummaryRing({
         <div
           className="relative flex h-[92px] w-[92px] items-center justify-center rounded-full"
           style={{
-            background: "radial-gradient(circle, rgba(255,255,255,0.96) 0%, rgba(255,252,247,0.98) 62%, rgba(255,248,241,0.84) 100%)",
-            boxShadow: "0 0 0 5px rgba(255,239,230,0.88), 0 10px 24px rgba(232, 182, 153, 0.14)",
+            background: "var(--color-home-ring-surface)",
+            boxShadow: "0 0 0 5px var(--color-home-ring-outline), var(--shadow-soft)",
           }}
         >
           <div
@@ -54,7 +54,7 @@ function QuickSummaryRing({
               cy={size / 2}
               r={radius}
               fill="none"
-              stroke="rgba(243, 211, 195, 0.72)"
+              stroke="var(--color-home-ring-track)"
               strokeWidth={stroke}
             />
             <circle
@@ -62,13 +62,13 @@ function QuickSummaryRing({
               cy={size / 2}
               r={radius}
               fill="none"
-              stroke="rgba(239,157,123,0.98)"
+              stroke="var(--color-home-ring-progress)"
               strokeWidth={stroke}
               strokeLinecap="round"
               strokeDasharray={circumference}
               strokeDashoffset={dashOffset}
               style={{
-                filter: "drop-shadow(0 0 6px rgba(239,157,123,0.24))",
+                filter: "drop-shadow(0 0 6px var(--color-home-ring-progress-shadow))",
                 transition: "stroke-dashoffset 280ms var(--ease-out-soft)",
               }}
             />
@@ -105,9 +105,9 @@ export function HomeTopSection({
 }) {
   const totalDiapers = summary.todayWetDiapers + summary.todayDirtyDiapers;
   const moodCards = [
-    { label: "Feeling Good", icon: <HomeMoodSunIcon />, tone: "bg-[rgba(255,237,222,0.9)]" },
-    { label: "Managing Okay", icon: <HomeMoodRainbowIcon />, tone: "bg-[rgba(255,252,247,0.95)]" },
-    { label: "Need a Moment", icon: <HomeMoodMoonIcon />, tone: "bg-[rgba(255,252,247,0.95)]" },
+    { label: "Feeling Good", icon: <HomeMoodSunIcon />, tone: "var(--color-home-mood-warm)" },
+    { label: "Managing Okay", icon: <HomeMoodRainbowIcon />, tone: "var(--color-home-mood-calm)" },
+    { label: "Need a Moment", icon: <HomeMoodMoonIcon />, tone: "var(--color-home-mood-calm)" },
   ];
 
   return (
@@ -125,7 +125,8 @@ export function HomeTopSection({
             <button
               key={card.label}
               type="button"
-              className={`min-h-[96px] rounded-[20px] border border-[rgba(155,126,102,0.14)] px-2 py-3 text-center shadow-[0_24px_44px_rgba(188,146,114,0.28),0_10px_22px_rgba(233,197,170,0.26),0_2px_10px_rgba(255,255,255,0.68)] ${card.tone}`}
+              className="min-h-[96px] rounded-[20px] border border-[var(--color-border)] px-2 py-3 text-center shadow-[var(--shadow-medium)]"
+              style={{ background: card.tone }}
             >
               <div className="flex justify-center">{card.icon}</div>
               <p className="mt-2 text-[0.92rem] font-semibold leading-tight text-[var(--color-text)]">{card.label}</p>
@@ -133,7 +134,7 @@ export function HomeTopSection({
           ))}
         </div>
 
-        <div className="mt-4 rounded-[22px] border border-[rgba(155,126,102,0.14)] bg-[rgba(255,252,247,0.94)] p-4 shadow-[0_14px_28px_rgba(184,146,118,0.11)]">
+        <div className="mt-4 rounded-[22px] border border-[var(--color-border)] bg-[var(--color-surface-strong)] p-4 shadow-[var(--shadow-soft)]">
           <p className="text-[0.9rem] font-medium text-[var(--color-text)]">Quick Summary (Last 24h)</p>
           <div className="mt-3 grid grid-cols-3 gap-2">
             <QuickSummaryRing

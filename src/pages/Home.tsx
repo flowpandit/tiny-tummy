@@ -306,7 +306,7 @@ export function Home() {
           style={{
             top: 0,
             height: "calc(var(--safe-area-top) + 74px)",
-            background: "linear-gradient(180deg, rgba(255,250,243,0.95) 0%, rgba(255,250,243,0.55) 74%, transparent 100%)",
+            background: "var(--gradient-home-sticky-overlay)",
             backdropFilter: "blur(24px) saturate(1.02)",
             WebkitBackdropFilter: "blur(24px) saturate(1.02)",
           }}
@@ -354,7 +354,8 @@ export function Home() {
             <motion.button
               whileTap={{ scale: 0.98 }}
               onClick={() => experience.mode === "diaper" ? openDiaperForm({ diaper_type: "wet", urine_color: "normal" }) : openPoopForm()}
-              className="min-h-[114px] rounded-[24px] bg-[linear-gradient(180deg,#efac88_0%,#eb9772_100%)] px-4 py-4 text-left text-white shadow-[var(--shadow-medium)] transition-colors hover:brightness-[1.02]"
+              className="min-h-[114px] rounded-[24px] px-4 py-4 text-left text-white shadow-[var(--shadow-medium)] transition-colors hover:brightness-[1.02]"
+              style={{ background: "var(--gradient-home-action-primary)" }}
             >
               <p className="text-[15px] font-semibold">{experience.mode === "diaper" ? "Log diaper" : "Log poop"}</p>
               <p className="mt-2 text-[12px] leading-relaxed text-white/80">
@@ -366,7 +367,8 @@ export function Home() {
             <motion.button
               whileTap={{ scale: 0.98 }}
               onClick={() => openFeedingForm()}
-              className="min-h-[114px] rounded-[24px] border border-[var(--color-border)] bg-[linear-gradient(180deg,rgba(192,222,195,0.92)_0%,rgba(235,245,233,0.92)_100%)] px-4 py-4 text-left shadow-[var(--shadow-soft)] transition-colors hover:bg-white/70"
+              className="min-h-[114px] rounded-[24px] border border-[var(--color-border)] px-4 py-4 text-left shadow-[var(--shadow-soft)] transition-colors hover:bg-[var(--color-home-hover-surface)]"
+              style={{ background: "var(--gradient-home-action-feed)" }}
             >
               <p className="text-[15px] font-semibold text-[var(--color-text)]">Log feed</p>
               <p className="mt-2 text-[12px] leading-relaxed text-[var(--color-text-secondary)]">
@@ -383,7 +385,8 @@ export function Home() {
                 navigateWithOrigin("/feed");
               }}
               disabled={!showBreastfeedAction && !lastFeed}
-              className="min-h-[114px] rounded-[24px] border border-[var(--color-border)] bg-[linear-gradient(180deg,rgba(220,231,248,0.92)_0%,rgba(246,249,254,0.92)_100%)] px-4 py-4 text-left shadow-[var(--shadow-soft)] transition-colors hover:bg-white/70 disabled:cursor-not-allowed disabled:opacity-50"
+              className="min-h-[114px] rounded-[24px] border border-[var(--color-border)] px-4 py-4 text-left shadow-[var(--shadow-soft)] transition-colors hover:bg-[var(--color-home-hover-surface)] disabled:cursor-not-allowed disabled:opacity-50"
+              style={{ background: "var(--gradient-home-action-breastfeed)" }}
             >
               <div className="flex items-center gap-2">
                 <p className="text-[15px] font-semibold text-[var(--color-text)]">
@@ -411,7 +414,8 @@ export function Home() {
             <motion.button
               whileTap={{ scale: 0.98 }}
               onClick={() => setSleepSheetOpen(true)}
-              className="min-h-[114px] rounded-[24px] border border-[var(--color-border)] bg-[linear-gradient(180deg,rgba(236,223,243,0.92)_0%,rgba(250,244,252,0.92)_100%)] px-4 py-4 text-left shadow-[var(--shadow-soft)] transition-colors hover:bg-white/70"
+              className="min-h-[114px] rounded-[24px] border border-[var(--color-border)] px-4 py-4 text-left shadow-[var(--shadow-soft)] transition-colors hover:bg-[var(--color-home-hover-surface)]"
+              style={{ background: "var(--gradient-home-action-sleep)" }}
             >
               <p className="text-[15px] font-semibold text-[var(--color-text)]">Log sleep</p>
               <p className="mt-2 text-[12px] leading-relaxed text-[var(--color-text-secondary)]">
@@ -424,7 +428,7 @@ export function Home() {
             <button
               type="button"
               onClick={() => openEpisodeSheet(activeEpisode ? "update" : "start")}
-              className="rounded-[20px] border border-[var(--color-border)] bg-[var(--color-surface-strong)] px-4 py-3 text-left transition-colors hover:bg-white/70"
+              className="rounded-[20px] border border-[var(--color-border)] bg-[var(--color-surface-strong)] px-4 py-3 text-left transition-colors hover:bg-[var(--color-home-hover-surface)]"
             >
               <p className="text-[14px] font-semibold text-[var(--color-text)]">{episodeActionLabel}</p>
               <p className="mt-1 text-[12px] leading-relaxed text-[var(--color-text-secondary)]">
@@ -434,7 +438,7 @@ export function Home() {
             <button
               type="button"
               onClick={() => setSymptomSheetOpen(true)}
-              className="rounded-[20px] border border-[var(--color-border)] bg-[var(--color-surface-strong)] px-4 py-3 text-left transition-colors hover:bg-white/70"
+              className="rounded-[20px] border border-[var(--color-border)] bg-[var(--color-surface-strong)] px-4 py-3 text-left transition-colors hover:bg-[var(--color-home-hover-surface)]"
             >
               <p className="text-[14px] font-semibold text-[var(--color-text)]">Log symptom</p>
               <p className="mt-1 text-[12px] leading-relaxed text-[var(--color-text-secondary)]">
@@ -455,7 +459,7 @@ export function Home() {
             <button
               type="button"
               onClick={() => navigate("/handoff")}
-              className="rounded-full border border-[var(--color-border)] bg-[var(--color-surface-strong)] px-3 py-2 text-[12px] font-semibold text-[var(--color-text-secondary)] transition-colors hover:bg-white/70"
+              className="rounded-full border border-[var(--color-border)] bg-[var(--color-surface-strong)] px-3 py-2 text-[12px] font-semibold text-[var(--color-text-secondary)] transition-colors hover:bg-[var(--color-home-hover-surface)]"
             >
               Open Handoff
             </button>
@@ -482,7 +486,7 @@ export function Home() {
               type="button"
               onClick={resetHandoffNote}
               disabled={!handoffNoteChanged}
-              className="flex-1 rounded-full border border-[var(--color-border)] bg-[var(--color-surface-strong)] px-4 py-3 text-[14px] font-semibold text-[var(--color-text-secondary)] transition-colors hover:bg-white/70 disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex-1 rounded-full border border-[var(--color-border)] bg-[var(--color-surface-strong)] px-4 py-3 text-[14px] font-semibold text-[var(--color-text-secondary)] transition-colors hover:bg-[var(--color-home-hover-surface)] disabled:cursor-not-allowed disabled:opacity-50"
             >
               Reset
             </button>
