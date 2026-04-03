@@ -20,7 +20,7 @@ import { getBreastfeedingSessionSettingKey, parseBreastfeedingSession } from "..
 import * as db from "../lib/db";
 import { Card, CardContent, CardHeader } from "../components/ui/card";
 import { Button } from "../components/ui/button";
-import { PageIntro } from "../components/ui/page-intro";
+import { ScenicHero } from "../components/layout/ScenicHero";
 import { EmptyState, InsetPanel, PageBody, SectionHeading } from "../components/ui/page-layout";
 import {
   TrackerEntryRow,
@@ -860,17 +860,18 @@ export function Feed() {
   };
 
   return (
-    <PageBody className="space-y-4">
-      <PageIntro
-        eyebrow="Tracking"
+    <PageBody className="mt-0 space-y-0 px-0 py-0">
+      <ScenicHero
+        child={activeChild}
         title="Feed"
         description="Feeds, meals, and the next likely window in one place."
         action={<Button variant="cta" size="sm" onClick={() => setFormOpen(true)}>Add</Button>}
-        className="pb-3"
+        className="overflow-hidden"
       />
 
-      <Card>
-        <CardContent className="p-4">
+      <div className="space-y-4 px-4 py-5">
+      <Card className="-mt-32 relative z-10 border-transparent bg-transparent shadow-none backdrop-blur-0">
+        <CardContent className="p-4 pt-4">
           <div className="grid grid-cols-3 gap-3">
             <div className="flex flex-col items-center gap-2 text-center">
               <TimeSinceIndicator timestamp={lastFeed?.logged_at ?? null} status={statusTone} />
@@ -1203,6 +1204,7 @@ export function Feed() {
         presets={quickFeedPresets}
         onSave={(drafts) => { void saveFeedPresets(drafts); }}
       />
+      </div>
     </PageBody>
   );
 }

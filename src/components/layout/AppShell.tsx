@@ -23,7 +23,7 @@ export function AppShell() {
     "/milestones": "/settings",
     "/report": "/dashboard",
   };
-  const revealOnScrollPaths = new Set(["/poop", "/diaper"]);
+  const revealOnScrollPaths = new Set(["/poop", "/diaper", "/feed", "/sleep"]);
   const showHeader = location.pathname !== "/";
   const headerFallbackTo = headerBackFallbackByPath[location.pathname];
   const showHeaderBackButton = Boolean(headerFallbackTo);
