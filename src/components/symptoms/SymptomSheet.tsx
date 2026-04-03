@@ -14,20 +14,9 @@ import {
   SYMPTOM_SEVERITIES,
   SYMPTOM_TYPES,
 } from "../../lib/symptom-constants";
+import { combineLocalDateAndTimeToUtcIso, getCurrentLocalDate, getCurrentLocalTime } from "../../lib/utils";
 import * as db from "../../lib/db";
 import type { Episode, SymptomSeverity, SymptomType } from "../../lib/types";
-
-function getCurrentDate(): string {
-  return new Date().toISOString().split("T")[0];
-}
-
-function getCurrentTime(): string {
-  return new Date().toTimeString().slice(0, 5);
-}
-
-function combineToISO(date: string, time: string): string {
-  return `${date}T${time}:00`;
-}
 
 interface SymptomSheetProps {
   open: boolean;
@@ -47,8 +36,8 @@ export function SymptomSheet({
   const { showError, showSuccess } = useToast();
   const [symptomType, setSymptomType] = useState<SymptomType | null>(null);
   const [severity, setSeverity] = useState<SymptomSeverity>("moderate");
-  const [logDate, setLogDate] = useState(getCurrentDate());
-  const [logTime, setLogTime] = useState(getCurrentTime());
+  const [logDate, setLogDate] = useState(getCurrentLocalDate());
+  const [logTime, setLogTime] = useState(getCurrentLocalTime());
   const [notes, setNotes] = useState("");
   const [linkToEpisode, setLinkToEpisode] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -58,8 +47,8 @@ export function SymptomSheet({
 
     setSymptomType(null);
     setSeverity("moderate");
-    setLogDate(getCurrentDate());
-    setLogTime(getCurrentTime());
+    setLogDate(getCurrentLocalDate());
+    setLogTime(getCurrentLocalTime());
     setNotes("");
     setLinkToEpisode(!!activeEpisode);
   }, [open, activeEpisode]);
@@ -70,7 +59,7 @@ export function SymptomSheet({
 
     setIsSubmitting(true);
     try {
-      const loggedAt = combineToISO(logDate, logTime);
+      const loggedAt = combineLocalDateAndTimeToUtcIso(logDate, logTime);
       const episodeId = linkToEpisode && activeEpisode ? activeEpisode.id : null;
 
       await db.createSymptomLog({
@@ -165,7 +154,7 @@ export function SymptomSheet({
               When
             </label>
             <div className="grid grid-cols-2 gap-2">
-              <DatePicker value={logDate} onChange={setLogDate} max={getCurrentDate()} />
+              <DatePicker value={logDate} onChange={setLogDate} max={getCurrentLocalDate()} />
               <TimePicker value={logTime} onChange={setLogTime} />
             </div>
           </div>

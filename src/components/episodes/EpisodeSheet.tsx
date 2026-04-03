@@ -8,21 +8,9 @@ import { Card, CardContent } from "../ui/card";
 import { useToast } from "../ui/toast";
 import { cn } from "../../lib/cn";
 import { EPISODE_EVENT_TYPES, EPISODE_TYPES, getEpisodeEventTypeLabel, getEpisodeTypeLabel } from "../../lib/episode-constants";
-import { formatDate } from "../../lib/utils";
+import { combineLocalDateAndTimeToUtcIso, formatDate, getCurrentLocalDate, getCurrentLocalTime, getLocalDateTimeParts } from "../../lib/utils";
 import * as db from "../../lib/db";
 import type { Episode, EpisodeEvent, EpisodeEventType, EpisodeType } from "../../lib/types";
-
-function getCurrentDate(): string {
-  return new Date().toISOString().split("T")[0];
-}
-
-function getCurrentTime(): string {
-  return new Date().toTimeString().slice(0, 5);
-}
-
-function combineToISO(date: string, time: string): string {
-  return `${date}T${time}:00`;
-}
 
 function getEpisodeBadgeVariant(episodeType: EpisodeType) {
   if (episodeType === "constipation") return "caution";
@@ -59,16 +47,16 @@ export function EpisodeSheet({
 }: EpisodeSheetProps) {
   const { showError, showSuccess } = useToast();
   const [episodeType, setEpisodeType] = useState<EpisodeType | null>(null);
-  const [episodeDate, setEpisodeDate] = useState(getCurrentDate());
-  const [episodeTime, setEpisodeTime] = useState(getCurrentTime());
+  const [episodeDate, setEpisodeDate] = useState(getCurrentLocalDate());
+  const [episodeTime, setEpisodeTime] = useState(getCurrentLocalTime());
   const [summary, setSummary] = useState("");
   const [eventType, setEventType] = useState<EpisodeEventType | null>("progress");
-  const [eventDate, setEventDate] = useState(getCurrentDate());
-  const [eventTime, setEventTime] = useState(getCurrentTime());
+  const [eventDate, setEventDate] = useState(getCurrentLocalDate());
+  const [eventTime, setEventTime] = useState(getCurrentLocalTime());
   const [eventTitle, setEventTitle] = useState("");
   const [eventNotes, setEventNotes] = useState("");
-  const [resolutionDate, setResolutionDate] = useState(getCurrentDate());
-  const [resolutionTime, setResolutionTime] = useState(getCurrentTime());
+  const [resolutionDate, setResolutionDate] = useState(getCurrentLocalDate());
+  const [resolutionTime, setResolutionTime] = useState(getCurrentLocalTime());
   const [outcome, setOutcome] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isAddingEvent, setIsAddingEvent] = useState(false);
@@ -79,16 +67,17 @@ export function EpisodeSheet({
     if (!open) return;
 
     setEpisodeType(null);
-    setEpisodeDate(activeEpisode?.started_at.split("T")[0] ?? getCurrentDate());
-    setEpisodeTime(activeEpisode?.started_at.split("T")[1]?.slice(0, 5) ?? getCurrentTime());
+    const episodeParts = activeEpisode?.started_at ? getLocalDateTimeParts(activeEpisode.started_at) : null;
+    setEpisodeDate(episodeParts?.date ?? getCurrentLocalDate());
+    setEpisodeTime(episodeParts?.time ?? getCurrentLocalTime());
     setSummary("");
     setEventType("progress");
-    setEventDate(getCurrentDate());
-    setEventTime(getCurrentTime());
+    setEventDate(getCurrentLocalDate());
+    setEventTime(getCurrentLocalTime());
     setEventTitle("");
     setEventNotes("");
-    setResolutionDate(getCurrentDate());
-    setResolutionTime(getCurrentTime());
+    setResolutionDate(getCurrentLocalDate());
+    setResolutionTime(getCurrentLocalTime());
     setOutcome("");
   }, [open, activeEpisode]);
 
@@ -111,7 +100,7 @@ export function EpisodeSheet({
       await db.createEpisode({
         child_id: childId,
         episode_type: episodeType,
-        started_at: combineToISO(episodeDate, episodeTime),
+        started_at: combineLocalDateAndTimeToUtcIso(episodeDate, episodeTime),
         summary: summary.trim() || null,
       });
       await onUpdated();
@@ -136,11 +125,11 @@ export function EpisodeSheet({
         event_type: eventType,
         title: trimmedTitle || getDefaultEventTitle(eventType),
         notes: trimmedNotes || null,
-        logged_at: combineToISO(eventDate, eventTime),
+        logged_at: combineLocalDateAndTimeToUtcIso(eventDate, eventTime),
       });
       setEventType("progress");
-      setEventDate(getCurrentDate());
-      setEventTime(getCurrentTime());
+      setEventDate(getCurrentLocalDate());
+      setEventTime(getCurrentLocalTime());
       setEventTitle("");
       setEventNotes("");
       await onUpdated();
@@ -157,7 +146,7 @@ export function EpisodeSheet({
     setIsResolving(true);
     try {
       await db.closeEpisode(activeEpisode.id, {
-        ended_at: combineToISO(resolutionDate, resolutionTime),
+        ended_at: combineLocalDateAndTimeToUtcIso(resolutionDate, resolutionTime),
         outcome: outcome.trim() || null,
       });
       await onUpdated();
@@ -211,7 +200,7 @@ export function EpisodeSheet({
                   When did this start?
                 </label>
                 <div className="grid grid-cols-2 gap-2">
-                  <DatePicker value={episodeDate} onChange={setEpisodeDate} max={getCurrentDate()} />
+                  <DatePicker value={episodeDate} onChange={setEpisodeDate} max={getCurrentLocalDate()} />
                   <TimePicker value={episodeTime} onChange={setEpisodeTime} />
                 </div>
               </div>
@@ -315,7 +304,7 @@ export function EpisodeSheet({
                   When
                 </label>
                 <div className="grid grid-cols-2 gap-2">
-                  <DatePicker value={eventDate} onChange={setEventDate} max={getCurrentDate()} />
+                  <DatePicker value={eventDate} onChange={setEventDate} max={getCurrentLocalDate()} />
                   <TimePicker value={eventTime} onChange={setEventTime} />
                 </div>
               </div>
@@ -386,7 +375,7 @@ export function EpisodeSheet({
               </p>
 
               <div className="mt-4 grid grid-cols-2 gap-2">
-                <DatePicker value={resolutionDate} onChange={setResolutionDate} max={getCurrentDate()} />
+                <DatePicker value={resolutionDate} onChange={setResolutionDate} max={getCurrentLocalDate()} />
                 <TimePicker value={resolutionTime} onChange={setResolutionTime} />
               </div>
 

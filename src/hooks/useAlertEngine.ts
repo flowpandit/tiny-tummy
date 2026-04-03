@@ -1,6 +1,6 @@
 import { useCallback } from "react";
 import { checkFrequencyAlert, checkColorAlert } from "../lib/tauri";
-import { getChildAgeDays } from "../lib/diaper";
+import { diaperIncludesWet, getChildAgeDays } from "../lib/diaper";
 import * as db from "../lib/db";
 import type { Child } from "../lib/types";
 
@@ -60,7 +60,7 @@ export function useAlertEngine() {
 
       if (getChildAgeDays(child.date_of_birth) < 365) {
         const diaperLogs = await db.getDiaperLogs(child.id, 40);
-        const wetLogs = diaperLogs.filter((log) => log.diaper_type === "wet" || log.diaper_type === "mixed");
+        const wetLogs = diaperLogs.filter((log) => diaperIncludesWet(log.diaper_type));
         const lastWet = wetLogs[0] ?? null;
         const existing = await db.getActiveAlerts(child.id);
         const ageDays = getChildAgeDays(child.date_of_birth);

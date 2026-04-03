@@ -9,19 +9,17 @@ import { StoolTypePicker } from "./StoolTypePicker";
 import { ColorPicker } from "./ColorPicker";
 import { SizePicker } from "./SizePicker";
 import { useToast } from "../ui/toast";
+import { diaperIncludesStool, diaperIncludesWet } from "../../lib/diaper";
+import { combineLocalDateAndTimeToUtcIso, getCurrentLocalDate, getLocalDateTimeParts } from "../../lib/utils";
 import * as db from "../../lib/db";
 import type { DiaperEntry, DiaperType, StoolColor, StoolSize, UrineColor } from "../../lib/types";
 
-function getCurrentDate(): string {
-  return new Date().toISOString().split("T")[0];
-}
-
 function hasUrine(type: DiaperType) {
-  return type === "wet" || type === "mixed";
+  return diaperIncludesWet(type);
 }
 
 function hasStool(type: DiaperType) {
-  return type === "dirty" || type === "mixed";
+  return diaperIncludesStool(type);
 }
 
 export function EditDiaperSheet({
@@ -38,8 +36,9 @@ export function EditDiaperSheet({
   onDeleted: () => void;
 }) {
   const { showError } = useToast();
-  const [logDate, setLogDate] = useState(entry.logged_at.split("T")[0]);
-  const [logTime, setLogTime] = useState(entry.logged_at.split("T")[1]?.slice(0, 5) ?? "12:00");
+  const entryLoggedAt = getLocalDateTimeParts(entry.logged_at);
+  const [logDate, setLogDate] = useState(entryLoggedAt.date);
+  const [logTime, setLogTime] = useState(entryLoggedAt.time);
   const [diaperType, setDiaperType] = useState<DiaperType>(entry.diaper_type);
   const [urineColor, setUrineColor] = useState<UrineColor | null>(entry.urine_color);
   const [stoolType, setStoolType] = useState<number | null>(entry.stool_type);
@@ -54,7 +53,7 @@ export function EditDiaperSheet({
     setIsSaving(true);
     try {
       await db.updateDiaperLog(entry.id, {
-        logged_at: `${logDate}T${logTime}:00`,
+        logged_at: combineLocalDateAndTimeToUtcIso(logDate, logTime),
         diaper_type: diaperType,
         urine_color: hasUrine(diaperType) ? urineColor : null,
         stool_type: hasStool(diaperType) ? stoolType : null,
@@ -91,7 +90,7 @@ export function EditDiaperSheet({
           <div>
             <label className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">When</label>
             <div className="grid grid-cols-2 gap-2">
-              <DatePicker value={logDate} onChange={setLogDate} max={getCurrentDate()} />
+              <DatePicker value={logDate} onChange={setLogDate} max={getCurrentLocalDate()} />
               <TimePicker value={logTime} onChange={setLogTime} />
             </div>
           </div>

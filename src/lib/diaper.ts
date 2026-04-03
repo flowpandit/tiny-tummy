@@ -44,6 +44,14 @@ export function getDiaperTypeLabel(type: DiaperType): string {
   return "Dirty diaper";
 }
 
+export function diaperIncludesWet(type: DiaperType): boolean {
+  return type === "wet" || type === "mixed";
+}
+
+export function diaperIncludesStool(type: DiaperType): boolean {
+  return type === "dirty" || type === "mixed";
+}
+
 export function getUrineColorLabel(value: DiaperEntry["urine_color"]): string | null {
   if (value === "pale") return "Pale urine";
   if (value === "dark") return "Dark urine";

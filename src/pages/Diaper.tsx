@@ -6,8 +6,8 @@ import { useSymptoms } from "../hooks/useSymptoms";
 import { useAlerts } from "../hooks/useAlerts";
 import { useAlertEngine } from "../hooks/useAlertEngine";
 import { useEliminationPreference } from "../hooks/useEliminationPreference";
-import { getChildAgeDays, getDiaperTypeLabel, getUrineColorLabel } from "../lib/diaper";
-import { timeSince } from "../lib/utils";
+import { diaperIncludesStool, diaperIncludesWet, getChildAgeDays, getDiaperTypeLabel, getUrineColorLabel } from "../lib/diaper";
+import { formatLocalDateKey, isOnLocalDay, timeSince } from "../lib/utils";
 import { STOOL_COLORS, BITSS_TYPES } from "../lib/constants";
 import { syncSmartRemindersForChild } from "../lib/notifications";
 import { AlertBanner } from "../components/dashboard/AlertBanner";
@@ -40,13 +40,13 @@ interface RingDisplay {
 }
 
 function getDayKey(date: Date = new Date()): string {
-  return date.toISOString().split("T")[0];
+  return formatLocalDateKey(date);
 }
 
 function getRelevantLogs(logs: DiaperEntry[], type: "wet" | "dirty") {
   return logs.filter((log) => type === "wet"
-    ? log.diaper_type === "wet" || log.diaper_type === "mixed"
-    : log.diaper_type === "dirty" || log.diaper_type === "mixed");
+    ? diaperIncludesWet(log.diaper_type)
+    : diaperIncludesStool(log.diaper_type));
 }
 
 function formatRange(hours: number[]) {
@@ -99,7 +99,7 @@ function getPrediction(logs: DiaperEntry[], dateOfBirth: string, type: "wet" | "
 function getHydrationStatus(logs: DiaperEntry[], symptomType?: string) {
   const wetLogs = getRelevantLogs(logs, "wet");
   const lastWet = wetLogs[0] ?? null;
-  const todayWetCount = wetLogs.filter((log) => log.logged_at.startsWith(getDayKey())).length;
+  const todayWetCount = wetLogs.filter((log) => isOnLocalDay(log.logged_at, getDayKey())).length;
   const recentDarkUrine = wetLogs.some((log) => log.urine_color === "dark" && Date.now() - new Date(log.logged_at).getTime() < 24 * 3600000);
   const hoursSinceWet = lastWet ? (Date.now() - new Date(lastWet.logged_at).getTime()) / 3600000 : Number.POSITIVE_INFINITY;
 
@@ -170,9 +170,9 @@ export function Diaper() {
   }, [experience.mode, navigate]);
 
   const todayKey = getDayKey();
-  const todayLogs = logs.filter((log) => log.logged_at.startsWith(todayKey));
-  const todayWetCount = todayLogs.filter((log) => log.diaper_type === "wet" || log.diaper_type === "mixed").length;
-  const todayDirtyCount = todayLogs.filter((log) => log.diaper_type === "dirty" || log.diaper_type === "mixed").length;
+  const todayLogs = logs.filter((log) => isOnLocalDay(log.logged_at, todayKey));
+  const todayWetCount = todayLogs.filter((log) => diaperIncludesWet(log.diaper_type)).length;
+  const todayDirtyCount = todayLogs.filter((log) => diaperIncludesStool(log.diaper_type)).length;
   const todayMixedCount = todayLogs.filter((log) => log.diaper_type === "mixed").length;
   const hydrationStatus = getHydrationStatus(logs, symptomLogs[0]?.symptom_type);
   const recentLogs = useMemo(() => logs.slice(0, 10), [logs]);

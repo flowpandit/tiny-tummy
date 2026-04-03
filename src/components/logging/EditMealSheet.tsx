@@ -8,6 +8,7 @@ import { cn } from "../../lib/cn";
 import { useToast } from "../ui/toast";
 import * as db from "../../lib/db";
 import { useUnits } from "../../contexts/UnitsContext";
+import { combineLocalDateAndTimeToUtcIso, getCurrentLocalDate, getLocalDateTimeParts } from "../../lib/utils";
 import { formatVolumeValue, getVolumeUnitLabel, parseVolumeInputToMl } from "../../lib/units";
 import type { BottleContent, BreastSide, DietEntry, FoodType } from "../../lib/types";
 
@@ -19,10 +20,6 @@ interface EditMealSheetProps {
   onDeleted: () => void;
 }
 
-function getCurrentDate(): string {
-  return new Date().toISOString().split("T")[0];
-}
-
 function parseInteger(value: string): number | null {
   if (!value.trim()) return null;
   const parsed = Number.parseInt(value, 10);
@@ -32,8 +29,9 @@ function parseInteger(value: string): number | null {
 export function EditMealSheet({ entry, open, onClose, onSaved, onDeleted }: EditMealSheetProps) {
   const { showError } = useToast();
   const { unitSystem } = useUnits();
-  const [logDate, setLogDate] = useState(entry.logged_at.split("T")[0]);
-  const [logTime, setLogTime] = useState(entry.logged_at.split("T")[1]?.slice(0, 5) ?? "12:00");
+  const entryLoggedAt = getLocalDateTimeParts(entry.logged_at);
+  const [logDate, setLogDate] = useState(entryLoggedAt.date);
+  const [logTime, setLogTime] = useState(entryLoggedAt.time);
   const [foodType, setFoodType] = useState<FoodType>(entry.food_type);
   const [foodName, setFoodName] = useState(entry.food_name ?? "");
   const [amountMl, setAmountMl] = useState(() => entry.amount_ml !== null ? formatVolumeValue(entry.amount_ml, unitSystem, { includeUnit: false }) : "");
@@ -59,7 +57,7 @@ export function EditMealSheet({ entry, open, onClose, onSaved, onDeleted }: Edit
     setIsSaving(true);
     try {
       await db.updateDietLog(entry.id, {
-        logged_at: `${logDate}T${logTime}:00`,
+        logged_at: combineLocalDateAndTimeToUtcIso(logDate, logTime),
         food_type: foodType,
         food_name: showsFoodName ? foodName.trim() || null : null,
         amount_ml: showsAmount ? parseVolumeInputToMl(amountMl, unitSystem) : null,
@@ -100,7 +98,7 @@ export function EditMealSheet({ entry, open, onClose, onSaved, onDeleted }: Edit
           <div>
             <label className="block text-sm font-medium text-[var(--color-text)] mb-1.5">When</label>
             <div className="grid grid-cols-2 gap-2">
-              <DatePicker value={logDate} onChange={setLogDate} max={getCurrentDate()} />
+              <DatePicker value={logDate} onChange={setLogDate} max={getCurrentLocalDate()} />
               <TimePicker value={logTime} onChange={setLogTime} />
             </div>
           </div>

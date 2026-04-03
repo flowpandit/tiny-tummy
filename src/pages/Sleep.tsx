@@ -103,7 +103,7 @@ function formatDurationRing(minutes: number): { value: string; unit: string } {
 }
 
 function getTodayKey(): string {
-  return new Date().toISOString().split("T")[0];
+  return formatLocalDateKey(new Date());
 }
 
 function toDayKey(dateStr: string): string {
@@ -656,7 +656,7 @@ export function Sleep() {
   const filledWeek = useMemo(() => fillDailyFrequencyDays(sleepByDay, DAYS_IN_WEEK, endDate), [endDate, sleepByDay]);
 
   const baseline = useMemo(
-    () => getWakeBaseline(activeChild?.date_of_birth ?? new Date().toISOString().split("T")[0]),
+    () => getWakeBaseline(activeChild?.date_of_birth ?? formatLocalDateKey(new Date())),
     [activeChild],
   );
   const prediction = useMemo(() => getSleepPrediction(logs, baseline), [baseline, logs]);
@@ -781,29 +781,29 @@ export function Sleep() {
                   </p>
                 </div>
                 {prediction && (
-                  <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-semibold text-[var(--color-text-secondary)]">
+                  <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-semibold text-[var(--color-chip-text-on-light)]">
                     {prediction.confidence}
                   </span>
                 )}
               </div>
               {prediction && (
                 <div className="mt-3 flex flex-wrap gap-2">
-                  <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-text-secondary)]">
+                  <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-chip-text-on-light)]">
                     Typical wake: {prediction.intervalLabel}
                   </span>
-                  <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-text-secondary)]">
+                  <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-chip-text-on-light)]">
                     {formatPredictionRelative(prediction)}
                   </span>
-                  <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-text-secondary)]">
+                  <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-chip-text-on-light)]">
                     Source: {prediction.source === "history" ? "recent rhythm" : "age baseline"}
                   </span>
-                  <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-text-secondary)]">
+                  <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-chip-text-on-light)]">
                     Window: {formatPredictionRange(prediction)}
                   </span>
                   {prediction.adjustments.slice(0, 2).map((adjustment) => (
                     <span
                       key={adjustment.label}
-                      className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-text-secondary)]"
+                      className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-chip-text-on-light)]"
                     >
                       {adjustment.direction === "earlier" ? "Earlier" : "Later"}: {adjustment.label}
                     </span>

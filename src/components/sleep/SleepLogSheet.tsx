@@ -17,6 +17,7 @@ import {
   parseSleepTimerSession,
   type SleepTimerSession,
 } from "../../lib/sleep-timer";
+import { combineLocalDateAndTimeToUtcIso, formatLocalTimeValue, getCurrentLocalDate, getCurrentLocalTime } from "../../lib/utils";
 
 interface SleepLogSheetProps {
   open: boolean;
@@ -30,31 +31,19 @@ const SLEEP_TYPES: Array<{ value: SleepType; label: string; description: string 
   { value: "night", label: "Night", description: "Overnight sleep block." },
 ];
 
-function getCurrentDate(): string {
-  return new Date().toISOString().split("T")[0];
-}
-
-function getCurrentTime(): string {
-  return new Date().toTimeString().slice(0, 5);
-}
-
-function combineToISO(date: string, time: string): string {
-  return `${date}T${time}:00`;
-}
-
 function getDefaultEndTime(): string {
   const date = new Date();
   date.setHours(date.getHours() + 1);
-  return date.toTimeString().slice(0, 5);
+  return formatLocalTimeValue(date);
 }
 
 export function SleepLogSheet({ open, onClose, childId, onLogged }: SleepLogSheetProps) {
   const { showError, showSuccess } = useToast();
   const [mode, setMode] = useState<"manual" | "timer">("manual");
   const [sleepType, setSleepType] = useState<SleepType>("nap");
-  const [startDate, setStartDate] = useState(getCurrentDate());
-  const [startTime, setStartTime] = useState(getCurrentTime());
-  const [endDate, setEndDate] = useState(getCurrentDate());
+  const [startDate, setStartDate] = useState(getCurrentLocalDate());
+  const [startTime, setStartTime] = useState(getCurrentLocalTime());
+  const [endDate, setEndDate] = useState(getCurrentLocalDate());
   const [endTime, setEndTime] = useState(getDefaultEndTime());
   const [notes, setNotes] = useState("");
   const [timerSession, setTimerSession] = useState<SleepTimerSession | null>(null);
@@ -73,9 +62,9 @@ export function SleepLogSheet({ open, onClose, childId, onLogged }: SleepLogShee
         setTimerSession(session);
         setMode(session ? "timer" : "manual");
         setSleepType(session?.sleepType ?? "nap");
-        setStartDate(getCurrentDate());
-        setStartTime(getCurrentTime());
-        setEndDate(getCurrentDate());
+        setStartDate(getCurrentLocalDate());
+        setStartTime(getCurrentLocalTime());
+        setEndDate(getCurrentLocalDate());
         setEndTime(getDefaultEndTime());
         setNotes(session?.notes ?? "");
         setTick(Date.now());
@@ -86,9 +75,9 @@ export function SleepLogSheet({ open, onClose, childId, onLogged }: SleepLogShee
         setTimerSession(null);
         setMode("manual");
         setSleepType("nap");
-        setStartDate(getCurrentDate());
-        setStartTime(getCurrentTime());
-        setEndDate(getCurrentDate());
+        setStartDate(getCurrentLocalDate());
+        setStartTime(getCurrentLocalTime());
+        setEndDate(getCurrentLocalDate());
         setEndTime(getDefaultEndTime());
         setNotes("");
         setTick(Date.now());
@@ -180,8 +169,8 @@ export function SleepLogSheet({ open, onClose, childId, onLogged }: SleepLogShee
       return;
     }
 
-    const startedAt = combineToISO(startDate, startTime);
-    const endedAt = combineToISO(endDate, endTime);
+    const startedAt = combineLocalDateAndTimeToUtcIso(startDate, startTime);
+    const endedAt = combineLocalDateAndTimeToUtcIso(endDate, endTime);
 
     if (new Date(endedAt).getTime() <= new Date(startedAt).getTime()) {
       showError("End time needs to be after the start time.");
@@ -319,7 +308,7 @@ export function SleepLogSheet({ open, onClose, childId, onLogged }: SleepLogShee
               <div>
                 <FieldLabel>Start</FieldLabel>
                 <div className="grid grid-cols-2 gap-2">
-                  <DatePicker value={startDate} onChange={setStartDate} max={getCurrentDate()} />
+                  <DatePicker value={startDate} onChange={setStartDate} max={getCurrentLocalDate()} />
                   <TimePicker value={startTime} onChange={setStartTime} />
                 </div>
               </div>

@@ -17,20 +17,9 @@ import {
   LoggingFieldGroup,
   LoggingFormHeader,
 } from "./logging-form-primitives";
+import { combineLocalDateAndTimeToUtcIso, getCurrentLocalDate, getCurrentLocalTime } from "../../lib/utils";
 import { getVolumeUnitLabel, parseVolumeInputToMl } from "../../lib/units";
 import type { BottleContent, FoodType, BreastSide, FeedingLogDraft } from "../../lib/types";
-
-function getCurrentDate(): string {
-  return new Date().toISOString().split("T")[0];
-}
-
-function getCurrentTime(): string {
-  return new Date().toTimeString().slice(0, 5);
-}
-
-function combineToISO(date: string, time: string): string {
-  return `${date}T${time}:00`;
-}
 
 function parseInteger(value: string): number | null {
   if (!value.trim()) return null;
@@ -60,8 +49,8 @@ interface DietLogFormProps {
 
 export function DietLogForm({ open, onClose, childId, onLogged, initialDraft = null }: DietLogFormProps) {
   const { showError } = useToast();
-  const [logDate, setLogDate] = useState(getCurrentDate());
-  const [logTime, setLogTime] = useState(getCurrentTime());
+  const [logDate, setLogDate] = useState(getCurrentLocalDate());
+  const [logTime, setLogTime] = useState(getCurrentLocalTime());
   const [foodType, setFoodType] = useState<FoodType | null>(null);
   const [foodName, setFoodName] = useState("");
   const [amountMl, setAmountMl] = useState("");
@@ -79,8 +68,8 @@ export function DietLogForm({ open, onClose, childId, onLogged, initialDraft = n
 
   const applyDraft = (draft?: Partial<FeedingLogDraft> | null) => {
     const nextDraft = { ...EMPTY_DRAFT, ...draft };
-    setLogDate(getCurrentDate());
-    setLogTime(getCurrentTime());
+    setLogDate(getCurrentLocalDate());
+    setLogTime(getCurrentLocalTime());
     setFoodType(nextDraft.food_type);
     setFoodName(nextDraft.food_name);
     setAmountMl(nextDraft.amount_ml);
@@ -117,7 +106,7 @@ export function DietLogForm({ open, onClose, childId, onLogged, initialDraft = n
     try {
       await db.createDietLog({
         child_id: childId,
-        logged_at: combineToISO(logDate, logTime),
+        logged_at: combineLocalDateAndTimeToUtcIso(logDate, logTime),
         food_type: foodType,
         food_name: showsFoodName ? foodName.trim() || null : null,
         amount_ml: showsAmount ? parseVolumeInputToMl(amountMl, unitSystem) : null,
@@ -153,7 +142,7 @@ export function DietLogForm({ open, onClose, childId, onLogged, initialDraft = n
         <div className="flex flex-col gap-5">
           <LoggingFieldGroup label="When" isNight={nightMode}>
             <div className="grid grid-cols-2 gap-2">
-              <DatePicker value={logDate} onChange={setLogDate} max={getCurrentDate()} nightMode={nightMode} />
+              <DatePicker value={logDate} onChange={setLogDate} max={getCurrentLocalDate()} nightMode={nightMode} />
               <TimePicker value={logTime} onChange={setLogTime} nightMode={nightMode} />
             </div>
           </LoggingFieldGroup>

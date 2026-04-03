@@ -15,7 +15,7 @@ import { TimePicker } from "../components/ui/time-picker";
 import { Sheet } from "../components/ui/sheet";
 import { useToast } from "../components/ui/toast";
 import { FEEDING_TYPES, AVATAR_COLORS, CHILD_SEX_OPTIONS } from "../lib/constants";
-import { getAgeLabelFromDob } from "../lib/utils";
+import { getAgeLabelFromDob, getCurrentLocalDate } from "../lib/utils";
 import { cn } from "../lib/cn";
 import {
   isDailyReminderEnabled,
@@ -127,7 +127,7 @@ function EditChildSheet({
 
           <div>
             <FieldLabel>Date of birth</FieldLabel>
-            <DatePicker value={dob} onChange={setDob} max={new Date().toISOString().split("T")[0]} label="Date of birth" />
+            <DatePicker value={dob} onChange={setDob} max={getCurrentLocalDate()} label="Date of birth" />
           </div>
 
           <div>

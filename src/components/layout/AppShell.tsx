@@ -67,8 +67,7 @@ export function AppShell() {
         className="pointer-events-none fixed inset-x-0 top-0 z-[25]"
         style={{
           height: "calc(var(--safe-area-top) + 26px)",
-          background:
-            "linear-gradient(180deg, rgba(255,250,243,0.95) 0%, rgba(255,250,243,0.55) 74%, transparent 100%)",
+          background: "var(--gradient-shell-top-overlay)",
           backdropFilter: "blur(24px) saturate(1.02)",
           WebkitBackdropFilter: "blur(24px) saturate(1.02)",
         }}

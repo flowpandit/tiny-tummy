@@ -13,6 +13,7 @@ import { getFeedingEntryDetailParts, getFeedingEntryPrimaryLabel, getFeedingEntr
 import { getMilestoneTypeLabel } from "../lib/milestone-constants";
 import { getEpisodeEventTypeLabel, getEpisodeTypeLabel } from "../lib/episode-constants";
 import { getSymptomSeverityBadgeVariant, getSymptomSeverityLabel, getSymptomTypeLabel } from "../lib/symptom-constants";
+import { formatLocalDateKey } from "../lib/utils";
 import { Badge } from "../components/ui/badge";
 import { PoopIcon, MealIcon, NoPoopIcon } from "../components/ui/icons";
 import { DatePicker } from "../components/ui/date-picker";
@@ -620,7 +621,7 @@ export function History() {
     await refreshSleep();
   };
 
-  const today = new Date().toISOString().split("T")[0];
+  const today = formatLocalDateKey(new Date());
   const allDates = [...grouped.keys()];
   const earliestDate = allDates.length > 0 ? allDates[allDates.length - 1] : today;
 

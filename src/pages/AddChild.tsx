@@ -13,6 +13,7 @@ import { saveAvatar } from "../lib/photos";
 import { useChildContext } from "../contexts/ChildContext";
 import { useToast } from "../components/ui/toast";
 import { Header } from "../components/layout/Header";
+import { getCurrentLocalDate } from "../lib/utils";
 import type { ChildSex, FeedingType } from "../lib/types";
 
 export function AddChild() {
@@ -20,7 +21,7 @@ export function AddChild() {
   const { refreshChildren, setActiveChildId } = useChildContext();
   const { showError } = useToast();
   const [name, setName] = useState("");
-  const [dob, setDob] = useState(new Date().toISOString().split("T")[0]);
+  const [dob, setDob] = useState(getCurrentLocalDate());
   const [sex, setSex] = useState<ChildSex | null>(null);
   const [feedingType, setFeedingType] = useState<FeedingType>("breast");
   const [avatarColor, setAvatarColor] = useState(AVATAR_COLORS[0]);
@@ -95,7 +96,7 @@ export function AddChild() {
 
         <div>
           <FieldLabel>Date of birth</FieldLabel>
-          <DatePicker value={dob} onChange={setDob} max={new Date().toISOString().split("T")[0]} label="Date of birth" />
+          <DatePicker value={dob} onChange={setDob} max={getCurrentLocalDate()} label="Date of birth" />
         </div>
 
         <div>

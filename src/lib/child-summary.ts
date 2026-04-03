@@ -1,5 +1,7 @@
 import * as db from "./db";
 import { getCaregiverNoteSettingKey } from "./caregiver-note";
+import { diaperIncludesStool, diaperIncludesWet } from "./diaper";
+import { formatLocalDateKey, isOnLocalDay } from "./utils";
 import type { Alert, DiaperEntry, Episode, EpisodeEvent, FeedingEntry, PoopEntry, SymptomEntry } from "./types";
 
 export interface ChildDailySummary {
@@ -27,7 +29,7 @@ export interface ChildSummarySnapshot extends ChildDailySummary {
 }
 
 export function getTodayKey(now: Date = new Date()): string {
-  return now.toISOString().split("T")[0];
+  return formatLocalDateKey(now);
 }
 
 export function buildChildDailySummary(input: {
@@ -47,11 +49,11 @@ export function buildChildDailySummary(input: {
     lastFeed: input.feedingLogs[0] ?? null,
     latestEpisodeUpdate: input.episodeEvents[0] ?? null,
     latestSymptom: input.symptomLogs[0] ?? null,
-    todayWetDiapers: input.diaperLogs.filter((log) => log.logged_at.startsWith(dayKey) && (log.diaper_type === "wet" || log.diaper_type === "mixed")).length,
-    todayDirtyDiapers: input.diaperLogs.filter((log) => log.logged_at.startsWith(dayKey) && (log.diaper_type === "dirty" || log.diaper_type === "mixed")).length,
-    todayPoops: input.poopLogs.filter((log) => log.logged_at.startsWith(dayKey) && log.is_no_poop === 0).length,
-    todayFeeds: input.feedingLogs.filter((log) => log.logged_at.startsWith(dayKey)).length,
-    hasNoPoopDay: input.poopLogs.some((log) => log.logged_at.startsWith(dayKey) && log.is_no_poop === 1),
+    todayWetDiapers: input.diaperLogs.filter((log) => isOnLocalDay(log.logged_at, dayKey) && diaperIncludesWet(log.diaper_type)).length,
+    todayDirtyDiapers: input.diaperLogs.filter((log) => isOnLocalDay(log.logged_at, dayKey) && diaperIncludesStool(log.diaper_type)).length,
+    todayPoops: input.poopLogs.filter((log) => isOnLocalDay(log.logged_at, dayKey) && log.is_no_poop === 0).length,
+    todayFeeds: input.feedingLogs.filter((log) => isOnLocalDay(log.logged_at, dayKey)).length,
+    hasNoPoopDay: input.poopLogs.some((log) => isOnLocalDay(log.logged_at, dayKey) && log.is_no_poop === 1),
     visibleAlerts: input.alerts.slice(0, 3),
     recentSymptoms: input.symptomLogs.slice(0, 3),
     activeEpisode: input.activeEpisode,

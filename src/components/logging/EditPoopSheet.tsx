@@ -7,6 +7,7 @@ import { StoolTypePicker } from "./StoolTypePicker";
 import { ColorPicker } from "./ColorPicker";
 import { SizePicker } from "./SizePicker";
 import { useToast } from "../ui/toast";
+import { combineLocalDateAndTimeToUtcIso, getCurrentLocalDate, getLocalDateTimeParts } from "../../lib/utils";
 import * as db from "../../lib/db";
 import type { PoopEntry, StoolColor, StoolSize } from "../../lib/types";
 
@@ -18,14 +19,11 @@ interface EditPoopSheetProps {
   onDeleted: () => void;
 }
 
-function getCurrentDate(): string {
-  return new Date().toISOString().split("T")[0];
-}
-
 export function EditPoopSheet({ entry, open, onClose, onSaved, onDeleted }: EditPoopSheetProps) {
   const { showError } = useToast();
-  const [logDate, setLogDate] = useState(entry.logged_at.split("T")[0]);
-  const [logTime, setLogTime] = useState(entry.logged_at.split("T")[1]?.slice(0, 5) ?? "12:00");
+  const entryLoggedAt = getLocalDateTimeParts(entry.logged_at);
+  const [logDate, setLogDate] = useState(entryLoggedAt.date);
+  const [logTime, setLogTime] = useState(entryLoggedAt.time);
   const [stoolType, setStoolType] = useState<number | null>(entry.stool_type);
   const [color, setColor] = useState<StoolColor | null>(entry.color);
   const [size, setSize] = useState<StoolSize | null>(entry.size);
@@ -38,7 +36,7 @@ export function EditPoopSheet({ entry, open, onClose, onSaved, onDeleted }: Edit
     setIsSaving(true);
     try {
       await db.updatePoopLog(entry.id, {
-        logged_at: `${logDate}T${logTime}:00`,
+        logged_at: combineLocalDateAndTimeToUtcIso(logDate, logTime),
         stool_type: stoolType,
         color,
         size,
@@ -74,7 +72,7 @@ export function EditPoopSheet({ entry, open, onClose, onSaved, onDeleted }: Edit
           <div>
             <label className="block text-sm font-medium text-[var(--color-text)] mb-1.5">When</label>
             <div className="grid grid-cols-2 gap-2">
-              <DatePicker value={logDate} onChange={setLogDate} max={getCurrentDate()} />
+              <DatePicker value={logDate} onChange={setLogDate} max={getCurrentLocalDate()} />
               <TimePicker value={logTime} onChange={setLogTime} />
             </div>
           </div>

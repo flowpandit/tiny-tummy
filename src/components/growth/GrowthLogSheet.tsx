@@ -6,6 +6,7 @@ import { TimePicker } from "../ui/time-picker";
 import { useToast } from "../ui/toast";
 import { useUnits } from "../../contexts/UnitsContext";
 import * as db from "../../lib/db";
+import { combineLocalDateAndTimeToUtcIso, getCurrentLocalDate, getCurrentLocalTime, getLocalDateTimeParts } from "../../lib/utils";
 import { formatGrowthValue, getGrowthUnitLabel, parseGrowthInputToMetric } from "../../lib/units";
 import type { GrowthEntry } from "../../lib/types";
 
@@ -18,24 +19,12 @@ interface GrowthLogSheetProps {
   onDeleted?: () => Promise<void> | void;
 }
 
-function getCurrentDate(): string {
-  return new Date().toISOString().split("T")[0];
-}
-
-function getCurrentTime(): string {
-  return new Date().toTimeString().slice(0, 5);
-}
-
-function combineToISO(date: string, time: string): string {
-  return `${date}T${time}:00`;
-}
-
 export function GrowthLogSheet({ open, onClose, childId, onLogged, entry = null, onDeleted }: GrowthLogSheetProps) {
   const { showError, showSuccess } = useToast();
   const { unitSystem } = useUnits();
   const isEditing = Boolean(entry);
-  const [measureDate, setMeasureDate] = useState(getCurrentDate());
-  const [measureTime, setMeasureTime] = useState(getCurrentTime());
+  const [measureDate, setMeasureDate] = useState(getCurrentLocalDate());
+  const [measureTime, setMeasureTime] = useState(getCurrentLocalTime());
   const [weightKg, setWeightKg] = useState("");
   const [heightCm, setHeightCm] = useState("");
   const [headCircumferenceCm, setHeadCircumferenceCm] = useState("");
@@ -45,8 +34,9 @@ export function GrowthLogSheet({ open, onClose, childId, onLogged, entry = null,
 
   useEffect(() => {
     if (!open) return;
-    setMeasureDate(entry?.measured_at.split("T")[0] ?? getCurrentDate());
-    setMeasureTime(entry?.measured_at.split("T")[1]?.slice(0, 5) ?? getCurrentTime());
+    const measureParts = entry?.measured_at ? getLocalDateTimeParts(entry.measured_at) : null;
+    setMeasureDate(measureParts?.date ?? getCurrentLocalDate());
+    setMeasureTime(measureParts?.time ?? getCurrentLocalTime());
     setWeightKg(entry?.weight_kg !== null && entry?.weight_kg !== undefined ? formatGrowthValue("weight_kg", entry.weight_kg, unitSystem, { includeUnit: false }) : "");
     setHeightCm(entry?.height_cm !== null && entry?.height_cm !== undefined ? formatGrowthValue("height_cm", entry.height_cm, unitSystem, { includeUnit: false }) : "");
     setHeadCircumferenceCm(entry?.head_circumference_cm !== null && entry?.head_circumference_cm !== undefined ? formatGrowthValue("head_circumference_cm", entry.head_circumference_cm, unitSystem, { includeUnit: false }) : "");
@@ -64,7 +54,7 @@ export function GrowthLogSheet({ open, onClose, childId, onLogged, entry = null,
     setIsSubmitting(true);
     try {
       const payload = {
-        measured_at: combineToISO(measureDate, measureTime),
+        measured_at: combineLocalDateAndTimeToUtcIso(measureDate, measureTime),
         weight_kg: parseGrowthInputToMetric("weight_kg", weightKg, unitSystem),
         height_cm: parseGrowthInputToMetric("height_cm", heightCm, unitSystem),
         head_circumference_cm: parseGrowthInputToMetric("head_circumference_cm", headCircumferenceCm, unitSystem),
@@ -121,7 +111,7 @@ export function GrowthLogSheet({ open, onClose, childId, onLogged, entry = null,
           <div>
             <label className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">When</label>
             <div className="grid grid-cols-2 gap-2">
-              <DatePicker value={measureDate} onChange={setMeasureDate} max={getCurrentDate()} />
+              <DatePicker value={measureDate} onChange={setMeasureDate} max={getCurrentLocalDate()} />
               <TimePicker value={measureTime} onChange={setMeasureTime} />
             </div>
           </div>

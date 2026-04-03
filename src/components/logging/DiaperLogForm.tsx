@@ -13,7 +13,9 @@ import { SizePicker } from "./SizePicker";
 import { FieldLabel, Textarea } from "../ui/field";
 import { useTheme } from "../../contexts/ThemeContext";
 import { cn } from "../../lib/cn";
+import { diaperIncludesStool, diaperIncludesWet } from "../../lib/diaper";
 import { savePhoto } from "../../lib/photos";
+import { combineLocalDateAndTimeToUtcIso, getCurrentLocalDate, getCurrentLocalTime } from "../../lib/utils";
 import * as db from "../../lib/db";
 import type { DiaperLogDraft, DiaperType, StoolColor, StoolSize, UrineColor } from "../../lib/types";
 
@@ -26,25 +28,12 @@ const EMPTY_DRAFT: DiaperLogDraft = {
   notes: "",
 };
 
-function getCurrentDate(): string {
-  return new Date().toISOString().split("T")[0];
-}
-
-function getCurrentTime(): string {
-  const now = new Date();
-  return now.toTimeString().slice(0, 5);
-}
-
-function combineToISO(date: string, time: string): string {
-  return `${date}T${time}:00`;
-}
-
 function showsUrineFields(type: DiaperType | null): boolean {
-  return type === "wet" || type === "mixed";
+  return type ? diaperIncludesWet(type) : false;
 }
 
 function showsStoolFields(type: DiaperType | null): boolean {
-  return type === "dirty" || type === "mixed";
+  return type ? diaperIncludesStool(type) : false;
 }
 
 export function DiaperLogForm({
@@ -61,8 +50,8 @@ export function DiaperLogForm({
   initialDraft?: Partial<DiaperLogDraft> | null;
 }) {
   const { showError } = useToast();
-  const [logDate, setLogDate] = useState(getCurrentDate());
-  const [logTime, setLogTime] = useState(getCurrentTime());
+  const [logDate, setLogDate] = useState(getCurrentLocalDate());
+  const [logTime, setLogTime] = useState(getCurrentLocalTime());
   const [diaperType, setDiaperType] = useState<DiaperType | null>(null);
   const [urineColor, setUrineColor] = useState<UrineColor | null>(null);
   const [stoolType, setStoolType] = useState<number | null>(null);
@@ -79,8 +68,8 @@ export function DiaperLogForm({
 
   const applyDraft = (draft?: Partial<DiaperLogDraft> | null) => {
     const nextDraft = { ...EMPTY_DRAFT, ...draft };
-    setLogDate(getCurrentDate());
-    setLogTime(getCurrentTime());
+    setLogDate(getCurrentLocalDate());
+    setLogTime(getCurrentLocalTime());
     setDiaperType(nextDraft.diaper_type);
     setUrineColor(nextDraft.urine_color);
     setStoolType(nextDraft.stool_type);
@@ -129,7 +118,7 @@ export function DiaperLogForm({
 
       await db.createDiaperLog({
         child_id: childId,
-        logged_at: combineToISO(logDate, logTime),
+        logged_at: combineLocalDateAndTimeToUtcIso(logDate, logTime),
         diaper_type: diaperType,
         urine_color: showsUrineFields(diaperType) ? urineColor : null,
         stool_type: showsStoolFields(diaperType) ? stoolType : null,
@@ -173,7 +162,7 @@ export function DiaperLogForm({
             <div>
               <FieldLabel className="mb-1.5">When</FieldLabel>
               <div className="grid grid-cols-2 gap-2">
-                <DatePicker value={logDate} onChange={setLogDate} max={getCurrentDate()} nightMode={nightMode} />
+                <DatePicker value={logDate} onChange={setLogDate} max={getCurrentLocalDate()} nightMode={nightMode} />
                 <TimePicker value={logTime} onChange={setLogTime} nightMode={nightMode} />
               </div>
             </div>

@@ -5,6 +5,7 @@ import { DatePicker } from "../ui/date-picker";
 import { FEEDING_TYPES, AVATAR_COLORS, CHILD_SEX_OPTIONS } from "../../lib/constants";
 import { cn } from "../../lib/cn";
 import * as db from "../../lib/db";
+import { getCurrentLocalDate } from "../../lib/utils";
 import type { Child, ChildSex, FeedingType } from "../../lib/types";
 
 interface AddChildStepProps {
@@ -13,7 +14,7 @@ interface AddChildStepProps {
 
 export function AddChildStep({ onChildCreated }: AddChildStepProps) {
   const [name, setName] = useState("");
-  const [dob, setDob] = useState(new Date().toISOString().split("T")[0]);
+  const [dob, setDob] = useState(getCurrentLocalDate());
   const [sex, setSex] = useState<ChildSex | null>(null);
   const [feedingType, setFeedingType] = useState<FeedingType>("breast");
   const [avatarColor, setAvatarColor] = useState(AVATAR_COLORS[0]);
@@ -67,7 +68,7 @@ export function AddChildStep({ onChildCreated }: AddChildStepProps) {
           <label className="block text-sm font-medium text-[var(--color-text)] mb-1.5">
             Date of birth
           </label>
-          <DatePicker value={dob} onChange={setDob} max={new Date().toISOString().split("T")[0]} label="Date of birth" />
+          <DatePicker value={dob} onChange={setDob} max={getCurrentLocalDate()} label="Date of birth" />
         </div>
 
         <div>

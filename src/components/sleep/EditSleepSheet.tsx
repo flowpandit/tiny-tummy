@@ -7,6 +7,7 @@ import { FieldLabel, Textarea } from "../ui/field";
 import { cn } from "../../lib/cn";
 import { useToast } from "../ui/toast";
 import * as db from "../../lib/db";
+import { combineLocalDateAndTimeToUtcIso, getCurrentLocalDate, getLocalDateTimeParts } from "../../lib/utils";
 import type { SleepEntry, SleepType } from "../../lib/types";
 
 interface EditSleepSheetProps {
@@ -22,21 +23,15 @@ const SLEEP_TYPES: Array<{ value: SleepType; label: string; description: string 
   { value: "night", label: "Night", description: "Overnight sleep block." },
 ];
 
-function getCurrentDate(): string {
-  return new Date().toISOString().split("T")[0];
-}
-
-function combineToISO(date: string, time: string): string {
-  return `${date}T${time}:00`;
-}
-
 export function EditSleepSheet({ entry, open, onClose, onSaved, onDeleted }: EditSleepSheetProps) {
   const { showError, showSuccess } = useToast();
+  const startParts = getLocalDateTimeParts(entry.started_at);
+  const endParts = getLocalDateTimeParts(entry.ended_at);
   const [sleepType, setSleepType] = useState<SleepType>(entry.sleep_type);
-  const [startDate, setStartDate] = useState(entry.started_at.split("T")[0]);
-  const [startTime, setStartTime] = useState(entry.started_at.split("T")[1]?.slice(0, 5) ?? "12:00");
-  const [endDate, setEndDate] = useState(entry.ended_at.split("T")[0]);
-  const [endTime, setEndTime] = useState(entry.ended_at.split("T")[1]?.slice(0, 5) ?? "13:00");
+  const [startDate, setStartDate] = useState(startParts.date);
+  const [startTime, setStartTime] = useState(startParts.time);
+  const [endDate, setEndDate] = useState(endParts.date);
+  const [endTime, setEndTime] = useState(endParts.time);
   const [notes, setNotes] = useState(entry.notes ?? "");
   const [isSaving, setIsSaving] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -44,10 +39,12 @@ export function EditSleepSheet({ entry, open, onClose, onSaved, onDeleted }: Edi
   useEffect(() => {
     if (!open) return;
     setSleepType(entry.sleep_type);
-    setStartDate(entry.started_at.split("T")[0]);
-    setStartTime(entry.started_at.split("T")[1]?.slice(0, 5) ?? "12:00");
-    setEndDate(entry.ended_at.split("T")[0]);
-    setEndTime(entry.ended_at.split("T")[1]?.slice(0, 5) ?? "13:00");
+    const nextStartParts = getLocalDateTimeParts(entry.started_at);
+    const nextEndParts = getLocalDateTimeParts(entry.ended_at);
+    setStartDate(nextStartParts.date);
+    setStartTime(nextStartParts.time);
+    setEndDate(nextEndParts.date);
+    setEndTime(nextEndParts.time);
     setNotes(entry.notes ?? "");
     setIsSaving(false);
     setConfirmDelete(false);
@@ -57,8 +54,8 @@ export function EditSleepSheet({ entry, open, onClose, onSaved, onDeleted }: Edi
     event.preventDefault();
     if (isSaving) return;
 
-    const startedAt = combineToISO(startDate, startTime);
-    const endedAt = combineToISO(endDate, endTime);
+    const startedAt = combineLocalDateAndTimeToUtcIso(startDate, startTime);
+    const endedAt = combineLocalDateAndTimeToUtcIso(endDate, endTime);
 
     if (new Date(endedAt).getTime() <= new Date(startedAt).getTime()) {
       showError("End time needs to be after the start time.");
@@ -129,7 +126,7 @@ export function EditSleepSheet({ entry, open, onClose, onSaved, onDeleted }: Edi
           <div>
             <FieldLabel>Started</FieldLabel>
             <div className="grid grid-cols-2 gap-2">
-              <DatePicker value={startDate} onChange={setStartDate} max={getCurrentDate()} />
+              <DatePicker value={startDate} onChange={setStartDate} max={getCurrentLocalDate()} />
               <TimePicker value={startTime} onChange={setStartTime} />
             </div>
           </div>
@@ -137,7 +134,7 @@ export function EditSleepSheet({ entry, open, onClose, onSaved, onDeleted }: Edi
           <div>
             <FieldLabel>Ended</FieldLabel>
             <div className="grid grid-cols-2 gap-2">
-              <DatePicker value={endDate} onChange={setEndDate} max={getCurrentDate()} />
+              <DatePicker value={endDate} onChange={setEndDate} max={getCurrentLocalDate()} />
               <TimePicker value={endTime} onChange={setEndTime} />
             </div>
           </div>

@@ -33,7 +33,7 @@ export function Header({ showBackButton = false, fallbackTo = "/", visible = tru
       className={`fixed inset-x-0 top-0 z-30 transition-all duration-200 ${visible ? "pointer-events-auto translate-y-0 opacity-100" : "pointer-events-none -translate-y-4 opacity-0"}`}
       style={{
         height: "calc(var(--safe-area-top) + 74px)",
-        background: "linear-gradient(180deg, rgba(255,250,243,0.95) 0%, rgba(255,250,243,0.55) 74%, transparent 100%)",
+        background: "var(--gradient-shell-top-overlay)",
         backdropFilter: "blur(24px) saturate(1.02)",
         WebkitBackdropFilter: "blur(24px) saturate(1.02)",
       }}

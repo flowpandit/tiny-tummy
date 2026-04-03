@@ -12,7 +12,7 @@ import { BITSS_TYPES, STOOL_COLORS } from "../lib/constants";
 import { fillDailyFrequencyDays, formatLocalDateKey, getRecentNoPoopDates } from "../lib/stats";
 import { DAYS_IN_WEEK, addDays, formatHoursCompact, formatHoursLong, formatWeekLabel, startOfDay } from "../lib/tracker";
 import { getChildStatus } from "../lib/tauri";
-import { timeSince } from "../lib/utils";
+import { combineLocalDateAndTimeToUtcIso, getCurrentLocalDate, getCurrentLocalTime, timeSince } from "../lib/utils";
 import {
   buildPoopPresetRecordInput,
   describePoopPresetDraft,
@@ -90,8 +90,7 @@ function getAgeDays(dateOfBirth: string): number {
 }
 
 function getCurrentPoopTimestamp(): string {
-  const now = new Date();
-  return `${now.toISOString().split("T")[0]}T${now.toTimeString().slice(0, 5)}:00`;
+  return combineLocalDateAndTimeToUtcIso(getCurrentLocalDate(), getCurrentLocalTime());
 }
 
 function getRepeatablePoopEntry(lastPoop: PoopEntry | null): PoopEntry | null {
@@ -891,7 +890,7 @@ export function Poop() {
     return [...counts.entries()].sort((left, right) => right[1] - left[1])[0]?.[0] ?? null;
   }, [weeklyRealLogs]);
   const baseline = useMemo(
-    () => getAgeBaseline(activeChild?.date_of_birth ?? new Date().toISOString().split("T")[0], activeChild?.feeding_type ?? "mixed"),
+    () => getAgeBaseline(activeChild?.date_of_birth ?? getCurrentLocalDate(), activeChild?.feeding_type ?? "mixed"),
     [activeChild],
   );
   const prediction = useMemo(
@@ -1140,29 +1139,29 @@ export function Poop() {
                   </p>
                 </div>
                 {prediction && (
-                  <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-semibold text-[var(--color-text-secondary)]">
+                  <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-semibold text-[var(--color-chip-text-on-light)]">
                     {prediction.confidence}
                   </span>
                 )}
               </div>
               {prediction && (
                 <div className="mt-3 flex flex-wrap gap-2">
-                  <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-text-secondary)]">
+                  <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-chip-text-on-light)]">
                     Typical gap: {prediction.intervalLabel}
                   </span>
-                  <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-text-secondary)]">
+                  <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-chip-text-on-light)]">
                     {formatPredictionRelative(prediction)}
                   </span>
-                  <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-text-secondary)]">
+                  <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-chip-text-on-light)]">
                     Source: {prediction.source === "history" ? "recent rhythm" : "age baseline"}
                   </span>
-                  <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-text-secondary)]">
+                  <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-chip-text-on-light)]">
                     Window: {formatPredictionRange(prediction)}
                   </span>
                   {prediction.adjustments.slice(0, 2).map((adjustment) => (
                     <span
                       key={adjustment.label}
-                      className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-text-secondary)]"
+                      className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-chip-text-on-light)]"
                     >
                       {adjustment.direction === "earlier" ? "Earlier" : "Later"}: {adjustment.label}
                     </span>
