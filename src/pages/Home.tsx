@@ -297,7 +297,7 @@ export function Home() {
   const otherChildren = children.filter((child) => child.id !== activeChild.id);
 
   return (
-    <div className="flex flex-col gap-0 pb-3 pt-0.5">
+    <div className="flex flex-col gap-4 pb-3 pt-0.5">
       {/* Alerts */}
       <AlertBanner alerts={alerts} onDismiss={dismiss} />
       {hasLogs && (
