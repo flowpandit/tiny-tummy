@@ -18,6 +18,7 @@ import homeCloud1 from "../../assets/svg-assets/hero-pieces/cloud-1.svg";
 import homeCloud3 from "../../assets/svg-assets/hero-pieces/cloud-3.svg";
 import homeCloud5 from "../../assets/svg-assets/hero-pieces/cloud-5.svg";
 import homeMount1 from "../../assets/svg-assets/hero-pieces/mount-1.svg";
+import sceneMoon from "../../assets/svg-assets/moon.svg";
 import sceneSun from "../../assets/svg-assets/sun.svg";
 import type { Child } from "../../lib/types";
 import { getAgeLabelFromDob } from "../../lib/utils";
@@ -51,7 +52,7 @@ export function ScenicHero({
   const skyArt = isDarkArtwork ? watercolorCloudsDark : watercolorClouds;
   const ridgeArt = isDarkArtwork ? watercolorMountainsDark : watercolorMountains;
   const orbArt = isDarkArtwork ? watercolorMoon : watercolorSun;
-  const homeOrbArt = isDarkArtwork ? watercolorMoon : sceneSun;
+  const homeOrbArt = isDarkArtwork ? sceneMoon : sceneSun;
   const sceneBackgroundArt = isDarkArtwork ? heroBackgroundArtDark : heroBackgroundArt;
   const useHomeScene = scene === "home";
   const useSleepScene = scene === "sleep";
@@ -108,7 +109,10 @@ export function ScenicHero({
               src={homeOrbArt}
               alt=""
               aria-hidden="true"
-              className="pointer-events-none absolute right-[14px] top-[14px] w-[118px] opacity-95 md:w-[132px]"
+              className={isDarkArtwork
+                ? "pointer-events-none absolute right-[18px] top-[34px] w-[112px] md:right-[24px] md:top-[40px] md:w-[126px]"
+                : "pointer-events-none absolute right-[14px] top-[14px] w-[118px] opacity-95 md:w-[132px]"}
+              style={{ opacity: isDarkArtwork ? 0.72 : 0.95 }}
             />
             <img
               src={homeCloud5}
