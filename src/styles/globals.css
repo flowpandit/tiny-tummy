@@ -2,7 +2,9 @@
 @import "./tokens.css";
 
 /* Base styles */
-html, body, #root {
+html,
+body,
+#root {
   height: 100%;
   margin: 0;
   padding: 0;
@@ -19,9 +21,7 @@ body {
   font-size: 16px;
   line-height: 1.5;
   color: var(--color-text);
-  background:
-    radial-gradient(circle at top center, rgba(255, 244, 216, 0.92) 0%, rgba(247, 207, 177, 0.46) 16%, rgba(251, 245, 234, 0) 36%),
-    linear-gradient(180deg, #fcf6eb 0%, #fbf5ea 58%, #f7efe1 100%);
+  background: linear-gradient(180deg, #fcf6eb 0%, #fbf5ea 58%, #f7efe1 100%);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   -webkit-text-size-adjust: 100%;
@@ -80,7 +80,9 @@ body {
 }
 
 /* Disable user selection on interactive elements for native feel */
-button, a, [role="button"] {
+button,
+a,
+[role="button"] {
   -webkit-tap-highlight-color: transparent;
   -webkit-touch-callout: none;
   user-select: none;
@@ -95,13 +97,36 @@ button, a, [role="button"] {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
 *::-webkit-scrollbar {
   display: none;
 }
 
+.hero-cloud-scroll {
+  will-change: transform;
+  animation: hero-cloud-scroll 60s linear infinite;
+}
+
+.hero-cloud-scroll-item {
+  transform: translateZ(0);
+}
+
+@keyframes hero-cloud-scroll {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+
+  to {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
 /* Reduced motion — disable animations for accessibility */
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
+
+  *,
+  *::before,
+  *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
@@ -114,9 +139,13 @@ button, a, [role="button"] {
     background: white !important;
     padding: 0 !important;
   }
-  nav, header, .no-print {
+
+  nav,
+  header,
+  .no-print {
     display: none !important;
   }
+
   main {
     padding-bottom: 0 !important;
   }

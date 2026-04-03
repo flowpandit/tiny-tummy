@@ -69,28 +69,20 @@ export function ScenicHero({
         className="relative h-[350px] overflow-hidden px-4 pt-6"
         style={{ clipPath: `url(#${clipPathId})` }}
       >
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-72" style={{ background: "var(--gradient-hero-glow)" }} />
-        <div className="pointer-events-none absolute inset-0" style={{ background: "var(--gradient-hero-wash)" }} />
+        {!useHomeScene && (
+          <>
+            <div className="pointer-events-none absolute inset-x-0 top-0 h-72" style={{ background: "var(--gradient-hero-glow)" }} />
+            <div className="pointer-events-none absolute inset-0" style={{ background: "var(--gradient-hero-wash)" }} />
+          </>
+        )}
         {useHomeScene ? (
           <>
             <div
               className="pointer-events-none absolute inset-0"
               style={{
                 background: isDarkArtwork
-                  ? "radial-gradient(circle at 28% 24%, rgba(214, 226, 247, 0.16) 0%, rgba(20, 28, 40, 0) 46%)"
-                  : "radial-gradient(circle at 22% 24%, rgba(255, 248, 239, 0.82) 0%, rgba(255, 255, 255, 0) 52%)",
-              }}
-            />
-            <img
-              src={skyArt}
-              alt=""
-              aria-hidden="true"
-              className="pointer-events-none absolute left-[-20px] top-[14px] w-[calc(100%+40px)] max-w-none"
-              style={{
-                opacity: isDarkArtwork ? 0.82 : 0.96,
-                filter: isDarkArtwork
-                  ? "brightness(1.08) contrast(1.02)"
-                  : "brightness(1.02)",
+                  ? "radial-gradient(circle at 76% 22%, rgba(214, 226, 247, 0.16) 0%, rgba(20, 28, 40, 0) 46%)"
+                  : "radial-gradient(circle at 78% 18%, rgba(255, 248, 239, 0.82) 0%, rgba(255, 255, 255, 0) 52%)",
               }}
             />
             <img
@@ -114,6 +106,35 @@ export function ScenicHero({
                   : "brightness(0.94) contrast(1.02)",
               }}
             />
+            <div
+              className="pointer-events-none absolute inset-x-[-20px] top-[40px] overflow-hidden"
+              aria-hidden="true"
+            >
+              <div className="hero-cloud-scroll flex w-[200%]">
+                <img
+                  src={skyArt}
+                  alt=""
+                  className="hero-cloud-scroll-item block w-1/2 max-w-none shrink-0 translate-y-[8px]"
+                  style={{
+                    opacity: isDarkArtwork ? 0.82 : 0.96,
+                    filter: isDarkArtwork
+                      ? "brightness(1.08) contrast(1.02)"
+                      : "brightness(1.02)",
+                  }}
+                />
+                <img
+                  src={skyArt}
+                  alt=""
+                  className="hero-cloud-scroll-item block w-1/2 max-w-none shrink-0 -translate-y-[6px]"
+                  style={{
+                    opacity: isDarkArtwork ? 0.74 : 0.88,
+                    filter: isDarkArtwork
+                      ? "brightness(1.08) contrast(1.02)"
+                      : "brightness(1.02)",
+                  }}
+                />
+              </div>
+            </div>
             <div
               className="pointer-events-none absolute inset-x-0 bottom-[18px] h-[132px]"
               style={{
