@@ -9,7 +9,7 @@ import { formatSleepTimerClock, formatSleepTimerSummary, getSleepTimerElapsedMs,
 import * as db from "../lib/db";
 import { Card, CardContent, CardHeader } from "../components/ui/card";
 import { Button } from "../components/ui/button";
-import { PageIntro } from "../components/ui/page-intro";
+import { ScenicHero } from "../components/layout/ScenicHero";
 import { EmptyState, InsetPanel, PageBody, SectionHeading } from "../components/ui/page-layout";
 import {
   TrackerEntryRow,
@@ -103,7 +103,7 @@ function formatDurationRing(minutes: number): { value: string; unit: string } {
 }
 
 function getTodayKey(): string {
-  return new Date().toISOString().split("T")[0];
+  return formatLocalDateKey(new Date());
 }
 
 function toDayKey(dateStr: string): string {
@@ -656,7 +656,7 @@ export function Sleep() {
   const filledWeek = useMemo(() => fillDailyFrequencyDays(sleepByDay, DAYS_IN_WEEK, endDate), [endDate, sleepByDay]);
 
   const baseline = useMemo(
-    () => getWakeBaseline(activeChild?.date_of_birth ?? new Date().toISOString().split("T")[0]),
+    () => getWakeBaseline(activeChild?.date_of_birth ?? formatLocalDateKey(new Date())),
     [activeChild],
   );
   const prediction = useMemo(() => getSleepPrediction(logs, baseline), [baseline, logs]);
@@ -683,36 +683,19 @@ export function Sleep() {
   };
 
   return (
-    <PageBody className="space-y-4">
-      <PageIntro
-        eyebrow="Tracking"
+    <PageBody className="mt-0 space-y-0 px-0 py-0">
+      <ScenicHero
+        child={activeChild}
         title="Sleep"
         description="Wake windows, next likely rest, and the week in one place."
         action={<Button variant="cta" size="sm" onClick={() => setSheetOpen(true)}>Add</Button>}
-        className="pb-3"
+        className="overflow-hidden"
+        scene="sleep"
       />
 
-      {timerSession && (
-        <InsetPanel className="flex items-center justify-between gap-4">
-          <div>
-            <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--color-text-soft)]">
-              {timerSession.sleepType === "night" ? "Night timer running" : "Nap timer running"}
-            </p>
-            <p className="mt-2 text-2xl font-semibold tracking-[-0.03em] text-[var(--color-text)]">
-              {formatSleepTimerClock(getSleepTimerElapsedMs(timerSession, tick))}
-            </p>
-            <p className="mt-2 text-sm text-[var(--color-text-secondary)]">
-              Started {timeSince(timerSession.startedAt)} · {formatSleepTimerSummary(getSleepTimerElapsedMs(timerSession, tick))}
-            </p>
-          </div>
-          <Button variant="secondary" size="sm" onClick={() => setSheetOpen(true)}>
-            Open timer
-          </Button>
-        </InsetPanel>
-      )}
-
-      <Card>
-        <CardContent className="p-4">
+      <div className="space-y-4 px-4 py-5">
+      <Card className="-mt-32 relative z-10 border-transparent bg-transparent shadow-none backdrop-blur-0">
+        <CardContent className="p-4 pt-4">
           <div className="grid grid-cols-3 gap-3">
             <div className="flex flex-col items-center gap-2 text-center">
               <TimeSinceIndicator timestamp={lastNapDisplay.timestamp} status={statusTone} />
@@ -733,6 +716,25 @@ export function Sleep() {
           </div>
         </CardContent>
       </Card>
+
+      {timerSession && (
+        <InsetPanel className="flex items-center justify-between gap-4">
+          <div>
+            <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--color-text-soft)]">
+              {timerSession.sleepType === "night" ? "Night timer running" : "Nap timer running"}
+            </p>
+            <p className="mt-2 text-2xl font-semibold tracking-[-0.03em] text-[var(--color-text)]">
+              {formatSleepTimerClock(getSleepTimerElapsedMs(timerSession, tick))}
+            </p>
+            <p className="mt-2 text-sm text-[var(--color-text-secondary)]">
+              Started {timeSince(timerSession.startedAt)} · {formatSleepTimerSummary(getSleepTimerElapsedMs(timerSession, tick))}
+            </p>
+          </div>
+          <Button variant="secondary" size="sm" onClick={() => setSheetOpen(true)}>
+            Open timer
+          </Button>
+        </InsetPanel>
+      )}
 
       <Card>
         <CardContent className="p-3.5">
@@ -780,29 +782,29 @@ export function Sleep() {
                   </p>
                 </div>
                 {prediction && (
-                  <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-semibold text-[var(--color-text-secondary)]">
+                  <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-semibold text-[var(--color-chip-text-on-light)]">
                     {prediction.confidence}
                   </span>
                 )}
               </div>
               {prediction && (
                 <div className="mt-3 flex flex-wrap gap-2">
-                  <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-text-secondary)]">
+                  <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-chip-text-on-light)]">
                     Typical wake: {prediction.intervalLabel}
                   </span>
-                  <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-text-secondary)]">
+                  <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-chip-text-on-light)]">
                     {formatPredictionRelative(prediction)}
                   </span>
-                  <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-text-secondary)]">
+                  <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-chip-text-on-light)]">
                     Source: {prediction.source === "history" ? "recent rhythm" : "age baseline"}
                   </span>
-                  <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-text-secondary)]">
+                  <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-chip-text-on-light)]">
                     Window: {formatPredictionRange(prediction)}
                   </span>
                   {prediction.adjustments.slice(0, 2).map((adjustment) => (
                     <span
                       key={adjustment.label}
-                      className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-text-secondary)]"
+                      className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-chip-text-on-light)]"
                     >
                       {adjustment.direction === "earlier" ? "Earlier" : "Later"}: {adjustment.label}
                     </span>
@@ -936,6 +938,7 @@ export function Sleep() {
           onDeleted={() => { void handleLogged(); }}
         />
       )}
+      </div>
     </PageBody>
   );
 }

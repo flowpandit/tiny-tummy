@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import { useAvatar } from "../../hooks/useAvatar";
 import { cn } from "../../lib/cn";
 
@@ -7,6 +8,7 @@ interface AvatarProps {
   color: string;
   size?: "xs" | "sm" | "md" | "lg";
   className?: string;
+  style?: CSSProperties;
 }
 
 const SIZE_CLASSES = {
@@ -16,7 +18,7 @@ const SIZE_CLASSES = {
   lg: "w-12 h-12 text-lg",
 };
 
-export function Avatar({ childId, name, color, size = "sm", className }: AvatarProps) {
+export function Avatar({ childId, name, color, size = "sm", className, style }: AvatarProps) {
   const avatarUrl = useAvatar(childId);
 
   return (
@@ -26,7 +28,10 @@ export function Avatar({ childId, name, color, size = "sm", className }: AvatarP
         SIZE_CLASSES[size],
         className,
       )}
-      style={!avatarUrl ? { backgroundColor: color } : undefined}
+      style={{
+        ...(!avatarUrl ? { backgroundColor: color } : undefined),
+        ...style,
+      }}
     >
       {avatarUrl ? (
         <img src={avatarUrl} alt={name} className="w-full h-full object-cover" />

@@ -13,6 +13,7 @@ import { savePhoto } from "../../lib/photos";
 import { cn } from "../../lib/cn";
 import { useTheme } from "../../contexts/ThemeContext";
 import { FieldLabel, Textarea } from "../ui/field";
+import { combineLocalDateAndTimeToUtcIso, getCurrentLocalDate, getCurrentLocalTime } from "../../lib/utils";
 import {
   getLoggingLabelClassName,
   LoggingFieldGroup,
@@ -36,23 +37,10 @@ interface LogFormProps {
   initialDraft?: Partial<PoopLogDraft> | null;
 }
 
-function getCurrentDate(): string {
-  return new Date().toISOString().split("T")[0];
-}
-
-function getCurrentTime(): string {
-  const now = new Date();
-  return now.toTimeString().slice(0, 5); // "HH:MM"
-}
-
-function combineToISO(date: string, time: string): string {
-  return `${date}T${time}:00`;
-}
-
 export function LogForm({ open, onClose, childId, onLogged, initialDraft = null }: LogFormProps) {
   const { showError } = useToast();
-  const [logDate, setLogDate] = useState(getCurrentDate());
-  const [logTime, setLogTime] = useState(getCurrentTime());
+  const [logDate, setLogDate] = useState(getCurrentLocalDate());
+  const [logTime, setLogTime] = useState(getCurrentLocalTime());
   const [stoolType, setStoolType] = useState<number | null>(null);
   const [color, setColor] = useState<StoolColor | null>(null);
   const [size, setSize] = useState<StoolSize | null>(null);
@@ -67,8 +55,8 @@ export function LogForm({ open, onClose, childId, onLogged, initialDraft = null 
 
   const applyDraft = (draft?: Partial<PoopLogDraft> | null) => {
     const nextDraft = { ...EMPTY_DRAFT, ...draft };
-    setLogDate(getCurrentDate());
-    setLogTime(getCurrentTime());
+    setLogDate(getCurrentLocalDate());
+    setLogTime(getCurrentLocalTime());
     setStoolType(nextDraft.stool_type);
     setColor(nextDraft.color);
     setSize(nextDraft.size);
@@ -118,7 +106,7 @@ export function LogForm({ open, onClose, childId, onLogged, initialDraft = null 
 
       await db.createPoopLog({
         child_id: childId,
-        logged_at: combineToISO(logDate, logTime),
+        logged_at: combineLocalDateAndTimeToUtcIso(logDate, logTime),
         stool_type: stoolType,
         color,
         size,
@@ -164,7 +152,7 @@ export function LogForm({ open, onClose, childId, onLogged, initialDraft = null 
           <div className="flex flex-col gap-5">
             <LoggingFieldGroup label="When" isNight={nightMode}>
               <div className="grid grid-cols-2 gap-2">
-                <DatePicker value={logDate} onChange={setLogDate} max={getCurrentDate()} nightMode={nightMode} />
+                <DatePicker value={logDate} onChange={setLogDate} max={getCurrentLocalDate()} nightMode={nightMode} />
                 <TimePicker value={logTime} onChange={setLogTime} nightMode={nightMode} />
               </div>
             </LoggingFieldGroup>

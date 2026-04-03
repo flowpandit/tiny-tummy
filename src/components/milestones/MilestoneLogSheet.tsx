@@ -6,6 +6,7 @@ import { TimePicker } from "../ui/time-picker";
 import { useToast } from "../ui/toast";
 import { cn } from "../../lib/cn";
 import { MILESTONE_OPTIONS } from "../../lib/milestone-constants";
+import { combineLocalDateAndTimeToUtcIso, getCurrentLocalDate, getCurrentLocalTime } from "../../lib/utils";
 import * as db from "../../lib/db";
 import type { MilestoneType } from "../../lib/types";
 
@@ -16,31 +17,19 @@ interface MilestoneLogSheetProps {
   onLogged: () => Promise<void> | void;
 }
 
-function getCurrentDate(): string {
-  return new Date().toISOString().split("T")[0];
-}
-
-function getCurrentTime(): string {
-  return new Date().toTimeString().slice(0, 5);
-}
-
-function combineToISO(date: string, time: string): string {
-  return `${date}T${time}:00`;
-}
-
 export function MilestoneLogSheet({ open, onClose, childId, onLogged }: MilestoneLogSheetProps) {
   const { showError, showSuccess } = useToast();
   const [milestoneType, setMilestoneType] = useState<MilestoneType>("started_solids");
-  const [logDate, setLogDate] = useState(getCurrentDate());
-  const [logTime, setLogTime] = useState(getCurrentTime());
+  const [logDate, setLogDate] = useState(getCurrentLocalDate());
+  const [logTime, setLogTime] = useState(getCurrentLocalTime());
   const [notes, setNotes] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (!open) return;
     setMilestoneType("started_solids");
-    setLogDate(getCurrentDate());
-    setLogTime(getCurrentTime());
+    setLogDate(getCurrentLocalDate());
+    setLogTime(getCurrentLocalTime());
     setNotes("");
     setIsSubmitting(false);
   }, [open]);
@@ -54,7 +43,7 @@ export function MilestoneLogSheet({ open, onClose, childId, onLogged }: Mileston
       await db.createMilestoneLog({
         child_id: childId,
         milestone_type: milestoneType,
-        logged_at: combineToISO(logDate, logTime),
+        logged_at: combineLocalDateAndTimeToUtcIso(logDate, logTime),
         notes: notes.trim() || null,
       });
       await onLogged();
@@ -104,7 +93,7 @@ export function MilestoneLogSheet({ open, onClose, childId, onLogged }: Mileston
           <div>
             <label className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">When</label>
             <div className="grid grid-cols-2 gap-2">
-              <DatePicker value={logDate} onChange={setLogDate} max={getCurrentDate()} />
+              <DatePicker value={logDate} onChange={setLogDate} max={getCurrentLocalDate()} />
               <TimePicker value={logTime} onChange={setLogTime} />
             </div>
           </div>

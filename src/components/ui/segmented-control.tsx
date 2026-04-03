@@ -6,7 +6,7 @@ interface SegmentedControlOption<T extends string> {
 }
 
 interface SegmentedControlProps<T extends string> {
-  value: T;
+  value: T | null;
   onChange: (value: T) => void;
   options: Array<SegmentedControlOption<T>>;
   className?: string;

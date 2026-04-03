@@ -7,6 +7,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { formatLocalDateKey } from "../../lib/utils";
 import type { SleepEntry } from "../../lib/types";
 
 interface SleepDurationChartProps {
@@ -14,7 +15,7 @@ interface SleepDurationChartProps {
 }
 
 function toDayKey(dateStr: string): string {
-  return new Date(dateStr).toISOString().split("T")[0];
+  return formatLocalDateKey(new Date(dateStr));
 }
 
 function formatDateLabel(dateStr: string): string {
@@ -32,7 +33,7 @@ function buildLastSevenDays(logs: SleepEntry[]) {
   const days = Array.from({ length: 7 }, (_, index) => {
     const date = new Date();
     date.setDate(date.getDate() - (6 - index));
-    const key = date.toISOString().split("T")[0];
+    const key = formatLocalDateKey(date);
     const totalHours = logs
       .filter((log) => toDayKey(log.started_at) === key)
       .reduce((sum, log) => sum + getDurationHours(log), 0);

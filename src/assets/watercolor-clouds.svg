@@ -1,0 +1,21 @@
+<svg width="430" height="230" viewBox="0 0 430 230" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <filter id="cloudBlur" x="-80" y="-80" width="590" height="390" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="16"/>
+    </filter>
+    <radialGradient id="warmCloud" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(150 120) rotate(90) scale(112 184)">
+      <stop offset="0" stop-color="#FFF6F0" stop-opacity="0.94"/>
+      <stop offset="0.52" stop-color="#FCE8DA" stop-opacity="0.68"/>
+      <stop offset="1" stop-color="#F7D5C5" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="peachCloud" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(286 122) rotate(90) scale(98 158)">
+      <stop offset="0" stop-color="#FBE6D8" stop-opacity="0.76"/>
+      <stop offset="0.58" stop-color="#F4CCB9" stop-opacity="0.42"/>
+      <stop offset="1" stop-color="#F4CCB9" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <g filter="url(#cloudBlur)">
+    <path d="M31 155C46 116 87 86 131 90C150 63 182 49 214 53C247 57 277 79 292 107C308 101 326 102 342 110C372 126 387 163 380 195H58C31 194 16 173 31 155Z" fill="url(#warmCloud)"/>
+    <path d="M181 179C193 149 222 127 255 128C273 110 300 103 324 108C357 114 384 139 395 169C409 169 423 177 430 190H147C150 185 156 181 163 179H181Z" fill="url(#peachCloud)"/>
+  </g>
+</svg>

@@ -1,8 +1,9 @@
-import { useState, useEffect } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { useState, useEffect, useRef } from "react";
+import { motion } from "framer-motion";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useChildContext } from "../contexts/ChildContext";
 import { usePoopLogs } from "../hooks/usePoopLogs";
+import { useDiaperLogs } from "../hooks/useDiaperLogs";
 import { useFeedingLogs } from "../hooks/useFeedingLogs";
 import { useSleepLogs } from "../hooks/useSleepLogs";
 import { useAlerts } from "../hooks/useAlerts";
@@ -11,15 +12,14 @@ import { useStats } from "../hooks/useStats";
 import { useEpisodes } from "../hooks/useEpisodes";
 import { useSymptoms } from "../hooks/useSymptoms";
 import { useCaregiverNote } from "../hooks/useCaregiverNote";
-import { getChildStatus } from "../lib/tauri";
+import { useEliminationPreference } from "../hooks/useEliminationPreference";
 import { buildChildDailySummary } from "../lib/child-summary";
 import { getBreastfeedingSessionSettingKey, parseBreastfeedingSession } from "../lib/breastfeeding";
 import { timeSince } from "../lib/utils";
 import { syncSmartRemindersForChild, syncSmartRemindersForChildren } from "../lib/notifications";
 import { getSymptomSeverityBadgeVariant, getSymptomSeverityLabel, getSymptomTypeLabel } from "../lib/symptom-constants";
 import * as db from "../lib/db";
-import { ChildSwitcherCard } from "../components/home/ChildSwitcherCard";
-import { TimeSinceIndicator } from "../components/home/TimeSinceIndicator";
+import { HomeTopSection } from "../components/home/HomeTopSection";
 import { WeeklyPatternCard } from "../components/home/WeeklyPatternCard";
 import { EpisodeCard } from "../components/home/EpisodeCard";
 import { RecentActivity } from "../components/home/RecentActivity";
@@ -35,15 +35,23 @@ import { SleepLogSheet } from "../components/sleep/SleepLogSheet";
 import { Badge } from "../components/ui/badge";
 import { useToast } from "../components/ui/toast";
 import { DiscoveryLinks } from "../components/discovery/DiscoveryLinks";
-import type { FeedingEntry, FeedingLogDraft, HealthStatus, PoopEntry, PoopLogDraft } from "../lib/types";
+import { DiaperLogForm } from "../components/logging/DiaperLogForm";
+import { EditDiaperSheet } from "../components/logging/EditDiaperSheet";
+import { CompactChildNav } from "../components/layout/CompactChildNav";
+import type { DiaperEntry, DiaperLogDraft, FeedingEntry, FeedingLogDraft, PoopEntry, PoopLogDraft } from "../lib/types";
 
 export function Home() {
   const navigate = useNavigate();
   const location = useLocation();
   const navigateWithOrigin = (path: string) => navigate(path, { state: { origin: location.pathname } });
   const { activeChild, children, setActiveChildId } = useChildContext();
+  const { experience } = useEliminationPreference(activeChild);
   const { showError, showSuccess } = useToast();
   const { logs, lastRealPoop, refresh: refreshLogs } = usePoopLogs(activeChild?.id ?? null);
+  const {
+    logs: diaperLogs,
+    refresh: refreshDiaperLogs,
+  } = useDiaperLogs(activeChild?.id ?? null);
   const { logs: feedingLogs, refresh: refreshFeedingLogs } = useFeedingLogs(activeChild?.id ?? null);
   const { logs: sleepLogs, refresh: refreshSleepLogs } = useSleepLogs(activeChild?.id ?? null);
   const { activeEpisode, events: episodeEvents, recentEpisodes, refresh: refreshEpisodes } = useEpisodes(activeChild?.id ?? null);
@@ -53,6 +61,8 @@ export function Home() {
   const { runChecks } = useAlertEngine();
   const [logFormOpen, setLogFormOpen] = useState(false);
   const [poopDraft, setPoopDraft] = useState<Partial<PoopLogDraft> | null>(null);
+  const [diaperFormOpen, setDiaperFormOpen] = useState(false);
+  const [diaperDraft, setDiaperDraft] = useState<Partial<DiaperLogDraft> | null>(null);
   const [feedingFormOpen, setFeedingFormOpen] = useState(false);
   const [feedingDraft, setFeedingDraft] = useState<Partial<FeedingLogDraft> | null>(null);
   const [sleepSheetOpen, setSleepSheetOpen] = useState(false);
@@ -60,10 +70,13 @@ export function Home() {
   const [episodeSheetMode, setEpisodeSheetMode] = useState<"default" | "start" | "update">("default");
   const [symptomSheetOpen, setSymptomSheetOpen] = useState(false);
   const [editingPoop, setEditingPoop] = useState<PoopEntry | null>(null);
+  const [editingDiaper, setEditingDiaper] = useState<DiaperEntry | null>(null);
   const [editingMeal, setEditingMeal] = useState<FeedingEntry | null>(null);
-  const [status, setStatus] = useState<HealthStatus>("healthy");
-  const [childSwitcherExpanded, setChildSwitcherExpanded] = useState(false);
   const [activeBreastfeedingSide, setActiveBreastfeedingSide] = useState<"left" | "right" | null>(null);
+  const [showStickyChildBar, setShowStickyChildBar] = useState(false);
+  const avatarAnchorRef = useRef<HTMLDivElement | null>(null);
+  const hasDiaperLogs = diaperLogs.length > 0;
+  const hasLogs = experience.mode === "diaper" ? hasDiaperLogs : logs.length > 0;
   const {
     note: handoffNote,
     setNote: setHandoffNote,
@@ -72,29 +85,6 @@ export function Home() {
     save: saveHandoffNote,
     reset: resetHandoffNote,
   } = useCaregiverNote(activeChild?.id ?? null);
-
-  useEffect(() => {
-    if (!activeChild) {
-      setStatus("healthy");
-      return;
-    }
-
-    let cancelled = false;
-
-    getChildStatus(
-      activeChild.date_of_birth,
-      activeChild.feeding_type,
-      lastRealPoop?.logged_at ?? null,
-    ).then(([s]) => {
-      if (!cancelled) {
-        setStatus(s);
-      }
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [activeChild, lastRealPoop]);
 
   useEffect(() => {
     if (children.length === 0) return;
@@ -140,6 +130,34 @@ export function Home() {
       document.removeEventListener("visibilitychange", handleVisibility);
     };
   }, [activeChild]);
+
+  useEffect(() => {
+    if (!hasLogs) {
+      setShowStickyChildBar(false);
+      return;
+    }
+
+    const avatarAnchor = avatarAnchorRef.current;
+    if (!avatarAnchor) return;
+
+    const scrollRoot = avatarAnchor.closest("main");
+    if (!(scrollRoot instanceof HTMLElement)) return;
+
+    const updateStickyBar = () => {
+      const rootTop = scrollRoot.getBoundingClientRect().top;
+      const anchorTop = avatarAnchor.getBoundingClientRect().top;
+      setShowStickyChildBar(anchorTop <= rootTop + 12);
+    };
+
+    updateStickyBar();
+    scrollRoot.addEventListener("scroll", updateStickyBar, { passive: true });
+    window.addEventListener("resize", updateStickyBar);
+
+    return () => {
+      scrollRoot.removeEventListener("scroll", updateStickyBar);
+      window.removeEventListener("resize", updateStickyBar);
+    };
+  }, [activeChild, hasLogs]);
 
   useEffect(() => {
     if (!activeChild) return;
@@ -192,6 +210,7 @@ export function Home() {
 
   const handleLogged = async () => {
     await refreshLogs();
+    await refreshDiaperLogs();
     await runChecks(activeChild);
     await refreshAlerts();
     await syncSmartRemindersForChild(activeChild);
@@ -200,6 +219,11 @@ export function Home() {
   const openPoopForm = (draft?: Partial<PoopLogDraft> | null) => {
     setPoopDraft(draft ?? null);
     setLogFormOpen(true);
+  };
+
+  const openDiaperForm = (draft?: Partial<DiaperLogDraft> | null) => {
+    setDiaperDraft(draft ?? null);
+    setDiaperFormOpen(true);
   };
 
   const openEpisodeSheet = (mode: "default" | "start" | "update" = "default") => {
@@ -239,11 +263,9 @@ export function Home() {
   const handleSleepLogged = async () => {
     await refreshSleepLogs();
   };
-
-  const hasLogs = logs.length > 0;
-  const lastPoopLabel = lastRealPoop?.logged_at ? timeSince(lastRealPoop.logged_at) : null;
   const summary = buildChildDailySummary({
     poopLogs: logs,
+    diaperLogs,
     feedingLogs,
     alerts,
     activeEpisode,
@@ -251,148 +273,120 @@ export function Home() {
     symptomLogs,
   });
   const lastFeed = summary.lastFeed;
-  const lastNap = sleepLogs.find((entry) => entry.sleep_type === "nap") ?? null;
   const latestSymptom = summary.latestSymptom;
   const showBreastfeedAction = activeChild.feeding_type === "breast" || activeChild.feeding_type === "mixed";
   const episodeActionLabel = activeEpisode ? "Add episode update" : "Start episode";
   const episodeActionDescription = activeEpisode
     ? "Jump straight into the active episode update form."
     : "Track constipation, diarrhoea, or solids transition.";
+  const sleepSummaryHours = sleepLogs
+    .filter((entry) => {
+      const started = new Date(entry.started_at);
+      return Date.now() - started.getTime() < 24 * 60 * 60 * 1000;
+    })
+    .reduce((sum, entry) => {
+      const end = entry.ended_at ? new Date(entry.ended_at).getTime() : Date.now();
+      const start = new Date(entry.started_at).getTime();
+      return sum + Math.max(0, end - start);
+    }, 0);
+  const sleepSummaryLabel = sleepSummaryHours > 0
+    ? `${Math.floor(sleepSummaryHours / (1000 * 60 * 60))}h ${Math.round((sleepSummaryHours % (1000 * 60 * 60)) / (1000 * 60))}m`
+    : "0h";
+  const sleepSummaryHoursValue = sleepSummaryHours / (1000 * 60 * 60);
+  const sleepNapCount = sleepLogs.filter((entry) => entry.sleep_type === "nap").length;
+  const otherChildren = children.filter((child) => child.id !== activeChild.id);
 
   return (
     <div className="flex flex-col gap-4 pb-3 pt-0.5">
       {/* Alerts */}
       <AlertBanner alerts={alerts} onDismiss={dismiss} />
+      {hasLogs && (
+        <div
+          className={`pointer-events-none fixed inset-x-0 z-30 transition-all duration-200 ${showStickyChildBar ? "translate-y-0 opacity-100" : "-translate-y-4 opacity-0"}`}
+          style={{
+            top: 0,
+            height: "calc(var(--safe-area-top) + 74px)",
+            background: "var(--gradient-home-sticky-overlay)",
+            backdropFilter: "blur(24px) saturate(1.02)",
+            WebkitBackdropFilter: "blur(24px) saturate(1.02)",
+          }}
+        >
+          <div
+            className="mx-auto flex max-w-[600px] items-center justify-between gap-3 bg-transparent px-4 py-3"
+            style={{ marginTop: "calc(var(--safe-area-top) + 16px)" }}
+          >
+            <CompactChildNav
+              activeChild={activeChild}
+              otherChildren={otherChildren}
+              onSelectChild={setActiveChildId}
+              className="flex w-full items-center justify-between gap-3"
+            />
+          </div>
+        </div>
+      )}
 
       {hasLogs ? (
-        <>
-          <div className="px-3">
-            <div className="relative h-[84px]">
-              <ChildSwitcherCard
-                activeChild={activeChild}
-                children={children}
-                expanded={childSwitcherExpanded}
-                lastPoopLabel={lastPoopLabel}
-                onToggle={() => setChildSwitcherExpanded((open) => !open)}
-                onSelectChild={(childId) => {
-                  setActiveChildId(childId);
-                  setChildSwitcherExpanded(false);
-                }}
-              />
-
-              <AnimatePresence>
-                {!childSwitcherExpanded && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -6 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -6 }}
-                    className="absolute right-0 top-1/2 -translate-y-1/2"
-                  >
-                    <div className="h-11 min-w-[182px] max-w-full rounded-full bg-[var(--color-healthy-bg)] px-4 text-center text-[13px] font-semibold text-[var(--color-healthy)] shadow-[var(--shadow-soft)] whitespace-nowrap flex items-center justify-center">
-                      {status === "healthy" ? "All looks normal" : status === "caution" ? "Keep an eye on it" : "Pay attention"}
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-          </div>
-
-          <div className="px-4">
-            <div className="rounded-[18px] border border-[var(--color-border)] bg-[var(--color-surface-strong)] p-5 shadow-[var(--shadow-soft)]">
-              <p className="text-[11px] uppercase tracking-[0.18em] text-[var(--color-text-soft)]">
-                Overview
-              </p>
-              <p className="mt-2 text-[22px] font-semibold tracking-[-0.03em] text-[var(--color-text)]">
-                {activeChild.name}'s quick summary
-              </p>
-              <div className="mt-5 grid grid-cols-3 gap-3">
-                <button
-                  type="button"
-                  onClick={() => navigate("/poop")}
-                  className="flex flex-col items-center gap-3 rounded-[16px] py-1 text-center transition-colors hover:bg-white/35"
-                  aria-label="Open poop page"
-                >
-                  <TimeSinceIndicator
-                    timestamp={lastRealPoop?.logged_at ?? null}
-                    status={status === "alert" ? "unknown" : "healthy"}
-                  />
-                  <p className="text-[12px] font-medium uppercase tracking-[0.12em] text-[var(--color-text-soft)]">Last poop</p>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => navigateWithOrigin("/feed")}
-                  className="flex flex-col items-center gap-3 rounded-[16px] py-1 text-center transition-colors hover:bg-white/35"
-                  aria-label="Open feed page"
-                >
-                  <TimeSinceIndicator
-                    timestamp={lastFeed?.logged_at ?? null}
-                    gradient="conic-gradient(from 210deg, var(--color-cta) 0deg, var(--color-gold) 160deg, var(--color-apricot) 360deg)"
-                  />
-                  <p className="text-[12px] font-medium uppercase tracking-[0.12em] text-[var(--color-text-soft)]">Last feed</p>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => navigate("/sleep")}
-                  className="flex flex-col items-center gap-3 rounded-[16px] py-1 text-center transition-colors hover:bg-white/35"
-                  aria-label="Open sleep page"
-                >
-                  <TimeSinceIndicator
-                    timestamp={lastNap?.ended_at ?? lastNap?.started_at ?? null}
-                    gradient="conic-gradient(from 210deg, var(--color-info) 0deg, #8aa7ea 180deg, #c1d4ff 360deg)"
-                  />
-                  <p className="text-[12px] font-medium uppercase tracking-[0.12em] text-[var(--color-text-soft)]">Last nap</p>
-                </button>
-              </div>
-            </div>
-          </div>
-        </>
+        <HomeTopSection
+          activeChild={activeChild}
+          summary={summary}
+          sleepSummaryLabel={sleepSummaryLabel}
+          sleepSummaryHoursValue={sleepSummaryHoursValue}
+          sleepNapCount={sleepNapCount}
+          onContinueToDashboard={() => navigate("/dashboard")}
+          avatarAnchorRef={avatarAnchorRef}
+        />
       ) : (
         <NoLogsYet
           childName={activeChild.name}
-          onLogFirst={() => openPoopForm()}
+          onLogFirst={() => experience.mode === "diaper" ? openDiaperForm({ diaper_type: "wet", urine_color: "normal" }) : openPoopForm()}
         />
       )}
 
-      <div className="px-4">
-        <div className="rounded-[20px] border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-[var(--shadow-soft)]">
+      <div className="px-4 pt-2">
+        <div className="rounded-[28px] border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-[var(--shadow-card)]">
           <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--color-text-soft)]">Quick actions</p>
-          <p className="mt-2 text-[16px] font-semibold text-[var(--color-text)]">Log the next thing fast</p>
-          <p className="mt-1 text-[13px] leading-relaxed text-[var(--color-text-secondary)]">
-            Keep the most common actions above the fold so the app feels faster in real use.
+          <p className="mt-2 font-[var(--font-display)] text-[2rem] font-semibold leading-[0.98] tracking-[-0.035em] text-[var(--color-text)]">Log the next thing gently</p>
+          <p className="mt-2 text-[13px] leading-relaxed text-[var(--color-text-secondary)]">
+            Keep the next likely care actions close without turning the home screen into a utility grid.
           </p>
 
           <div className="mt-4 grid grid-cols-2 gap-3">
             <motion.button
               whileTap={{ scale: 0.98 }}
-              onClick={() => openPoopForm()}
-              className="min-h-[104px] rounded-[18px] bg-[var(--color-cta)] px-4 py-4 text-left text-white shadow-[var(--shadow-medium)] transition-colors hover:bg-[var(--color-cta-hover)]"
+              onClick={() => experience.mode === "diaper" ? openDiaperForm({ diaper_type: "wet", urine_color: "normal" }) : openPoopForm()}
+              className="min-h-[114px] rounded-[24px] px-4 py-4 text-left text-white shadow-[var(--shadow-medium)] transition-colors hover:brightness-[1.02]"
+              style={{ background: "var(--gradient-home-action-primary)" }}
             >
-              <p className="text-[15px] font-semibold">Log poop</p>
+              <p className="text-[15px] font-semibold">{experience.mode === "diaper" ? "Log diaper" : "Log poop"}</p>
               <p className="mt-2 text-[12px] leading-relaxed text-white/80">
-                Open the full poop logger with presets and notes.
+                {experience.mode === "diaper"
+                  ? "Start with wet, dirty, or mixed in the young-baby workflow."
+                  : "Open the full poop logger with presets and notes."}
               </p>
             </motion.button>
             <motion.button
               whileTap={{ scale: 0.98 }}
               onClick={() => openFeedingForm()}
-              className="min-h-[104px] rounded-[18px] border border-[var(--color-border)] bg-[var(--color-surface-strong)] px-4 py-4 text-left shadow-[var(--shadow-soft)] transition-colors hover:bg-white/70"
+              className="min-h-[114px] rounded-[24px] border border-[var(--color-border)] px-4 py-4 text-left shadow-[var(--shadow-soft)] transition-colors hover:bg-[var(--color-home-hover-surface)]"
+              style={{ background: "var(--gradient-home-action-feed)" }}
             >
               <p className="text-[15px] font-semibold text-[var(--color-text)]">Log feed</p>
               <p className="mt-2 text-[12px] leading-relaxed text-[var(--color-text-secondary)]">
                 Start a feed or meal log with quick presets.
               </p>
             </motion.button>
-              <motion.button
-                whileTap={{ scale: 0.98 }}
-                onClick={() => {
-                  if (showBreastfeedAction) {
-                    navigateWithOrigin("/breastfeed");
-                    return;
-                  }
-                  navigateWithOrigin("/feed");
-                }}
+            <motion.button
+              whileTap={{ scale: 0.98 }}
+              onClick={() => {
+                if (showBreastfeedAction) {
+                  navigateWithOrigin("/breastfeed");
+                  return;
+                }
+                navigateWithOrigin("/feed");
+              }}
               disabled={!showBreastfeedAction && !lastFeed}
-              className="min-h-[104px] rounded-[18px] border border-[var(--color-border)] bg-[var(--color-surface-strong)] px-4 py-4 text-left shadow-[var(--shadow-soft)] transition-colors hover:bg-white/70 disabled:cursor-not-allowed disabled:opacity-50"
+              className="min-h-[114px] rounded-[24px] border border-[var(--color-border)] px-4 py-4 text-left shadow-[var(--shadow-soft)] transition-colors hover:bg-[var(--color-home-hover-surface)] disabled:cursor-not-allowed disabled:opacity-50"
+              style={{ background: "var(--gradient-home-action-breastfeed)" }}
             >
               <div className="flex items-center gap-2">
                 <p className="text-[15px] font-semibold text-[var(--color-text)]">
@@ -420,7 +414,8 @@ export function Home() {
             <motion.button
               whileTap={{ scale: 0.98 }}
               onClick={() => setSleepSheetOpen(true)}
-              className="min-h-[104px] rounded-[18px] border border-[var(--color-border)] bg-[var(--color-surface-strong)] px-4 py-4 text-left shadow-[var(--shadow-soft)] transition-colors hover:bg-white/70"
+              className="min-h-[114px] rounded-[24px] border border-[var(--color-border)] px-4 py-4 text-left shadow-[var(--shadow-soft)] transition-colors hover:bg-[var(--color-home-hover-surface)]"
+              style={{ background: "var(--gradient-home-action-sleep)" }}
             >
               <p className="text-[15px] font-semibold text-[var(--color-text)]">Log sleep</p>
               <p className="mt-2 text-[12px] leading-relaxed text-[var(--color-text-secondary)]">
@@ -433,7 +428,7 @@ export function Home() {
             <button
               type="button"
               onClick={() => openEpisodeSheet(activeEpisode ? "update" : "start")}
-              className="rounded-[16px] border border-[var(--color-border)] bg-[var(--color-surface-strong)] px-4 py-3 text-left transition-colors hover:bg-white/70"
+              className="rounded-[20px] border border-[var(--color-border)] bg-[var(--color-surface-strong)] px-4 py-3 text-left transition-colors hover:bg-[var(--color-home-hover-surface)]"
             >
               <p className="text-[14px] font-semibold text-[var(--color-text)]">{episodeActionLabel}</p>
               <p className="mt-1 text-[12px] leading-relaxed text-[var(--color-text-secondary)]">
@@ -443,7 +438,7 @@ export function Home() {
             <button
               type="button"
               onClick={() => setSymptomSheetOpen(true)}
-              className="rounded-[16px] border border-[var(--color-border)] bg-[var(--color-surface-strong)] px-4 py-3 text-left transition-colors hover:bg-white/70"
+              className="rounded-[20px] border border-[var(--color-border)] bg-[var(--color-surface-strong)] px-4 py-3 text-left transition-colors hover:bg-[var(--color-home-hover-surface)]"
             >
               <p className="text-[14px] font-semibold text-[var(--color-text)]">Log symptom</p>
               <p className="mt-1 text-[12px] leading-relaxed text-[var(--color-text-secondary)]">
@@ -464,7 +459,7 @@ export function Home() {
             <button
               type="button"
               onClick={() => navigate("/handoff")}
-              className="rounded-full border border-[var(--color-border)] bg-[var(--color-surface-strong)] px-3 py-2 text-[12px] font-semibold text-[var(--color-text-secondary)] transition-colors hover:bg-white/70"
+              className="rounded-full border border-[var(--color-border)] bg-[var(--color-surface-strong)] px-3 py-2 text-[12px] font-semibold text-[var(--color-text-secondary)] transition-colors hover:bg-[var(--color-home-hover-surface)]"
             >
               Open Handoff
             </button>
@@ -491,7 +486,7 @@ export function Home() {
               type="button"
               onClick={resetHandoffNote}
               disabled={!handoffNoteChanged}
-              className="flex-1 rounded-full border border-[var(--color-border)] bg-[var(--color-surface-strong)] px-4 py-3 text-[14px] font-semibold text-[var(--color-text-secondary)] transition-colors hover:bg-white/70 disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex-1 rounded-full border border-[var(--color-border)] bg-[var(--color-surface-strong)] px-4 py-3 text-[14px] font-semibold text-[var(--color-text-secondary)] transition-colors hover:bg-[var(--color-home-hover-surface)] disabled:cursor-not-allowed disabled:opacity-50"
             >
               Reset
             </button>
@@ -567,9 +562,11 @@ export function Home() {
       {/* Recent activity */}
       {(logs.length > 0 || feedingLogs.length > 0) && (
         <RecentActivity
-          poopLogs={logs}
+          poopLogs={experience.mode === "diaper" ? [] : logs}
+          diaperLogs={experience.mode === "diaper" ? diaperLogs : []}
           feedingLogs={feedingLogs}
           onEditPoop={setEditingPoop}
+          onEditDiaper={setEditingDiaper}
           onEditMeal={setEditingMeal}
         />
       )}
@@ -616,6 +613,17 @@ export function Home() {
         childId={activeChild.id}
         onLogged={handleLogged}
         initialDraft={poopDraft}
+      />
+
+      <DiaperLogForm
+        open={diaperFormOpen}
+        onClose={() => {
+          setDiaperFormOpen(false);
+          setDiaperDraft(null);
+        }}
+        childId={activeChild.id}
+        onLogged={handleLogged}
+        initialDraft={diaperDraft}
       />
 
       {/* Diet log form sheet */}
@@ -667,6 +675,16 @@ export function Home() {
           onClose={() => setEditingPoop(null)}
           onSaved={() => { refreshLogs(); refreshFeedingLogs(); }}
           onDeleted={() => { refreshLogs(); refreshFeedingLogs(); }}
+        />
+      )}
+      {editingDiaper && (
+        <EditDiaperSheet
+          key={editingDiaper.id}
+          entry={editingDiaper}
+          open={!!editingDiaper}
+          onClose={() => setEditingDiaper(null)}
+          onSaved={() => { setEditingDiaper(null); void handleLogged(); }}
+          onDeleted={() => { setEditingDiaper(null); void handleLogged(); }}
         />
       )}
       {editingMeal && (

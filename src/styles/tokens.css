@@ -18,53 +18,87 @@
 
 :root {
   /* Brand */
-  --color-primary: #2b3956;
-  --color-primary-hover: #1f2a40;
+  --color-primary: #5f4a3c;
+  --color-primary-hover: #49372d;
   --color-on-primary: #ffffff;
-  --color-cta: #ff8b69;
-  --color-cta-hover: #f5704c;
+  --color-cta: #ef9d7b;
+  --color-cta-hover: #e58c67;
 
   /* Backgrounds & surfaces */
-  --color-bg: #fff8f1;
-  --color-bg-elevated: #fff3e8;
-  --color-surface: rgba(255, 255, 255, 0.74);
-  --color-surface-strong: #fffdf9;
-  --color-surface-tint: #fff7f0;
-  --color-muted: #8f9ab2;
-  --color-border: rgba(112, 88, 69, 0.12);
+  --color-bg: #fbf5ea;
+  --color-bg-elevated: #fffaf2;
+  --color-surface: rgba(255, 251, 244, 0.76);
+  --color-surface-strong: rgba(255, 252, 247, 0.96);
+  --color-surface-tint: #fff1e5;
+  --color-muted: #9a8e84;
+  --color-border: rgba(120, 92, 69, 0.12);
+  --color-border-strong: rgba(120, 92, 69, 0.18);
 
   /* Text */
-  --color-text: #2b3956;
-  --color-text-secondary: #647392;
-  --color-text-soft: #7b88a0;
+  --color-text: #46372d;
+  --color-text-secondary: #766457;
+  --color-text-soft: #9b8a7f;
+  --color-chip-text-on-light: #46372d;
 
   /* Health states */
-  --color-healthy: #2f7f62;
-  --color-healthy-bg: #d7f2df;
-  --color-caution: #b67b28;
-  --color-caution-bg: #fff1cf;
-  --color-alert: #d95f52;
-  --color-alert-bg: #ffe5df;
-  --color-info: #5675c8;
-  --color-info-bg: #eef3ff;
+  --color-healthy: #6d9d7f;
+  --color-healthy-bg: #e5f2e7;
+  --color-caution: #bb8d4a;
+  --color-caution-bg: #fff0d6;
+  --color-alert: #cb7f74;
+  --color-alert-bg: #ffe7e2;
+  --color-info: #8ca8d8;
+  --color-info-bg: #edf2fb;
 
   /* Decorative accents */
-  --color-peach: #ffcfba;
-  --color-apricot: #ffb48e;
-  --color-gold: #e7cb6d;
-  --color-mint: #9adbc1;
-  --color-berry: #9c5a8f;
+  --color-peach: #f5c3a7;
+  --color-apricot: #efb184;
+  --color-gold: #e9c87d;
+  --color-mint: #bcdcb9;
+  --color-berry: #b88ea8;
+  --color-dawn: #f9ddbf;
+  --color-sky-wash: #dce8f7;
 
   /* Data viz */
-  --color-chart-warm-start: #ffb48e;
-  --color-chart-warm-end: #ff8d69;
-  --color-chart-spectrum-mid: #f2c462;
-  --color-chart-spectrum-end: #94d6bb;
-  --color-chart-dot: #ff8d69;
-  --gradient-status-healthy: conic-gradient(from 210deg, #ff9c7c 0deg, #efc45c 120deg, #94d6bb 280deg, #ff9c7c 360deg);
-  --gradient-status-caution: conic-gradient(from 210deg, #ff9c7c 0deg, #efc45c 170deg, #efc45c 360deg);
-  --gradient-status-alert: conic-gradient(from 210deg, #ff9c7c 0deg, #ef8c7a 200deg, #d95f52 360deg);
-  --gradient-status-unknown: conic-gradient(from 210deg, #cfd7e5 0deg, #9aabc4 360deg);
+  --color-chart-warm-start: #f2b28f;
+  --color-chart-warm-end: #e99672;
+  --color-chart-spectrum-mid: #e8c989;
+  --color-chart-spectrum-end: #accfb4;
+  --color-chart-dot: #e99672;
+  --gradient-status-healthy: conic-gradient(from 210deg, #e5b08b 0deg, #e4ca8a 120deg, #b8d5bc 280deg, #e5b08b 360deg);
+  --gradient-status-caution: conic-gradient(from 210deg, #e7ab86 0deg, #e2c286 170deg, #e2c286 360deg);
+  --gradient-status-head: conic-gradient(from 210deg, #b4c6eb 0deg, #b6d7d3 180deg, #92a7d9 360deg);
+  --gradient-status-alert: conic-gradient(from 210deg, #e6a486 0deg, #d9958b 200deg, #cb7f74 360deg);
+  --gradient-status-unknown: conic-gradient(from 210deg, #dcd4cc 0deg, #b7a99c 360deg);
+  --gradient-dawn: radial-gradient(circle at top, rgba(255, 245, 220, 0.9) 0%, rgba(245, 195, 167, 0.48) 36%, rgba(239, 177, 132, 0.22) 62%, rgba(251, 245, 234, 0) 100%);
+  --gradient-sunrise: linear-gradient(180deg, #f7c7ab 0%, #f6d7b9 38%, #fbf5ea 82%);
+  --color-hero-title: #e79a88;
+  --gradient-hero-glow: radial-gradient(circle at 76% 18%, rgba(255, 214, 119, 0.58) 0%, rgba(255, 214, 119, 0.2) 20%, rgba(255, 255, 255, 0) 50%);
+  --gradient-hero-wash: linear-gradient(180deg, rgba(248, 204, 170, 0.14) 0%, rgba(255, 255, 255, 0) 44%);
+  --gradient-hero-ridge: linear-gradient(180deg, rgba(255, 255, 255, 0) 0%, rgba(245, 221, 208, 0.08) 40%, rgba(238, 183, 155, 0.2) 100%);
+  --gradient-hero-floor: linear-gradient(180deg, rgba(251, 245, 234, 0) 0%, rgba(251, 245, 234, 0.56) 68%, rgba(251, 245, 234, 0.92) 100%);
+  --color-hero-cloud: rgba(255, 255, 255, 0.46);
+  --color-hero-cloud-strong: rgba(255, 255, 255, 0.54);
+  --color-hero-cloud-soft: rgba(255, 255, 255, 0.36);
+  --color-hero-avatar-border: rgba(255, 255, 255, 0.7);
+  --color-home-mood-warm: rgba(255, 237, 222, 0.9);
+  --color-home-mood-calm: rgba(255, 252, 247, 0.95);
+  --color-home-ring-surface: radial-gradient(circle, rgba(255, 255, 255, 0.96) 0%, rgba(255, 252, 247, 0.98) 62%, rgba(255, 248, 241, 0.84) 100%);
+  --color-home-ring-outline: rgba(255, 239, 230, 0.88);
+  --color-home-ring-track: rgba(243, 211, 195, 0.72);
+  --color-home-ring-progress: rgba(239, 157, 123, 0.98);
+  --color-home-ring-progress-shadow: rgba(239, 157, 123, 0.24);
+  --gradient-home-sticky-overlay: linear-gradient(180deg, rgba(255, 250, 243, 0.95) 0%, rgba(255, 250, 243, 0.55) 74%, transparent 100%);
+  --gradient-shell-top-overlay: linear-gradient(180deg, rgba(255, 250, 243, 0.95) 0%, rgba(255, 250, 243, 0.55) 74%, transparent 100%);
+  --gradient-home-action-primary: linear-gradient(180deg, #efac88 0%, #eb9772 100%);
+  --gradient-home-action-feed: linear-gradient(180deg, rgba(192, 222, 195, 0.92) 0%, rgba(235, 245, 233, 0.92) 100%);
+  --gradient-home-action-breastfeed: linear-gradient(180deg, rgba(220, 231, 248, 0.92) 0%, rgba(246, 249, 254, 0.92) 100%);
+  --gradient-home-action-sleep: linear-gradient(180deg, rgba(236, 223, 243, 0.92) 0%, rgba(250, 244, 252, 0.92) 100%);
+  --color-home-hover-surface: rgba(255, 255, 255, 0.4);
+  --color-nav-surface: rgba(255, 251, 244, 0.92);
+  --gradient-nav-active: linear-gradient(180deg, rgba(255, 241, 229, 0.92) 0%, rgba(255, 248, 239, 0.92) 100%);
+  --color-nav-inactive: var(--color-muted);
+  --color-nav-inactive-hover: var(--color-text-secondary);
 
   /* Spacing */
   --space-xs: 4px;
@@ -75,16 +109,17 @@
   --space-2xl: 48px;
 
   /* Radii */
-  --radius-sm: 10px;
-  --radius-md: 18px;
-  --radius-lg: 14px;
+  --radius-sm: 12px;
+  --radius-md: 22px;
+  --radius-lg: 28px;
   --radius-full: 9999px;
 
   /* Shadows */
-  --shadow-soft: 0 12px 28px rgba(214, 175, 138, 0.16);
-  --shadow-medium: 0 20px 44px rgba(122, 88, 56, 0.14);
-  --shadow-lg: 0 28px 60px rgba(122, 88, 56, 0.18);
-  --shadow-inner: inset 0 1px 0 rgba(255, 255, 255, 0.75);
+  --shadow-soft: 0 14px 32px rgba(183, 143, 109, 0.15);
+  --shadow-medium: 0 22px 48px rgba(168, 127, 96, 0.18);
+  --shadow-lg: 0 32px 72px rgba(140, 106, 81, 0.22);
+  --shadow-inner: inset 0 1px 0 rgba(255, 255, 255, 0.78);
+  --shadow-card: 0 18px 46px rgba(180, 146, 117, 0.16);
 
   /* Touch */
   --touch-target: 44px;
@@ -116,6 +151,7 @@
     --color-text: #f6f0ea;
     --color-text-secondary: #c1cadd;
     --color-text-soft: #95a4bf;
+    --color-chip-text-on-light: #1b2432;
     --color-border: rgba(182, 196, 221, 0.12);
     --color-muted: #7b89a2;
 
@@ -133,10 +169,47 @@
     --color-chart-spectrum-mid: #d9b164;
     --color-chart-spectrum-end: #88c9ac;
     --color-chart-dot: #ff9c7c;
+    --color-peach: #4f5f83;
+    --color-apricot: #344766;
+    --color-gold: #8d9cca;
+    --color-mint: #3c5d56;
+    --color-berry: #5a5878;
+    --color-dawn: #31415f;
+    --color-sky-wash: #2a3952;
     --gradient-status-healthy: conic-gradient(from 210deg, #ff9d7d 0deg, #e0b962 120deg, #88c9ac 280deg, #ff9d7d 360deg);
     --gradient-status-caution: conic-gradient(from 210deg, #ff9d7d 0deg, #d7b060 170deg, #d7b060 360deg);
+    --gradient-status-head: conic-gradient(from 210deg, #8fb4ff 0deg, #78c7c0 180deg, #8a96ef 360deg);
     --gradient-status-alert: conic-gradient(from 210deg, #ff9d7d 0deg, #e8927f 200deg, #f2a193 360deg);
     --gradient-status-unknown: conic-gradient(from 210deg, #5f6f89 0deg, #8396b5 360deg);
+    --gradient-dawn: radial-gradient(circle at top, rgba(116, 138, 189, 0.36) 0%, rgba(74, 95, 141, 0.2) 34%, rgba(33, 45, 66, 0.1) 60%, rgba(20, 28, 40, 0) 100%);
+    --gradient-sunrise: linear-gradient(180deg, #223149 0%, #1b2432 46%, #141c28 100%);
+    --color-hero-title: #f3ab97;
+    --gradient-hero-glow: radial-gradient(circle at 76% 18%, rgba(255, 168, 107, 0.34) 0%, rgba(255, 168, 107, 0.14) 24%, rgba(20, 28, 40, 0) 56%);
+    --gradient-hero-wash: linear-gradient(180deg, rgba(255, 154, 119, 0.14) 0%, rgba(20, 28, 40, 0) 44%);
+    --gradient-hero-ridge: linear-gradient(180deg, rgba(20, 28, 40, 0) 0%, rgba(56, 74, 104, 0.12) 44%, rgba(255, 141, 105, 0.18) 100%);
+    --gradient-hero-floor: linear-gradient(180deg, rgba(20, 28, 40, 0) 0%, rgba(20, 28, 40, 0.64) 68%, rgba(20, 28, 40, 0.94) 100%);
+    --color-hero-cloud: rgba(235, 242, 255, 0.16);
+    --color-hero-cloud-strong: rgba(235, 242, 255, 0.22);
+    --color-hero-cloud-soft: rgba(235, 242, 255, 0.12);
+    --color-hero-avatar-border: rgba(214, 226, 247, 0.24);
+    --color-home-mood-warm: rgba(41, 53, 72, 0.92);
+    --color-home-mood-calm: rgba(31, 42, 59, 0.96);
+    --color-home-ring-surface: radial-gradient(circle, rgba(38, 49, 68, 0.98) 0%, rgba(29, 38, 53, 0.96) 66%, rgba(23, 30, 43, 0.88) 100%);
+    --color-home-ring-outline: rgba(126, 146, 178, 0.3);
+    --color-home-ring-track: rgba(106, 125, 156, 0.46);
+    --color-home-ring-progress: rgba(255, 141, 105, 0.98);
+    --color-home-ring-progress-shadow: rgba(255, 141, 105, 0.3);
+    --gradient-home-sticky-overlay: linear-gradient(180deg, rgba(20, 28, 40, 0.96) 0%, rgba(20, 28, 40, 0.62) 74%, transparent 100%);
+    --gradient-shell-top-overlay: linear-gradient(180deg, rgba(20, 28, 40, 0.96) 0%, rgba(20, 28, 40, 0.62) 74%, transparent 100%);
+    --gradient-home-action-primary: linear-gradient(180deg, #ff9d78 0%, #ff7f5b 100%);
+    --gradient-home-action-feed: linear-gradient(180deg, rgba(55, 86, 73, 0.96) 0%, rgba(35, 57, 50, 0.96) 100%);
+    --gradient-home-action-breastfeed: linear-gradient(180deg, rgba(58, 78, 117, 0.96) 0%, rgba(36, 51, 78, 0.96) 100%);
+    --gradient-home-action-sleep: linear-gradient(180deg, rgba(82, 65, 103, 0.96) 0%, rgba(52, 42, 68, 0.96) 100%);
+    --color-home-hover-surface: rgba(255, 255, 255, 0.08);
+    --color-nav-surface: rgba(22, 30, 43, 0.92);
+    --gradient-nav-active: linear-gradient(180deg, rgba(45, 58, 81, 0.96) 0%, rgba(33, 44, 62, 0.96) 100%);
+    --color-nav-inactive: #9dacc6;
+    --color-nav-inactive-hover: #c1cadd;
 
     --shadow-soft: 0 14px 34px rgba(6, 10, 18, 0.32);
     --shadow-medium: 0 20px 48px rgba(6, 10, 18, 0.38);
@@ -161,6 +234,7 @@
   --color-text: #f6f0ea;
   --color-text-secondary: #c1cadd;
   --color-text-soft: #95a4bf;
+  --color-chip-text-on-light: #1b2432;
   --color-border: rgba(182, 196, 221, 0.12);
   --color-muted: #7b89a2;
 
@@ -178,10 +252,47 @@
   --color-chart-spectrum-mid: #d9b164;
   --color-chart-spectrum-end: #88c9ac;
   --color-chart-dot: #ff9c7c;
+  --color-peach: #4f5f83;
+  --color-apricot: #344766;
+  --color-gold: #8d9cca;
+  --color-mint: #3c5d56;
+  --color-berry: #5a5878;
+  --color-dawn: #31415f;
+  --color-sky-wash: #2a3952;
   --gradient-status-healthy: conic-gradient(from 210deg, #ff9d7d 0deg, #e0b962 120deg, #88c9ac 280deg, #ff9d7d 360deg);
   --gradient-status-caution: conic-gradient(from 210deg, #ff9d7d 0deg, #d7b060 170deg, #d7b060 360deg);
+  --gradient-status-head: conic-gradient(from 210deg, #8fb4ff 0deg, #78c7c0 180deg, #8a96ef 360deg);
   --gradient-status-alert: conic-gradient(from 210deg, #ff9d7d 0deg, #e8927f 200deg, #f2a193 360deg);
   --gradient-status-unknown: conic-gradient(from 210deg, #5f6f89 0deg, #8396b5 360deg);
+  --gradient-dawn: radial-gradient(circle at top, rgba(116, 138, 189, 0.36) 0%, rgba(74, 95, 141, 0.2) 34%, rgba(33, 45, 66, 0.1) 60%, rgba(20, 28, 40, 0) 100%);
+  --gradient-sunrise: linear-gradient(180deg, #223149 0%, #1b2432 46%, #141c28 100%);
+  --color-hero-title: #f3ab97;
+  --gradient-hero-glow: radial-gradient(circle at 76% 18%, rgba(255, 168, 107, 0.34) 0%, rgba(255, 168, 107, 0.14) 24%, rgba(20, 28, 40, 0) 56%);
+  --gradient-hero-wash: linear-gradient(180deg, rgba(255, 154, 119, 0.14) 0%, rgba(20, 28, 40, 0) 44%);
+  --gradient-hero-ridge: linear-gradient(180deg, rgba(20, 28, 40, 0) 0%, rgba(56, 74, 104, 0.12) 44%, rgba(255, 141, 105, 0.18) 100%);
+  --gradient-hero-floor: linear-gradient(180deg, rgba(20, 28, 40, 0) 0%, rgba(20, 28, 40, 0.64) 68%, rgba(20, 28, 40, 0.94) 100%);
+  --color-hero-cloud: rgba(235, 242, 255, 0.16);
+  --color-hero-cloud-strong: rgba(235, 242, 255, 0.22);
+  --color-hero-cloud-soft: rgba(235, 242, 255, 0.12);
+  --color-hero-avatar-border: rgba(214, 226, 247, 0.24);
+  --color-home-mood-warm: rgba(41, 53, 72, 0.92);
+  --color-home-mood-calm: rgba(31, 42, 59, 0.96);
+  --color-home-ring-surface: radial-gradient(circle, rgba(38, 49, 68, 0.98) 0%, rgba(29, 38, 53, 0.96) 66%, rgba(23, 30, 43, 0.88) 100%);
+  --color-home-ring-outline: rgba(126, 146, 178, 0.3);
+  --color-home-ring-track: rgba(106, 125, 156, 0.46);
+  --color-home-ring-progress: rgba(255, 141, 105, 0.98);
+  --color-home-ring-progress-shadow: rgba(255, 141, 105, 0.3);
+  --gradient-home-sticky-overlay: linear-gradient(180deg, rgba(20, 28, 40, 0.96) 0%, rgba(20, 28, 40, 0.62) 74%, transparent 100%);
+  --gradient-shell-top-overlay: linear-gradient(180deg, rgba(20, 28, 40, 0.96) 0%, rgba(20, 28, 40, 0.62) 74%, transparent 100%);
+  --gradient-home-action-primary: linear-gradient(180deg, #ff9d78 0%, #ff7f5b 100%);
+  --gradient-home-action-feed: linear-gradient(180deg, rgba(55, 86, 73, 0.96) 0%, rgba(35, 57, 50, 0.96) 100%);
+  --gradient-home-action-breastfeed: linear-gradient(180deg, rgba(58, 78, 117, 0.96) 0%, rgba(36, 51, 78, 0.96) 100%);
+  --gradient-home-action-sleep: linear-gradient(180deg, rgba(82, 65, 103, 0.96) 0%, rgba(52, 42, 68, 0.96) 100%);
+  --color-home-hover-surface: rgba(255, 255, 255, 0.08);
+  --color-nav-surface: rgba(22, 30, 43, 0.92);
+  --gradient-nav-active: linear-gradient(180deg, rgba(45, 58, 81, 0.96) 0%, rgba(33, 44, 62, 0.96) 100%);
+  --color-nav-inactive: #9dacc6;
+  --color-nav-inactive-hover: #c1cadd;
 
   --shadow-soft: 0 14px 34px rgba(6, 10, 18, 0.32);
   --shadow-medium: 0 20px 48px rgba(6, 10, 18, 0.38);
@@ -204,6 +315,7 @@
   --color-text: #ece4dc;
   --color-text-secondary: #b8adbf;
   --color-text-soft: #8f869b;
+  --color-chip-text-on-light: #17141f;
   --color-border: rgba(166, 149, 181, 0.12);
   --color-muted: #7f7790;
 
@@ -221,6 +333,8 @@
   --color-gold: #8b7749;
   --color-mint: #5d7a69;
   --color-berry: #745c80;
+  --color-dawn: #3a2f4e;
+  --color-sky-wash: #2d3148;
 
   --color-chart-warm-start: #b98773;
   --color-chart-warm-end: #d28a68;
@@ -229,8 +343,38 @@
   --color-chart-dot: #d28a68;
   --gradient-status-healthy: conic-gradient(from 210deg, #d28a68 0deg, #b69963 120deg, #789f8a 280deg, #d28a68 360deg);
   --gradient-status-caution: conic-gradient(from 210deg, #d28a68 0deg, #b69963 170deg, #b69963 360deg);
+  --gradient-status-head: conic-gradient(from 210deg, #7e89cf 0deg, #729a93 180deg, #6774bc 360deg);
   --gradient-status-alert: conic-gradient(from 210deg, #d28a68 0deg, #b07d74 200deg, #d89a8f 360deg);
   --gradient-status-unknown: conic-gradient(from 210deg, #70697c 0deg, #938a9d 360deg);
+  --gradient-dawn: radial-gradient(circle at top, rgba(116, 103, 151, 0.34) 0%, rgba(84, 73, 112, 0.18) 34%, rgba(36, 30, 51, 0.08) 60%, rgba(15, 13, 22, 0) 100%);
+  --gradient-sunrise: linear-gradient(180deg, #241f33 0%, #181422 46%, #0f0d16 100%);
+  --color-hero-title: #dba393;
+  --gradient-hero-glow: radial-gradient(circle at 76% 18%, rgba(210, 138, 104, 0.28) 0%, rgba(210, 138, 104, 0.1) 22%, rgba(15, 13, 22, 0) 56%);
+  --gradient-hero-wash: linear-gradient(180deg, rgba(143, 95, 86, 0.18) 0%, rgba(15, 13, 22, 0) 48%);
+  --gradient-hero-ridge: linear-gradient(180deg, rgba(15, 13, 22, 0) 0%, rgba(74, 61, 96, 0.12) 44%, rgba(143, 95, 86, 0.2) 100%);
+  --gradient-hero-floor: linear-gradient(180deg, rgba(15, 13, 22, 0) 0%, rgba(15, 13, 22, 0.68) 68%, rgba(15, 13, 22, 0.96) 100%);
+  --color-hero-cloud: rgba(233, 226, 244, 0.12);
+  --color-hero-cloud-strong: rgba(233, 226, 244, 0.16);
+  --color-hero-cloud-soft: rgba(233, 226, 244, 0.09);
+  --color-hero-avatar-border: rgba(190, 176, 206, 0.22);
+  --color-home-mood-warm: rgba(42, 35, 57, 0.92);
+  --color-home-mood-calm: rgba(30, 25, 42, 0.96);
+  --color-home-ring-surface: radial-gradient(circle, rgba(35, 29, 49, 0.98) 0%, rgba(24, 20, 33, 0.96) 66%, rgba(18, 15, 25, 0.88) 100%);
+  --color-home-ring-outline: rgba(143, 134, 155, 0.28);
+  --color-home-ring-track: rgba(112, 105, 124, 0.46);
+  --color-home-ring-progress: rgba(210, 138, 104, 0.96);
+  --color-home-ring-progress-shadow: rgba(210, 138, 104, 0.26);
+  --gradient-home-sticky-overlay: linear-gradient(180deg, rgba(15, 13, 22, 0.96) 0%, rgba(15, 13, 22, 0.62) 74%, transparent 100%);
+  --gradient-shell-top-overlay: linear-gradient(180deg, rgba(15, 13, 22, 0.96) 0%, rgba(15, 13, 22, 0.62) 74%, transparent 100%);
+  --gradient-home-action-primary: linear-gradient(180deg, #d89775 0%, #c77a57 100%);
+  --gradient-home-action-feed: linear-gradient(180deg, rgba(73, 96, 83, 0.94) 0%, rgba(49, 67, 58, 0.94) 100%);
+  --gradient-home-action-breastfeed: linear-gradient(180deg, rgba(77, 88, 136, 0.94) 0%, rgba(52, 58, 96, 0.94) 100%);
+  --gradient-home-action-sleep: linear-gradient(180deg, rgba(88, 74, 104, 0.94) 0%, rgba(58, 48, 72, 0.94) 100%);
+  --color-home-hover-surface: rgba(255, 255, 255, 0.06);
+  --color-nav-surface: rgba(22, 18, 31, 0.92);
+  --gradient-nav-active: linear-gradient(180deg, rgba(49, 40, 64, 0.96) 0%, rgba(34, 28, 47, 0.96) 100%);
+  --color-nav-inactive: #9b92aa;
+  --color-nav-inactive-hover: #b8adbf;
 
   --shadow-soft: 0 14px 34px rgba(3, 2, 8, 0.3);
   --shadow-medium: 0 20px 48px rgba(3, 2, 8, 0.36);

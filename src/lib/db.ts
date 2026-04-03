@@ -2,6 +2,7 @@ import Database from "@tauri-apps/plugin-sql";
 import type {
   Child,
   PoopEntry,
+  DiaperEntry,
   Alert,
   SymptomEntry,
   GrowthEntry,
@@ -15,7 +16,7 @@ import type {
   EpisodeEvent,
   QuickPresetEntry,
 } from "./types";
-import { generateId, nowISO, parseLocalDate } from "./utils";
+import { combineLocalDateAndTimeToUtcIso, formatLocalDateKey, generateId, nowISO, parseLocalDate } from "./utils";
 import { getBreastfeedingLastSideSettingKey, getBreastfeedingSessionSettingKey } from "./breastfeeding";
 import { getCaregiverNoteSettingKey } from "./caregiver-note";
 import { deleteAvatar, deletePhoto } from "./photos";
@@ -35,6 +36,7 @@ async function getDb(): Promise<Database> {
 export async function createChild(input: {
   name: string;
   date_of_birth: string;
+  sex?: Child["sex"];
   feeding_type: string;
   avatar_color?: string;
 }): Promise<Child> {
@@ -44,14 +46,15 @@ export async function createChild(input: {
   const avatarColor = input.avatar_color ?? "#2563EB";
 
   await conn.execute(
-    "INSERT INTO children (id, name, date_of_birth, feeding_type, avatar_color, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
-    [id, input.name, input.date_of_birth, input.feeding_type, avatarColor, now, now],
+    "INSERT INTO children (id, name, date_of_birth, sex, feeding_type, avatar_color, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+    [id, input.name, input.date_of_birth, input.sex ?? null, input.feeding_type, avatarColor, now, now],
   );
 
   return {
     id,
     name: input.name,
     date_of_birth: input.date_of_birth,
+    sex: input.sex ?? null,
     feeding_type: input.feeding_type as Child["feeding_type"],
     avatar_color: avatarColor,
     is_active: 1,
@@ -69,7 +72,7 @@ export async function getChildren(): Promise<Child[]> {
 
 export async function updateChild(
   id: string,
-  updates: Partial<Pick<Child, "name" | "date_of_birth" | "feeding_type" | "avatar_color">>,
+  updates: Partial<Pick<Child, "name" | "date_of_birth" | "sex" | "feeding_type" | "avatar_color">>,
 ): Promise<void> {
   const conn = await getDb();
   const sets: string[] = ["updated_at = ?"];
@@ -92,8 +95,12 @@ export async function deleteChild(id: string): Promise<void> {
     "SELECT photo_path FROM poop_logs WHERE child_id = ? AND photo_path IS NOT NULL",
     [id],
   );
+  const diaperPhotoRows = await conn.select<{ photo_path: string | null }[]>(
+    "SELECT photo_path FROM diaper_logs WHERE child_id = ? AND photo_path IS NOT NULL",
+    [id],
+  );
 
-  for (const row of poopPhotoRows) {
+  for (const row of [...poopPhotoRows, ...diaperPhotoRows]) {
     if (!row.photo_path) continue;
     try {
       await deletePhoto(row.photo_path);
@@ -117,6 +124,7 @@ export async function deleteChild(id: string): Promise<void> {
   await conn.execute("DELETE FROM milestone_logs WHERE child_id = ?", [id]);
   await conn.execute("DELETE FROM quick_presets WHERE child_id = ?", [id]);
   await conn.execute("DELETE FROM diet_logs WHERE child_id = ?", [id]);
+  await conn.execute("DELETE FROM diaper_logs WHERE child_id = ?", [id]);
   await conn.execute("DELETE FROM poop_logs WHERE child_id = ?", [id]);
   await conn.execute("DELETE FROM children WHERE id = ?", [id]);
 
@@ -169,6 +177,18 @@ export async function createPoopLog(input: {
     created_at: now,
     updated_at: now,
   };
+}
+
+async function createLinkedPoopLog(input: {
+  child_id: string;
+  logged_at: string;
+  stool_type?: number | null;
+  color?: string | null;
+  size?: string | null;
+  notes?: string | null;
+  photo_path?: string | null;
+}): Promise<PoopEntry> {
+  return createPoopLog(input);
 }
 
 export async function logNoPoop(childId: string): Promise<PoopEntry> {
@@ -259,14 +279,14 @@ export async function deletePoopLog(entry: Pick<PoopEntry, "id" | "photo_path"> 
 export async function reconcileAutoNoPoopDays(childId: string): Promise<number> {
   const conn = await getDb();
   const now = nowISO();
-  const todayKey = new Date().toISOString().split("T")[0];
+  const todayKey = formatLocalDateKey(new Date());
   const redundantRows = await conn.select<{ cnt: number }[]>(
     `SELECT COUNT(*) as cnt
      FROM poop_logs
      WHERE child_id = ?
        AND is_no_poop = 1
-       AND substr(logged_at, 1, 10) IN (
-         SELECT DISTINCT substr(logged_at, 1, 10)
+       AND date(logged_at, 'localtime') IN (
+         SELECT DISTINCT date(logged_at, 'localtime')
          FROM poop_logs
          WHERE child_id = ? AND is_no_poop = 0
        )`,
@@ -278,8 +298,8 @@ export async function reconcileAutoNoPoopDays(childId: string): Promise<number> 
     `DELETE FROM poop_logs
      WHERE child_id = ?
        AND is_no_poop = 1
-       AND substr(logged_at, 1, 10) IN (
-         SELECT DISTINCT substr(logged_at, 1, 10)
+       AND date(logged_at, 'localtime') IN (
+         SELECT DISTINCT date(logged_at, 'localtime')
          FROM poop_logs
          WHERE child_id = ? AND is_no_poop = 0
        )`,
@@ -289,23 +309,23 @@ export async function reconcileAutoNoPoopDays(childId: string): Promise<number> 
   const candidateRows = await conn.select<{ day: string }[]>(
     `SELECT DISTINCT day
      FROM (
-       SELECT substr(logged_at, 1, 10) AS day FROM diet_logs WHERE child_id = ?
+       SELECT date(logged_at, 'localtime') AS day FROM diet_logs WHERE child_id = ?
        UNION
-       SELECT substr(logged_at, 1, 10) AS day FROM symptom_logs WHERE child_id = ?
+       SELECT date(logged_at, 'localtime') AS day FROM symptom_logs WHERE child_id = ?
        UNION
-       SELECT substr(logged_at, 1, 10) AS day FROM milestone_logs WHERE child_id = ?
+       SELECT date(logged_at, 'localtime') AS day FROM milestone_logs WHERE child_id = ?
        UNION
-       SELECT substr(started_at, 1, 10) AS day FROM sleep_logs WHERE child_id = ?
+       SELECT date(started_at, 'localtime') AS day FROM sleep_logs WHERE child_id = ?
        UNION
-       SELECT substr(measured_at, 1, 10) AS day FROM growth_logs WHERE child_id = ?
+       SELECT date(measured_at, 'localtime') AS day FROM growth_logs WHERE child_id = ?
        UNION
-       SELECT substr(started_at, 1, 10) AS day FROM episodes WHERE child_id = ?
+       SELECT date(started_at, 'localtime') AS day FROM episodes WHERE child_id = ?
        UNION
-       SELECT substr(logged_at, 1, 10) AS day FROM episode_events WHERE child_id = ?
+       SELECT date(logged_at, 'localtime') AS day FROM episode_events WHERE child_id = ?
      )
      WHERE day < ?
        AND day NOT IN (
-         SELECT DISTINCT substr(logged_at, 1, 10)
+         SELECT DISTINCT date(logged_at, 'localtime')
          FROM poop_logs
          WHERE child_id = ?
        )
@@ -318,11 +338,221 @@ export async function reconcileAutoNoPoopDays(childId: string): Promise<number> 
       `INSERT INTO poop_logs (
         id, child_id, logged_at, stool_type, color, size, is_no_poop, notes, photo_path, created_at, updated_at
       ) VALUES (?, ?, ?, NULL, NULL, NULL, 1, NULL, NULL, ?, ?)`,
-      [generateId(), childId, `${row.day}T20:00:00`, now, now],
+      [generateId(), childId, combineLocalDateAndTimeToUtcIso(row.day, "20:00"), now, now],
     );
   }
 
   return removedCount + candidateRows.length;
+}
+
+// --- Diaper Logs ---
+
+export async function createDiaperLog(input: {
+  child_id: string;
+  logged_at: string;
+  diaper_type: DiaperEntry["diaper_type"];
+  urine_color?: string | null;
+  stool_type?: number | null;
+  color?: string | null;
+  size?: string | null;
+  notes?: string | null;
+  photo_path?: string | null;
+}): Promise<DiaperEntry> {
+  const conn = await getDb();
+  const id = generateId();
+  const now = nowISO();
+
+  let linkedPoopLogId: string | null = null;
+  if (input.diaper_type === "dirty" || input.diaper_type === "mixed") {
+    const poopLog = await createLinkedPoopLog({
+      child_id: input.child_id,
+      logged_at: input.logged_at,
+      stool_type: input.stool_type ?? null,
+      color: input.color ?? null,
+      size: input.size ?? null,
+      notes: input.notes ?? null,
+      photo_path: input.photo_path ?? null,
+    });
+    linkedPoopLogId = poopLog.id;
+  }
+
+  await conn.execute(
+    `INSERT INTO diaper_logs (
+      id, child_id, logged_at, diaper_type, urine_color, stool_type, color, size, notes,
+      photo_path, linked_poop_log_id, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      id,
+      input.child_id,
+      input.logged_at,
+      input.diaper_type,
+      input.urine_color ?? null,
+      input.stool_type ?? null,
+      input.color ?? null,
+      input.size ?? null,
+      input.notes ?? null,
+      input.photo_path ?? null,
+      linkedPoopLogId,
+      now,
+      now,
+    ],
+  );
+
+  return {
+    id,
+    child_id: input.child_id,
+    logged_at: input.logged_at,
+    diaper_type: input.diaper_type,
+    urine_color: (input.urine_color as DiaperEntry["urine_color"]) ?? null,
+    stool_type: input.stool_type ?? null,
+    color: (input.color as DiaperEntry["color"]) ?? null,
+    size: (input.size as DiaperEntry["size"]) ?? null,
+    notes: input.notes ?? null,
+    photo_path: input.photo_path ?? null,
+    linked_poop_log_id: linkedPoopLogId,
+    created_at: now,
+    updated_at: now,
+  };
+}
+
+export async function getDiaperLogs(childId: string, limit = 100): Promise<DiaperEntry[]> {
+  const conn = await getDb();
+  return conn.select<DiaperEntry[]>(
+    "SELECT * FROM diaper_logs WHERE child_id = ? ORDER BY logged_at DESC LIMIT ?",
+    [childId, limit],
+  );
+}
+
+export async function getLastDiaperLog(childId: string): Promise<DiaperEntry | null> {
+  const conn = await getDb();
+  const rows = await conn.select<DiaperEntry[]>(
+    "SELECT * FROM diaper_logs WHERE child_id = ? ORDER BY logged_at DESC LIMIT 1",
+    [childId],
+  );
+  return rows[0] ?? null;
+}
+
+export async function getLastWetDiaper(childId: string): Promise<DiaperEntry | null> {
+  const conn = await getDb();
+  const rows = await conn.select<DiaperEntry[]>(
+    "SELECT * FROM diaper_logs WHERE child_id = ? AND diaper_type IN ('wet', 'mixed') ORDER BY logged_at DESC LIMIT 1",
+    [childId],
+  );
+  return rows[0] ?? null;
+}
+
+export async function getLastDirtyDiaper(childId: string): Promise<DiaperEntry | null> {
+  const conn = await getDb();
+  const rows = await conn.select<DiaperEntry[]>(
+    "SELECT * FROM diaper_logs WHERE child_id = ? AND diaper_type IN ('dirty', 'mixed') ORDER BY logged_at DESC LIMIT 1",
+    [childId],
+  );
+  return rows[0] ?? null;
+}
+
+export async function updateDiaperLog(
+  id: string,
+  updates: {
+    logged_at?: string;
+    diaper_type?: DiaperEntry["diaper_type"];
+    urine_color?: string | null;
+    stool_type?: number | null;
+    color?: string | null;
+    size?: string | null;
+    notes?: string | null;
+  },
+): Promise<void> {
+  const conn = await getDb();
+  const rows = await conn.select<DiaperEntry[]>(
+    "SELECT * FROM diaper_logs WHERE id = ? LIMIT 1",
+    [id],
+  );
+  const current = rows[0];
+  if (!current) return;
+
+  const next: DiaperEntry = {
+    ...current,
+    logged_at: updates.logged_at ?? current.logged_at,
+    diaper_type: updates.diaper_type ?? current.diaper_type,
+    urine_color: updates.urine_color !== undefined ? (updates.urine_color as DiaperEntry["urine_color"]) : current.urine_color,
+    stool_type: updates.stool_type !== undefined ? updates.stool_type : current.stool_type,
+    color: updates.color !== undefined ? (updates.color as DiaperEntry["color"]) : current.color,
+    size: updates.size !== undefined ? (updates.size as DiaperEntry["size"]) : current.size,
+    notes: updates.notes !== undefined ? updates.notes : current.notes,
+  };
+
+  let linkedPoopLogId = current.linked_poop_log_id;
+  const needsPoopLog = next.diaper_type === "dirty" || next.diaper_type === "mixed";
+
+  if (needsPoopLog && linkedPoopLogId) {
+    await updatePoopLog(linkedPoopLogId, {
+      logged_at: next.logged_at,
+      stool_type: next.stool_type,
+      color: next.color,
+      size: next.size,
+      notes: next.notes,
+    });
+  } else if (needsPoopLog && !linkedPoopLogId) {
+    const poopLog = await createLinkedPoopLog({
+      child_id: current.child_id,
+      logged_at: next.logged_at,
+      stool_type: next.stool_type,
+      color: next.color,
+      size: next.size,
+      notes: next.notes,
+      photo_path: current.photo_path,
+    });
+    linkedPoopLogId = poopLog.id;
+  } else if (!needsPoopLog && linkedPoopLogId) {
+    await deletePoopLog({
+      id: linkedPoopLogId,
+      photo_path: current.photo_path,
+    });
+    linkedPoopLogId = null;
+  }
+
+  const sets: string[] = ["updated_at = ?"];
+  const params: unknown[] = [nowISO()];
+
+  if (updates.logged_at !== undefined) { sets.push("logged_at = ?"); params.push(next.logged_at); }
+  if (updates.diaper_type !== undefined) { sets.push("diaper_type = ?"); params.push(next.diaper_type); }
+  if (updates.urine_color !== undefined) { sets.push("urine_color = ?"); params.push(next.urine_color); }
+  if (updates.stool_type !== undefined) { sets.push("stool_type = ?"); params.push(next.stool_type); }
+  if (updates.color !== undefined) { sets.push("color = ?"); params.push(next.color); }
+  if (updates.size !== undefined) { sets.push("size = ?"); params.push(next.size); }
+  if (updates.notes !== undefined) { sets.push("notes = ?"); params.push(next.notes); }
+  if (linkedPoopLogId !== current.linked_poop_log_id) { sets.push("linked_poop_log_id = ?"); params.push(linkedPoopLogId); }
+
+  params.push(id);
+  await conn.execute(`UPDATE diaper_logs SET ${sets.join(", ")} WHERE id = ?`, params);
+}
+
+export async function deleteDiaperLog(entry: Pick<DiaperEntry, "id" | "photo_path" | "linked_poop_log_id"> | string): Promise<void> {
+  const conn = await getDb();
+  const id = typeof entry === "string" ? entry : entry.id;
+  let linkedPoopLogId: string | null = null;
+  let photoPath: string | null = null;
+
+  if (typeof entry === "string") {
+    const rows = await conn.select<DiaperEntry[]>(
+      "SELECT * FROM diaper_logs WHERE id = ? LIMIT 1",
+      [entry],
+    );
+    linkedPoopLogId = rows[0]?.linked_poop_log_id ?? null;
+    photoPath = rows[0]?.photo_path ?? null;
+  } else {
+    linkedPoopLogId = entry.linked_poop_log_id;
+    photoPath = entry.photo_path;
+  }
+
+  if (linkedPoopLogId) {
+    await deletePoopLog({
+      id: linkedPoopLogId,
+      photo_path: photoPath,
+    });
+  }
+
+  await conn.execute("DELETE FROM diaper_logs WHERE id = ?", [id]);
 }
 
 // --- Symptom Logs ---
@@ -463,6 +693,37 @@ export async function getLatestGrowthLog(childId: string): Promise<GrowthEntry |
     [childId],
   );
   return rows[0] ?? null;
+}
+
+export async function updateGrowthLog(
+  id: string,
+  updates: {
+    measured_at?: string;
+    weight_kg?: number | null;
+    height_cm?: number | null;
+    head_circumference_cm?: number | null;
+    notes?: string | null;
+  },
+): Promise<void> {
+  const conn = await getDb();
+  const sets: string[] = [];
+  const params: unknown[] = [];
+
+  if (updates.measured_at !== undefined) { sets.push("measured_at = ?"); params.push(updates.measured_at); }
+  if (updates.weight_kg !== undefined) { sets.push("weight_kg = ?"); params.push(updates.weight_kg); }
+  if (updates.height_cm !== undefined) { sets.push("height_cm = ?"); params.push(updates.height_cm); }
+  if (updates.head_circumference_cm !== undefined) { sets.push("head_circumference_cm = ?"); params.push(updates.head_circumference_cm); }
+  if (updates.notes !== undefined) { sets.push("notes = ?"); params.push(updates.notes); }
+
+  if (sets.length === 0) return;
+
+  params.push(id);
+  await conn.execute(`UPDATE growth_logs SET ${sets.join(", ")} WHERE id = ?`, params);
+}
+
+export async function deleteGrowthLog(id: string): Promise<void> {
+  const conn = await getDb();
+  await conn.execute("DELETE FROM growth_logs WHERE id = ?", [id]);
 }
 
 // --- Sleep Logs ---

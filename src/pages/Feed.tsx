@@ -14,13 +14,13 @@ import {
   hydrateFeedPresets,
   type QuickFeedPreset,
 } from "../lib/quick-presets";
-import { timeSince } from "../lib/utils";
+import { combineLocalDateAndTimeToUtcIso, getCurrentLocalDate, getCurrentLocalTime, isOnLocalDay, timeSince } from "../lib/utils";
 import { formatVolumeValue, getVolumeDisplayParts } from "../lib/units";
 import { getBreastfeedingSessionSettingKey, parseBreastfeedingSession } from "../lib/breastfeeding";
 import * as db from "../lib/db";
 import { Card, CardContent, CardHeader } from "../components/ui/card";
 import { Button } from "../components/ui/button";
-import { PageIntro } from "../components/ui/page-intro";
+import { ScenicHero } from "../components/layout/ScenicHero";
 import { EmptyState, InsetPanel, PageBody, SectionHeading } from "../components/ui/page-layout";
 import {
   TrackerEntryRow,
@@ -144,8 +144,7 @@ function getPredictableFeedLogs(logs: FeedingEntry[]): FeedingEntry[] {
 }
 
 function getCurrentFeedingTimestamp(): string {
-  const now = new Date();
-  return `${now.toISOString().split("T")[0]}T${now.toTimeString().slice(0, 5)}:00`;
+  return combineLocalDateAndTimeToUtcIso(getCurrentLocalDate(), getCurrentLocalTime());
 }
 
 function getTrackedMl(logs: FeedingEntry[]): number {
@@ -696,13 +695,13 @@ export function Feed() {
 
   const predictableLogs = useMemo(() => getPredictableFeedLogs(logs), [logs]);
   const lastFeed = predictableLogs[0] ?? null;
-  const todayKey = new Date().toISOString().split("T")[0];
+  const todayKey = formatLocalDateKey(new Date());
   const todayFeedCount = useMemo(
-    () => predictableLogs.filter((log) => log.logged_at.startsWith(todayKey)).length,
+    () => predictableLogs.filter((log) => isOnLocalDay(log.logged_at, todayKey)).length,
     [predictableLogs, todayKey],
   );
   const todayTrackedMl = useMemo(
-    () => getTrackedMl(logs.filter((log) => log.logged_at.startsWith(todayKey))),
+    () => getTrackedMl(logs.filter((log) => isOnLocalDay(log.logged_at, todayKey))),
     [logs, todayKey],
   );
 
@@ -749,7 +748,7 @@ export function Feed() {
   const filledWeek = useMemo(() => fillDailyFrequencyDays(frequencyData, DAYS_IN_WEEK, endDate), [endDate, frequencyData]);
 
   const baseline = useMemo(
-    () => getFeedBaseline(activeChild?.date_of_birth ?? new Date().toISOString().split("T")[0], activeChild?.feeding_type ?? "mixed"),
+    () => getFeedBaseline(activeChild?.date_of_birth ?? getCurrentLocalDate(), activeChild?.feeding_type ?? "mixed"),
     [activeChild],
   );
   const prediction = useMemo(() => getFeedPrediction(logs, baseline), [baseline, logs]);
@@ -860,17 +859,19 @@ export function Feed() {
   };
 
   return (
-    <PageBody className="space-y-4">
-      <PageIntro
-        eyebrow="Tracking"
+    <PageBody className="mt-0 space-y-0 px-0 py-0">
+      <ScenicHero
+        child={activeChild}
         title="Feed"
         description="Feeds, meals, and the next likely window in one place."
         action={<Button variant="cta" size="sm" onClick={() => setFormOpen(true)}>Add</Button>}
-        className="pb-3"
+        className="overflow-hidden"
+        scene="feed"
       />
 
-      <Card>
-        <CardContent className="p-4">
+      <div className="space-y-4 px-4 py-5">
+      <Card className="-mt-32 relative z-10 border-transparent bg-transparent shadow-none backdrop-blur-0">
+        <CardContent className="p-4 pt-4">
           <div className="grid grid-cols-3 gap-3">
             <div className="flex flex-col items-center gap-2 text-center">
               <TimeSinceIndicator timestamp={lastFeed?.logged_at ?? null} status={statusTone} />
@@ -1012,7 +1013,7 @@ export function Feed() {
                   </p>
                 </div>
                 {feedMix.dominantCount > 0 && (
-                  <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-semibold text-[var(--color-text-secondary)]">
+                  <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-semibold text-[var(--color-chip-text-on-light)]">
                     {feedMix.dominantCount} logs
                   </span>
                 )}
@@ -1022,13 +1023,13 @@ export function Feed() {
                   {feedMix.chips.map((chip) => (
                     <span
                       key={chip}
-                      className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-text-secondary)]"
+                      className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-chip-text-on-light)]"
                     >
                       {chip}
                     </span>
                   ))}
                   {weekTrackedMl > 0 && (
-                    <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-text-secondary)]">
+                    <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-chip-text-on-light)]">
                       {formatVolumeValue(weekTrackedMl, unitSystem)} tracked
                     </span>
                   )}
@@ -1047,29 +1048,29 @@ export function Feed() {
                   </p>
                 </div>
                 {prediction && (
-                  <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-semibold text-[var(--color-text-secondary)]">
+                  <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-semibold text-[var(--color-chip-text-on-light)]">
                     {prediction.confidence}
                   </span>
                 )}
               </div>
               {prediction && (
                 <div className="mt-3 flex flex-wrap gap-2">
-                  <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-text-secondary)]">
+                  <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-chip-text-on-light)]">
                     Typical gap: {prediction.intervalLabel}
                   </span>
-                  <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-text-secondary)]">
+                  <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-chip-text-on-light)]">
                     {formatPredictionRelative(prediction)}
                   </span>
-                  <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-text-secondary)]">
+                  <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-chip-text-on-light)]">
                     Source: {prediction.source === "history" ? "recent rhythm" : "age baseline"}
                   </span>
-                  <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-text-secondary)]">
+                  <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-chip-text-on-light)]">
                     Window: {formatPredictionRange(prediction)}
                   </span>
                   {prediction.adjustments.slice(0, 2).map((adjustment) => (
                     <span
                       key={adjustment.label}
-                      className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-text-secondary)]"
+                      className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-chip-text-on-light)]"
                     >
                       {adjustment.direction === "earlier" ? "Earlier" : "Later"}: {adjustment.label}
                     </span>
@@ -1203,6 +1204,7 @@ export function Feed() {
         presets={quickFeedPresets}
         onSave={(drafts) => { void saveFeedPresets(drafts); }}
       />
+      </div>
     </PageBody>
   );
 }

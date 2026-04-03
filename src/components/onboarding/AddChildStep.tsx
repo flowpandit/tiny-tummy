@@ -2,10 +2,11 @@ import { useState, type FormEvent } from "react";
 import { Button } from "../ui/button";
 import { Card, CardContent } from "../ui/card";
 import { DatePicker } from "../ui/date-picker";
-import { FEEDING_TYPES, AVATAR_COLORS } from "../../lib/constants";
+import { FEEDING_TYPES, AVATAR_COLORS, CHILD_SEX_OPTIONS } from "../../lib/constants";
 import { cn } from "../../lib/cn";
 import * as db from "../../lib/db";
-import type { Child, FeedingType } from "../../lib/types";
+import { getCurrentLocalDate } from "../../lib/utils";
+import type { Child, ChildSex, FeedingType } from "../../lib/types";
 
 interface AddChildStepProps {
   onChildCreated: (child: Child) => void;
@@ -13,12 +14,13 @@ interface AddChildStepProps {
 
 export function AddChildStep({ onChildCreated }: AddChildStepProps) {
   const [name, setName] = useState("");
-  const [dob, setDob] = useState(new Date().toISOString().split("T")[0]);
+  const [dob, setDob] = useState(getCurrentLocalDate());
+  const [sex, setSex] = useState<ChildSex | null>(null);
   const [feedingType, setFeedingType] = useState<FeedingType>("breast");
   const [avatarColor, setAvatarColor] = useState(AVATAR_COLORS[0]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const isValid = name.trim().length > 0 && dob.length > 0;
+  const isValid = name.trim().length > 0 && dob.length > 0 && sex !== null;
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -28,6 +30,7 @@ export function AddChildStep({ onChildCreated }: AddChildStepProps) {
     const child = await db.createChild({
       name: name.trim(),
       date_of_birth: dob,
+      sex,
       feeding_type: feedingType,
       avatar_color: avatarColor,
     });
@@ -65,7 +68,33 @@ export function AddChildStep({ onChildCreated }: AddChildStepProps) {
           <label className="block text-sm font-medium text-[var(--color-text)] mb-1.5">
             Date of birth
           </label>
-          <DatePicker value={dob} onChange={setDob} max={new Date().toISOString().split("T")[0]} label="Date of birth" />
+          <DatePicker value={dob} onChange={setDob} max={getCurrentLocalDate()} label="Date of birth" />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-[var(--color-text)] mb-1.5">
+            Sex
+          </label>
+          <div className="grid grid-cols-2 gap-2">
+            {CHILD_SEX_OPTIONS.map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => setSex(option.value)}
+                className={cn(
+                  "h-11 rounded-[var(--radius-md)] border text-sm font-medium transition-colors duration-200 cursor-pointer",
+                  sex === option.value
+                    ? "border-[var(--color-primary)] bg-[var(--color-primary)]/10 text-[var(--color-primary)]"
+                    : "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-secondary)] hover:border-[var(--color-muted)]",
+                )}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+          <p className="mt-2 text-xs text-[var(--color-text-secondary)]">
+            Needed for official growth percentile charts.
+          </p>
         </div>
 
         {/* Feeding type */}
@@ -127,7 +156,9 @@ export function AddChildStep({ onChildCreated }: AddChildStepProps) {
               <div>
                 <p className="font-medium text-[var(--color-text)]">{name.trim()}</p>
                 <p className="text-xs text-[var(--color-text-secondary)]">
-                  {FEEDING_TYPES.find((f) => f.value === feedingType)?.label}
+                  {[sex ? CHILD_SEX_OPTIONS.find((option) => option.value === sex)?.label : null, FEEDING_TYPES.find((f) => f.value === feedingType)?.label]
+                    .filter(Boolean)
+                    .join(" · ")}
                 </p>
               </div>
             </CardContent>

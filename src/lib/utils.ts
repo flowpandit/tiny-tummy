@@ -3,6 +3,53 @@ export function parseLocalDate(value: string): Date {
   return new Date(year, (month || 1) - 1, day || 1);
 }
 
+function pad(value: number): string {
+  return String(value).padStart(2, "0");
+}
+
+export function formatLocalDateKey(date: Date): string {
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
+export function formatLocalTimeValue(date: Date): string {
+  return `${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+export function getCurrentLocalDate(): string {
+  return formatLocalDateKey(new Date());
+}
+
+export function getCurrentLocalTime(): string {
+  return formatLocalTimeValue(new Date());
+}
+
+export function combineLocalDateAndTimeToUtcIso(date: string, time: string): string {
+  const [year, month, day] = date.split("-").map(Number);
+  const [hours, minutes] = time.split(":").map(Number);
+  return new Date(year, (month || 1) - 1, day || 1, hours || 0, minutes || 0, 0, 0).toISOString();
+}
+
+export function getLocalDateTimeParts(value: string): { date: string; time: string } {
+  const parsed = new Date(value);
+  if (!Number.isNaN(parsed.getTime())) {
+    return {
+      date: formatLocalDateKey(parsed),
+      time: formatLocalTimeValue(parsed),
+    };
+  }
+
+  return {
+    date: value.split("T")[0] ?? getCurrentLocalDate(),
+    time: value.split("T")[1]?.slice(0, 5) ?? "12:00",
+  };
+}
+
+export function isOnLocalDay(value: string, dayKey: string): boolean {
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return value.startsWith(dayKey);
+  return formatLocalDateKey(parsed) === dayKey;
+}
+
 export function getAgeLabelFromDob(dob: string): string {
   const birth = parseLocalDate(dob);
   const now = new Date();

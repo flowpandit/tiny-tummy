@@ -1,11 +1,16 @@
 import * as db from "./db";
 import { getCaregiverNoteSettingKey } from "./caregiver-note";
-import type { Alert, Episode, EpisodeEvent, FeedingEntry, PoopEntry, SymptomEntry } from "./types";
+import { diaperIncludesStool, diaperIncludesWet } from "./diaper";
+import { formatLocalDateKey, isOnLocalDay } from "./utils";
+import type { Alert, DiaperEntry, Episode, EpisodeEvent, FeedingEntry, PoopEntry, SymptomEntry } from "./types";
 
 export interface ChildDailySummary {
+  lastDiaper: DiaperEntry | null;
   lastFeed: FeedingEntry | null;
   latestEpisodeUpdate: EpisodeEvent | null;
   latestSymptom: SymptomEntry | null;
+  todayWetDiapers: number;
+  todayDirtyDiapers: number;
   todayPoops: number;
   todayFeeds: number;
   hasNoPoopDay: boolean;
@@ -15,6 +20,7 @@ export interface ChildDailySummary {
 }
 
 export interface ChildSummarySnapshot extends ChildDailySummary {
+  diaperLogs: DiaperEntry[];
   lastPoop: PoopEntry | null;
   alerts: Alert[];
   episodeEvents: EpisodeEvent[];
@@ -23,11 +29,12 @@ export interface ChildSummarySnapshot extends ChildDailySummary {
 }
 
 export function getTodayKey(now: Date = new Date()): string {
-  return now.toISOString().split("T")[0];
+  return formatLocalDateKey(now);
 }
 
 export function buildChildDailySummary(input: {
   poopLogs: PoopEntry[];
+  diaperLogs: DiaperEntry[];
   feedingLogs: FeedingEntry[];
   alerts: Alert[];
   activeEpisode: Episode | null;
@@ -38,12 +45,15 @@ export function buildChildDailySummary(input: {
   const dayKey = input.dayKey ?? getTodayKey();
 
   return {
+    lastDiaper: input.diaperLogs[0] ?? null,
     lastFeed: input.feedingLogs[0] ?? null,
     latestEpisodeUpdate: input.episodeEvents[0] ?? null,
     latestSymptom: input.symptomLogs[0] ?? null,
-    todayPoops: input.poopLogs.filter((log) => log.logged_at.startsWith(dayKey) && log.is_no_poop === 0).length,
-    todayFeeds: input.feedingLogs.filter((log) => log.logged_at.startsWith(dayKey)).length,
-    hasNoPoopDay: input.poopLogs.some((log) => log.logged_at.startsWith(dayKey) && log.is_no_poop === 1),
+    todayWetDiapers: input.diaperLogs.filter((log) => isOnLocalDay(log.logged_at, dayKey) && diaperIncludesWet(log.diaper_type)).length,
+    todayDirtyDiapers: input.diaperLogs.filter((log) => isOnLocalDay(log.logged_at, dayKey) && diaperIncludesStool(log.diaper_type)).length,
+    todayPoops: input.poopLogs.filter((log) => isOnLocalDay(log.logged_at, dayKey) && log.is_no_poop === 0).length,
+    todayFeeds: input.feedingLogs.filter((log) => isOnLocalDay(log.logged_at, dayKey)).length,
+    hasNoPoopDay: input.poopLogs.some((log) => isOnLocalDay(log.logged_at, dayKey) && log.is_no_poop === 1),
     visibleAlerts: input.alerts.slice(0, 3),
     recentSymptoms: input.symptomLogs.slice(0, 3),
     activeEpisode: input.activeEpisode,
@@ -63,7 +73,8 @@ export async function getChildSummarySnapshot(
   const feedingLimit = options.feedingLimit ?? 100;
   const symptomLimit = options.symptomLimit ?? 10;
 
-  const [poopLogs, lastPoop, feedingLogs, alerts, activeEpisode, symptomLogs, handoffNote] = await Promise.all([
+  const [diaperLogs, poopLogs, lastPoop, feedingLogs, alerts, activeEpisode, symptomLogs, handoffNote] = await Promise.all([
+    db.getDiaperLogs(childId, poopLimit),
     db.getPoopLogs(childId, poopLimit),
     db.getLastRealPoop(childId),
     db.getFeedingLogs(childId, feedingLimit),
@@ -79,6 +90,7 @@ export async function getChildSummarySnapshot(
 
   const summary = buildChildDailySummary({
     poopLogs,
+    diaperLogs,
     feedingLogs,
     alerts,
     activeEpisode,
@@ -89,6 +101,7 @@ export async function getChildSummarySnapshot(
 
   return {
     ...summary,
+    diaperLogs,
     lastPoop,
     alerts,
     episodeEvents,

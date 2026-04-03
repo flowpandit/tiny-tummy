@@ -7,7 +7,7 @@ import { useUnits } from "../contexts/UnitsContext";
 import { Button } from "../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { PageIntro } from "../components/ui/page-intro";
-import { PageBackButton, PageBody } from "../components/ui/page-layout";
+import { PageBody } from "../components/ui/page-layout";
 import { DatePicker } from "../components/ui/date-picker";
 import { buildReportPdfPayload } from "../lib/report-pdf";
 import {
@@ -18,13 +18,13 @@ import {
 } from "../lib/reporting";
 import { useToast } from "../components/ui/toast";
 import { generateReportPdf, savePdfToDownloads } from "../lib/tauri";
-import { getAgeLabelFromDob } from "../lib/utils";
+import { formatLocalDateKey, getAgeLabelFromDob } from "../lib/utils";
 import * as db from "../lib/db";
 
 function addDays(dateString: string, delta: number): string {
   const next = new Date(`${dateString}T00:00:00`);
   next.setDate(next.getDate() + delta);
-  return next.toISOString().split("T")[0];
+  return formatLocalDateKey(next);
 }
 
 export function Report() {
@@ -32,8 +32,8 @@ export function Report() {
   const { unitSystem } = useUnits();
   const { showError, showSuccess } = useToast();
 
-  const today = new Date().toISOString().split("T")[0];
-  const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000).toISOString().split("T")[0];
+  const today = formatLocalDateKey(new Date());
+  const thirtyDaysAgo = formatLocalDateKey(new Date(Date.now() - 30 * 86400000));
 
   const [startDate, setStartDate] = useState(thirtyDaysAgo);
   const [endDate, setEndDate] = useState(today);
@@ -130,8 +130,6 @@ export function Report() {
 
   return (
     <PageBody>
-      <PageBackButton fallbackTo="/dashboard" />
-
       <PageIntro
         eyebrow="Share"
         title="Pediatrician Report"

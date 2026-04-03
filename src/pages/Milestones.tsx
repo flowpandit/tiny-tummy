@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Badge } from "../components/ui/badge";
 import { PageIntro } from "../components/ui/page-intro";
-import { EmptyState, InsetPanel, PageBackButton, PageBody, SectionHeading, StatGrid, StatTile } from "../components/ui/page-layout";
+import { EmptyState, InsetPanel, PageBody, SectionHeading, StatGrid, StatTile } from "../components/ui/page-layout";
 import { MilestoneLogSheet } from "../components/milestones/MilestoneLogSheet";
 import { getMilestoneTypeDescription, getMilestoneTypeLabel } from "../lib/milestone-constants";
 import { formatDate, getAgeLabelFromDob, timeSince } from "../lib/utils";
@@ -34,8 +34,6 @@ export function Milestones() {
 
   return (
     <PageBody>
-      <PageBackButton fallbackTo="/settings" />
-
       <PageIntro
         eyebrow="Tracking"
         title="Milestones"

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useChildContext } from "../contexts/ChildContext";
 import { usePoopLogs } from "../hooks/usePoopLogs";
 import { useFeedingLogs } from "../hooks/useFeedingLogs";
@@ -6,11 +7,12 @@ import { useAlerts } from "../hooks/useAlerts";
 import { useAlertEngine } from "../hooks/useAlertEngine";
 import { useEpisodes } from "../hooks/useEpisodes";
 import { useSymptoms } from "../hooks/useSymptoms";
+import { useEliminationPreference } from "../hooks/useEliminationPreference";
 import { BITSS_TYPES, STOOL_COLORS } from "../lib/constants";
 import { fillDailyFrequencyDays, formatLocalDateKey, getRecentNoPoopDates } from "../lib/stats";
 import { DAYS_IN_WEEK, addDays, formatHoursCompact, formatHoursLong, formatWeekLabel, startOfDay } from "../lib/tracker";
 import { getChildStatus } from "../lib/tauri";
-import { timeSince } from "../lib/utils";
+import { combineLocalDateAndTimeToUtcIso, getCurrentLocalDate, getCurrentLocalTime, timeSince } from "../lib/utils";
 import {
   buildPoopPresetRecordInput,
   describePoopPresetDraft,
@@ -21,8 +23,8 @@ import {
 import * as db from "../lib/db";
 import { Card, CardContent, CardHeader } from "../components/ui/card";
 import { Button } from "../components/ui/button";
-import { PageIntro } from "../components/ui/page-intro";
 import { EmptyState, InsetPanel, PageBody, SectionHeading } from "../components/ui/page-layout";
+import { ScenicHero } from "../components/layout/ScenicHero";
 import {
   TrackerEntryRow,
   TrackerEntryTable,
@@ -88,8 +90,7 @@ function getAgeDays(dateOfBirth: string): number {
 }
 
 function getCurrentPoopTimestamp(): string {
-  const now = new Date();
-  return `${now.toISOString().split("T")[0]}T${now.toTimeString().slice(0, 5)}:00`;
+  return combineLocalDateAndTimeToUtcIso(getCurrentLocalDate(), getCurrentLocalTime());
 }
 
 function getRepeatablePoopEntry(lastPoop: PoopEntry | null): PoopEntry | null {
@@ -752,7 +753,9 @@ function buildPatternNarrative({
 }
 
 export function Poop() {
+  const navigate = useNavigate();
   const { activeChild } = useChildContext();
+  const { experience } = useEliminationPreference(activeChild);
   const { showError, showSuccess } = useToast();
   const { logs, lastRealPoop, refresh } = usePoopLogs(activeChild?.id ?? null, 500);
   const { logs: feedingLogs } = useFeedingLogs(activeChild?.id ?? null);
@@ -768,6 +771,12 @@ export function Poop() {
   const [editingPoop, setEditingPoop] = useState<PoopEntry | null>(null);
   const [poopPresetSheetOpen, setPoopPresetSheetOpen] = useState(false);
   const [quickPoopPresets, setQuickPoopPresets] = useState<QuickPoopPreset[]>([]);
+
+  useEffect(() => {
+    if (experience.mode === "diaper") {
+      navigate("/diaper", { replace: true });
+    }
+  }, [experience.mode, navigate]);
 
   useEffect(() => {
     if (!activeChild) {
@@ -881,7 +890,7 @@ export function Poop() {
     return [...counts.entries()].sort((left, right) => right[1] - left[1])[0]?.[0] ?? null;
   }, [weeklyRealLogs]);
   const baseline = useMemo(
-    () => getAgeBaseline(activeChild?.date_of_birth ?? new Date().toISOString().split("T")[0], activeChild?.feeding_type ?? "mixed"),
+    () => getAgeBaseline(activeChild?.date_of_birth ?? getCurrentLocalDate(), activeChild?.feeding_type ?? "mixed"),
     [activeChild],
   );
   const prediction = useMemo(
@@ -927,6 +936,7 @@ export function Poop() {
   const repeatablePoop = useMemo(() => getRepeatablePoopEntry(lastRealPoop), [lastRealPoop]);
 
   if (!activeChild) return null;
+  if (experience.mode === "diaper") return null;
 
   const weekSummaryBits = [
     totalPoops === 0 ? "No poops logged in this week" : `${totalPoops} poop${totalPoops === 1 ? "" : "s"} in this week`,
@@ -1000,17 +1010,19 @@ export function Poop() {
   };
 
   return (
-    <PageBody className="space-y-4">
-      <PageIntro
-        eyebrow="Tracking"
+    <PageBody className="mt-0 space-y-0 px-0 py-0">
+      <ScenicHero
+        child={activeChild}
         title="Poop"
         description="Pattern, timing, and alerts in one place."
         action={<Button variant="cta" size="sm" onClick={() => setLogFormOpen(true)}>Add</Button>}
-        className="pb-3"
+        className="overflow-hidden"
+        scene="poop"
       />
 
-      <Card>
-        <CardContent className="p-4">
+      <div className="space-y-4 px-4 py-5">
+        <Card className="-mt-32 relative z-10 border-transparent bg-transparent shadow-none backdrop-blur-0">
+          <CardContent className="p-4 pt-4">
           <div className="grid grid-cols-3 gap-3">
             <div className="flex flex-col items-center gap-2 text-center">
               <TimeSinceIndicator
@@ -1032,8 +1044,8 @@ export function Poop() {
               gradient={alertRing.gradient}
             />
           </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
 
       <AlertBanner alerts={alerts} onDismiss={dismiss} />
 
@@ -1128,29 +1140,29 @@ export function Poop() {
                   </p>
                 </div>
                 {prediction && (
-                  <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-semibold text-[var(--color-text-secondary)]">
+                  <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-semibold text-[var(--color-chip-text-on-light)]">
                     {prediction.confidence}
                   </span>
                 )}
               </div>
               {prediction && (
                 <div className="mt-3 flex flex-wrap gap-2">
-                  <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-text-secondary)]">
+                  <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-chip-text-on-light)]">
                     Typical gap: {prediction.intervalLabel}
                   </span>
-                  <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-text-secondary)]">
+                  <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-chip-text-on-light)]">
                     {formatPredictionRelative(prediction)}
                   </span>
-                  <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-text-secondary)]">
+                  <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-chip-text-on-light)]">
                     Source: {prediction.source === "history" ? "recent rhythm" : "age baseline"}
                   </span>
-                  <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-text-secondary)]">
+                  <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-chip-text-on-light)]">
                     Window: {formatPredictionRange(prediction)}
                   </span>
                   {prediction.adjustments.slice(0, 2).map((adjustment) => (
                     <span
                       key={adjustment.label}
-                      className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-text-secondary)]"
+                      className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-chip-text-on-light)]"
                     >
                       {adjustment.direction === "earlier" ? "Earlier" : "Later"}: {adjustment.label}
                     </span>
@@ -1170,17 +1182,17 @@ export function Poop() {
         <CardHeader>
           <SectionHeading
             title="Weekly pattern"
-                description="The same seven-day pattern view, but with week-by-week browsing so older rhythms are easier to compare."
-                action={(
-                  <TrackerWeekSwitcher
-                    weekOffset={weekOffset}
-                    maxWeekOffset={maxWeekOffset}
-                    onOlder={() => setWeekOffset((current) => Math.min(maxWeekOffset, current + 1))}
-                    onNewer={() => setWeekOffset((current) => Math.max(0, current - 1))}
-                  />
-                )}
+            description="The same seven-day pattern view, but with week-by-week browsing so older rhythms are easier to compare."
+            action={(
+              <TrackerWeekSwitcher
+                weekOffset={weekOffset}
+                maxWeekOffset={maxWeekOffset}
+                onOlder={() => setWeekOffset((current) => Math.min(maxWeekOffset, current + 1))}
+                onNewer={() => setWeekOffset((current) => Math.max(0, current - 1))}
               />
-            </CardHeader>
+            )}
+          />
+        </CardHeader>
         <CardContent>
           <TrackerWeekBarChart
             data={filledWeek.map((day) => ({ ...day, value: day.count }))}
@@ -1280,6 +1292,7 @@ export function Poop() {
         presets={quickPoopPresets}
         onSave={(drafts) => { void savePoopPresets(drafts); }}
       />
+      </div>
     </PageBody>
   );
 }

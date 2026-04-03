@@ -1,4 +1,4 @@
-import { formatDate } from "./utils";
+import { formatDate, formatLocalDateKey } from "./utils";
 import { STOOL_COLORS } from "./constants";
 import { getEpisodeTypeLabel } from "./episode-constants";
 import { getFeedingEntryDisplayLabel } from "./feeding";
@@ -120,7 +120,7 @@ function buildLastNDates(endDate: string, count: number): string[] {
   for (let index = count - 1; index >= 0; index -= 1) {
     const current = new Date(end);
     current.setDate(end.getDate() - index);
-    dates.push(current.toISOString().split("T")[0]);
+    dates.push(formatLocalDateKey(current));
   }
   return dates;
 }

@@ -8,11 +8,13 @@ export function TrackerMetricRing({
   unit,
   label,
   gradient,
+  detail,
 }: {
   value: string;
   unit: string;
   label: string;
   gradient: string;
+  detail?: string;
 }) {
   return (
     <div className="flex flex-col items-center gap-2 text-center">
@@ -28,6 +30,11 @@ export function TrackerMetricRing({
           <span className="text-[11px] text-[var(--color-text-secondary)]">{unit}</span>
         </div>
       </div>
+      {detail && (
+        <p className="max-w-[9ch] text-[11px] leading-tight text-[var(--color-text-secondary)]">
+          {detail}
+        </p>
+      )}
       <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-[var(--color-text-soft)]">{label}</p>
     </div>
   );

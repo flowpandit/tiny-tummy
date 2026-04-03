@@ -6,27 +6,30 @@ import { DatePicker } from "../components/ui/date-picker";
 import { FieldLabel, Input } from "../components/ui/field";
 import { SegmentedControl } from "../components/ui/segmented-control";
 import { AvatarUpload } from "../components/child/AvatarUpload";
-import { FEEDING_TYPES, AVATAR_COLORS } from "../lib/constants";
+import { FEEDING_TYPES, AVATAR_COLORS, CHILD_SEX_OPTIONS } from "../lib/constants";
 import { cn } from "../lib/cn";
 import * as db from "../lib/db";
 import { saveAvatar } from "../lib/photos";
 import { useChildContext } from "../contexts/ChildContext";
 import { useToast } from "../components/ui/toast";
-import type { FeedingType } from "../lib/types";
+import { Header } from "../components/layout/Header";
+import { getCurrentLocalDate } from "../lib/utils";
+import type { ChildSex, FeedingType } from "../lib/types";
 
 export function AddChild() {
   const navigate = useNavigate();
   const { refreshChildren, setActiveChildId } = useChildContext();
   const { showError } = useToast();
   const [name, setName] = useState("");
-  const [dob, setDob] = useState(new Date().toISOString().split("T")[0]);
+  const [dob, setDob] = useState(getCurrentLocalDate());
+  const [sex, setSex] = useState<ChildSex | null>(null);
   const [feedingType, setFeedingType] = useState<FeedingType>("breast");
   const [avatarColor, setAvatarColor] = useState(AVATAR_COLORS[0]);
   const [avatarBlob, setAvatarBlob] = useState<Blob | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const isValid = name.trim().length > 0 && dob.length > 0;
+  const isValid = name.trim().length > 0 && dob.length > 0 && sex !== null;
 
   const handleAvatarSave = async (blob: Blob) => {
     setAvatarBlob(blob);
@@ -43,6 +46,7 @@ export function AddChild() {
       const child = await db.createChild({
         name: name.trim(),
         date_of_birth: dob,
+        sex,
         feeding_type: feedingType,
         avatar_color: avatarColor,
       });
@@ -65,19 +69,10 @@ export function AddChild() {
     <div
       className="min-h-[100dvh] bg-[var(--color-bg)] flex flex-col px-6"
       style={{
-        paddingTop: "calc(var(--safe-area-top) + 18px)",
+        paddingTop: "calc(var(--safe-area-top) + 94px)",
       }}
     >
-      {/* Back button */}
-      <button
-        onClick={() => navigate(-1)}
-        className="flex items-center gap-1 text-sm text-[var(--color-primary)] cursor-pointer mb-4 self-start"
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
-          <path fillRule="evenodd" d="M17 10a.75.75 0 0 1-.75.75H5.612l4.158 3.96a.75.75 0 1 1-1.04 1.08l-5.5-5.25a.75.75 0 0 1 0-1.08l5.5-5.25a.75.75 0 1 1 1.04 1.08L5.612 9.25H16.25A.75.75 0 0 1 17 10Z" clipRule="evenodd" />
-        </svg>
-        Back
-      </button>
+      <Header showBackButton fallbackTo="/settings" />
 
       <h2 className="font-[var(--font-display)] text-2xl font-bold text-[var(--color-text)] mb-2">
         Add a child
@@ -101,7 +96,20 @@ export function AddChild() {
 
         <div>
           <FieldLabel>Date of birth</FieldLabel>
-          <DatePicker value={dob} onChange={setDob} max={new Date().toISOString().split("T")[0]} label="Date of birth" />
+          <DatePicker value={dob} onChange={setDob} max={getCurrentLocalDate()} label="Date of birth" />
+        </div>
+
+        <div>
+          <FieldLabel>Sex</FieldLabel>
+          <SegmentedControl
+            value={sex}
+            onChange={(value) => setSex(value as ChildSex)}
+            options={CHILD_SEX_OPTIONS}
+            gridClassName="grid-cols-2"
+          />
+          <p className="mt-2 text-xs text-[var(--color-text-secondary)]">
+            Used for official growth percentile calculations.
+          </p>
         </div>
 
         <div>
@@ -161,7 +169,9 @@ export function AddChild() {
               <div>
                 <p className="font-medium text-[var(--color-text)]">{name.trim()}</p>
                 <p className="text-xs text-[var(--color-text-secondary)]">
-                  {FEEDING_TYPES.find((f) => f.value === feedingType)?.label}
+                  {[sex ? CHILD_SEX_OPTIONS.find((option) => option.value === sex)?.label : null, FEEDING_TYPES.find((f) => f.value === feedingType)?.label]
+                    .filter(Boolean)
+                    .join(" · ")}
                 </p>
               </div>
             </CardContent>

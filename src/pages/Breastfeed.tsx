@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Button } from "../components/ui/button";
-import { PageIntro } from "../components/ui/page-intro";
-import { InsetPanel, PageBackButton, PageBody } from "../components/ui/page-layout";
+import { ScenicHero } from "../components/layout/ScenicHero";
+import { InsetPanel, PageBody } from "../components/ui/page-layout";
+import { TrackerMetricRing } from "../components/tracking/TrackerPrimitives";
 import { useToast } from "../components/ui/toast";
 import { useChildContext } from "../contexts/ChildContext";
 import { syncSmartRemindersForChild } from "../lib/notifications";
@@ -83,6 +84,26 @@ function BreastSideButton({
       </p>
     </button>
   );
+}
+
+function getDurationRingDisplay(durationMs: number, gradient: string) {
+  const roundedMinutes = getRoundedDurationMinutes(durationMs);
+
+  if (roundedMinutes >= 60) {
+    const hours = Math.floor(roundedMinutes / 60);
+    const minutes = roundedMinutes % 60;
+    return {
+      value: `${hours}`,
+      unit: minutes > 0 ? `${minutes}m` : "hrs",
+      gradient,
+    };
+  }
+
+  return {
+    value: `${roundedMinutes}`,
+    unit: "mins",
+    gradient,
+  };
 }
 
 export function Breastfeed() {
@@ -298,17 +319,26 @@ export function Breastfeed() {
     }
   };
 
-  return (
-    <PageBody>
-      <PageBackButton fallbackTo="/" />
+  const currentSessionRing = getDurationRingDisplay(totalDuration, "var(--gradient-status-caution)");
+  const leftRing = getDurationRingDisplay(leftDuration, "var(--gradient-status-healthy)");
+  const rightRing = getDurationRingDisplay(rightDuration, "var(--gradient-status-head)");
 
-      <PageIntro
-        eyebrow="Feeding"
+  return (
+    <PageBody className="mt-0 space-y-0 px-0 py-0">
+      <ScenicHero
+        child={activeChild}
         title="Breastfeed"
         description="Tap left or right to start timing. Switching sides pauses the first side automatically and keeps both totals together."
-        meta={suggestedStartSide ? `Last feed finished on ${lastUsedSide}. Start on ${suggestedStartSide} if that is what you want to offer first.` : "The last-used side will be remembered here for the next feed."}
+        action={(
+          <Button variant="cta" size="sm" onClick={handleSave} disabled={totalDuration < 1000 || isSaving}>
+            {isSaving ? "Saving..." : "Save"}
+          </Button>
+        )}
+        className="overflow-hidden"
+        scene="breastfeed"
       />
 
+      <div className="space-y-4 px-4 py-5">
       {!supportsBreastfeeding ? (
         <InsetPanel>
           <p className="text-sm font-medium text-[var(--color-text)]">Breastfeeding timer is hidden for this child profile.</p>
@@ -318,6 +348,27 @@ export function Breastfeed() {
         </InsetPanel>
       ) : (
         <>
+          <div className="-mt-32 relative z-10 grid grid-cols-3 gap-3 px-4 pt-4">
+            <TrackerMetricRing
+              value={leftRing.value}
+              unit={leftRing.unit}
+              label="Left total"
+              gradient={leftRing.gradient}
+            />
+            <TrackerMetricRing
+              value={currentSessionRing.value}
+              unit={currentSessionRing.unit}
+              label="Current session"
+              gradient={currentSessionRing.gradient}
+            />
+            <TrackerMetricRing
+              value={rightRing.value}
+              unit={rightRing.unit}
+              label="Right total"
+              gradient={rightRing.gradient}
+            />
+          </div>
+
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <BreastSideButton
               side="left"
@@ -349,6 +400,17 @@ export function Breastfeed() {
                 </span>
               )}
             </div>
+            {lastUsedSide && !activeSide && (
+              <div className="rounded-[18px] border border-[var(--color-border)] bg-[var(--color-bg-elevated)]/72 px-4 py-3">
+                <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--color-text-soft)]">Next suggested side</p>
+                <p className="mt-2 text-sm font-medium text-[var(--color-text)]">
+                  Start on the {suggestedStartSide} side.
+                </p>
+                <p className="mt-1 text-xs leading-relaxed text-[var(--color-text-secondary)]">
+                  Last feed finished on the {lastUsedSide} side, so the {suggestedStartSide} side should be fuller.
+                </p>
+              </div>
+            )}
             <div className="grid grid-cols-2 gap-3">
               <div className="rounded-[18px] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3">
                 <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--color-text-soft)]">Left total</p>
@@ -387,6 +449,7 @@ export function Breastfeed() {
           </div>
         </>
       )}
+      </div>
     </PageBody>
   );
 }

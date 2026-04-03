@@ -4,11 +4,12 @@ import { Card, CardContent, CardHeader } from "../components/ui/card";
 import { Badge } from "../components/ui/badge";
 import { Textarea } from "../components/ui/field";
 import { PageIntro } from "../components/ui/page-intro";
-import { InsetPanel, PageBackButton, PageBody, SectionHeading, StatGrid, StatTile } from "../components/ui/page-layout";
+import { InsetPanel, PageBody, SectionHeading, StatGrid, StatTile } from "../components/ui/page-layout";
 import { useToast } from "../components/ui/toast";
 import { useChildContext } from "../contexts/ChildContext";
 import { useUnits } from "../contexts/UnitsContext";
 import { usePoopLogs } from "../hooks/usePoopLogs";
+import { useDiaperLogs } from "../hooks/useDiaperLogs";
 import { useFeedingLogs } from "../hooks/useFeedingLogs";
 import { useAlerts } from "../hooks/useAlerts";
 import { useEpisodes } from "../hooks/useEpisodes";
@@ -27,6 +28,7 @@ export function Handoff() {
   const { activeChild } = useChildContext();
   const { unitSystem } = useUnits();
   const { logs, lastRealPoop } = usePoopLogs(activeChild?.id ?? null);
+  const { logs: diaperLogs } = useDiaperLogs(activeChild?.id ?? null);
   const { logs: feedingLogs } = useFeedingLogs(activeChild?.id ?? null);
   const { alerts } = useAlerts(activeChild?.id ?? null);
   const { activeEpisode, events: episodeEvents } = useEpisodes(activeChild?.id ?? null);
@@ -74,6 +76,7 @@ export function Handoff() {
 
   const summary = buildChildDailySummary({
     poopLogs: logs,
+    diaperLogs,
     feedingLogs,
     alerts,
     activeEpisode,
@@ -131,8 +134,6 @@ export function Handoff() {
 
   return (
     <PageBody>
-      <PageBackButton fallbackTo="/settings" className="pt-1" />
-
       <PageIntro
         eyebrow="Caregiver"
         title="Handoff"
@@ -169,6 +170,8 @@ export function Handoff() {
       </div>
 
       <StatGrid>
+        <StatTile eyebrow="Wet today" value={summary.todayWetDiapers} description="Wet or mixed diapers logged so far." tone="healthy" />
+        <StatTile eyebrow="Dirty today" value={summary.todayDirtyDiapers} description="Dirty or mixed diapers logged so far." />
         <StatTile eyebrow="Poops today" value={summary.todayPoops} description="Logged bowel movements so far." />
         <StatTile eyebrow="Feeds today" value={summary.todayFeeds} description="Logged feeds so far." tone="cta" />
         <StatTile eyebrow="No-poop day" value={summary.hasNoPoopDay ? "Yes" : "No"} description="Whether a no-poop day marker was added." tone="info" />

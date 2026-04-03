@@ -2,6 +2,7 @@ export interface Child {
   id: string;
   name: string;
   date_of_birth: string;
+  sex: ChildSex | null;
   feeding_type: FeedingType;
   avatar_color: string;
   is_active: number;
@@ -10,6 +11,7 @@ export interface Child {
 }
 
 export type UnitSystem = "metric" | "imperial";
+export type ChildSex = "male" | "female";
 
 export type FeedingType = "breast" | "formula" | "mixed" | "solids";
 
@@ -27,7 +29,36 @@ export interface PoopEntry {
   updated_at: string;
 }
 
+export type DiaperType = "wet" | "dirty" | "mixed";
+
+export type UrineColor = "pale" | "normal" | "dark";
+
+export interface DiaperEntry {
+  id: string;
+  child_id: string;
+  logged_at: string;
+  diaper_type: DiaperType;
+  urine_color: UrineColor | null;
+  stool_type: number | null;
+  color: StoolColor | null;
+  size: StoolSize | null;
+  notes: string | null;
+  photo_path: string | null;
+  linked_poop_log_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface PoopLogDraft {
+  stool_type: number | null;
+  color: StoolColor | null;
+  size: StoolSize | null;
+  notes: string;
+}
+
+export interface DiaperLogDraft {
+  diaper_type: DiaperType | null;
+  urine_color: UrineColor | null;
   stool_type: number | null;
   color: StoolColor | null;
   size: StoolSize | null;
@@ -257,7 +288,7 @@ export interface QuickPresetEntry {
 
 export interface TimelineEvent {
   id: string;
-  type: "poop" | "meal";
+  type: "poop" | "meal" | "diaper";
   logged_at: string;
   label: string;
   color?: string;

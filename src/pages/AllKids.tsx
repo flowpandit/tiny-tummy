@@ -8,6 +8,7 @@ import { getAgeLabelFromDob, timeSince } from "../lib/utils";
 import { Card, CardContent } from "../components/ui/card";
 import { Avatar } from "../components/child/Avatar";
 import { Badge } from "../components/ui/badge";
+import { Header } from "../components/layout/Header";
 import type { Child, HealthStatus } from "../lib/types";
 
 interface ChildSummary {
@@ -82,17 +83,8 @@ export function AllKids() {
   };
 
   return (
-    <div className="min-h-screen bg-[var(--color-bg)] px-4 py-6">
-      {/* Back button */}
-      <button
-        onClick={() => navigate(-1)}
-        className="flex items-center gap-1 text-sm text-[var(--color-primary)] cursor-pointer mb-4"
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
-          <path fillRule="evenodd" d="M17 10a.75.75 0 0 1-.75.75H5.612l4.158 3.96a.75.75 0 1 1-1.04 1.08l-5.5-5.25a.75.75 0 0 1 0-1.08l5.5-5.25a.75.75 0 1 1 1.04 1.08L5.612 9.25H16.25A.75.75 0 0 1 17 10Z" clipRule="evenodd" />
-        </svg>
-        Back
-      </button>
+    <div className="min-h-screen bg-[var(--color-bg)] px-4 py-6" style={{ paddingTop: "calc(var(--safe-area-top) + 94px)" }}>
+      <Header showBackButton fallbackTo="/settings" />
 
       <h2 className="font-[var(--font-display)] text-2xl font-bold text-[var(--color-text)] mb-1">
         All Kids

@@ -1,6 +1,5 @@
 import { type KeyboardEvent, type MouseEvent } from "react";
 import { motion } from "framer-motion";
-import { useNavigate } from "react-router-dom";
 import { Avatar } from "../child/Avatar";
 import { getAgeLabelFromDob } from "../../lib/utils";
 import type { Child } from "../../lib/types";
@@ -9,7 +8,7 @@ interface ChildSwitcherCardProps {
   activeChild: Child;
   children: Child[];
   expanded: boolean;
-  lastPoopLabel: string | null;
+  secondaryLabel: string | null;
   collapsible?: boolean;
   onToggle?: () => void;
   onSelectChild: (id: string) => void;
@@ -19,12 +18,11 @@ export function ChildSwitcherCard({
   activeChild,
   children,
   expanded,
-  lastPoopLabel,
+  secondaryLabel,
   collapsible = true,
   onToggle,
   onSelectChild,
 }: ChildSwitcherCardProps) {
-  const navigate = useNavigate();
   const ageLabel = getAgeLabelFromDob(activeChild.date_of_birth);
   const otherChildren = children.filter((child) => child.id !== activeChild.id);
   const isExpanded = collapsible ? expanded : true;
@@ -35,11 +33,6 @@ export function ChildSwitcherCard({
       event.preventDefault();
       onToggle();
     }
-  };
-
-  const handleAddChild = (event: MouseEvent<HTMLButtonElement>) => {
-    event.stopPropagation();
-    navigate("/add-child");
   };
 
   const handleSelectChild = (event: MouseEvent<HTMLButtonElement>, childId: string) => {
@@ -64,7 +57,7 @@ export function ChildSwitcherCard({
           opacity: isExpanded || !collapsible ? 1 : 0,
         }}
         transition={{ duration: 0.16, ease: [0.22, 1, 0.36, 1] }}
-        className="absolute inset-y-0 left-0 rounded-[20px] border border-[var(--color-border)] bg-[var(--color-surface-strong)] shadow-[var(--shadow-soft)]"
+        className="absolute inset-y-0 left-0 rounded-[28px] border border-[var(--color-border)] bg-[rgba(255,252,247,0.96)] shadow-[var(--shadow-card)]"
       />
 
       <div className="relative z-10 flex h-full items-center">
@@ -73,7 +66,7 @@ export function ChildSwitcherCard({
           name={activeChild.name}
           color={activeChild.avatar_color}
           size="lg"
-          className="ml-7 h-[56px] w-[56px] ring-4 ring-white/55 text-[1.4rem]"
+          className="ml-6 h-[56px] w-[56px] ring-4 ring-white/70 text-[1.4rem]"
         />
 
         <motion.div
@@ -86,15 +79,15 @@ export function ChildSwitcherCard({
           className="ml-5 min-w-0 flex-1"
           style={{ pointerEvents: isExpanded ? "auto" : "none" }}
         >
-          <p className="truncate text-[24px] font-semibold leading-none text-[var(--color-text)]">
+          <p className="truncate font-[var(--font-display)] text-[1.9rem] font-semibold leading-none tracking-[-0.03em] text-[var(--color-text)]">
             {activeChild.name}
           </p>
           <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-[var(--color-text-secondary)]">
             <span>{ageLabel}</span>
-            {lastPoopLabel && (
+            {secondaryLabel && (
               <>
                 <span className="h-2 w-2 rounded-full bg-[var(--color-healthy)]" />
-                <span className="text-[var(--color-healthy)]">{lastPoopLabel}</span>
+                <span className="text-[var(--color-healthy)]">{secondaryLabel}</span>
               </>
             )}
           </div>
@@ -127,15 +120,6 @@ export function ChildSwitcherCard({
               />
             </button>
           ))}
-
-          <button
-            type="button"
-            aria-label="Add a child"
-            onClick={handleAddChild}
-            className="flex h-14 w-14 items-center justify-center rounded-full border border-[var(--color-border)] bg-white/70 text-[30px] font-light leading-none text-[var(--color-text-secondary)] transition-colors hover:bg-white"
-          >
-            +
-          </button>
         </motion.div>
       </div>
     </div>

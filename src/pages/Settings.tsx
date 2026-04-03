@@ -9,13 +9,13 @@ import { Button } from "../components/ui/button";
 import { FieldLabel, Input } from "../components/ui/field";
 import { SegmentedControl } from "../components/ui/segmented-control";
 import { Switch } from "../components/ui/switch";
-import { PageIntro } from "../components/ui/page-intro";
+import { ScenicHero } from "../components/layout/ScenicHero";
 import { DatePicker } from "../components/ui/date-picker";
 import { TimePicker } from "../components/ui/time-picker";
 import { Sheet } from "../components/ui/sheet";
 import { useToast } from "../components/ui/toast";
-import { FEEDING_TYPES, AVATAR_COLORS } from "../lib/constants";
-import { getAgeLabelFromDob } from "../lib/utils";
+import { FEEDING_TYPES, AVATAR_COLORS, CHILD_SEX_OPTIONS } from "../lib/constants";
+import { getAgeLabelFromDob, getCurrentLocalDate } from "../lib/utils";
 import { cn } from "../lib/cn";
 import {
   isDailyReminderEnabled,
@@ -28,8 +28,9 @@ import {
 import { AvatarUpload } from "../components/child/AvatarUpload";
 import { Avatar } from "../components/child/Avatar";
 import { saveAvatar, deleteAvatar } from "../lib/photos";
+import { getEliminationViewSettingKey, type EliminationViewPreference } from "../lib/diaper";
 import * as db from "../lib/db";
-import type { Child, FeedingType, UnitSystem } from "../lib/types";
+import type { Child, ChildSex, FeedingType, UnitSystem } from "../lib/types";
 
 function EditChildSheet({
   child,
@@ -44,6 +45,7 @@ function EditChildSheet({
 }) {
   const [name, setName] = useState(child.name);
   const [dob, setDob] = useState(child.date_of_birth);
+  const [sex, setSex] = useState<ChildSex | null>(child.sex);
   const [feedingType, setFeedingType] = useState<FeedingType>(child.feeding_type);
   const [avatarColor, setAvatarColor] = useState(child.avatar_color);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
@@ -86,6 +88,7 @@ function EditChildSheet({
     await db.updateChild(child.id, {
       name: name.trim(),
       date_of_birth: dob,
+      sex,
       feeding_type: feedingType,
       avatar_color: avatarColor,
     });
@@ -124,7 +127,21 @@ function EditChildSheet({
 
           <div>
             <FieldLabel>Date of birth</FieldLabel>
-            <DatePicker value={dob} onChange={setDob} max={new Date().toISOString().split("T")[0]} label="Date of birth" />
+            <DatePicker value={dob} onChange={setDob} max={getCurrentLocalDate()} label="Date of birth" />
+          </div>
+
+          <div>
+            <FieldLabel>Sex</FieldLabel>
+            <SegmentedControl
+              value={sex}
+              onChange={(value) => setSex(value as ChildSex)}
+              options={CHILD_SEX_OPTIONS}
+              gridClassName="grid-cols-2"
+              size="sm"
+            />
+            <p className="mt-2 text-xs text-[var(--color-text-secondary)]">
+              Growth percentiles need this to match the right chart.
+            </p>
           </div>
 
           <div>
@@ -227,27 +244,27 @@ function NotificationSection({ children }: { children: Child[] }) {
     title: string;
     description: string;
   }> = [
-    {
-      key: "noPoop",
-      title: "No-poop threshold",
-      description: "Age-aware reminder when it's time to review a long gap since the last poop.",
-    },
-    {
-      key: "redFlagFollowUp",
-      title: "Red-flag stool follow-up",
-      description: "Follow up after white, red, or post-newborn black stool entries.",
-    },
-    {
-      key: "episodeCheckIn",
-      title: "Active episode check-in",
-      description: "Nudge you to add another update when an episode is still active.",
-    },
-    {
-      key: "solidsHydration",
-      title: "Solids hydration check",
-      description: "Extra hydration reminder while a solids transition episode is active.",
-    },
-  ];
+      {
+        key: "noPoop",
+        title: "No-poop threshold",
+        description: "Age-aware reminder when it's time to review a long gap since the last poop.",
+      },
+      {
+        key: "redFlagFollowUp",
+        title: "Red-flag stool follow-up",
+        description: "Follow up after white, red, or post-newborn black stool entries.",
+      },
+      {
+        key: "episodeCheckIn",
+        title: "Active episode check-in",
+        description: "Nudge you to add another update when an episode is still active.",
+      },
+      {
+        key: "solidsHydration",
+        title: "Solids hydration check",
+        description: "Extra hydration reminder while a solids transition episode is active.",
+      },
+    ];
 
   return (
     <div className="mb-6">
@@ -402,6 +419,61 @@ function MeasurementsSection() {
   );
 }
 
+const ELIMINATION_VIEW_OPTIONS: { value: EliminationViewPreference; label: string }[] = [
+  { value: "auto", label: "Auto" },
+  { value: "diaper", label: "Diaper" },
+  { value: "poop", label: "Poop" },
+];
+
+function EliminationSection({ child }: { child: Child | null }) {
+  const [value, setValue] = useState<EliminationViewPreference>("auto");
+
+  useEffect(() => {
+    if (!child) {
+      setValue("auto");
+      return;
+    }
+
+    db.getSetting(getEliminationViewSettingKey(child.id)).then((stored) => {
+      if (stored === "auto" || stored === "diaper" || stored === "poop") {
+        setValue(stored);
+      } else {
+        setValue("auto");
+      }
+    });
+  }, [child]);
+
+  if (!child) return null;
+
+  return (
+    <div className="mb-6">
+      <h3 className="text-sm font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider mb-3">
+        Elimination
+      </h3>
+      <Card>
+        <CardContent className="py-3">
+          <p className="text-sm font-medium text-[var(--color-text)] mb-2">Main tracking page</p>
+          <SegmentedControl
+            value={value}
+            onChange={(next) => {
+              const preference = next as EliminationViewPreference;
+              setValue(preference);
+              void db.setSetting(getEliminationViewSettingKey(child.id), preference);
+            }}
+            options={ELIMINATION_VIEW_OPTIONS}
+            className="bg-[var(--color-bg)] rounded-[var(--radius-sm)] border border-[var(--color-border)] p-0.5"
+            gridClassName="grid-cols-3"
+            size="sm"
+          />
+          <p className="mt-2 text-xs text-[var(--color-text-secondary)]">
+            Auto uses the diaper view through the first year, then switches back to the poop page.
+          </p>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 export function Settings() {
   const { children, activeChild, refreshChildren } = useChildContext();
   const { simulateExpiration } = useTrial();
@@ -416,250 +488,267 @@ export function Settings() {
     // If we deleted the active child, context will auto-select another
   };
 
-  return (
-    <div className="px-4 py-5">
-      <PageIntro eyebrow="Preferences" title="Settings" className="mb-6" />
+  const heroChild = activeChild ?? children[0] ?? null;
 
-      {/* Children section */}
-      <div className="mb-8">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider">
-            Children
+  return (
+    <div className="mt-0 px-0 py-0">
+      {heroChild && (
+        <ScenicHero
+          child={heroChild}
+          title="Settings"
+          description="Preferences, children, reminders, and everyday app setup in one place."
+          showChildInfo={false}
+          className="overflow-hidden"
+        />
+      )}
+
+      <div className="-mt-24 px-4">
+
+        {/* Children section */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider">
+              Children
+            </h3>
+            <div className="flex gap-2">
+              {children.length > 1 && (
+                <button
+                  onClick={() => navigate("/all-kids")}
+                  className="text-xs text-[var(--color-primary)] cursor-pointer font-medium"
+                >
+                  View All
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            {children.map((child) => (
+              <Card key={child.id}>
+                <CardContent className="py-3">
+                  <div className="flex items-center gap-3">
+                    <Avatar childId={child.id} name={child.name} color={child.avatar_color} size="md" />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium text-[var(--color-text)] truncate">{child.name}</p>
+                        {activeChild?.id === child.id && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--color-primary)]/10 text-[var(--color-primary)] font-medium">
+                            Active
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-[var(--color-text-secondary)]">
+                        {[getAgeLabelFromDob(child.date_of_birth), child.sex ? CHILD_SEX_OPTIONS.find((option) => option.value === child.sex)?.label : null, FEEDING_TYPES.find((f) => f.value === child.feeding_type)?.label]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </p>
+                    </div>
+                    <div className="flex gap-1">
+                      <button
+                        onClick={() => setEditingChild(child)}
+                        className="w-11 h-11 flex items-center justify-center rounded-[var(--radius-sm)] text-[var(--color-text-secondary)] hover:bg-[var(--color-bg)] cursor-pointer transition-colors"
+                        aria-label={`Edit ${child.name}`}
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+                          <path d="m5.433 13.917 1.262-3.155A4 4 0 0 1 7.58 9.42l6.92-6.918a2.121 2.121 0 0 1 3 3l-6.92 6.918c-.383.383-.84.685-1.343.886l-3.154 1.262a.5.5 0 0 1-.65-.65Z" />
+                          <path d="M3.5 5.75c0-.69.56-1.25 1.25-1.25H10A.75.75 0 0 0 10 3H4.75A2.75 2.75 0 0 0 2 5.75v9.5A2.75 2.75 0 0 0 4.75 18h9.5A2.75 2.75 0 0 0 17 15.25V10a.75.75 0 0 0-1.5 0v5.25c0 .69-.56 1.25-1.25 1.25h-9.5c-.69 0-1.25-.56-1.25-1.25v-9.5Z" />
+                        </svg>
+                      </button>
+                      {children.length > 1 && (
+                        confirmDelete === child.id ? (
+                          <div className="flex gap-1">
+                            <button
+                              onClick={() => handleDelete(child.id)}
+                              className="px-2 py-1 text-xs bg-[var(--color-alert)] text-white rounded-[var(--radius-sm)] cursor-pointer"
+                            >
+                              Delete
+                            </button>
+                            <button
+                              onClick={() => setConfirmDelete(null)}
+                              className="px-2 py-1 text-xs bg-[var(--color-bg)] text-[var(--color-text-secondary)] border border-[var(--color-border)] rounded-[var(--radius-sm)] cursor-pointer"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => setConfirmDelete(child.id)}
+                            className="w-11 h-11 flex items-center justify-center rounded-[var(--radius-sm)] text-[var(--color-muted)] hover:text-[var(--color-alert)] hover:bg-[var(--color-alert-bg)] cursor-pointer transition-colors"
+                            aria-label={`Remove ${child.name}`}
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+                              <path fillRule="evenodd" d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 1 0 .23 1.482l.149-.022.841 10.518A2.75 2.75 0 0 0 7.596 19h4.807a2.75 2.75 0 0 0 2.742-2.53l.841-10.52.149.023a.75.75 0 0 0 .23-1.482A41.03 41.03 0 0 0 14 4.193V3.75A2.75 2.75 0 0 0 11.25 1h-2.5ZM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4ZM8.58 7.72a.75.75 0 0 0-1.5.06l.3 7.5a.75.75 0 1 0 1.5-.06l-.3-7.5Zm4.34.06a.75.75 0 1 0-1.5-.06l-.3 7.5a.75.75 0 1 0 1.5.06l.3-7.5Z" clipRule="evenodd" />
+                            </svg>
+                          </button>
+                        )
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          <Button
+            variant="secondary"
+            className="w-full mt-3"
+            onClick={() => navigate("/add-child")}
+          >
+            Add Child
+          </Button>
+        </div>
+
+        {/* Appearance */}
+        <ThemeSection />
+
+        <MeasurementsSection />
+
+        <EliminationSection child={activeChild} />
+
+        {/* Notifications */}
+        <NotificationSection children={children} />
+
+        <div className="mb-6">
+          <h3 className="text-sm font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider mb-3">
+            Records
           </h3>
-          <div className="flex gap-2">
-            {children.length > 1 && (
-              <button
-                onClick={() => navigate("/all-kids")}
-                className="text-xs text-[var(--color-primary)] cursor-pointer font-medium"
-              >
-                View All
-              </button>
-            )}
+          <div className="flex flex-col gap-2">
+            <Card
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") navigate("/history"); }}
+              className="cursor-pointer hover:shadow-[var(--shadow-soft)] transition-shadow"
+              onClick={() => navigate("/history")}
+            >
+              <CardContent className="py-3 flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-[var(--color-text)]">History</p>
+                  <p className="text-xs text-[var(--color-text-secondary)]">
+                    Timeline of logged entries
+                  </p>
+                </div>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="var(--color-muted)" className="w-5 h-5">
+                  <path fillRule="evenodd" d="M8.22 5.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L11.94 10 8.22 6.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
+                </svg>
+              </CardContent>
+            </Card>
+
+            <Card
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") navigate("/growth"); }}
+              className="cursor-pointer hover:shadow-[var(--shadow-soft)] transition-shadow"
+              onClick={() => navigate("/growth")}
+            >
+              <CardContent className="py-3 flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-[var(--color-text)]">Growth</p>
+                  <p className="text-xs text-[var(--color-text-secondary)]">
+                    Weight, length, and head circumference trends
+                  </p>
+                </div>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="var(--color-muted)" className="w-5 h-5">
+                  <path fillRule="evenodd" d="M8.22 5.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L11.94 10 8.22 6.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
+                </svg>
+              </CardContent>
+            </Card>
+
+            <Card
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") navigate("/milestones"); }}
+              className="cursor-pointer hover:shadow-[var(--shadow-soft)] transition-shadow"
+              onClick={() => navigate("/milestones")}
+            >
+              <CardContent className="py-3 flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-[var(--color-text)]">Milestones</p>
+                  <p className="text-xs text-[var(--color-text-secondary)]">
+                    Health-linked context like solids, illness, teething, or medication changes
+                  </p>
+                </div>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="var(--color-muted)" className="w-5 h-5">
+                  <path fillRule="evenodd" d="M8.22 5.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L11.94 10 8.22 6.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
+                </svg>
+              </CardContent>
+            </Card>
           </div>
         </div>
 
-        <div className="flex flex-col gap-2">
-          {children.map((child) => (
-            <Card key={child.id}>
-              <CardContent className="py-3">
-                <div className="flex items-center gap-3">
-                  <Avatar childId={child.id} name={child.name} color={child.avatar_color} size="md" />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <p className="font-medium text-[var(--color-text)] truncate">{child.name}</p>
-                      {activeChild?.id === child.id && (
-                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--color-primary)]/10 text-[var(--color-primary)] font-medium">
-                          Active
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-xs text-[var(--color-text-secondary)]">
-                      {getAgeLabelFromDob(child.date_of_birth)} · {FEEDING_TYPES.find((f) => f.value === child.feeding_type)?.label}
-                    </p>
-                  </div>
-                  <div className="flex gap-1">
-                    <button
-                      onClick={() => setEditingChild(child)}
-                      className="w-11 h-11 flex items-center justify-center rounded-[var(--radius-sm)] text-[var(--color-text-secondary)] hover:bg-[var(--color-bg)] cursor-pointer transition-colors"
-                      aria-label={`Edit ${child.name}`}
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
-                        <path d="m5.433 13.917 1.262-3.155A4 4 0 0 1 7.58 9.42l6.92-6.918a2.121 2.121 0 0 1 3 3l-6.92 6.918c-.383.383-.84.685-1.343.886l-3.154 1.262a.5.5 0 0 1-.65-.65Z" />
-                        <path d="M3.5 5.75c0-.69.56-1.25 1.25-1.25H10A.75.75 0 0 0 10 3H4.75A2.75 2.75 0 0 0 2 5.75v9.5A2.75 2.75 0 0 0 4.75 18h9.5A2.75 2.75 0 0 0 17 15.25V10a.75.75 0 0 0-1.5 0v5.25c0 .69-.56 1.25-1.25 1.25h-9.5c-.69 0-1.25-.56-1.25-1.25v-9.5Z" />
-                      </svg>
-                    </button>
-                    {children.length > 1 && (
-                      confirmDelete === child.id ? (
-                        <div className="flex gap-1">
-                          <button
-                            onClick={() => handleDelete(child.id)}
-                            className="px-2 py-1 text-xs bg-[var(--color-alert)] text-white rounded-[var(--radius-sm)] cursor-pointer"
-                          >
-                            Delete
-                          </button>
-                          <button
-                            onClick={() => setConfirmDelete(null)}
-                            className="px-2 py-1 text-xs bg-[var(--color-bg)] text-[var(--color-text-secondary)] border border-[var(--color-border)] rounded-[var(--radius-sm)] cursor-pointer"
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      ) : (
-                        <button
-                          onClick={() => setConfirmDelete(child.id)}
-                          className="w-11 h-11 flex items-center justify-center rounded-[var(--radius-sm)] text-[var(--color-muted)] hover:text-[var(--color-alert)] hover:bg-[var(--color-alert-bg)] cursor-pointer transition-colors"
-                          aria-label={`Remove ${child.name}`}
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
-                            <path fillRule="evenodd" d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 1 0 .23 1.482l.149-.022.841 10.518A2.75 2.75 0 0 0 7.596 19h4.807a2.75 2.75 0 0 0 2.742-2.53l.841-10.52.149.023a.75.75 0 0 0 .23-1.482A41.03 41.03 0 0 0 14 4.193V3.75A2.75 2.75 0 0 0 11.25 1h-2.5ZM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4ZM8.58 7.72a.75.75 0 0 0-1.5.06l.3 7.5a.75.75 0 1 0 1.5-.06l-.3-7.5Zm4.34.06a.75.75 0 1 0-1.5-.06l-.3 7.5a.75.75 0 1 0 1.5.06l.3-7.5Z" clipRule="evenodd" />
-                          </svg>
-                        </button>
-                      )
-                    )}
-                  </div>
+        {/* Reports */}
+        <div className="mb-6">
+          <h3 className="text-sm font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider mb-3">
+            Support
+          </h3>
+          <div className="flex flex-col gap-2">
+            <Card
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") navigate("/guidance"); }}
+              className="cursor-pointer hover:shadow-[var(--shadow-soft)] transition-shadow"
+              onClick={() => navigate("/guidance")}
+            >
+              <CardContent className="py-3 flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-[var(--color-text)]">Guidance</p>
+                  <p className="text-xs text-[var(--color-text-secondary)]">
+                    Evidence-based tips and when to call the doctor
+                  </p>
                 </div>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="var(--color-muted)" className="w-5 h-5">
+                  <path fillRule="evenodd" d="M8.22 5.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L11.94 10 8.22 6.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
+                </svg>
               </CardContent>
             </Card>
-          ))}
+
+          </div>
         </div>
 
-        <Button
-          variant="secondary"
-          className="w-full mt-3"
-          onClick={() => navigate("/add-child")}
-        >
-          Add Child
-        </Button>
-      </div>
-
-      {/* Appearance */}
-      <ThemeSection />
-
-      <MeasurementsSection />
-
-      {/* Notifications */}
-      <NotificationSection children={children} />
-
-      <div className="mb-6">
-        <h3 className="text-sm font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider mb-3">
-          Records
-        </h3>
-        <div className="flex flex-col gap-2">
-          <Card
-            role="button"
-            tabIndex={0}
-            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") navigate("/history"); }}
-            className="cursor-pointer hover:shadow-[var(--shadow-soft)] transition-shadow"
-            onClick={() => navigate("/history")}
-          >
-            <CardContent className="py-3 flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-[var(--color-text)]">History</p>
-                <p className="text-xs text-[var(--color-text-secondary)]">
-                  Timeline of poop and feed entries
-                </p>
-              </div>
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="var(--color-muted)" className="w-5 h-5">
-                <path fillRule="evenodd" d="M8.22 5.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L11.94 10 8.22 6.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
-              </svg>
-            </CardContent>
-          </Card>
-
-          <Card
-            role="button"
-            tabIndex={0}
-            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") navigate("/growth"); }}
-            className="cursor-pointer hover:shadow-[var(--shadow-soft)] transition-shadow"
-            onClick={() => navigate("/growth")}
-          >
-            <CardContent className="py-3 flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-[var(--color-text)]">Growth</p>
-                <p className="text-xs text-[var(--color-text-secondary)]">
-                  Weight, length, and head circumference trends
-                </p>
-              </div>
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="var(--color-muted)" className="w-5 h-5">
-                <path fillRule="evenodd" d="M8.22 5.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L11.94 10 8.22 6.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
-              </svg>
-            </CardContent>
-          </Card>
-
-          <Card
-            role="button"
-            tabIndex={0}
-            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") navigate("/milestones"); }}
-            className="cursor-pointer hover:shadow-[var(--shadow-soft)] transition-shadow"
-            onClick={() => navigate("/milestones")}
-          >
-            <CardContent className="py-3 flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-[var(--color-text)]">Milestones</p>
-                <p className="text-xs text-[var(--color-text-secondary)]">
-                  Health-linked context like solids, illness, teething, or medication changes
-                </p>
-              </div>
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="var(--color-muted)" className="w-5 h-5">
-                <path fillRule="evenodd" d="M8.22 5.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L11.94 10 8.22 6.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
-              </svg>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-
-      {/* Reports */}
-      <div className="mb-6">
-        <h3 className="text-sm font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider mb-3">
-          Support
-        </h3>
-        <div className="flex flex-col gap-2">
-          <Card
-            role="button"
-            tabIndex={0}
-            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") navigate("/guidance"); }}
-            className="cursor-pointer hover:shadow-[var(--shadow-soft)] transition-shadow"
-            onClick={() => navigate("/guidance")}
-          >
-            <CardContent className="py-3 flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-[var(--color-text)]">Guidance</p>
-                <p className="text-xs text-[var(--color-text-secondary)]">
-                  Evidence-based tips and when to call the doctor
-                </p>
-              </div>
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="var(--color-muted)" className="w-5 h-5">
-                <path fillRule="evenodd" d="M8.22 5.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L11.94 10 8.22 6.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
-              </svg>
-            </CardContent>
-          </Card>
-
-        </div>
-      </div>
-
-      {/* About */}
-      <div className="mb-6">
-        <h3 className="text-sm font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider mb-3">
-          About
-        </h3>
-        <Card>
-          <CardContent className="py-3 flex flex-col gap-2">
-            <p className="text-sm text-[var(--color-text)]">Tiny Tummy v{__APP_VERSION__}</p>
-            <p className="text-xs text-[var(--color-muted)]">
-              100% offline. Your data never leaves this device.
-            </p>
-            <div className="flex gap-4">
-              <button
-                onClick={() => navigate("/privacy")}
-                className="text-xs text-[var(--color-primary)] cursor-pointer text-left font-medium"
-              >
-                Privacy Policy
-              </button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {import.meta.env.DEV && (
-        <div className="mb-12">
-          <h3 className="text-sm font-semibold text-[var(--color-alert)] uppercase tracking-wider mb-3">
-            Developer Tools
+        {/* About */}
+        <div className="mb-6">
+          <h3 className="text-sm font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider mb-3">
+            About
           </h3>
-          <Card className="border-[var(--color-alert)]/30">
-            <CardContent className="py-3 flex flex-col gap-3">
-              <p className="text-xs text-[var(--color-text-secondary)]">
-                These tools only appear during local development.
+          <Card>
+            <CardContent className="py-3 flex flex-col gap-2">
+              <p className="text-sm text-[var(--color-text)]">Tiny Tummy v{__APP_VERSION__}</p>
+              <p className="text-xs text-[var(--color-muted)]">
+                100% offline. Your data never leaves this device.
               </p>
-              <Button 
-                variant="secondary" 
-                className="w-full text-[var(--color-alert)] border border-[var(--color-alert)]/30 hover:bg-[var(--color-alert)]/10"
-                onClick={simulateExpiration}
-              >
-                Simulate Trial Expiration
-              </Button>
+              <div className="flex gap-4">
+                <button
+                  onClick={() => navigate("/privacy")}
+                  className="text-xs text-[var(--color-primary)] cursor-pointer text-left font-medium"
+                >
+                  Privacy Policy
+                </button>
+              </div>
             </CardContent>
           </Card>
         </div>
-      )}
+
+        {import.meta.env.DEV && (
+          <div className="mb-12">
+            <h3 className="text-sm font-semibold text-[var(--color-alert)] uppercase tracking-wider mb-3">
+              Developer Tools
+            </h3>
+            <Card className="border-[var(--color-alert)]/30">
+              <CardContent className="py-3 flex flex-col gap-3">
+                <p className="text-xs text-[var(--color-text-secondary)]">
+                  These tools only appear during local development.
+                </p>
+                <Button
+                  variant="secondary"
+                  className="w-full text-[var(--color-alert)] border border-[var(--color-alert)]/30 hover:bg-[var(--color-alert)]/10"
+                  onClick={simulateExpiration}
+                >
+                  Simulate Trial Expiration
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+      </div>
 
       {/* Edit sheet */}
       {editingChild && (
