@@ -23,8 +23,8 @@ import {
 import * as db from "../lib/db";
 import { Card, CardContent, CardHeader } from "../components/ui/card";
 import { Button } from "../components/ui/button";
-import { PageIntro } from "../components/ui/page-intro";
 import { EmptyState, InsetPanel, PageBody, SectionHeading } from "../components/ui/page-layout";
+import { ScenicHero } from "../components/layout/ScenicHero";
 import {
   TrackerEntryRow,
   TrackerEntryTable,
@@ -1011,17 +1011,18 @@ export function Poop() {
   };
 
   return (
-    <PageBody className="space-y-4">
-      <PageIntro
-        eyebrow="Tracking"
+    <PageBody className="mt-0 space-y-0 px-0 py-0">
+      <ScenicHero
+        child={activeChild}
         title="Poop"
         description="Pattern, timing, and alerts in one place."
         action={<Button variant="cta" size="sm" onClick={() => setLogFormOpen(true)}>Add</Button>}
-        className="pb-3"
+        className="overflow-hidden"
       />
 
-      <Card>
-        <CardContent className="p-4">
+      <div className="space-y-4 px-4 py-5">
+        <Card className="-mt-32 relative z-10 border-transparent bg-transparent shadow-none backdrop-blur-0">
+          <CardContent className="p-4 pt-4">
           <div className="grid grid-cols-3 gap-3">
             <div className="flex flex-col items-center gap-2 text-center">
               <TimeSinceIndicator
@@ -1043,8 +1044,8 @@ export function Poop() {
               gradient={alertRing.gradient}
             />
           </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
 
       <AlertBanner alerts={alerts} onDismiss={dismiss} />
 
@@ -1181,17 +1182,17 @@ export function Poop() {
         <CardHeader>
           <SectionHeading
             title="Weekly pattern"
-                description="The same seven-day pattern view, but with week-by-week browsing so older rhythms are easier to compare."
-                action={(
-                  <TrackerWeekSwitcher
-                    weekOffset={weekOffset}
-                    maxWeekOffset={maxWeekOffset}
-                    onOlder={() => setWeekOffset((current) => Math.min(maxWeekOffset, current + 1))}
-                    onNewer={() => setWeekOffset((current) => Math.max(0, current - 1))}
-                  />
-                )}
+            description="The same seven-day pattern view, but with week-by-week browsing so older rhythms are easier to compare."
+            action={(
+              <TrackerWeekSwitcher
+                weekOffset={weekOffset}
+                maxWeekOffset={maxWeekOffset}
+                onOlder={() => setWeekOffset((current) => Math.min(maxWeekOffset, current + 1))}
+                onNewer={() => setWeekOffset((current) => Math.max(0, current - 1))}
               />
-            </CardHeader>
+            )}
+          />
+        </CardHeader>
         <CardContent>
           <TrackerWeekBarChart
             data={filledWeek.map((day) => ({ ...day, value: day.count }))}
@@ -1291,6 +1292,7 @@ export function Poop() {
         presets={quickPoopPresets}
         onSave={(drafts) => { void savePoopPresets(drafts); }}
       />
+      </div>
     </PageBody>
   );
 }

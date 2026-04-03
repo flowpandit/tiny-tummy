@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Header } from "./Header";
@@ -13,6 +13,7 @@ const pageVariants = {
 export function AppShell() {
   const location = useLocation();
   const mainRef = useRef<HTMLElement | null>(null);
+  const [isScrollHeaderVisible, setIsScrollHeaderVisible] = useState(false);
   const headerBackFallbackByPath: Record<string, string> = {
     "/breastfeed": "/",
     "/growth": "/settings",
@@ -22,13 +23,42 @@ export function AppShell() {
     "/milestones": "/settings",
     "/report": "/dashboard",
   };
+  const revealOnScrollPaths = new Set(["/poop", "/diaper"]);
   const showHeader = location.pathname !== "/";
   const headerFallbackTo = headerBackFallbackByPath[location.pathname];
   const showHeaderBackButton = Boolean(headerFallbackTo);
+  const revealHeaderOnScroll = revealOnScrollPaths.has(location.pathname);
 
   useEffect(() => {
     mainRef.current?.scrollTo({ top: 0, behavior: "auto" });
   }, [location.pathname]);
+
+  useEffect(() => {
+    if (!showHeader) {
+      setIsScrollHeaderVisible(false);
+      return;
+    }
+
+    if (!revealHeaderOnScroll) {
+      setIsScrollHeaderVisible(true);
+      return;
+    }
+
+    const scrollRoot = mainRef.current;
+    if (!scrollRoot) return;
+
+    const revealThreshold = 170;
+    const updateVisibility = () => {
+      setIsScrollHeaderVisible(scrollRoot.scrollTop > revealThreshold);
+    };
+
+    updateVisibility();
+    scrollRoot.addEventListener("scroll", updateVisibility, { passive: true });
+
+    return () => {
+      scrollRoot.removeEventListener("scroll", updateVisibility);
+    };
+  }, [location.pathname, revealHeaderOnScroll, showHeader]);
 
   return (
     <div className="relative flex min-h-[100dvh] flex-col overflow-hidden bg-[var(--color-bg)]">
@@ -49,12 +79,18 @@ export function AppShell() {
         <div className="absolute right-[-72px] top-52 h-64 w-64 rounded-full bg-[var(--color-apricot)]/14 blur-3xl" />
         <div className="absolute bottom-20 left-[-44px] h-52 w-52 rounded-full bg-[var(--color-sky-wash)]/22 blur-3xl" />
       </div>
-      {showHeader && <Header showBackButton={showHeaderBackButton} fallbackTo={headerFallbackTo} />}
+      {showHeader && (
+        <Header
+          showBackButton={showHeaderBackButton}
+          fallbackTo={headerFallbackTo}
+          visible={isScrollHeaderVisible}
+        />
+      )}
       <main
         ref={mainRef}
         className="relative flex-1 overflow-y-auto overflow-x-hidden pb-24"
         style={{
-          paddingTop: showHeader
+          paddingTop: showHeader && !revealHeaderOnScroll
             ? "calc(var(--safe-area-top) + 86px)"
             : "var(--safe-area-top)",
         }}

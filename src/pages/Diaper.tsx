@@ -7,15 +7,15 @@ import { useAlerts } from "../hooks/useAlerts";
 import { useAlertEngine } from "../hooks/useAlertEngine";
 import { useEliminationPreference } from "../hooks/useEliminationPreference";
 import { getChildAgeDays, getDiaperTypeLabel, getUrineColorLabel } from "../lib/diaper";
-import { getAgeLabelFromDob, timeSince } from "../lib/utils";
+import { timeSince } from "../lib/utils";
 import { STOOL_COLORS, BITSS_TYPES } from "../lib/constants";
 import { syncSmartRemindersForChild } from "../lib/notifications";
 import { AlertBanner } from "../components/dashboard/AlertBanner";
 import { DiaperLogForm } from "../components/logging/DiaperLogForm";
 import { EditDiaperSheet } from "../components/logging/EditDiaperSheet";
+import { ScenicHero } from "../components/layout/ScenicHero";
 import { Card, CardContent, CardHeader } from "../components/ui/card";
 import { Button } from "../components/ui/button";
-import { PageIntro } from "../components/ui/page-intro";
 import { EmptyState, InsetPanel, PageBody, SectionHeading } from "../components/ui/page-layout";
 import { DiscoveryLinks } from "../components/discovery/DiscoveryLinks";
 import { TimeSinceIndicator } from "../components/home/TimeSinceIndicator";
@@ -193,22 +193,22 @@ export function Diaper() {
   };
 
   return (
-    <PageBody className="space-y-4">
-      <PageIntro
-        eyebrow="Tracking"
+    <PageBody className="mt-0 space-y-0 px-0 py-0">
+      <ScenicHero
+        child={child}
         title="Diaper"
         description="Track wet, dirty, and mixed diapers fast while keeping stool detail when it matters."
-        meta={`${child.name} · ${getAgeLabelFromDob(child.date_of_birth)}${lastDiaper ? ` · last logged ${timeSince(lastDiaper.logged_at)}` : ""}`}
         action={(
           <Button variant="cta" size="sm" onClick={() => setFormOpen(true)}>
             Add
           </Button>
         )}
-        className="pb-3"
+        className="overflow-hidden"
       />
 
-      <Card>
-        <CardContent className="p-4">
+      <div className="space-y-4 px-4 py-5">
+        <Card className="-mt-32 relative z-10 border-transparent bg-transparent shadow-none backdrop-blur-0">
+          <CardContent className="p-4 pt-4">
           <div className="grid grid-cols-3 gap-3">
             <div className="flex flex-col items-center gap-2 text-center">
               <TimeSinceIndicator
@@ -230,8 +230,8 @@ export function Diaper() {
               gradient={hydrationRing.gradient}
             />
           </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
 
       <AlertBanner alerts={alerts} onDismiss={dismiss} />
 
@@ -290,13 +290,12 @@ export function Diaper() {
               <p className="mt-1.5 max-w-[42ch] text-[13px] leading-relaxed text-[var(--color-text-secondary)]">{hydrationStatus.description}</p>
             </div>
             <span
-              className={`rounded-full px-3 py-1.5 text-[12px] font-semibold ${
-                hydrationStatus.tone === "cta"
-                  ? "bg-[var(--color-alert-bg)] text-[var(--color-alert)]"
-                  : hydrationStatus.tone === "info"
-                    ? "bg-[var(--color-info-bg)] text-[var(--color-info)]"
-                    : "bg-[var(--color-healthy-bg)] text-[var(--color-healthy)]"
-              }`}
+              className={`rounded-full px-3 py-1.5 text-[12px] font-semibold ${hydrationStatus.tone === "cta"
+                ? "bg-[var(--color-alert-bg)] text-[var(--color-alert)]"
+                : hydrationStatus.tone === "info"
+                  ? "bg-[var(--color-info-bg)] text-[var(--color-info)]"
+                  : "bg-[var(--color-healthy-bg)] text-[var(--color-healthy)]"
+                }`}
             >
               {hydrationStatus.tone === "cta" ? "Watch" : hydrationStatus.tone === "info" ? "Monitor" : "Stable"}
             </span>
@@ -451,6 +450,7 @@ export function Diaper() {
           onDeleted={() => { setEditingLog(null); void handleLogged(); }}
         />
       )}
+      </div>
     </PageBody>
   );
 }
