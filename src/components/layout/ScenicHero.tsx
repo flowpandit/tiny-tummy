@@ -1,10 +1,14 @@
 import { useId, type ReactNode, type RefObject } from "react";
 import { motion } from "framer-motion";
 import watercolorClouds from "../../assets/watercolor-clouds.svg";
+import watercolorCloudsDark from "../../assets/watercolor-clouds-dark.svg";
 import watercolorMountains from "../../assets/watercolor-mountains.svg";
+import watercolorMountainsDark from "../../assets/watercolor-mountains-dark.svg";
+import watercolorMoon from "../../assets/watercolor-moon.svg";
 import watercolorSun from "../../assets/watercolor-sun.svg";
 import type { Child } from "../../lib/types";
 import { getAgeLabelFromDob } from "../../lib/utils";
+import { useTheme } from "../../contexts/ThemeContext";
 import { Avatar } from "../child/Avatar";
 
 type ScenicHeroProps = {
@@ -27,6 +31,11 @@ export function ScenicHero({
   className,
 }: ScenicHeroProps) {
   const clipPathId = useId();
+  const { resolved } = useTheme();
+  const isDarkArtwork = resolved !== "light";
+  const skyArt = isDarkArtwork ? watercolorCloudsDark : watercolorClouds;
+  const ridgeArt = isDarkArtwork ? watercolorMountainsDark : watercolorMountains;
+  const orbArt = isDarkArtwork ? watercolorMoon : watercolorSun;
 
   return (
     <section className={className}>
@@ -43,9 +52,9 @@ export function ScenicHero({
       >
         <div className="pointer-events-none absolute inset-x-0 top-0 h-72" style={{ background: "var(--gradient-hero-glow)" }} />
         <div className="pointer-events-none absolute inset-0" style={{ background: "var(--gradient-hero-wash)" }} />
-        <img src={watercolorClouds} alt="" aria-hidden="true" className="pointer-events-none absolute left-[-14px] top-[18px] w-[calc(100%+28px)] opacity-95" />
-        <img src={watercolorSun} alt="" aria-hidden="true" className="pointer-events-none absolute right-[14px] top-[10px] w-[130px] opacity-95" />
-        <img src={watercolorMountains} alt="" aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-[74px] w-full scale-[1.12] opacity-100" />
+        <img src={skyArt} alt="" aria-hidden="true" className="pointer-events-none absolute left-[-14px] top-[18px] w-[calc(100%+28px)] opacity-95" />
+        <img src={orbArt} alt="" aria-hidden="true" className="pointer-events-none absolute right-[14px] top-[10px] w-[130px] opacity-95" />
+        <img src={ridgeArt} alt="" aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-[74px] w-full scale-[1.12] opacity-100" />
         <div className="pointer-events-none absolute inset-x-[-6%] top-[86px] h-[165px]" style={{ background: "var(--gradient-hero-ridge)" }} />
         <div className="pointer-events-none absolute left-[12px] top-[106px] h-12 w-20 rounded-full blur-[8px]" style={{ background: "var(--color-hero-cloud)" }} />
         <div className="pointer-events-none absolute left-[42px] top-[112px] h-8 w-8 rounded-full blur-[6px]" style={{ background: "var(--color-hero-cloud-strong)" }} />

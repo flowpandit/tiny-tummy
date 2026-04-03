@@ -114,7 +114,7 @@ export function HomeTopSection({
     <section className="-mx-4 -mt-2 overflow-hidden px-4 pb-3 pt-1">
       <ScenicHero
         child={activeChild}
-        title="How are you holding up today?"
+        title="How are you feeling today?"
         description="Daily Check-in: Parent & Baby Care"
         avatarAnchorRef={avatarAnchorRef}
       />

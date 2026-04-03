@@ -1,0 +1,24 @@
+<svg width="430" height="210" viewBox="0 0 430 210" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <filter id="mountainBlurDark" x="-40" y="-40" width="510" height="290" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="8"/>
+    </filter>
+    <linearGradient id="ridgeBackDark" x1="97" y1="49" x2="143" y2="176" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#475A7E"/>
+      <stop offset="1" stop-color="#2A3850"/>
+    </linearGradient>
+    <linearGradient id="ridgeMidDark" x1="224" y1="52" x2="254" y2="184" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#5A6D96"/>
+      <stop offset="1" stop-color="#334563"/>
+    </linearGradient>
+    <linearGradient id="ridgeFrontDark" x1="313" y1="77" x2="340" y2="187" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#6D81AF"/>
+      <stop offset="1" stop-color="#41567D"/>
+    </linearGradient>
+  </defs>
+  <g filter="url(#mountainBlurDark)" opacity="0.95">
+    <path d="M13 177C45 149 71 126 112 95C134 78 155 75 177 93C196 107 211 127 225 148C247 126 268 103 291 90C315 76 341 80 359 103C381 129 398 155 417 177H13Z" fill="url(#ridgeBackDark)"/>
+    <path d="M88 177C117 146 151 124 187 110C211 101 232 109 249 127C260 114 274 102 290 95C318 82 352 89 372 113C389 133 399 154 410 177H88Z" fill="url(#ridgeMidDark)"/>
+    <path d="M170 177C192 156 221 140 247 137C273 133 290 142 304 155C321 136 345 124 366 126C393 129 413 146 426 177H170Z" fill="url(#ridgeFrontDark)"/>
+  </g>
+</svg>
