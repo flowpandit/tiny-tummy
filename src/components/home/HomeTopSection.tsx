@@ -131,7 +131,7 @@ export function HomeTopSection({
   ];
 
   return (
-    <section className="-mx-4 -mt-2 overflow-hidden pb-3 pt-1 md:-mx-6 lg:-mx-8">
+    <section className="-mt-2 overflow-hidden pb-3 pt-1">
       <ScenicHero
         child={activeChild}
         title="How are you feeling today?"

@@ -116,7 +116,7 @@ export function ScenicHero({
                 <img
                   src={skyArt}
                   alt=""
-                  className="hero-cloud-scroll-item block w-1/2 max-w-none shrink-0 translate-y-[8px] md:translate-y-[18px]"
+                  className="hero-cloud-scroll-item block w-1/2 max-w-none shrink-0"
                   style={{
                     opacity: isDarkArtwork ? 0.82 : 0.96,
                     filter: isDarkArtwork
@@ -127,7 +127,7 @@ export function ScenicHero({
                 <img
                   src={skyArt}
                   alt=""
-                  className="hero-cloud-scroll-item block w-1/2 max-w-none shrink-0 -translate-y-[6px] md:translate-y-[8px]"
+                  className="hero-cloud-scroll-item block w-1/2 max-w-none shrink-0"
                   style={{
                     opacity: isDarkArtwork ? 0.74 : 0.88,
                     filter: isDarkArtwork
