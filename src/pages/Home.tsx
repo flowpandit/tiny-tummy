@@ -335,6 +335,8 @@ export function Home() {
           sleepNapCount={sleepNapCount}
           onContinueToDashboard={() => navigate("/dashboard")}
           avatarAnchorRef={avatarAnchorRef}
+          otherChildren={otherChildren}
+          onSelectChild={setActiveChildId}
         />
       ) : (
         <NoLogsYet

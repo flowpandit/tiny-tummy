@@ -102,6 +102,8 @@ export function HomeTopSection({
   sleepNapCount,
   onContinueToDashboard,
   avatarAnchorRef,
+  otherChildren,
+  onSelectChild,
 }: {
   activeChild: Child;
   summary: ChildDailySummary;
@@ -110,6 +112,8 @@ export function HomeTopSection({
   sleepNapCount: number;
   onContinueToDashboard: () => void;
   avatarAnchorRef: RefObject<HTMLDivElement | null>;
+  otherChildren: Child[];
+  onSelectChild: (childId: string) => void;
 }) {
   const totalDiapers = summary.todayWetDiapers + summary.todayDirtyDiapers;
   const moodCards = [
@@ -137,6 +141,8 @@ export function HomeTopSection({
         title="How are you feeling today?"
         description="Daily Check-in: Parent & Baby Care"
         avatarAnchorRef={avatarAnchorRef}
+        siblingChildren={otherChildren}
+        onSelectChild={onSelectChild}
         scene="home"
       />
 

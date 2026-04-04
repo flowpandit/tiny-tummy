@@ -1,5 +1,5 @@
-import { useId, type ReactNode, type RefObject } from "react";
-import { motion } from "framer-motion";
+import { useEffect, useId, useState, type ReactNode, type RefObject } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import watercolorClouds from "../../assets/svg-assets/hero-pieces/watercolor-clouds.svg";
 import watercolorCloudsDark from "../../assets/svg-assets/hero-pieces/watercolor-clouds-dark.svg";
 import watercolorMountains from "../../assets/svg-assets/hero-pieces/watercolor-mountains.svg";
@@ -16,6 +16,7 @@ import sceneMoon from "../../assets/svg-assets/moon.svg";
 import sceneSun from "../../assets/svg-assets/sun.svg";
 import type { Child } from "../../lib/types";
 import { getAgeLabelFromDob } from "../../lib/utils";
+import { useChildContext } from "../../contexts/ChildContext";
 import { useTheme } from "../../contexts/ThemeContext";
 import { Avatar } from "../child/Avatar";
 
@@ -26,6 +27,8 @@ type ScenicHeroProps = {
   action?: ReactNode;
   avatarAnchorRef?: RefObject<HTMLDivElement | null>;
   showChildInfo?: boolean;
+  siblingChildren?: Child[];
+  onSelectChild?: (childId: string) => void;
   className?: string;
   scene?: "default" | "home" | "sleep" | "feed" | "breastfeed" | "diaper" | "poop" | "growth";
 };
@@ -37,10 +40,13 @@ export function ScenicHero({
   action,
   avatarAnchorRef,
   showChildInfo = true,
+  siblingChildren = [],
+  onSelectChild,
   className,
   scene = "default",
 }: ScenicHeroProps) {
   const clipPathId = useId();
+  const { children, setActiveChildId } = useChildContext();
   const { resolved } = useTheme();
   const isDarkArtwork = resolved !== "light";
   const skyArt = isDarkArtwork ? watercolorCloudsDark : watercolorClouds;
@@ -55,6 +61,16 @@ export function ScenicHero({
   const useDiaperScene = scene === "diaper";
   const usePoopScene = scene === "poop";
   const useGrowthScene = scene === "growth";
+  const [isChildTrayOpen, setIsChildTrayOpen] = useState(false);
+  const resolvedSiblingChildren = siblingChildren.length > 0
+    ? siblingChildren
+    : children.filter((candidate) => candidate.id !== child.id);
+  const resolvedOnSelectChild = onSelectChild ?? setActiveChildId;
+  const canSwapChildren = resolvedSiblingChildren.length > 0;
+
+  useEffect(() => {
+    setIsChildTrayOpen(false);
+  }, [child.id]);
 
   return (
     <section className={className}>
@@ -410,14 +426,56 @@ export function ScenicHero({
             </div>
             {showChildInfo && (
               <div ref={avatarAnchorRef} className="mt-5 flex items-center gap-3">
-                <Avatar
-                  childId={child.id}
-                  name={child.name}
-                  color={child.avatar_color}
-                  size="sm"
-                  className="h-10 w-10 border-2 shadow-[var(--shadow-soft)]"
-                  style={{ borderColor: "var(--color-hero-avatar-border)" }}
-                />
+                <div className="relative">
+                  <button
+                    type="button"
+                    aria-label={canSwapChildren ? `Switch child from ${child.name}` : `${child.name} avatar`}
+                    aria-expanded={canSwapChildren ? isChildTrayOpen : undefined}
+                    onClick={() => {
+                      if (!canSwapChildren) return;
+                      setIsChildTrayOpen((open) => !open);
+                    }}
+                    className={canSwapChildren ? "cursor-pointer rounded-full transition-transform active:scale-[0.98]" : "cursor-default rounded-full"}
+                  >
+                    <Avatar
+                      childId={child.id}
+                      name={child.name}
+                      color={child.avatar_color}
+                      size="sm"
+                      className="h-10 w-10 border-2 shadow-[var(--shadow-soft)]"
+                      style={{ borderColor: "var(--color-hero-avatar-border)" }}
+                    />
+                  </button>
+                  <AnimatePresence initial={false}>
+                    {canSwapChildren && isChildTrayOpen && (
+                      <motion.div
+                        initial={{ opacity: 0, x: -10, scale: 0.96 }}
+                        animate={{ opacity: 1, x: 0, scale: 1 }}
+                        exit={{ opacity: 0, x: -8, scale: 0.98 }}
+                        transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+                        className="absolute left-[calc(100%+10px)] top-1/2 z-10 flex -translate-y-1/2 items-center gap-2"
+                      >
+                        {resolvedSiblingChildren.map((sibling) => (
+                          <button
+                            key={sibling.id}
+                            type="button"
+                            aria-label={`Switch to ${sibling.name}`}
+                            onClick={() => resolvedOnSelectChild(sibling.id)}
+                            className="rounded-full transition-transform hover:scale-[1.03] active:scale-[0.98]"
+                          >
+                            <Avatar
+                              childId={sibling.id}
+                              name={sibling.name}
+                              color={sibling.avatar_color}
+                              size="sm"
+                              className="h-9 w-9 border border-white/80 bg-white/40 shadow-[var(--shadow-soft)]"
+                            />
+                          </button>
+                        ))}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
                 <div>
                   <p className="text-[1.05rem] font-semibold text-[var(--color-text)]">{child.name}</p>
                   <p className="text-[0.82rem] leading-tight text-[var(--color-text-secondary)]">
