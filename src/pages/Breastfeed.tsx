@@ -324,11 +324,11 @@ export function Breastfeed() {
             {isSaving ? "Saving..." : "Save"}
           </Button>
         )}
-        className="overflow-hidden"
+        className="-mx-4 overflow-hidden md:-mx-6 lg:-mx-8"
         scene="breastfeed"
       />
 
-      <div className="space-y-4 px-4 py-5">
+      <div className="space-y-4 px-4 py-5 md:px-6 lg:px-8">
       {!supportsBreastfeeding ? (
         <InsetPanel>
           <p className="text-sm font-medium text-[var(--color-text)]">Breastfeeding timer is hidden for this child profile.</p>

@@ -102,7 +102,7 @@ export function AppShell() {
         <AnimatePresence mode="wait">
           <motion.div
             key={location.pathname}
-            className="mx-auto w-full max-w-[600px]"
+            className="mx-auto w-full max-w-[1180px]"
             variants={pageVariants}
             initial="initial"
             animate="animate"

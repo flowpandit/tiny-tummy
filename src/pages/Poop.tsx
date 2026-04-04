@@ -1016,11 +1016,11 @@ export function Poop() {
         title="Poop"
         description="Pattern, timing, and alerts in one place."
         action={<Button variant="cta" size="sm" onClick={() => setLogFormOpen(true)}>Add</Button>}
-        className="overflow-hidden"
+        className="-mx-4 overflow-hidden md:-mx-6 lg:-mx-8"
         scene="poop"
       />
 
-      <div className="space-y-4 px-4 py-5">
+      <div className="space-y-4 px-4 py-5 md:px-6 lg:px-8">
         <Card className="-mt-32 relative z-10 border-transparent bg-transparent shadow-none backdrop-blur-0">
           <CardContent className="p-4 pt-4">
           <div className="grid grid-cols-3 gap-3">

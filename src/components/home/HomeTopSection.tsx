@@ -131,7 +131,7 @@ export function HomeTopSection({
   ];
 
   return (
-    <section className="-mx-4 -mt-2 overflow-hidden px-4 pb-3 pt-1">
+    <section className="-mx-4 -mt-2 overflow-hidden pb-3 pt-1 md:-mx-6 lg:-mx-8">
       <ScenicHero
         child={activeChild}
         title="How are you feeling today?"
@@ -140,7 +140,7 @@ export function HomeTopSection({
         scene="home"
       />
 
-      <div className="px-4">
+      <div className="px-4 md:px-6 lg:px-8">
         <div className="-mt-24 grid grid-cols-3 gap-3">
           {moodCards.map((card) => (
             <button
