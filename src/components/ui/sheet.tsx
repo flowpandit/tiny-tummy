@@ -16,15 +16,50 @@ export function Sheet({ open, onClose, children, className, tone = "default" }: 
   const sheetY = useMotionValue(0);
   const backdropOpacity = useTransform(sheetY, [0, 300], [1, 0]);
   const effectiveTone = tone === "night" || (tone === "default" && resolved === "night") ? "night" : "default";
+
   useEffect(() => {
-    if (open) {
-      document.body.style.overflow = "hidden";
-      sheetY.set(0);
-    } else {
-      document.body.style.overflow = "";
+    const body = document.body;
+    const html = document.documentElement;
+    const scrollRoot = document.querySelector('[data-scroll-root="true"]');
+
+    if (!open) return;
+
+    const lockCount = Number(body.dataset.sheetLockCount ?? "0");
+    body.dataset.sheetLockCount = String(lockCount + 1);
+
+    if (lockCount === 0) {
+      body.dataset.sheetBodyOverflow = body.style.overflow;
+      html.dataset.sheetHtmlOverflow = html.style.overflow;
+      body.style.overflow = "hidden";
+      html.style.overflow = "hidden";
+
+      if (scrollRoot instanceof HTMLElement) {
+        scrollRoot.dataset.sheetOverflow = scrollRoot.style.overflow;
+        scrollRoot.dataset.sheetOverscrollBehavior = scrollRoot.style.overscrollBehavior;
+        scrollRoot.style.overflow = "hidden";
+        scrollRoot.style.overscrollBehavior = "none";
+      }
     }
+
+    sheetY.set(0);
+
     return () => {
-      document.body.style.overflow = "";
+      const nextLockCount = Math.max(0, Number(body.dataset.sheetLockCount ?? "1") - 1);
+      body.dataset.sheetLockCount = String(nextLockCount);
+
+      if (nextLockCount === 0) {
+        body.style.overflow = body.dataset.sheetBodyOverflow ?? "";
+        html.style.overflow = html.dataset.sheetHtmlOverflow ?? "";
+        delete body.dataset.sheetBodyOverflow;
+        delete html.dataset.sheetHtmlOverflow;
+
+        if (scrollRoot instanceof HTMLElement) {
+          scrollRoot.style.overflow = scrollRoot.dataset.sheetOverflow ?? "";
+          scrollRoot.style.overscrollBehavior = scrollRoot.dataset.sheetOverscrollBehavior ?? "";
+          delete scrollRoot.dataset.sheetOverflow;
+          delete scrollRoot.dataset.sheetOverscrollBehavior;
+        }
+      }
     };
   }, [open, sheetY]);
 

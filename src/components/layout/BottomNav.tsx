@@ -109,7 +109,10 @@ export function BottomNav() {
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-30 px-3" style={{ paddingBottom: "calc(var(--safe-area-bottom) + 8px)" }}>
-      <div className="mx-auto flex h-[76px] max-w-[600px] items-center justify-around rounded-[30px] border border-[var(--color-border)] px-2 shadow-[var(--shadow-lg)] backdrop-blur-[20px]" style={{ background: "var(--color-nav-surface)" }}>
+      <div
+        className="mx-auto flex h-[76px] max-w-[600px] items-center justify-around rounded-[30px] border border-[var(--color-border)] px-2 shadow-[var(--shadow-lg)] backdrop-blur-[20px]"
+        style={{ background: "var(--color-nav-surface)" }}
+      >
         {navItems.map((item) => {
           const isActive = item.matches(location.pathname);
           return (

@@ -1,4 +1,4 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ChildProvider, useChildContext } from "./contexts/ChildContext";
 import { ThemeProvider } from "./contexts/ThemeContext";
@@ -40,13 +40,82 @@ function PageLoader() {
 }
 
 function AppRoutes() {
-  const { children, isLoading } = useChildContext();
-  const { isLocked, isLoading: isTrialLoading } = useTrial();
+  const {
+    children,
+    isLoading,
+    loadError: childLoadError,
+    refreshChildren,
+  } = useChildContext();
+  const {
+    isLocked,
+    isLoading: isTrialLoading,
+    loadError: trialLoadError,
+    refreshTrial,
+  } = useTrial();
+  const [loadingForMs, setLoadingForMs] = useState(0);
+
+  useEffect(() => {
+    if (!isLoading && !isTrialLoading) {
+      setLoadingForMs(0);
+      return;
+    }
+
+    const startedAt = Date.now();
+    const intervalId = window.setInterval(() => {
+      setLoadingForMs(Date.now() - startedAt);
+    }, 250);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [isLoading, isTrialLoading]);
 
   if (isLoading || isTrialLoading) {
+    const loadingParts = [
+      isLoading ? "children" : null,
+      isTrialLoading ? "trial" : null,
+    ].filter(Boolean).join(" + ");
+
     return (
       <div className="min-h-screen flex items-center justify-center bg-[var(--color-bg)]">
-        <div className="w-8 h-8 border-3 border-[var(--color-primary)] border-t-transparent rounded-full animate-spin" />
+        <div className="flex flex-col items-center gap-3 px-6 text-center">
+          <div className="w-8 h-8 border-3 border-[var(--color-primary)] border-t-transparent rounded-full animate-spin" />
+          {import.meta.env.DEV ? (
+            <div className="max-w-xs text-xs text-[var(--color-text-secondary)]">
+              <div>Loading: {loadingParts || "startup"}</div>
+              <div>{(loadingForMs / 1000).toFixed(1)}s</div>
+            </div>
+          ) : null}
+        </div>
+      </div>
+    );
+  }
+
+  if (childLoadError || trialLoadError) {
+    const messages = [childLoadError, trialLoadError].filter(Boolean) as string[];
+
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[var(--color-bg)] px-6">
+        <div className="w-full max-w-sm rounded-[28px] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 text-center shadow-[var(--shadow-lg)]">
+          <h1 className="text-lg font-semibold text-[var(--color-text)]">Startup blocked</h1>
+          <p className="mt-2 text-sm text-[var(--color-text-secondary)]">
+            Tiny Tummy could not finish loading. Your data has not been changed.
+          </p>
+          <div className="mt-4 space-y-2 text-sm text-[var(--color-text-secondary)]">
+            {messages.map((message) => (
+              <p key={message}>{message}</p>
+            ))}
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              void Promise.all([refreshChildren(), refreshTrial()]);
+            }}
+            className="mt-6 inline-flex h-11 items-center justify-center rounded-full bg-[var(--color-primary)] px-5 text-sm font-semibold text-white"
+          >
+            Retry startup
+          </button>
+        </div>
       </div>
     );
   }

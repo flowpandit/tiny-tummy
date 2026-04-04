@@ -88,8 +88,12 @@ export function AppShell() {
       )}
       <main
         ref={mainRef}
-        className="relative flex-1 overflow-y-auto overflow-x-hidden pb-24"
+        data-scroll-root="true"
+        className="relative flex-1 overflow-y-auto overflow-x-hidden"
         style={{
+          overscrollBehavior: "none",
+          WebkitOverflowScrolling: "touch",
+          paddingBottom: "calc(var(--safe-area-bottom) + 96px)",
           paddingTop: showHeader && !revealHeaderOnScroll
             ? "calc(var(--safe-area-top) + 86px)"
             : "var(--safe-area-top)",
