@@ -14,6 +14,10 @@ export function AppShell() {
   const location = useLocation();
   const mainRef = useRef<HTMLElement | null>(null);
   const [isScrollHeaderVisible, setIsScrollHeaderVisible] = useState(false);
+  const isIOS = typeof window !== "undefined" && (
+    /iPad|iPhone|iPod/.test(window.navigator.userAgent)
+    || (window.navigator.platform === "MacIntel" && window.navigator.maxTouchPoints > 1)
+  );
   const headerBackFallbackByPath: Record<string, string> = {
     "/breastfeed": "/",
     "/growth": "/settings",
@@ -99,19 +103,25 @@ export function AppShell() {
             : "var(--safe-area-top)",
         }}
       >
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={location.pathname}
-            className="mx-auto w-full max-w-[1180px]"
-            variants={pageVariants}
-            initial="initial"
-            animate="animate"
-            exit="exit"
-            transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
-          >
+        {isIOS ? (
+          <div className="mx-auto w-full max-w-[1180px]">
             <Outlet />
-          </motion.div>
-        </AnimatePresence>
+          </div>
+        ) : (
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={location.pathname}
+              className="mx-auto w-full max-w-[1180px]"
+              variants={pageVariants}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
+            >
+              <Outlet />
+            </motion.div>
+          </AnimatePresence>
+        )}
       </main>
       <BottomNav />
     </div>
