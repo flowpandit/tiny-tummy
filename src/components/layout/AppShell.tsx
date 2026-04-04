@@ -23,6 +23,8 @@ const pageVariants = {
 
 const SWIPE_MIN_DISTANCE = 72;
 const SWIPE_DIRECTION_LOCK_RATIO = 1.2;
+const PULL_REFRESH_TRIGGER = 92;
+const PULL_REFRESH_MAX = 128;
 const INTERACTIVE_SELECTOR = [
   "button",
   "a",
@@ -42,6 +44,10 @@ function applyEdgeResistance(offset: number, hasTarget: boolean) {
   return Math.sign(offset) * Math.pow(Math.abs(offset), 0.82) * 0.22;
 }
 
+function applyPullResistance(offset: number) {
+  return Math.min(PULL_REFRESH_MAX, Math.pow(Math.max(offset, 0), 0.82) * 0.88);
+}
+
 export function AppShell() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -51,16 +57,24 @@ export function AppShell() {
   const [isScrollHeaderVisible, setIsScrollHeaderVisible] = useState(false);
   const [transitionDirection, setTransitionDirection] = useState(0);
   const [dragOffsetX, setDragOffsetX] = useState(0);
+  const [pullOffsetY, setPullOffsetY] = useState(0);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [pendingSwipePath, setPendingSwipePath] = useState<string | null>(null);
+  const touchPullRef = useRef<{
+    startY: number;
+    isEligible: boolean;
+  } | null>(null);
   const gestureRef = useRef<{
     pointerId: number;
     startX: number;
     startY: number;
     lockedAxis: "x" | "y" | null;
     isEligible: boolean;
+    canPullToRefresh: boolean;
   } | null>(null);
   const previousPathRef = useRef(location.pathname);
   const swipeNavigateTimeoutRef = useRef<number | null>(null);
+  const refreshTimeoutRef = useRef<number | null>(null);
   const isIOS = typeof window !== "undefined" && (
     /iPad|iPhone|iPod/.test(window.navigator.userAgent)
     || (window.navigator.platform === "MacIntel" && window.navigator.maxTouchPoints > 1)
@@ -121,20 +135,36 @@ export function AppShell() {
   );
   const swipeRouteIndex = bottomNavPaths.indexOf(location.pathname);
   const canSwipeBetweenBottomRoutes = swipeRouteIndex !== -1;
+  const canPullToRefresh = canSwipeBetweenBottomRoutes && !pendingSwipePath && !isRefreshing;
   const previewPath = dragOffsetX < 0 ? bottomNavPaths[swipeRouteIndex + 1] ?? null : dragOffsetX > 0 ? bottomNavPaths[swipeRouteIndex - 1] ?? null : null;
   const previewMeta = previewPath ? bottomNavMeta[previewPath] : null;
   const dragProgress = Math.min(Math.abs(dragOffsetX) / 180, 1);
   const contentShadowOpacity = Math.min(Math.abs(dragOffsetX) / 240, 0.14);
+  const pullProgress = Math.min(pullOffsetY / PULL_REFRESH_TRIGGER, 1);
+  const contentTransition = gestureRef.current?.lockedAxis === "x"
+    ? { duration: 0 }
+    : gestureRef.current?.lockedAxis === "y" && !isRefreshing
+        ? { duration: 0 }
+        : isRefreshing
+            ? { duration: 0.18, ease: [0.22, 1, 0.36, 1] as const }
+            : pendingSwipePath
+                ? { duration: isIOS ? 0.18 : 0.21, ease: [0.22, 1, 0.36, 1] as const }
+                : { duration: 0.18, ease: [0.22, 1, 0.36, 1] as const };
 
   useEffect(() => {
     mainRef.current?.scrollTo({ top: 0, behavior: "auto" });
     setDragOffsetX(0);
+    setPullOffsetY(0);
+    setIsRefreshing(false);
     setPendingSwipePath(null);
   }, [location.pathname]);
 
   useEffect(() => () => {
     if (swipeNavigateTimeoutRef.current !== null) {
       window.clearTimeout(swipeNavigateTimeoutRef.current);
+    }
+    if (refreshTimeoutRef.current !== null) {
+      window.clearTimeout(refreshTimeoutRef.current);
     }
   }, []);
 
@@ -192,6 +222,8 @@ export function AppShell() {
     const target = event.target;
     if (!(target instanceof Element)) return;
     if (target.closest(INTERACTIVE_SELECTOR)) return;
+    const scrollRoot = mainRef.current;
+    const atTop = scrollRoot ? scrollRoot.scrollTop <= 0 : false;
 
     gestureRef.current = {
       pointerId: event.pointerId,
@@ -199,6 +231,7 @@ export function AppShell() {
       startY: event.clientY,
       lockedAxis: null,
       isEligible: true,
+      canPullToRefresh: canPullToRefresh && atTop,
     };
   };
 
@@ -226,6 +259,12 @@ export function AppShell() {
       const targetExists = nextOffset < 0 ? Boolean(getSwipeTarget("next")) : Boolean(getSwipeTarget("previous"));
       setDragOffsetX(applyEdgeResistance(nextOffset, targetExists));
       event.preventDefault();
+      return;
+    }
+
+    if (gesture.lockedAxis === "y" && gesture.canPullToRefresh && deltaY > 0) {
+      setPullOffsetY(applyPullResistance(deltaY));
+      event.preventDefault();
     }
   };
 
@@ -235,21 +274,44 @@ export function AppShell() {
 
     gestureRef.current = null;
 
-    if (!gesture.isEligible || gesture.lockedAxis !== "x") {
+    if (!gesture.isEligible) {
       setDragOffsetX(0);
+      setPullOffsetY(0);
       return;
     }
 
     const deltaX = event.clientX - gesture.startX;
     const deltaY = event.clientY - gesture.startY;
+    if (gesture.lockedAxis === "y") {
+      if (gesture.canPullToRefresh && pullOffsetY >= PULL_REFRESH_TRIGGER) {
+        setIsRefreshing(true);
+        setPullOffsetY(62);
+        refreshTimeoutRef.current = window.setTimeout(() => {
+          refreshTimeoutRef.current = null;
+          window.location.reload();
+        }, 420);
+      } else {
+        setPullOffsetY(0);
+      }
+      return;
+    }
+
+    if (gesture.lockedAxis !== "x") {
+      setDragOffsetX(0);
+      setPullOffsetY(0);
+      return;
+    }
+
     if (Math.abs(deltaX) < SWIPE_MIN_DISTANCE || Math.abs(deltaX) <= Math.abs(deltaY)) {
       setDragOffsetX(0);
+      setPullOffsetY(0);
       return;
     }
 
     const targetPath = deltaX < 0 ? getSwipeTarget("next") : getSwipeTarget("previous");
     if (!targetPath || targetPath === location.pathname) {
       setDragOffsetX(0);
+      setPullOffsetY(0);
       return;
     }
 
@@ -260,6 +322,56 @@ export function AppShell() {
       swipeNavigateTimeoutRef.current = null;
       navigate(targetPath);
     }, isIOS ? 180 : 210);
+  };
+
+  const handleTouchStart = (event: React.TouchEvent<HTMLElement>) => {
+    if (!canPullToRefresh || pendingSwipePath) return;
+
+    const target = event.target;
+    if (!(target instanceof Element)) return;
+    if (target.closest(INTERACTIVE_SELECTOR)) return;
+
+    const scrollRoot = mainRef.current;
+    const atTop = scrollRoot ? scrollRoot.scrollTop <= 0 : false;
+    if (!atTop) return;
+
+    touchPullRef.current = {
+      startY: event.touches[0]?.clientY ?? 0,
+      isEligible: true,
+    };
+  };
+
+  const handleTouchMove = (event: React.TouchEvent<HTMLElement>) => {
+    const touchPull = touchPullRef.current;
+    if (!touchPull || !touchPull.isEligible || isRefreshing || pendingSwipePath) return;
+
+    const currentY = event.touches[0]?.clientY ?? touchPull.startY;
+    const deltaY = currentY - touchPull.startY;
+    if (deltaY <= 0) {
+      setPullOffsetY(0);
+      return;
+    }
+
+    setPullOffsetY(applyPullResistance(deltaY));
+    event.preventDefault();
+  };
+
+  const handleTouchEnd = () => {
+    const touchPull = touchPullRef.current;
+    touchPullRef.current = null;
+    if (!touchPull?.isEligible || pendingSwipePath) return;
+
+    if (pullOffsetY >= PULL_REFRESH_TRIGGER) {
+      setIsRefreshing(true);
+      setPullOffsetY(62);
+      refreshTimeoutRef.current = window.setTimeout(() => {
+        refreshTimeoutRef.current = null;
+        window.location.reload();
+      }, 420);
+      return;
+    }
+
+    setPullOffsetY(0);
   };
 
   return (
@@ -295,6 +407,10 @@ export function AppShell() {
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerEnd}
         onPointerCancel={handlePointerEnd}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        onTouchCancel={handleTouchEnd}
         style={{
           overscrollBehavior: "none",
           WebkitOverflowScrolling: "touch",
@@ -305,6 +421,45 @@ export function AppShell() {
             : "var(--safe-area-top)",
         }}
       >
+        <div
+          className="pointer-events-none absolute inset-x-0 top-0 z-20 flex justify-center"
+          style={{
+            paddingTop: "calc(var(--safe-area-top) + 10px)",
+            opacity: pullOffsetY > 0 || isRefreshing ? 1 : 0,
+            transform: `translate3d(0, ${Math.max(0, pullOffsetY - 52)}px, 0)`,
+            transition: pullOffsetY > 0 && !isRefreshing ? "none" : "opacity 180ms var(--ease-out-soft), transform 180ms var(--ease-out-soft)",
+          }}
+        >
+          <div className="flex items-center gap-2 rounded-full border border-[var(--color-border)] bg-[var(--color-surface)]/92 px-3 py-2 shadow-[var(--shadow-soft)] backdrop-blur-[18px]">
+            <div
+              className={isRefreshing ? "animate-spin" : ""}
+              style={{
+                transform: isRefreshing ? undefined : `rotate(${pullProgress * 180}deg)`,
+                transition: pullOffsetY > 0 ? "none" : "transform 180ms var(--ease-out-soft)",
+              }}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="none" className="h-4 w-4 text-[var(--color-primary)]">
+                <path
+                  d="M15.833 10a5.833 5.833 0 1 1-1.709-4.124"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <path
+                  d="M15.833 4.167v2.916h-2.916"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </div>
+            <span className="text-xs font-semibold text-[var(--color-text-secondary)]">
+              {isRefreshing ? "Refreshing" : pullProgress >= 1 ? "Release to refresh" : "Pull to refresh"}
+            </span>
+          </div>
+        </div>
         {previewMeta && (
           <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
             <div
@@ -352,14 +507,12 @@ export function AppShell() {
             transition={{ duration: isIOS ? 0.2 : 0.24, ease: [0.22, 1, 0.36, 1] }}
           >
             <motion.div
-              animate={{ x: dragOffsetX }}
-              transition={gestureRef.current?.lockedAxis === "x"
-                ? { duration: 0 }
-                : pendingSwipePath
-                    ? { duration: isIOS ? 0.18 : 0.21, ease: [0.22, 1, 0.36, 1] }
-                    : { duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
+              animate={{ x: dragOffsetX, y: pullOffsetY }}
+              transition={contentTransition}
               style={{
-                boxShadow: dragOffsetX === 0 ? "none" : `0 20px 50px rgba(120, 92, 69, ${contentShadowOpacity})`,
+                boxShadow: dragOffsetX === 0 && pullOffsetY === 0
+                  ? "none"
+                  : `0 20px 50px rgba(120, 92, 69, ${Math.max(contentShadowOpacity, Math.min(pullOffsetY / 420, 0.12))})`,
               }}
             >
               <Outlet />
