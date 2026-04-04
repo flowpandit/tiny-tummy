@@ -498,12 +498,12 @@ export function Settings() {
           title="Settings"
           description="Preferences, children, reminders, and everyday app setup in one place."
           showChildInfo={false}
-          className="overflow-hidden"
+          className="-mx-4 overflow-hidden md:-mx-6 lg:-mx-8"
           scene="home"
         />
       )}
 
-      <div className="-mt-24 px-4">
+      <div className="-mt-24 px-4 md:px-6 lg:px-8">
 
         {/* Children section */}
         <div className="mb-8">

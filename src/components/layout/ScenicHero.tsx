@@ -1,5 +1,5 @@
-import { useId, type ReactNode, type RefObject } from "react";
-import { motion } from "framer-motion";
+import { useEffect, useId, useState, type ReactNode, type RefObject } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import watercolorClouds from "../../assets/svg-assets/hero-pieces/watercolor-clouds.svg";
 import watercolorCloudsDark from "../../assets/svg-assets/hero-pieces/watercolor-clouds-dark.svg";
 import watercolorMountains from "../../assets/svg-assets/hero-pieces/watercolor-mountains.svg";
@@ -16,6 +16,7 @@ import sceneMoon from "../../assets/svg-assets/moon.svg";
 import sceneSun from "../../assets/svg-assets/sun.svg";
 import type { Child } from "../../lib/types";
 import { getAgeLabelFromDob } from "../../lib/utils";
+import { useChildContext } from "../../contexts/ChildContext";
 import { useTheme } from "../../contexts/ThemeContext";
 import { Avatar } from "../child/Avatar";
 
@@ -26,6 +27,8 @@ type ScenicHeroProps = {
   action?: ReactNode;
   avatarAnchorRef?: RefObject<HTMLDivElement | null>;
   showChildInfo?: boolean;
+  siblingChildren?: Child[];
+  onSelectChild?: (childId: string) => void;
   className?: string;
   scene?: "default" | "home" | "sleep" | "feed" | "breastfeed" | "diaper" | "poop" | "growth";
 };
@@ -37,10 +40,13 @@ export function ScenicHero({
   action,
   avatarAnchorRef,
   showChildInfo = true,
+  siblingChildren = [],
+  onSelectChild,
   className,
   scene = "default",
 }: ScenicHeroProps) {
   const clipPathId = useId();
+  const { children, setActiveChildId } = useChildContext();
   const { resolved } = useTheme();
   const isDarkArtwork = resolved !== "light";
   const skyArt = isDarkArtwork ? watercolorCloudsDark : watercolorClouds;
@@ -55,6 +61,16 @@ export function ScenicHero({
   const useDiaperScene = scene === "diaper";
   const usePoopScene = scene === "poop";
   const useGrowthScene = scene === "growth";
+  const [isChildTrayOpen, setIsChildTrayOpen] = useState(false);
+  const resolvedSiblingChildren = siblingChildren.length > 0
+    ? siblingChildren
+    : children.filter((candidate) => candidate.id !== child.id);
+  const resolvedOnSelectChild = onSelectChild ?? setActiveChildId;
+  const canSwapChildren = resolvedSiblingChildren.length > 0;
+
+  useEffect(() => {
+    setIsChildTrayOpen(false);
+  }, [child.id]);
 
   return (
     <section className={className}>
@@ -66,7 +82,9 @@ export function ScenicHero({
         </defs>
       </svg>
       <div
-        className="relative h-[350px] overflow-hidden px-4 pt-6"
+        className={useHomeScene
+          ? "relative h-[350px] overflow-hidden px-4 pt-6 md:h-[380px] md:px-0 lg:h-[410px] lg:px-0"
+          : "relative h-[350px] overflow-hidden px-4 pt-6 md:h-[380px] md:px-0 lg:h-[400px] lg:px-0"}
         style={{ clipPath: `url(#${clipPathId})` }}
       >
         {!useHomeScene && (
@@ -90,15 +108,15 @@ export function ScenicHero({
               alt=""
               aria-hidden="true"
               className={isDarkArtwork
-                ? "pointer-events-none absolute right-[18px] top-[34px] w-[112px] md:right-[24px] md:top-[40px] md:w-[126px]"
-                : "pointer-events-none absolute right-[14px] top-[14px] w-[118px] opacity-95 md:w-[132px]"}
+                ? "pointer-events-none absolute right-[18px] top-[34px] w-[112px] md:right-[74px] md:top-[54px] md:w-[96px] lg:right-[92px] lg:top-[62px] lg:w-[108px]"
+                : "pointer-events-none absolute right-[14px] top-[14px] w-[118px] opacity-95 md:right-[72px] md:top-[46px] md:w-[92px] lg:right-[88px] lg:top-[54px] lg:w-[104px]"}
               style={{ opacity: isDarkArtwork ? 0.72 : 0.95 }}
             />
             <img
               src={ridgeArt}
               alt=""
               aria-hidden="true"
-              className="pointer-events-none absolute left-1/2 bottom-[1px] w-[200%] max-w-none -translate-x-1/2 md:w-[220%]"
+              className="pointer-events-none absolute left-1/2 bottom-[1px] w-[200%] max-w-none -translate-x-1/2 md:bottom-[-10px] md:w-[120%] lg:bottom-[-14px] lg:w-[112%]"
               style={{
                 opacity: isDarkArtwork ? 0.96 : 0.98,
                 filter: isDarkArtwork
@@ -107,14 +125,14 @@ export function ScenicHero({
               }}
             />
             <div
-              className="pointer-events-none absolute inset-x-[-20px] top-[40px] overflow-hidden"
+              className="pointer-events-none absolute inset-x-[-20px] top-[40px] overflow-hidden md:inset-x-0 md:top-[72px] lg:top-[84px]"
               aria-hidden="true"
             >
               <div className="hero-cloud-scroll flex w-[200%]">
                 <img
                   src={skyArt}
                   alt=""
-                  className="hero-cloud-scroll-item block w-1/2 max-w-none shrink-0 translate-y-[8px]"
+                  className="hero-cloud-scroll-item block w-1/2 max-w-none shrink-0"
                   style={{
                     opacity: isDarkArtwork ? 0.82 : 0.96,
                     filter: isDarkArtwork
@@ -125,7 +143,7 @@ export function ScenicHero({
                 <img
                   src={skyArt}
                   alt=""
-                  className="hero-cloud-scroll-item block w-1/2 max-w-none shrink-0 -translate-y-[6px]"
+                  className="hero-cloud-scroll-item block w-1/2 max-w-none shrink-0"
                   style={{
                     opacity: isDarkArtwork ? 0.74 : 0.88,
                     filter: isDarkArtwork
@@ -136,7 +154,7 @@ export function ScenicHero({
               </div>
             </div>
             <div
-              className="pointer-events-none absolute inset-x-0 bottom-[18px] h-[132px]"
+              className="pointer-events-none absolute inset-x-0 bottom-[18px] h-[132px] md:bottom-[6px] md:h-[156px] lg:bottom-0 lg:h-[164px]"
               style={{
                 background: isDarkArtwork
                   ? "linear-gradient(180deg, rgba(17, 28, 42, 0) 0%, rgba(17, 28, 42, 0.18) 100%)"
@@ -144,7 +162,7 @@ export function ScenicHero({
               }}
             />
             <div
-              className="pointer-events-none absolute inset-x-[-10%] top-[122px] h-[164px]"
+              className="pointer-events-none absolute inset-x-[-10%] top-[122px] h-[164px] md:inset-x-0 md:top-[182px] md:h-[146px] lg:top-[194px] lg:h-[154px]"
               style={{ background: "var(--gradient-hero-ridge)", opacity: isDarkArtwork ? 0.48 : 0.34 }}
             />
           </>
@@ -154,7 +172,7 @@ export function ScenicHero({
               src={sceneBackgroundArt}
               alt=""
               aria-hidden="true"
-              className="pointer-events-none absolute inset-x-[-10%] top-[-36px] w-[124%] max-w-none opacity-70"
+              className="pointer-events-none absolute inset-x-[-10%] top-[-36px] w-[124%] max-w-none opacity-70 md:inset-x-0 md:top-[8px] md:w-full lg:top-[4px]"
               style={{
                 filter: isDarkArtwork
                   ? "none"
@@ -173,7 +191,7 @@ export function ScenicHero({
               src={sleepSceneArt}
               alt=""
               aria-hidden="true"
-              className="pointer-events-none absolute right-[-4%] bottom-[90px] w-[74%] max-w-none md:right-[2%] md:w-[62%]"
+              className="pointer-events-none absolute right-[-4%] bottom-[90px] w-[74%] max-w-none md:right-[5%] md:bottom-[58px] md:w-[46%] lg:right-[7%] lg:bottom-[54px] lg:w-[44%]"
               style={{
                 opacity: isDarkArtwork ? 0.78 : 0.88,
                 filter: isDarkArtwork
@@ -192,7 +210,7 @@ export function ScenicHero({
               src={sceneBackgroundArt}
               alt=""
               aria-hidden="true"
-              className="pointer-events-none absolute inset-x-[-12%] top-[-44px] w-[128%] max-w-none opacity-72"
+              className="pointer-events-none absolute inset-x-[-12%] top-[-44px] w-[128%] max-w-none opacity-72 md:inset-x-0 md:top-[4px] md:w-full"
               style={{
                 filter: isDarkArtwork
                   ? "none"
@@ -211,7 +229,7 @@ export function ScenicHero({
               src={feedSceneArt}
               alt=""
               aria-hidden="true"
-              className="pointer-events-none absolute right-[-6%] bottom-[26px] w-[82%] max-w-none md:right-[0%] md:w-[68%]"
+              className="pointer-events-none absolute right-[-6%] bottom-[26px] w-[82%] max-w-none md:right-[4%] md:bottom-[14px] md:w-[50%] lg:right-[6%] lg:w-[47%]"
               style={{
                 opacity: isDarkArtwork ? 0.82 : 0.92,
                 filter: isDarkArtwork
@@ -230,7 +248,7 @@ export function ScenicHero({
               src={sceneBackgroundArt}
               alt=""
               aria-hidden="true"
-              className="pointer-events-none absolute inset-x-[-12%] top-[-42px] w-[126%] max-w-none opacity-72"
+              className="pointer-events-none absolute inset-x-[-12%] top-[-42px] w-[126%] max-w-none opacity-72 md:inset-x-0 md:top-[4px] md:w-full"
               style={{
                 filter: isDarkArtwork
                   ? "none"
@@ -249,7 +267,7 @@ export function ScenicHero({
               src={breastfeedingSceneArt}
               alt=""
               aria-hidden="true"
-              className="pointer-events-none absolute right-[-14%] bottom-[10px] w-[76%] max-w-none md:right-[-6%] md:w-[62%]"
+              className="pointer-events-none absolute right-[-14%] bottom-[10px] w-[76%] max-w-none md:right-[1%] md:bottom-[4px] md:w-[48%] lg:right-[3%] lg:w-[45%]"
               style={{
                 opacity: isDarkArtwork ? 0.84 : 0.92,
                 filter: isDarkArtwork
@@ -268,7 +286,7 @@ export function ScenicHero({
               src={sceneBackgroundArt}
               alt=""
               aria-hidden="true"
-              className="pointer-events-none absolute inset-x-[-12%] top-[-42px] w-[126%] max-w-none opacity-72"
+              className="pointer-events-none absolute inset-x-[-12%] top-[-42px] w-[126%] max-w-none opacity-72 md:inset-x-0 md:top-[4px] md:w-full"
               style={{
                 filter: isDarkArtwork
                   ? "none"
@@ -287,7 +305,7 @@ export function ScenicHero({
               src={diaperSceneArt}
               alt=""
               aria-hidden="true"
-              className="pointer-events-none absolute right-[-10%] bottom-[20px] w-[72%] max-w-none md:right-[-4%] md:w-[58%]"
+              className="pointer-events-none absolute right-[-10%] bottom-[20px] w-[72%] max-w-none md:right-[2%] md:bottom-[6px] md:w-[45%] lg:right-[4%] lg:w-[42%]"
               style={{
                 opacity: isDarkArtwork ? 0.84 : 0.92,
                 filter: isDarkArtwork
@@ -306,7 +324,7 @@ export function ScenicHero({
               src={sceneBackgroundArt}
               alt=""
               aria-hidden="true"
-              className="pointer-events-none absolute inset-x-[-12%] top-[-42px] w-[126%] max-w-none opacity-72"
+              className="pointer-events-none absolute inset-x-[-12%] top-[-42px] w-[126%] max-w-none opacity-72 md:inset-x-0 md:top-[4px] md:w-full"
               style={{
                 filter: isDarkArtwork
                   ? "none"
@@ -325,7 +343,7 @@ export function ScenicHero({
               src={poopSceneArt}
               alt=""
               aria-hidden="true"
-              className="pointer-events-none absolute right-[1%] bottom-[72px] w-[44%] max-w-none md:right-[4%] md:w-[36%]"
+              className="pointer-events-none absolute right-[1%] bottom-[72px] w-[44%] max-w-none md:right-[7%] md:bottom-[48px] md:w-[28%] lg:right-[8%] lg:w-[26%]"
               style={{
                 opacity: isDarkArtwork ? 0.84 : 0.92,
                 filter: isDarkArtwork
@@ -344,7 +362,7 @@ export function ScenicHero({
               src={sceneBackgroundArt}
               alt=""
               aria-hidden="true"
-              className="pointer-events-none absolute inset-x-[-12%] top-[-42px] w-[126%] max-w-none opacity-72"
+              className="pointer-events-none absolute inset-x-[-12%] top-[-42px] w-[126%] max-w-none opacity-72 md:inset-x-0 md:top-[4px] md:w-full"
               style={{
                 filter: isDarkArtwork
                   ? "none"
@@ -363,7 +381,7 @@ export function ScenicHero({
               src={growthSceneArt}
               alt=""
               aria-hidden="true"
-              className="pointer-events-none absolute right-[-1%] bottom-[24px] w-[32%] max-w-none md:right-[2%] md:w-[38%]"
+              className="pointer-events-none absolute right-[-1%] bottom-[24px] w-[32%] max-w-none md:right-[7%] md:bottom-[20px] md:w-[26%] lg:right-[8%] lg:w-[24%]"
               style={{
                 opacity: isDarkArtwork ? 0.84 : 0.92,
                 filter: isDarkArtwork
@@ -393,14 +411,14 @@ export function ScenicHero({
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.34, ease: [0.22, 1, 0.36, 1] }}
-            className="w-full"
+            className="w-full px-4 md:px-6 lg:px-8"
           >
             <div className="flex items-start justify-between gap-4">
-              <div className="min-w-0 max-w-[18rem]">
-                <h1 className="font-[var(--font-display)] text-[2.05rem] font-extrabold leading-[1.1] tracking-[-0.05em] text-[var(--color-hero-title)]">
+              <div className="min-w-0 max-w-[18rem] md:max-w-[23rem] lg:max-w-[25rem]">
+                <h1 className="font-[var(--font-display)] text-[2.05rem] font-extrabold leading-[1.1] tracking-[-0.05em] text-[var(--color-hero-title)] md:text-[2.5rem] lg:text-[2.8rem]">
                   {title}
                 </h1>
-                <p className="mt-2 text-[0.98rem] leading-tight tracking-[-0.02em] text-[var(--color-text)]">
+                <p className="mt-2 text-[0.98rem] leading-tight tracking-[-0.02em] text-[var(--color-text)] md:text-[1.08rem]">
                   {description}
                 </p>
               </div>
@@ -408,14 +426,56 @@ export function ScenicHero({
             </div>
             {showChildInfo && (
               <div ref={avatarAnchorRef} className="mt-5 flex items-center gap-3">
-                <Avatar
-                  childId={child.id}
-                  name={child.name}
-                  color={child.avatar_color}
-                  size="sm"
-                  className="h-10 w-10 border-2 shadow-[var(--shadow-soft)]"
-                  style={{ borderColor: "var(--color-hero-avatar-border)" }}
-                />
+                <div className="relative">
+                  <button
+                    type="button"
+                    aria-label={canSwapChildren ? `Switch child from ${child.name}` : `${child.name} avatar`}
+                    aria-expanded={canSwapChildren ? isChildTrayOpen : undefined}
+                    onClick={() => {
+                      if (!canSwapChildren) return;
+                      setIsChildTrayOpen((open) => !open);
+                    }}
+                    className={canSwapChildren ? "cursor-pointer rounded-full transition-transform active:scale-[0.98]" : "cursor-default rounded-full"}
+                  >
+                    <Avatar
+                      childId={child.id}
+                      name={child.name}
+                      color={child.avatar_color}
+                      size="sm"
+                      className="h-10 w-10 border-2 shadow-[var(--shadow-soft)]"
+                      style={{ borderColor: "var(--color-hero-avatar-border)" }}
+                    />
+                  </button>
+                  <AnimatePresence initial={false}>
+                    {canSwapChildren && isChildTrayOpen && (
+                      <motion.div
+                        initial={{ opacity: 0, x: -10, scale: 0.96 }}
+                        animate={{ opacity: 1, x: 0, scale: 1 }}
+                        exit={{ opacity: 0, x: -8, scale: 0.98 }}
+                        transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+                        className="absolute left-[calc(100%+10px)] top-1/2 z-10 flex -translate-y-1/2 items-center gap-2"
+                      >
+                        {resolvedSiblingChildren.map((sibling) => (
+                          <button
+                            key={sibling.id}
+                            type="button"
+                            aria-label={`Switch to ${sibling.name}`}
+                            onClick={() => resolvedOnSelectChild(sibling.id)}
+                            className="rounded-full transition-transform hover:scale-[1.03] active:scale-[0.98]"
+                          >
+                            <Avatar
+                              childId={sibling.id}
+                              name={sibling.name}
+                              color={sibling.avatar_color}
+                              size="sm"
+                              className="h-9 w-9 border border-white/80 bg-white/40 shadow-[var(--shadow-soft)]"
+                            />
+                          </button>
+                        ))}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
                 <div>
                   <p className="text-[1.05rem] font-semibold text-[var(--color-text)]">{child.name}</p>
                   <p className="text-[0.82rem] leading-tight text-[var(--color-text-secondary)]">

@@ -203,14 +203,14 @@ export function Diaper() {
             Add
           </Button>
         )}
-        className="overflow-hidden"
+        className="-mx-4 overflow-hidden md:-mx-6 lg:-mx-8"
         scene="diaper"
       />
 
-      <div className="space-y-4 px-4 py-5">
+      <div className="space-y-4 px-4 py-5 md:px-6 lg:px-8">
         <Card className="-mt-32 relative z-10 border-transparent bg-transparent shadow-none backdrop-blur-0">
           <CardContent className="p-4 pt-4">
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-3 gap-3 lg:gap-4">
             <div className="flex flex-col items-center gap-2 text-center">
               <TimeSinceIndicator
                 timestamp={lastWetDiaper?.logged_at ?? null}
@@ -236,199 +236,205 @@ export function Diaper() {
 
       <AlertBanner alerts={alerts} onDismiss={dismiss} />
 
-      <Card>
-        <CardContent className="p-4">
-          <div>
-            <div>
-              <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--color-text-soft)]">Quick diaper start</p>
-              <p className="mt-2 max-w-[34ch] text-[14px] leading-relaxed text-[var(--color-text-secondary)]">
-                Start with the most likely diaper event, then fill in stool or urine detail only when it matters.
-              </p>
-            </div>
-            <div className="mt-3 flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={() => { setDraft({ diaper_type: "wet", urine_color: "normal" }); setFormOpen(true); }}
-                className="rounded-full border border-[var(--color-primary)]/20 bg-[var(--color-primary)]/10 px-3 py-2 text-[12px] font-semibold text-[var(--color-primary)] transition-colors hover:bg-[var(--color-primary)]/15"
-              >
-                Wet diaper
-              </button>
-              <button
-                type="button"
-                onClick={() => { setDraft({ diaper_type: "dirty" }); setFormOpen(true); }}
-                className="rounded-full border border-[var(--color-border)] bg-[var(--color-surface-strong)] px-3 py-2 text-[12px] font-semibold text-[var(--color-text-secondary)] transition-colors hover:bg-white/70"
-              >
-                Dirty diaper
-              </button>
-              <button
-                type="button"
-                onClick={() => { setDraft({ diaper_type: "mixed", urine_color: "normal" }); setFormOpen(true); }}
-                className="rounded-full border border-[var(--color-border)] bg-[var(--color-surface-strong)] px-3 py-2 text-[12px] font-semibold text-[var(--color-text-secondary)] transition-colors hover:bg-white/70"
-              >
-                Mixed diaper
-              </button>
-            </div>
-          </div>
-
-          {lastDiaper && (
-            <p className="mt-3 text-[12px] text-[var(--color-text-soft)]">
-              Last logged: {getDiaperTypeLabel(lastDiaper.diaper_type)}
-              {lastDiaper.urine_color ? ` · ${getUrineColorLabel(lastDiaper.urine_color)}` : ""}
-              {lastDiaper.stool_type ? ` · Type ${lastDiaper.stool_type}` : ""}
-            </p>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardContent className="p-3.5">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--color-text-soft)]">Current diaper status</p>
-              <p className="mt-1.5 text-[1.4rem] font-semibold tracking-[-0.035em] text-[var(--color-text)]">
-                {hydrationStatus.title}
-              </p>
-              <p className="mt-1.5 max-w-[42ch] text-[13px] leading-relaxed text-[var(--color-text-secondary)]">{hydrationStatus.description}</p>
-            </div>
-            <span
-              className={`rounded-full px-3 py-1.5 text-[12px] font-semibold ${hydrationStatus.tone === "cta"
-                ? "bg-[var(--color-alert-bg)] text-[var(--color-alert)]"
-                : hydrationStatus.tone === "info"
-                  ? "bg-[var(--color-info-bg)] text-[var(--color-info)]"
-                  : "bg-[var(--color-healthy-bg)] text-[var(--color-healthy)]"
-                }`}
-            >
-              {hydrationStatus.tone === "cta" ? "Watch" : hydrationStatus.tone === "info" ? "Monitor" : "Stable"}
-            </span>
-          </div>
-
-          <div className="mt-3 grid grid-cols-2 gap-2.5">
-            <TrackerMetricPanel
-              eyebrow="Today output"
-              value={`${todayWetCount}/${todayDirtyCount}`}
-              description={`${todayWetCount} wet and ${todayDirtyCount} dirty so far`}
-              tone="healthy"
-            />
-            <TrackerMetricPanel
-              eyebrow="Mixed diapers"
-              value={`${todayMixedCount}`}
-              description="Counted in both wet and dirty totals"
-              tone="info"
-            />
-            <InsetPanel className="col-span-2 border-[var(--color-info)]/18 bg-[var(--color-info-bg)] p-3">
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--color-text-soft)]">Next likely wet diaper</p>
-                  <p className="mt-2 text-xl font-semibold tracking-[-0.02em] text-[var(--color-text)]">{wetPrediction.title}</p>
-                  <p className="mt-1 text-xs leading-relaxed text-[var(--color-text-secondary)]">{wetPrediction.detail}</p>
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:gap-5">
+        <div className="space-y-4">
+          <Card>
+            <CardContent className="p-4">
+              <div>
+                <div>
+                  <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--color-text-soft)]">Quick diaper start</p>
+                  <p className="mt-2 max-w-[34ch] text-[14px] leading-relaxed text-[var(--color-text-secondary)]">
+                    Start with the most likely diaper event, then fill in stool or urine detail only when it matters.
+                  </p>
                 </div>
-                <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-semibold text-[var(--color-text-secondary)]">
-                  hydration
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => { setDraft({ diaper_type: "wet", urine_color: "normal" }); setFormOpen(true); }}
+                    className="rounded-full border border-[var(--color-primary)]/20 bg-[var(--color-primary)]/10 px-3 py-2 text-[12px] font-semibold text-[var(--color-primary)] transition-colors hover:bg-[var(--color-primary)]/15"
+                  >
+                    Wet diaper
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setDraft({ diaper_type: "dirty" }); setFormOpen(true); }}
+                    className="rounded-full border border-[var(--color-border)] bg-[var(--color-surface-strong)] px-3 py-2 text-[12px] font-semibold text-[var(--color-text-secondary)] transition-colors hover:bg-white/70"
+                  >
+                    Dirty diaper
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setDraft({ diaper_type: "mixed", urine_color: "normal" }); setFormOpen(true); }}
+                    className="rounded-full border border-[var(--color-border)] bg-[var(--color-surface-strong)] px-3 py-2 text-[12px] font-semibold text-[var(--color-text-secondary)] transition-colors hover:bg-white/70"
+                  >
+                    Mixed diaper
+                  </button>
+                </div>
+              </div>
+
+              {lastDiaper && (
+                <p className="mt-3 text-[12px] text-[var(--color-text-soft)]">
+                  Last logged: {getDiaperTypeLabel(lastDiaper.diaper_type)}
+                  {lastDiaper.urine_color ? ` · ${getUrineColorLabel(lastDiaper.urine_color)}` : ""}
+                  {lastDiaper.stool_type ? ` · Type ${lastDiaper.stool_type}` : ""}
+                </p>
+              )}
+            </CardContent>
+          </Card>
+
+          <DiscoveryLinks
+            eyebrow="Adjacent views"
+            title="Keep stool-focused work close by"
+            description="Diaper tracking handles the young-baby workflow, while the poop page stays available when you want the full bowel-specific view."
+            items={[
+              {
+                to: "/poop",
+                title: "Poop page",
+                description: "Open the bowel-first analysis surface directly.",
+              },
+              {
+                to: "/history",
+                title: "History",
+                description: "Review the wider timeline across logs.",
+              },
+              {
+                to: "/feed",
+                title: "Feed",
+                description: "Compare feeding timing with wet and dirty output.",
+                tone: "info",
+              },
+            ]}
+          />
+        </div>
+
+        <div className="space-y-4">
+          <Card>
+            <CardContent className="p-3.5">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--color-text-soft)]">Current diaper status</p>
+                  <p className="mt-1.5 text-[1.4rem] font-semibold tracking-[-0.035em] text-[var(--color-text)]">
+                    {hydrationStatus.title}
+                  </p>
+                  <p className="mt-1.5 max-w-[42ch] text-[13px] leading-relaxed text-[var(--color-text-secondary)]">{hydrationStatus.description}</p>
+                </div>
+                <span
+                  className={`rounded-full px-3 py-1.5 text-[12px] font-semibold ${hydrationStatus.tone === "cta"
+                    ? "bg-[var(--color-alert-bg)] text-[var(--color-alert)]"
+                    : hydrationStatus.tone === "info"
+                      ? "bg-[var(--color-info-bg)] text-[var(--color-info)]"
+                      : "bg-[var(--color-healthy-bg)] text-[var(--color-healthy)]"
+                    }`}
+                >
+                  {hydrationStatus.tone === "cta" ? "Watch" : hydrationStatus.tone === "info" ? "Monitor" : "Stable"}
                 </span>
               </div>
-            </InsetPanel>
-            <InsetPanel className="col-span-2 p-3">
-              <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--color-text-soft)]">Dirty diaper rhythm</p>
-              <p className="mt-2 text-[13px] leading-relaxed text-[var(--color-text-secondary)]">{dirtyPrediction.detail}</p>
-              {lastDirtyDiaper && (
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-text-secondary)]">
-                    Last dirty: {timeSince(lastDirtyDiaper.logged_at)}
-                  </span>
-                  {lastDirtyDiaper.stool_type && (
-                    <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-text-secondary)]">
-                      Type {lastDirtyDiaper.stool_type}
-                    </span>
-                  )}
-                  {lastDirtyDiaper.color && (
-                    <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-text-secondary)]">
-                      {STOOL_COLORS.find((item) => item.value === lastDirtyDiaper.color)?.label ?? lastDirtyDiaper.color}
-                    </span>
-                  )}
-                </div>
-              )}
-            </InsetPanel>
-          </div>
-        </CardContent>
-      </Card>
 
-      <DiscoveryLinks
-        eyebrow="Adjacent views"
-        title="Keep stool-focused work close by"
-        description="Diaper tracking handles the young-baby workflow, while the poop page stays available when you want the full bowel-specific view."
-        items={[
-          {
-            to: "/poop",
-            title: "Poop page",
-            description: "Open the bowel-first analysis surface directly.",
-          },
-          {
-            to: "/history",
-            title: "History",
-            description: "Review the wider timeline across logs.",
-          },
-          {
-            to: "/feed",
-            title: "Feed",
-            description: "Compare feeding timing with wet and dirty output.",
-            tone: "info",
-          },
-        ]}
-      />
-
-      {recentLogs.length === 0 ? (
-        <EmptyState
-          icon={<span className="text-2xl text-[var(--color-primary)]">+</span>}
-          title="Start the diaper page with the first log"
-          description="Once wet, dirty, or mixed diapers are logged, this page can show hydration rhythm and diaper summaries."
-          action={<Button variant="primary" onClick={() => setFormOpen(true)}>Add first diaper log</Button>}
-        />
-      ) : (
-        <Card>
-          <CardHeader>
-            <div>
-              <SectionHeading
-                title="Recent diaper entries"
-                description="Every recent diaper log in one list, with quick editing when details need correcting."
-              />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <TrackerEntryTable leftHeader="When" mainHeader="Details">
-              {recentLogs.map((log) => {
-                const colorHex = log.color ? STOOL_COLORS.find((item) => item.value === log.color)?.hex : undefined;
-                const stoolLabel = log.stool_type ? BITSS_TYPES.find((item) => item.type === log.stool_type)?.label : null;
-                const urineLabel = getUrineColorLabel(log.urine_color);
-                const summary = [
-                  getDiaperTypeLabel(log.diaper_type),
-                  urineLabel,
-                  stoolLabel ? `Type ${log.stool_type} ${stoolLabel}` : null,
-                  log.color ? STOOL_COLORS.find((item) => item.value === log.color)?.label ?? log.color : null,
-                ].filter(Boolean).join(" · ");
-
-                return (
-                  <TrackerEntryRow key={log.id} onClick={() => setEditingLog(log)}>
-                    <div>
-                      <p className="text-sm font-semibold text-[var(--color-text)]">{timeSince(log.logged_at)}</p>
-                      <p className="mt-1 text-xs text-[var(--color-text-soft)]">{new Date(log.logged_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}</p>
-                    </div>
+              <div className="mt-3 grid grid-cols-2 gap-2.5">
+                <TrackerMetricPanel
+                  eyebrow="Today output"
+                  value={`${todayWetCount}/${todayDirtyCount}`}
+                  description={`${todayWetCount} wet and ${todayDirtyCount} dirty so far`}
+                  tone="healthy"
+                />
+                <TrackerMetricPanel
+                  eyebrow="Mixed diapers"
+                  value={`${todayMixedCount}`}
+                  description="Counted in both wet and dirty totals"
+                  tone="info"
+                />
+                <InsetPanel className="col-span-2 border-[var(--color-info)]/18 bg-[var(--color-info-bg)] p-3">
+                  <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span
-                          className="h-2.5 w-2.5 rounded-full"
-                          style={{ backgroundColor: colorHex ?? (log.diaper_type === "wet" ? "#d6b74f" : "#c08937") }}
-                        />
-                        <p className="truncate text-sm font-semibold text-[var(--color-text)]">{summary}</p>
-                      </div>
-                      <p className="mt-1 truncate text-xs text-[var(--color-text-secondary)]">{log.notes || "No extra notes"}</p>
+                      <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--color-text-soft)]">Next likely wet diaper</p>
+                      <p className="mt-2 text-xl font-semibold tracking-[-0.02em] text-[var(--color-text)]">{wetPrediction.title}</p>
+                      <p className="mt-1 text-xs leading-relaxed text-[var(--color-text-secondary)]">{wetPrediction.detail}</p>
                     </div>
-                  </TrackerEntryRow>
-                );
-              })}
-            </TrackerEntryTable>
-          </CardContent>
-        </Card>
-      )}
+                    <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-semibold text-[var(--color-text-secondary)]">
+                      hydration
+                    </span>
+                  </div>
+                </InsetPanel>
+                <InsetPanel className="col-span-2 p-3">
+                  <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--color-text-soft)]">Dirty diaper rhythm</p>
+                  <p className="mt-2 text-[13px] leading-relaxed text-[var(--color-text-secondary)]">{dirtyPrediction.detail}</p>
+                  {lastDirtyDiaper && (
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-text-secondary)]">
+                        Last dirty: {timeSince(lastDirtyDiaper.logged_at)}
+                      </span>
+                      {lastDirtyDiaper.stool_type && (
+                        <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-text-secondary)]">
+                          Type {lastDirtyDiaper.stool_type}
+                        </span>
+                      )}
+                      {lastDirtyDiaper.color && (
+                        <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-text-secondary)]">
+                          {STOOL_COLORS.find((item) => item.value === lastDirtyDiaper.color)?.label ?? lastDirtyDiaper.color}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </InsetPanel>
+              </div>
+            </CardContent>
+          </Card>
+
+          {recentLogs.length === 0 ? (
+            <EmptyState
+              icon={<span className="text-2xl text-[var(--color-primary)]">+</span>}
+              title="Start the diaper page with the first log"
+              description="Once wet, dirty, or mixed diapers are logged, this page can show hydration rhythm and diaper summaries."
+              action={<Button variant="primary" onClick={() => setFormOpen(true)}>Add first diaper log</Button>}
+            />
+          ) : (
+            <Card>
+              <CardHeader>
+                <div>
+                  <SectionHeading
+                    title="Recent diaper entries"
+                    description="Every recent diaper log in one list, with quick editing when details need correcting."
+                  />
+                </div>
+              </CardHeader>
+              <CardContent>
+                <TrackerEntryTable leftHeader="When" mainHeader="Details">
+                  {recentLogs.map((log) => {
+                    const colorHex = log.color ? STOOL_COLORS.find((item) => item.value === log.color)?.hex : undefined;
+                    const stoolLabel = log.stool_type ? BITSS_TYPES.find((item) => item.type === log.stool_type)?.label : null;
+                    const urineLabel = getUrineColorLabel(log.urine_color);
+                    const summary = [
+                      getDiaperTypeLabel(log.diaper_type),
+                      urineLabel,
+                      stoolLabel ? `Type ${log.stool_type} ${stoolLabel}` : null,
+                      log.color ? STOOL_COLORS.find((item) => item.value === log.color)?.label ?? log.color : null,
+                    ].filter(Boolean).join(" · ");
+
+                    return (
+                      <TrackerEntryRow key={log.id} onClick={() => setEditingLog(log)}>
+                        <div>
+                          <p className="text-sm font-semibold text-[var(--color-text)]">{timeSince(log.logged_at)}</p>
+                          <p className="mt-1 text-xs text-[var(--color-text-soft)]">{new Date(log.logged_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}</p>
+                        </div>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span
+                              className="h-2.5 w-2.5 rounded-full"
+                              style={{ backgroundColor: colorHex ?? (log.diaper_type === "wet" ? "#d6b74f" : "#c08937") }}
+                            />
+                            <p className="truncate text-sm font-semibold text-[var(--color-text)]">{summary}</p>
+                          </div>
+                          <p className="mt-1 truncate text-xs text-[var(--color-text-secondary)]">{log.notes || "No extra notes"}</p>
+                        </div>
+                      </TrackerEntryRow>
+                    );
+                  })}
+                </TrackerEntryTable>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      </div>
 
       <DiaperLogForm
         open={formOpen}

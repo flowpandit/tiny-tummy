@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useChildContext } from "../../contexts/ChildContext";
 import { useEliminationPreference } from "../../hooks/useEliminationPreference";
@@ -96,6 +97,22 @@ export function BottomNav() {
   const navigate = useNavigate();
   const { activeChild } = useChildContext();
   const { experience } = useEliminationPreference(activeChild);
+  const [isSheetOpen, setIsSheetOpen] = useState(false);
+
+  useEffect(() => {
+    const body = document.body;
+
+    const syncSheetState = () => {
+      setIsSheetOpen(Number(body.dataset.sheetLockCount ?? "0") > 0);
+    };
+
+    syncSheetState();
+
+    const observer = new MutationObserver(syncSheetState);
+    observer.observe(body, { attributes: true, attributeFilter: ["data-sheet-lock-count"] });
+
+    return () => observer.disconnect();
+  }, []);
 
   const navItems = NAV_ITEMS.map((item) => {
     if (item.path !== "/poop") return item;
@@ -108,8 +125,17 @@ export function BottomNav() {
   });
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-30 px-3" style={{ paddingBottom: "calc(var(--safe-area-bottom) + 8px)" }}>
-      <div className="mx-auto flex h-[76px] max-w-[600px] items-center justify-around rounded-[30px] border border-[var(--color-border)] px-2 shadow-[var(--shadow-lg)] backdrop-blur-[20px]" style={{ background: "var(--color-nav-surface)" }}>
+    <nav
+      className={cn(
+        "fixed bottom-0 left-0 right-0 z-30 px-3 transition-all duration-200 md:px-6",
+        isSheetOpen ? "pointer-events-none translate-y-6 opacity-0" : "translate-y-0 opacity-100",
+      )}
+      style={{ paddingBottom: "calc(var(--safe-area-bottom) + 8px)" }}
+    >
+      <div
+        className="mx-auto flex h-[76px] max-w-[720px] items-center justify-around rounded-[30px] border border-[var(--color-border)] px-2 shadow-[var(--shadow-lg)] backdrop-blur-[20px]"
+        style={{ background: "var(--color-nav-surface)" }}
+      >
         {navItems.map((item) => {
           const isActive = item.matches(location.pathname);
           return (

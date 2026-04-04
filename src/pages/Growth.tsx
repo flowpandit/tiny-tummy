@@ -179,11 +179,11 @@ export function Growth() {
         title="Growth story"
         description="Track measurements and percentile context in one place."
         action={<Button variant="cta" size="sm" onClick={openAddSheet}>Add</Button>}
-        className="overflow-hidden"
+        className="-mx-4 overflow-hidden md:-mx-6 lg:-mx-8"
         scene="growth"
       />
 
-      <div className="space-y-4 px-4 py-5">
+      <div className="space-y-4 px-4 py-5 md:px-6 lg:px-8">
       {sortedLogs.length === 0 ? (
         <EmptyState
           icon={(

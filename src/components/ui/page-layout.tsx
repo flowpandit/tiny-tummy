@@ -5,7 +5,7 @@ export function PageBody({
   className,
   ...props
 }: HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn("mt-4 space-y-6 px-4 py-5", className)} {...props} />;
+  return <div className={cn("mt-4 space-y-6 px-4 py-5 md:px-6 lg:px-8", className)} {...props} />;
 }
 
 export function SectionHeading({

@@ -102,6 +102,8 @@ export function HomeTopSection({
   sleepNapCount,
   onContinueToDashboard,
   avatarAnchorRef,
+  otherChildren,
+  onSelectChild,
 }: {
   activeChild: Child;
   summary: ChildDailySummary;
@@ -110,6 +112,8 @@ export function HomeTopSection({
   sleepNapCount: number;
   onContinueToDashboard: () => void;
   avatarAnchorRef: RefObject<HTMLDivElement | null>;
+  otherChildren: Child[];
+  onSelectChild: (childId: string) => void;
 }) {
   const totalDiapers = summary.todayWetDiapers + summary.todayDirtyDiapers;
   const moodCards = [
@@ -131,16 +135,18 @@ export function HomeTopSection({
   ];
 
   return (
-    <section className="-mx-4 -mt-2 overflow-hidden px-4 pb-3 pt-1">
+    <section className="-mt-2 overflow-hidden pb-3 pt-1">
       <ScenicHero
         child={activeChild}
         title="How are you feeling today?"
         description="Daily Check-in: Parent & Baby Care"
         avatarAnchorRef={avatarAnchorRef}
+        siblingChildren={otherChildren}
+        onSelectChild={onSelectChild}
         scene="home"
       />
 
-      <div className="px-4">
+      <div className="px-4 md:px-6 lg:px-8">
         <div className="-mt-24 grid grid-cols-3 gap-3">
           {moodCards.map((card) => (
             <button

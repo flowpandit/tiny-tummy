@@ -25,7 +25,7 @@ export function FrequencyChart({ data, days }: FrequencyChartProps) {
   const showEveryN = days <= 7 ? 1 : days <= 14 ? 2 : 4;
 
   return (
-    <div className="w-full h-52">
+    <div className="w-full h-52" data-no-page-swipe="true">
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={filled} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
           <defs>

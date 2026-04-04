@@ -10,7 +10,7 @@ export function ColorDistribution({ data }: ColorDistributionProps) {
   if (total === 0) return null;
 
   return (
-    <div>
+    <div data-no-page-swipe="true">
       <div className="flex h-7 gap-1 overflow-hidden rounded-full bg-[var(--color-surface-strong)] p-1">
         {data.map((item) => {
           const info = STOOL_COLORS.find((c) => c.value === item.color);

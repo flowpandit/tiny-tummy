@@ -89,7 +89,7 @@ export function DietCorrelation({ poopLogs, feedingLogs, days }: DietCorrelation
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4" data-no-page-swipe="true">
       {[...timeline.entries()].map(([date, events]) => (
         <div key={date}>
           <p className="text-xs font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider mb-2">

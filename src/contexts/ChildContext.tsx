@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback, useRef, type ReactNode } from "react";
 import type { Child } from "../lib/types";
 import * as db from "../lib/db";
+import { withTimeout } from "../lib/async";
 
 interface ChildContextType {
   children: Child[];
@@ -8,6 +9,7 @@ interface ChildContextType {
   setActiveChildId: (id: string) => void;
   refreshChildren: () => Promise<void>;
   isLoading: boolean;
+  loadError: string | null;
 }
 
 const ChildContext = createContext<ChildContextType | null>(null);
@@ -16,28 +18,41 @@ export function ChildProvider({ children: childrenProp }: { children: ReactNode 
   const [childList, setChildList] = useState<Child[]>([]);
   const [activeChildId, setActiveChildId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
   const requestIdRef = useRef(0);
 
   const refreshChildren = useCallback(async () => {
     const requestId = ++requestIdRef.current;
     setIsLoading(true);
+    if (!hasLoadedOnce) {
+      setLoadError(null);
+    }
 
     try {
-      const rows = await db.getChildren();
+      const safeRows = await withTimeout(db.getChildren(), 8000, "Loading children");
       if (requestId !== requestIdRef.current) return;
 
-      setChildList(rows);
-      if (rows.length === 0) {
+      setChildList(safeRows);
+      if (safeRows.length === 0) {
         setActiveChildId(null);
-      } else if (!rows.find((c) => c.id === activeChildId)) {
-        setActiveChildId(rows[0].id);
+      } else if (!safeRows.find((c) => c.id === activeChildId)) {
+        setActiveChildId(safeRows[0].id);
+      }
+      setHasLoadedOnce(true);
+      setLoadError(null);
+    } catch (error) {
+      if (requestId !== requestIdRef.current) return;
+      console.error("Failed to load children", error);
+      if (!hasLoadedOnce) {
+        setLoadError("Unable to load your children right now.");
       }
     } finally {
       if (requestId === requestIdRef.current) {
         setIsLoading(false);
       }
     }
-  }, [activeChildId]);
+  }, [activeChildId, hasLoadedOnce]);
 
   useEffect(() => {
     void refreshChildren();
@@ -53,6 +68,7 @@ export function ChildProvider({ children: childrenProp }: { children: ReactNode 
         setActiveChildId,
         refreshChildren,
         isLoading,
+        loadError,
       }}
     >
       {childrenProp}
