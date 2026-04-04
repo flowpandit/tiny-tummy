@@ -26,7 +26,7 @@ function typeLabel(type: number): string {
 
 export function ConsistencyTrend({ data }: ConsistencyTrendProps) {
   return (
-    <div className="w-full h-52">
+    <div className="w-full h-52" data-no-page-swipe="true">
       <ResponsiveContainer width="100%" height="100%">
         <LineChart data={data} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
           <defs>
