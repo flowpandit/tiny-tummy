@@ -30,13 +30,22 @@ append_path_if_dir() {
 }
 
 pick_node_bin() {
+  local_node=$(command_path node)
+  if [ -n "$local_node" ]; then
+    dirname "$local_node"
+    return 0
+  fi
+
   if [ -n "${HOME:-}" ] && [ -d "$HOME/.nvm/versions/node" ]; then
     for candidate in "$HOME"/.nvm/versions/node/*/bin; do
       if [ -x "$candidate/node" ]; then
         echo "$candidate"
+        return 0
       fi
     done
   fi
+
+  return 1
 }
 
 normalize_configuration() {

@@ -20,6 +20,7 @@ export function TrialProvider({ children }: { children: ReactNode }) {
   const [daysRemaining, setDaysRemaining] = useState(14);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
 
   // Expose this as a dev trick so you can easily test the Paywall
   const simulateExpiration = async () => {
@@ -34,7 +35,9 @@ export function TrialProvider({ children }: { children: ReactNode }) {
 
   async function refreshTrial() {
     setIsLoading(true);
-    setLoadError(null);
+    if (!hasLoadedOnce) {
+      setLoadError(null);
+    }
 
     try {
       const isPremiumStr = await withTimeout(getSetting("app_is_premium"), 8000, "Loading premium status");
@@ -58,9 +61,13 @@ export function TrialProvider({ children }: { children: ReactNode }) {
 
       setDaysRemaining(remaining);
       setIsLocked(remaining === 0);
+      setHasLoadedOnce(true);
+      setLoadError(null);
     } catch (error) {
       console.error("Trial check failed", error);
-      setLoadError("Unable to verify trial access right now.");
+      if (!hasLoadedOnce) {
+        setLoadError("Unable to verify trial access right now.");
+      }
     } finally {
       setIsLoading(false);
     }

@@ -19,12 +19,15 @@ export function ChildProvider({ children: childrenProp }: { children: ReactNode 
   const [activeChildId, setActiveChildId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
   const requestIdRef = useRef(0);
 
   const refreshChildren = useCallback(async () => {
     const requestId = ++requestIdRef.current;
     setIsLoading(true);
-    setLoadError(null);
+    if (!hasLoadedOnce) {
+      setLoadError(null);
+    }
 
     try {
       const safeRows = await withTimeout(db.getChildren(), 8000, "Loading children");
@@ -36,16 +39,20 @@ export function ChildProvider({ children: childrenProp }: { children: ReactNode 
       } else if (!safeRows.find((c) => c.id === activeChildId)) {
         setActiveChildId(safeRows[0].id);
       }
+      setHasLoadedOnce(true);
+      setLoadError(null);
     } catch (error) {
       if (requestId !== requestIdRef.current) return;
       console.error("Failed to load children", error);
-      setLoadError("Unable to load your children right now.");
+      if (!hasLoadedOnce) {
+        setLoadError("Unable to load your children right now.");
+      }
     } finally {
       if (requestId === requestIdRef.current) {
         setIsLoading(false);
       }
     }
-  }, [activeChildId]);
+  }, [activeChildId, hasLoadedOnce]);
 
   useEffect(() => {
     void refreshChildren();
