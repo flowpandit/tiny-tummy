@@ -172,15 +172,39 @@ cargo tauri android build --apk --debug --target aarch64
 ### iOS
 
 ```bash
-# Initialize iOS project (one-time)
+# 1. Initialize iOS project (one-time per machine)
 cargo tauri ios init
 
-# Run on iOS Simulator
+# 2. Run the project iOS Rust build helper
+./scripts/build-rust-ios.sh
+
+# 3. Boot the simulator you want to use
+xcrun simctl boot "iPad (A16)"
+
+# 4. Run the app on the booted simulator
 cargo tauri ios dev
 
 # Run on a physical iPhone connected via USB
 cargo tauri ios dev --device
 ```
+
+After the initial `cargo tauri ios init`, the usual simulator flow is:
+
+```bash
+./scripts/build-rust-ios.sh
+xcrun simctl boot "iPad (A16)"
+cargo tauri ios dev
+```
+
+If the simulator is already booted, you can just run `cargo tauri ios dev`.
+
+If you want to run the Android simulator at the same time as the iPhone/iPad simulator, start Android with:
+
+```bash
+cargo tauri android dev -c '{"build":{"beforeDevCommand":"true"}}'
+```
+
+That skips re-running the shared frontend dev command, which is useful when iOS dev is already using it.
 
 > **Note:** Testing on a physical iPhone requires an Apple Developer account and a provisioning profile configured in the Xcode project at `src-tauri/gen/apple/`.
 
