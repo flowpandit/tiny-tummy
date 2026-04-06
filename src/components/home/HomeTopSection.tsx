@@ -100,7 +100,6 @@ export function HomeTopSection({
   sleepSummaryLabel,
   sleepSummaryHoursValue,
   sleepNapCount,
-  onContinueToDashboard,
   avatarAnchorRef,
   otherChildren,
   onSelectChild,
@@ -110,7 +109,6 @@ export function HomeTopSection({
   sleepSummaryLabel: string;
   sleepSummaryHoursValue: number;
   sleepNapCount: number;
-  onContinueToDashboard: () => void;
   avatarAnchorRef: RefObject<HTMLDivElement | null>;
   otherChildren: Child[];
   onSelectChild: (childId: string) => void;
@@ -147,16 +145,16 @@ export function HomeTopSection({
       />
 
       <div className="px-4 md:px-6 lg:px-8">
-        <div className="-mt-24 grid grid-cols-3 gap-3">
+        <div className="-mt-24 grid grid-cols-3 gap-2.5">
           {moodCards.map((card) => (
             <button
               key={card.label}
               type="button"
-              className="min-h-[96px] rounded-[20px] border border-[var(--color-border)] px-2 py-3 text-center shadow-[var(--shadow-medium)]"
+              className="flex h-[64px] flex-col items-center justify-center rounded-[14px] border border-[var(--color-border)] px-1.5 py-1 text-center shadow-[var(--shadow-medium)]"
               style={{ background: card.tone }}
             >
-              <div className="flex h-10 items-center justify-center">{card.icon}</div>
-              <p className="mt-2 text-[0.92rem] font-semibold leading-tight text-[var(--color-text)]">{card.label}</p>
+              <div className="flex h-4 items-center justify-center [&_img]:h-4 [&_img]:w-4">{card.icon}</div>
+              <p className="mt-1 text-[0.74rem] font-semibold leading-none text-[var(--color-text)]">{card.label}</p>
             </button>
           ))}
         </div>
@@ -190,14 +188,6 @@ export function HomeTopSection({
             />
           </div>
         </div>
-
-        <button
-          type="button"
-          onClick={onContinueToDashboard}
-          className="mt-4 h-12 w-full rounded-full bg-[var(--color-cta)] px-5 text-[0.98rem] font-semibold text-white shadow-[var(--shadow-medium)]"
-        >
-          Continue to Dashboard
-        </button>
       </div>
     </section>
   );

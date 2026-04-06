@@ -133,7 +133,7 @@ export function BottomNav() {
       style={{ paddingBottom: "calc(var(--safe-area-bottom) + 8px)" }}
     >
       <div
-        className="mx-auto flex h-[76px] max-w-[720px] items-center justify-around rounded-[30px] border border-[var(--color-border)] px-2 shadow-[var(--shadow-lg)] backdrop-blur-[20px]"
+        className="mx-auto flex h-[78px] max-w-[720px] items-center justify-around rounded-[28px] border border-[var(--color-border)] px-2 shadow-[var(--shadow-lg)] backdrop-blur-[20px]"
         style={{ background: "var(--color-nav-surface)" }}
       >
         {navItems.map((item) => {
@@ -143,7 +143,7 @@ export function BottomNav() {
               key={item.path}
               onClick={() => navigate(item.path)}
               className={cn(
-                "relative flex h-[62px] min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-[22px] cursor-pointer transition-all duration-200",
+                "relative flex h-[64px] min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-[20px] cursor-pointer transition-all duration-200",
                 isActive
                   ? "text-[var(--color-primary)] shadow-[var(--shadow-soft)]"
                   : "text-[var(--color-nav-inactive)] hover:text-[var(--color-nav-inactive-hover)]",
@@ -154,13 +154,13 @@ export function BottomNav() {
                 <span
                   className={cn(
                   "absolute left-1/2 top-1.5 h-1 w-8 -translate-x-1/2 rounded-full transition-opacity duration-200",
-                  isActive ? "bg-[var(--color-cta)] opacity-100" : "opacity-0",
+                  isActive ? "bg-[var(--color-nav-active-indicator)] opacity-100" : "opacity-0",
                   )}
                 />
               <span className="flex h-6 w-6 items-center justify-center">
                 {item.icon(isActive)}
               </span>
-              <span className="max-w-full truncate px-1 text-[10px] font-semibold tracking-[0.04em]">{item.label}</span>
+              <span className="max-w-full truncate px-1 text-[10px] font-semibold tracking-[0.01em]">{item.label}</span>
             </button>
           );
         })}

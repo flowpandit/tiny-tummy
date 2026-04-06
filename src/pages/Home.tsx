@@ -8,20 +8,15 @@ import { useFeedingLogs } from "../hooks/useFeedingLogs";
 import { useSleepLogs } from "../hooks/useSleepLogs";
 import { useAlerts } from "../hooks/useAlerts";
 import { useAlertEngine } from "../hooks/useAlertEngine";
-import { useStats } from "../hooks/useStats";
 import { useEpisodes } from "../hooks/useEpisodes";
 import { useSymptoms } from "../hooks/useSymptoms";
 import { useCaregiverNote } from "../hooks/useCaregiverNote";
 import { useEliminationPreference } from "../hooks/useEliminationPreference";
 import { buildChildDailySummary } from "../lib/child-summary";
 import { getBreastfeedingSessionSettingKey, parseBreastfeedingSession } from "../lib/breastfeeding";
-import { timeSince } from "../lib/utils";
 import { syncSmartRemindersForChild, syncSmartRemindersForChildren } from "../lib/notifications";
-import { getSymptomSeverityBadgeVariant, getSymptomSeverityLabel, getSymptomTypeLabel } from "../lib/symptom-constants";
 import * as db from "../lib/db";
 import { HomeTopSection } from "../components/home/HomeTopSection";
-import { WeeklyPatternCard } from "../components/home/WeeklyPatternCard";
-import { EpisodeCard } from "../components/home/EpisodeCard";
 import { RecentActivity } from "../components/home/RecentActivity";
 import { AlertBanner } from "../components/dashboard/AlertBanner";
 import { LogForm } from "../components/logging/LogForm";
@@ -32,9 +27,19 @@ import { EpisodeSheet } from "../components/episodes/EpisodeSheet";
 import { NoLogsYet } from "../components/empty-states/NoLogsYet";
 import { SymptomSheet } from "../components/symptoms/SymptomSheet";
 import { SleepLogSheet } from "../components/sleep/SleepLogSheet";
-import { Badge } from "../components/ui/badge";
+import {
+  HomeActionBottleIcon,
+  HomeActionBreastfeedIcon,
+  HomeActionDiaperIcon,
+  HomeActionEpisodeIcon,
+  HomeActionSleepIcon,
+  HomeActionSymptomIcon,
+  HomeToolGrowthIcon,
+  HomeToolHandoffIcon,
+  HomeToolHistoryIcon,
+  HomeToolMilestonesIcon,
+} from "../components/ui/icons";
 import { useToast } from "../components/ui/toast";
-import { DiscoveryLinks } from "../components/discovery/DiscoveryLinks";
 import { DiaperLogForm } from "../components/logging/DiaperLogForm";
 import { EditDiaperSheet } from "../components/logging/EditDiaperSheet";
 import { CompactChildNav } from "../components/layout/CompactChildNav";
@@ -57,7 +62,6 @@ export function Home() {
   const { activeEpisode, events: episodeEvents, recentEpisodes, refresh: refreshEpisodes } = useEpisodes(activeChild?.id ?? null);
   const { logs: symptomLogs, refresh: refreshSymptoms } = useSymptoms(activeChild?.id ?? null);
   const { alerts, refresh: refreshAlerts, dismiss } = useAlerts(activeChild?.id ?? null);
-  const { frequency, consistency, colorDist } = useStats(activeChild?.id ?? null, 7);
   const { runChecks } = useAlertEngine();
   const [logFormOpen, setLogFormOpen] = useState(false);
   const [poopDraft, setPoopDraft] = useState<Partial<PoopLogDraft> | null>(null);
@@ -83,7 +87,6 @@ export function Home() {
     isSaving: isSavingHandoffNote,
     hasChanges: handoffNoteChanged,
     save: saveHandoffNote,
-    reset: resetHandoffNote,
   } = useCaregiverNote(activeChild?.id ?? null);
 
   useEffect(() => {
@@ -274,12 +277,8 @@ export function Home() {
     symptomLogs,
   });
   const lastFeed = summary.lastFeed;
-  const latestSymptom = summary.latestSymptom;
   const showBreastfeedAction = activeChild.feeding_type === "breast" || activeChild.feeding_type === "mixed";
   const episodeActionLabel = activeEpisode ? "Add episode update" : "Start episode";
-  const episodeActionDescription = activeEpisode
-    ? "Jump straight into the active episode update form."
-    : "Track constipation, diarrhoea, or solids transition.";
   const sleepSummaryHours = sleepLogs
     .filter((entry) => {
       const started = new Date(entry.started_at);
@@ -296,9 +295,35 @@ export function Home() {
   const sleepSummaryHoursValue = sleepSummaryHours / (1000 * 60 * 60);
   const sleepNapCount = sleepLogs.filter((entry) => entry.sleep_type === "nap").length;
   const otherChildren = children.filter((child) => child.id !== activeChild.id);
+  const careToolItems = [
+    {
+      label: "History",
+      icon: <HomeToolHistoryIcon className="h-5 w-5" />,
+      background: "var(--color-home-tool-history)",
+      onClick: () => navigate("/history"),
+    },
+    {
+      label: "Growth",
+      icon: <HomeToolGrowthIcon className="h-5 w-5" />,
+      background: "var(--color-home-tool-growth)",
+      onClick: () => navigate("/growth"),
+    },
+    {
+      label: "Milestones",
+      icon: <HomeToolMilestonesIcon className="h-5 w-5" />,
+      background: "var(--color-home-tool-milestone)",
+      onClick: () => navigate("/milestones"),
+    },
+    {
+      label: "Caregiver handoff",
+      icon: <HomeToolHandoffIcon className="h-5 w-5" />,
+      background: "var(--color-home-tool-handoff)",
+      onClick: () => navigate("/handoff"),
+    },
+  ];
 
   return (
-    <div className="flex flex-col gap-4 pb-3 pt-0.5">
+    <div className="flex flex-col gap-3 pb-2 pt-0.5">
       {/* Alerts */}
       <AlertBanner alerts={alerts} onDismiss={dismiss} />
       {hasLogs && (
@@ -333,7 +358,6 @@ export function Home() {
           sleepSummaryLabel={sleepSummaryLabel}
           sleepSummaryHoursValue={sleepSummaryHoursValue}
           sleepNapCount={sleepNapCount}
-          onContinueToDashboard={() => navigate("/dashboard")}
           avatarAnchorRef={avatarAnchorRef}
           otherChildren={otherChildren}
           onSelectChild={setActiveChildId}
@@ -345,110 +369,93 @@ export function Home() {
         />
       )}
 
-      <div className="px-4 pt-2">
-        <div className="rounded-[28px] border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-[var(--shadow-card)]">
-          <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--color-text-soft)]">Quick actions</p>
-          <p className="mt-2 font-[var(--font-display)] text-[2rem] font-semibold leading-[0.98] tracking-[-0.035em] text-[var(--color-text)]">Log the next thing gently</p>
-          <p className="mt-2 text-[13px] leading-relaxed text-[var(--color-text-secondary)]">
-            Keep the next likely care actions close without turning the home screen into a utility grid.
-          </p>
-
-          <div className="mt-4 grid grid-cols-2 gap-3">
-            <motion.button
-              whileTap={{ scale: 0.98 }}
-              onClick={() => experience.mode === "diaper" ? openDiaperForm({ diaper_type: "wet", urine_color: "normal" }) : openPoopForm()}
-              className="min-h-[114px] rounded-[24px] px-4 py-4 text-left text-white shadow-[var(--shadow-medium)] transition-colors hover:brightness-[1.02]"
-              style={{ background: "var(--gradient-home-action-primary)" }}
-            >
-              <p className="text-[15px] font-semibold">{experience.mode === "diaper" ? "Log diaper" : "Log poop"}</p>
-              <p className="mt-2 text-[12px] leading-relaxed text-white/80">
-                {experience.mode === "diaper"
-                  ? "Start with wet, dirty, or mixed in the young-baby workflow."
-                  : "Open the full poop logger with presets and notes."}
+      <div className="px-4 pt-1">
+        <div className="grid grid-cols-3 gap-2.5">
+          <motion.button
+            whileTap={{ scale: 0.98 }}
+            onClick={() => experience.mode === "diaper" ? openDiaperForm({ diaper_type: "wet", urine_color: "normal" }) : openPoopForm()}
+            className="flex h-[64px] flex-col items-center justify-center rounded-[14px] px-1.5 py-1 text-center text-white shadow-[var(--shadow-medium)] transition-colors hover:brightness-[1.02]"
+            style={{ background: "var(--gradient-home-action-primary)" }}
+          >
+            <span className="flex h-4 w-4 items-center justify-center">
+              <HomeActionDiaperIcon className="h-4 w-4" />
+            </span>
+            <p className="mt-1 text-[0.74rem] font-semibold leading-none">{experience.mode === "diaper" ? "Log diaper" : "Log poop"}</p>
+          </motion.button>
+          <motion.button
+            whileTap={{ scale: 0.98 }}
+            onClick={() => openFeedingForm()}
+            className="flex h-[64px] flex-col items-center justify-center rounded-[14px] px-1.5 py-1 text-center shadow-[var(--shadow-medium)] transition-colors hover:brightness-[1.02]"
+            style={{ background: "var(--gradient-home-action-feed)" }}
+          >
+            <span className="flex h-4 w-4 items-center justify-center text-[var(--color-text)]">
+              <HomeActionBottleIcon className="h-4 w-4" />
+            </span>
+            <p className="mt-1 text-[0.74rem] font-semibold leading-none text-[var(--color-text)]">Log feed</p>
+          </motion.button>
+          <motion.button
+            whileTap={{ scale: 0.98 }}
+            onClick={() => {
+              if (showBreastfeedAction) {
+                navigateWithOrigin("/breastfeed");
+                return;
+              }
+              navigateWithOrigin("/feed");
+            }}
+            disabled={!showBreastfeedAction && !lastFeed}
+            className="flex h-[64px] flex-col items-center justify-center rounded-[14px] px-1.5 py-1 text-center shadow-[var(--shadow-medium)] transition-colors hover:brightness-[1.02] disabled:cursor-not-allowed disabled:opacity-55"
+            style={{ background: "var(--gradient-home-action-breastfeed)" }}
+          >
+            <span className="flex h-4 w-4 items-center justify-center text-[var(--color-text)]">
+              <HomeActionBreastfeedIcon className="h-4 w-4" />
+            </span>
+            <div className="mt-1 flex items-center gap-0.5">
+              <p className="text-[0.74rem] font-semibold leading-none text-[var(--color-text)]">
+                {showBreastfeedAction ? "Breastfeed" : "Repeat last feed"}
               </p>
-            </motion.button>
-            <motion.button
-              whileTap={{ scale: 0.98 }}
-              onClick={() => openFeedingForm()}
-              className="min-h-[114px] rounded-[24px] border border-[var(--color-border)] px-4 py-4 text-left shadow-[var(--shadow-soft)] transition-colors hover:bg-[var(--color-home-hover-surface)]"
-              style={{ background: "var(--gradient-home-action-feed)" }}
-            >
-              <p className="text-[15px] font-semibold text-[var(--color-text)]">Log feed</p>
-              <p className="mt-2 text-[12px] leading-relaxed text-[var(--color-text-secondary)]">
-                Start a feed or meal log with quick presets.
-              </p>
-            </motion.button>
-            <motion.button
-              whileTap={{ scale: 0.98 }}
-              onClick={() => {
-                if (showBreastfeedAction) {
-                  navigateWithOrigin("/breastfeed");
-                  return;
-                }
-                navigateWithOrigin("/feed");
-              }}
-              disabled={!showBreastfeedAction && !lastFeed}
-              className="min-h-[114px] rounded-[24px] border border-[var(--color-border)] px-4 py-4 text-left shadow-[var(--shadow-soft)] transition-colors hover:bg-[var(--color-home-hover-surface)] disabled:cursor-not-allowed disabled:opacity-50"
-              style={{ background: "var(--gradient-home-action-breastfeed)" }}
-            >
-              <div className="flex items-center gap-2">
-                <p className="text-[15px] font-semibold text-[var(--color-text)]">
-                  {showBreastfeedAction ? "Breastfeed" : "Repeat last feed"}
-                </p>
-                {showBreastfeedAction && activeBreastfeedingSide && (
-                  <span
-                    className="inline-flex items-center gap-1 text-[12px] font-semibold text-[var(--color-primary)]"
-                    aria-label={activeBreastfeedingSide === "left" ? "Left breastfeeding timer running" : "Right breastfeeding timer running"}
-                    title={activeBreastfeedingSide === "left" ? "Left running" : "Right running"}
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm.75-11.25a.75.75 0 0 0-1.5 0V10c0 .199.079.39.22.53l2.25 2.25a.75.75 0 1 0 1.06-1.06L10.75 9.69V6.75Z" clipRule="evenodd" />
-                    </svg>
-                    {activeBreastfeedingSide === "left" ? "L" : "R"}
-                  </span>
-                )}
-              </div>
-              <p className="mt-2 text-[12px] leading-relaxed text-[var(--color-text-secondary)]">
-                {showBreastfeedAction
-                  ? "Open the side-by-side timer for left and right breast."
-                  : "Reuse the last feed structure without filling the form again."}
-              </p>
-            </motion.button>
-            <motion.button
-              whileTap={{ scale: 0.98 }}
-              onClick={() => setSleepSheetOpen(true)}
-              className="min-h-[114px] rounded-[24px] border border-[var(--color-border)] px-4 py-4 text-left shadow-[var(--shadow-soft)] transition-colors hover:bg-[var(--color-home-hover-surface)]"
-              style={{ background: "var(--gradient-home-action-sleep)" }}
-            >
-              <p className="text-[15px] font-semibold text-[var(--color-text)]">Log sleep</p>
-              <p className="mt-2 text-[12px] leading-relaxed text-[var(--color-text-secondary)]">
-                Start a nap or night sleep log with timer or manual times.
-              </p>
-            </motion.button>
-          </div>
-
-          <div className="mt-3 grid grid-cols-2 gap-3">
-            <button
-              type="button"
-              onClick={() => openEpisodeSheet(activeEpisode ? "update" : "start")}
-              className="rounded-[20px] border border-[var(--color-border)] bg-[var(--color-surface-strong)] px-4 py-3 text-left transition-colors hover:bg-[var(--color-home-hover-surface)]"
-            >
-              <p className="text-[14px] font-semibold text-[var(--color-text)]">{episodeActionLabel}</p>
-              <p className="mt-1 text-[12px] leading-relaxed text-[var(--color-text-secondary)]">
-                {episodeActionDescription}
-              </p>
-            </button>
-            <button
-              type="button"
-              onClick={() => setSymptomSheetOpen(true)}
-              className="rounded-[20px] border border-[var(--color-border)] bg-[var(--color-surface-strong)] px-4 py-3 text-left transition-colors hover:bg-[var(--color-home-hover-surface)]"
-            >
-              <p className="text-[14px] font-semibold text-[var(--color-text)]">Log symptom</p>
-              <p className="mt-1 text-[12px] leading-relaxed text-[var(--color-text-secondary)]">
-                Capture straining, pain, vomiting, rash, dehydration concern, or blood concern.
-              </p>
-            </button>
-          </div>
+              {showBreastfeedAction && activeBreastfeedingSide && (
+                <span
+                  className="inline-flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-[var(--color-surface-strong)] px-0.5 text-[0.52rem] font-bold text-[var(--color-primary)]"
+                  aria-label={activeBreastfeedingSide === "left" ? "Left breastfeeding timer running" : "Right breastfeeding timer running"}
+                >
+                  {activeBreastfeedingSide === "left" ? "L" : "R"}
+                </span>
+              )}
+            </div>
+          </motion.button>
+          <motion.button
+            whileTap={{ scale: 0.98 }}
+            onClick={() => setSleepSheetOpen(true)}
+            className="flex h-[64px] flex-col items-center justify-center rounded-[14px] px-1.5 py-1 text-center shadow-[var(--shadow-medium)] transition-colors hover:brightness-[1.02]"
+            style={{ background: "var(--gradient-home-action-sleep)" }}
+          >
+            <span className="flex h-4 w-4 items-center justify-center text-[var(--color-text)]">
+              <HomeActionSleepIcon className="h-4 w-4" />
+            </span>
+            <p className="mt-1 text-[0.74rem] font-semibold leading-none text-[var(--color-text)]">Log sleep</p>
+          </motion.button>
+          <motion.button
+            whileTap={{ scale: 0.98 }}
+            onClick={() => openEpisodeSheet(activeEpisode ? "update" : "start")}
+            className="flex h-[64px] flex-col items-center justify-center rounded-[14px] px-1.5 py-1 text-center text-white shadow-[var(--shadow-medium)] transition-colors hover:brightness-[1.02]"
+            style={{ background: "var(--gradient-home-action-episode)" }}
+          >
+            <span className="flex h-4 w-4 items-center justify-center">
+              <HomeActionEpisodeIcon className="h-4 w-4" />
+            </span>
+            <p className="mt-1 text-[0.74rem] font-semibold leading-none">{episodeActionLabel}</p>
+          </motion.button>
+          <motion.button
+            whileTap={{ scale: 0.98 }}
+            onClick={() => setSymptomSheetOpen(true)}
+            className="flex h-[64px] flex-col items-center justify-center rounded-[14px] px-1.5 py-1 text-center text-white shadow-[var(--shadow-medium)] transition-colors hover:brightness-[1.02]"
+            style={{ background: "var(--gradient-home-action-symptom)" }}
+          >
+            <span className="flex h-4 w-4 items-center justify-center">
+              <HomeActionSymptomIcon className="h-4 w-4" />
+            </span>
+            <p className="mt-1 text-[0.74rem] font-semibold leading-none">Log symptom</p>
+          </motion.button>
         </div>
       </div>
 
@@ -476,90 +483,17 @@ export function Home() {
             className="mt-3 w-full resize-none rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-strong)] px-3 py-2 text-sm text-[var(--color-text)] outline-none transition-colors focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20"
           />
 
-          <div className="mt-3 flex gap-3">
+          <div className="mt-3">
             <button
               type="button"
               onClick={handleSaveHandoffNote}
               disabled={!handoffNoteChanged || isSavingHandoffNote}
-              className="flex-1 rounded-full bg-[var(--color-primary)] px-4 py-3 text-[14px] font-semibold text-[var(--color-on-primary)] transition-colors hover:bg-[var(--color-primary-hover)] disabled:cursor-not-allowed disabled:opacity-50"
+              className="w-full rounded-full bg-[var(--color-primary)] px-4 py-3 text-[14px] font-semibold text-[var(--color-on-primary)] transition-colors hover:bg-[var(--color-primary-hover)] disabled:cursor-not-allowed disabled:opacity-50"
             >
               {isSavingHandoffNote ? "Saving..." : "Save note"}
             </button>
-            <button
-              type="button"
-              onClick={resetHandoffNote}
-              disabled={!handoffNoteChanged}
-              className="flex-1 rounded-full border border-[var(--color-border)] bg-[var(--color-surface-strong)] px-4 py-3 text-[14px] font-semibold text-[var(--color-text-secondary)] transition-colors hover:bg-[var(--color-home-hover-surface)] disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              Reset
-            </button>
           </div>
         </div>
-      </div>
-
-      <div className="px-4">
-        <div className="rounded-[18px] border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-[var(--shadow-soft)]">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--color-text-soft)]">Symptoms</p>
-              <p className="mt-2 text-[15px] font-semibold text-[var(--color-text)]">Recent symptom context</p>
-            </div>
-            <button
-              type="button"
-              onClick={() => setSymptomSheetOpen(true)}
-              className="rounded-full border border-[var(--color-primary)]/20 bg-[var(--color-primary)]/10 px-3 py-2 text-[12px] font-semibold text-[var(--color-primary)] transition-colors hover:bg-[var(--color-primary)]/15"
-            >
-              Add symptom
-            </button>
-          </div>
-
-          {!latestSymptom ? (
-            <p className="mt-3 text-sm leading-relaxed text-[var(--color-text-secondary)]">
-              No symptoms logged yet. Add symptoms when they help explain a bowel pattern or doctor visit.
-            </p>
-          ) : (
-            <div className="mt-3 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-strong)] px-3 py-3">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-sm font-medium text-[var(--color-text)]">
-                    {getSymptomTypeLabel(latestSymptom.symptom_type)}
-                  </p>
-                  <p className="mt-1 text-xs text-[var(--color-text-soft)]">
-                    {timeSince(latestSymptom.logged_at)} · {latestSymptom.episode_id ? "linked to episode" : "standalone"}
-                  </p>
-                </div>
-                <Badge variant={getSymptomSeverityBadgeVariant(latestSymptom.severity)}>
-                  {getSymptomSeverityLabel(latestSymptom.severity)}
-                </Badge>
-              </div>
-              {latestSymptom.notes && (
-                <p className="mt-2 text-sm leading-relaxed text-[var(--color-text-secondary)]">
-                  {latestSymptom.notes}
-                </p>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {hasLogs && (
-        <div className="px-4">
-          <WeeklyPatternCard
-            frequency={frequency}
-            consistency={consistency}
-            colorDist={colorDist}
-            poopLogs={logs}
-          />
-        </div>
-      )}
-
-      <div className="px-4">
-        <EpisodeCard
-          activeEpisode={activeEpisode}
-          events={episodeEvents}
-          recentEpisodes={recentEpisodes}
-          onOpen={() => openEpisodeSheet("default")}
-        />
       </div>
 
       {/* Recent activity */}
@@ -575,35 +509,25 @@ export function Home() {
       )}
 
       <div className="px-4">
-        <DiscoveryLinks
-          eyebrow="Care tools"
-          title="Open the right surface"
-          description="The less-frequent pages stay one tap away without taking over the bottom nav."
-          items={[
-            {
-              to: "/history",
-              title: "History",
-              description: "Review the full timeline across logs.",
-            },
-            {
-              to: "/growth",
-              title: "Growth",
-              description: "Check weight, length, and head trends.",
-              tone: "info",
-            },
-            {
-              to: "/milestones",
-              title: "Milestones",
-              description: "See context like solids, illness, or teething.",
-            },
-            {
-              to: "/handoff",
-              title: "Caregiver handoff",
-              description: "Share the current state with the next person.",
-              tone: "healthy",
-            },
-          ]}
-        />
+        <div>
+          <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--color-text-soft)]">Care tools</p>
+          <div className="mt-2.5 grid grid-cols-4 gap-2">
+            {careToolItems.map((item) => (
+              <button
+                key={item.label}
+                type="button"
+                onClick={item.onClick}
+                className="flex min-h-[86px] flex-col items-start justify-between rounded-[14px] px-2.5 py-2.5 text-left text-white shadow-[var(--shadow-medium)] transition-transform hover:-translate-y-0.5"
+                style={{ background: item.background }}
+              >
+                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white/18">
+                  {item.icon}
+                </span>
+                <span className="text-[0.72rem] font-semibold leading-tight">{item.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
 
       {/* Log form sheet */}
