@@ -41,11 +41,10 @@ function BreastSideButton({
     <button
       type="button"
       onClick={onClick}
-      className={`rounded-[24px] border px-5 py-5 text-left transition-all duration-200 ${
-        isActive
+      className={`rounded-[24px] border px-5 py-5 text-left transition-all duration-200 ${isActive
           ? "border-[var(--color-primary)] bg-[var(--color-surface-tint)] shadow-[var(--shadow-soft)]"
           : "border-[var(--color-border)] bg-[var(--color-surface)] hover:bg-[var(--color-bg-elevated)]"
-      }`}
+        }`}
     >
       <div className="flex items-start justify-between gap-3">
         <div>
@@ -231,9 +230,9 @@ export function Breastfeed() {
     const now = Date.now();
     const nextDurations = activeSide && activeStartedAt
       ? {
-          ...durations,
-          [activeSide]: durations[activeSide] + (now - activeStartedAt),
-        }
+        ...durations,
+        [activeSide]: durations[activeSide] + (now - activeStartedAt),
+      }
       : durations;
 
     const nextSession: BreastfeedingSessionState = {
@@ -329,116 +328,116 @@ export function Breastfeed() {
       />
 
       <div className="space-y-4 px-4 py-5 md:px-6 lg:px-8">
-      {!supportsBreastfeeding ? (
-        <InsetPanel>
-          <p className="text-sm font-medium text-[var(--color-text)]">Breastfeeding timer is hidden for this child profile.</p>
-          <p className="mt-2 text-sm leading-relaxed text-[var(--color-text-secondary)]">
-            Change the feeding type in Settings if this child is breastfed or mixed fed.
-          </p>
-        </InsetPanel>
-      ) : (
-        <>
-          <div className="-mt-32 relative z-10 grid grid-cols-3 gap-3 px-4 pt-4">
-            <TrackerMetricRing
-              value={leftRing.value}
-              unit={leftRing.unit}
-              label="Left total"
-              gradient={leftRing.gradient}
-            />
-            <TrackerMetricRing
-              value={currentSessionRing.value}
-              unit={currentSessionRing.unit}
-              label="Current session"
-              gradient={currentSessionRing.gradient}
-            />
-            <TrackerMetricRing
-              value={rightRing.value}
-              unit={rightRing.unit}
-              label="Right total"
-              gradient={rightRing.gradient}
-            />
-          </div>
-
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <BreastSideButton
-              side="left"
-              isActive={activeSide === "left"}
-              isLastUsed={lastUsedSide === "left"}
-              durationMs={leftDuration}
-              onClick={() => handleStartSide("left")}
-            />
-            <BreastSideButton
-              side="right"
-              isActive={activeSide === "right"}
-              isLastUsed={lastUsedSide === "right"}
-              durationMs={rightDuration}
-              onClick={() => handleStartSide("right")}
-            />
-          </div>
-
-          <InsetPanel className="space-y-4">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--color-text-soft)]">Current session</p>
-                <p className="mt-2 text-2xl font-semibold tracking-[-0.03em] text-[var(--color-text)]">
-                  {formatBreastfeedingSummary(totalDuration)}
-                </p>
-              </div>
-              {activeSide && (
-                <span className="rounded-full bg-[var(--color-healthy-bg)] px-3 py-1 text-[11px] font-semibold text-[var(--color-healthy)]">
-                  {activeSide} side running
-                </span>
-              )}
-            </div>
-            {lastUsedSide && !activeSide && (
-              <div className="rounded-[18px] border border-[var(--color-border)] bg-[var(--color-bg-elevated)]/72 px-4 py-3">
-                <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--color-text-soft)]">Next suggested side</p>
-                <p className="mt-2 text-sm font-medium text-[var(--color-text)]">
-                  Start on the {suggestedStartSide} side.
-                </p>
-                <p className="mt-1 text-xs leading-relaxed text-[var(--color-text-secondary)]">
-                  Last feed finished on the {lastUsedSide} side, so the {suggestedStartSide} side should be fuller.
-                </p>
-              </div>
-            )}
-            <div className="grid grid-cols-2 gap-3">
-              <div className="rounded-[18px] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3">
-                <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--color-text-soft)]">Left total</p>
-                <p className="mt-2 text-lg font-semibold text-[var(--color-text)]">{formatBreastfeedingSummary(leftDuration)}</p>
-              </div>
-              <div className="rounded-[18px] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3">
-                <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--color-text-soft)]">Right total</p>
-                <p className="mt-2 text-lg font-semibold text-[var(--color-text)]">{formatBreastfeedingSummary(rightDuration)}</p>
-              </div>
-            </div>
-            <div className="flex gap-3">
-              <Button variant="secondary" className="flex-1" onClick={handlePause} disabled={!activeSide}>
-                Pause
-              </Button>
-              <Button variant="ghost" className="flex-1" onClick={handleReset} disabled={totalDuration < 1000}>
-                Reset
-              </Button>
-            </div>
-          </InsetPanel>
-
-          <div className="rounded-[24px] border border-[var(--color-border)] bg-[var(--color-surface)] px-5 py-5 shadow-[var(--shadow-soft)]">
-            <p className="text-sm font-medium text-[var(--color-text)]">
-              Save left and right as separate breastfeed entries.
-            </p>
+        {!supportsBreastfeeding ? (
+          <InsetPanel>
+            <p className="text-sm font-medium text-[var(--color-text)]">Breastfeeding timer is hidden for this child profile.</p>
             <p className="mt-2 text-sm leading-relaxed text-[var(--color-text-secondary)]">
-              The most recently used side will be remembered here next time.
+              Change the feeding type in Settings if this child is breastfed or mixed fed.
             </p>
-            <Button
-              variant="cta"
-              className="mt-4 w-full"
-              onClick={handleSave}
-              disabled={totalDuration < 1000 || isSaving}
-            >
-              {isSaving ? "Saving..." : "Save breastfeeding session"}
-            </Button>
-          </div>
-        </>
-      )}
+          </InsetPanel>
+        ) : (
+          <>
+            <div className="-mt-32 relative z-10 grid grid-cols-3 gap-3 px-4 pt-4">
+              <TrackerMetricRing
+                value={leftRing.value}
+                unit={leftRing.unit}
+                label="Left total"
+                gradient={leftRing.gradient}
+              />
+              <TrackerMetricRing
+                value={currentSessionRing.value}
+                unit={currentSessionRing.unit}
+                label="Current session"
+                gradient={currentSessionRing.gradient}
+              />
+              <TrackerMetricRing
+                value={rightRing.value}
+                unit={rightRing.unit}
+                label="Right total"
+                gradient={rightRing.gradient}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <BreastSideButton
+                side="left"
+                isActive={activeSide === "left"}
+                isLastUsed={lastUsedSide === "left"}
+                durationMs={leftDuration}
+                onClick={() => handleStartSide("left")}
+              />
+              <BreastSideButton
+                side="right"
+                isActive={activeSide === "right"}
+                isLastUsed={lastUsedSide === "right"}
+                durationMs={rightDuration}
+                onClick={() => handleStartSide("right")}
+              />
+            </div>
+
+            <InsetPanel className="space-y-4">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--color-text-soft)]">Current session</p>
+                  <p className="mt-2 text-2xl font-semibold tracking-[-0.03em] text-[var(--color-text)]">
+                    {formatBreastfeedingSummary(totalDuration)}
+                  </p>
+                </div>
+                {activeSide && (
+                  <span className="rounded-full bg-[var(--color-healthy-bg)] px-3 py-1 text-[11px] font-semibold text-[var(--color-healthy)]">
+                    {activeSide} side running
+                  </span>
+                )}
+              </div>
+              {lastUsedSide && !activeSide && (
+                <div className="rounded-[18px] border border-[var(--color-border)] bg-[var(--color-bg-elevated)]/72 px-4 py-3">
+                  <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--color-text-soft)]">Next suggested side</p>
+                  <p className="mt-2 text-sm font-medium text-[var(--color-text)]">
+                    Start on the {suggestedStartSide} side.
+                  </p>
+                  <p className="mt-1 text-xs leading-relaxed text-[var(--color-text-secondary)]">
+                    Last feed finished on the {lastUsedSide} side, so the {suggestedStartSide} side should be fuller.
+                  </p>
+                </div>
+              )}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="rounded-[18px] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3">
+                  <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--color-text-soft)]">Left total</p>
+                  <p className="mt-2 text-lg font-semibold text-[var(--color-text)]">{formatBreastfeedingSummary(leftDuration)}</p>
+                </div>
+                <div className="rounded-[18px] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3">
+                  <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--color-text-soft)]">Right total</p>
+                  <p className="mt-2 text-lg font-semibold text-[var(--color-text)]">{formatBreastfeedingSummary(rightDuration)}</p>
+                </div>
+              </div>
+              <div className="flex gap-3">
+                <Button variant="secondary" className="flex-1" onClick={handlePause} disabled={!activeSide}>
+                  Pause
+                </Button>
+                <Button variant="ghost" className="flex-1" onClick={handleReset} disabled={totalDuration < 1000}>
+                  Reset
+                </Button>
+              </div>
+            </InsetPanel>
+
+            <div className="rounded-[24px] border border-[var(--color-border)] bg-[var(--color-surface)] px-5 py-5 shadow-[var(--shadow-soft)]">
+              <p className="text-sm font-medium text-[var(--color-text)]">
+                Save left and right as separate breastfeed entries.
+              </p>
+              <p className="mt-2 text-sm leading-relaxed text-[var(--color-text-secondary)]">
+                The most recently used side will be remembered here next time.
+              </p>
+              <Button
+                variant="cta"
+                className="mt-4 w-full"
+                onClick={handleSave}
+                disabled={totalDuration < 1000 || isSaving}
+              >
+                {isSaving ? "Saving..." : "Save breastfeeding session"}
+              </Button>
+            </div>
+          </>
+        )}
       </div>
     </PageBody>
   );

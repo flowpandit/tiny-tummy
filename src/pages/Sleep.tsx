@@ -500,7 +500,7 @@ function SleepLogList({
   }
 
   return (
-      <TrackerEntryTable mainHeader="Sleep block">
+    <TrackerEntryTable mainHeader="Sleep block">
       {logs.map((log) => (
         <TrackerEntryRow key={log.id} onClick={() => onEdit(log)}>
           <div>
@@ -694,250 +694,249 @@ export function Sleep() {
       />
 
       <div className="space-y-4 px-4 py-5 md:px-6 lg:px-8">
-      <Card className="-mt-32 relative z-10 border-transparent bg-transparent shadow-none backdrop-blur-0">
-        <CardContent className="p-4 pt-4">
-          <div className="grid grid-cols-3 gap-3">
-            <div className="flex flex-col items-center gap-2 text-center">
-              <TimeSinceIndicator timestamp={lastNapDisplay.timestamp} status={statusTone} />
-              <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-[var(--color-text-soft)]">{lastNapDisplay.label}</p>
-            </div>
-            <TrackerMetricRing
-              value={predictionRing.value}
-              unit={predictionRing.unit}
-              label="Next predicted"
-              gradient={predictionRing.gradient}
-            />
-            <TrackerMetricRing
-              value={todayDurationRing.value}
-              unit={todayDurationRing.unit}
-              label="Total sleep"
-              gradient={totalTodayMinutes > 0 ? "var(--gradient-status-healthy)" : "var(--gradient-status-unknown)"}
-            />
-          </div>
-        </CardContent>
-      </Card>
-
-      {timerSession && (
-        <InsetPanel className="flex items-center justify-between gap-4">
-          <div>
-            <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--color-text-soft)]">
-              {timerSession.sleepType === "night" ? "Night timer running" : "Nap timer running"}
-            </p>
-            <p className="mt-2 text-2xl font-semibold tracking-[-0.03em] text-[var(--color-text)]">
-              {formatSleepTimerClock(getSleepTimerElapsedMs(timerSession, tick))}
-            </p>
-            <p className="mt-2 text-sm text-[var(--color-text-secondary)]">
-              Started {timeSince(timerSession.startedAt)} · {formatSleepTimerSummary(getSleepTimerElapsedMs(timerSession, tick))}
-            </p>
-          </div>
-          <Button variant="secondary" size="sm" onClick={() => setSheetOpen(true)}>
-            Open timer
-          </Button>
-        </InsetPanel>
-      )}
-
-      <Card>
-        <CardContent className="p-3.5">
-          <div>
-            <div className="flex flex-wrap items-center gap-2">
-              <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--color-text-soft)]">Current sleep status</p>
-              <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold leading-none ${
-                wakeRisk.label === "High"
-                  ? "bg-[var(--color-alert-bg)] text-[var(--color-alert)]"
-                  : wakeRisk.label === "Medium"
-                    ? "bg-[var(--color-caution-bg)] text-[var(--color-caution)]"
-                    : "bg-[var(--color-healthy-bg)] text-[var(--color-healthy)]"
-              }`}>
-                {wakeRisk.label === "High" ? "Watch now" : wakeRisk.label === "Medium" ? "Soon" : "Normal"}
-              </span>
-            </div>
-            <p className="mt-1.5 text-[1.4rem] font-semibold tracking-[-0.035em] text-[var(--color-text)]">
-              {wakeRisk.label === "High" ? "Next sleep needs attention" : wakeRisk.label === "Medium" ? "Next rest is approaching" : "Wake rhythm looks settled"}
-            </p>
-            <p className="mt-1.5 max-w-[42ch] text-[13px] leading-relaxed text-[var(--color-text-secondary)]">{baseline.description}</p>
-          </div>
-
-          <div className="mt-3 grid grid-cols-2 gap-2.5">
-            <TrackerMetricPanel
-              eyebrow="Wake baseline"
-              value={formatBaselineRange(baseline)}
-              description={wakeComparison.label}
-              tone={wakeComparison.tone}
-            />
-            <TrackerMetricPanel
-              eyebrow="Due risk"
-              value={wakeRisk.label}
-              description={wakeRisk.description}
-              tone={wakeRisk.tone}
-            />
-            <InsetPanel className="col-span-2 border-[var(--color-info)]/18 bg-[var(--color-info-bg)] p-3">
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--color-text-soft)]">Next likely sleep</p>
-                  <p className="mt-2 text-xl font-semibold tracking-[-0.02em] text-[var(--color-text)]">
-                    {getPredictionHeadline(prediction)}
-                  </p>
-                  <p className="mt-1 text-xs leading-relaxed text-[var(--color-text-secondary)]">
-                    {prediction ? getPredictionDescription(prediction) : "Needs at least two sleep logs to estimate a rhythm."}
-                  </p>
-                </div>
-                {prediction && (
-                  <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-semibold text-[var(--color-chip-text-on-light)]">
-                    {prediction.confidence}
-                  </span>
-                )}
+        <Card className="-mt-32 mb-0 relative z-10 border-transparent bg-transparent shadow-none backdrop-blur-0">
+          <CardContent className="p-4 pt-4">
+            <div className="grid grid-cols-3 gap-3">
+              <div className="flex flex-col items-center gap-2 text-center">
+                <TimeSinceIndicator timestamp={lastNapDisplay.timestamp} status={statusTone} />
+                <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-[var(--color-text-soft)]">{lastNapDisplay.label}</p>
               </div>
-              {prediction && (
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-chip-text-on-light)]">
-                    Typical wake: {prediction.intervalLabel}
-                  </span>
-                  <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-chip-text-on-light)]">
-                    {formatPredictionRelative(prediction)}
-                  </span>
-                  <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-chip-text-on-light)]">
-                    Source: {prediction.source === "history" ? "recent rhythm" : "age baseline"}
-                  </span>
-                  <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-chip-text-on-light)]">
-                    Window: {formatPredictionRange(prediction)}
-                  </span>
-                  {prediction.adjustments.slice(0, 2).map((adjustment) => (
-                    <span
-                      key={adjustment.label}
-                      className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-chip-text-on-light)]"
-                    >
-                      {adjustment.direction === "earlier" ? "Earlier" : "Later"}: {adjustment.label}
-                    </span>
-                  ))}
-                </div>
-              )}
-            </InsetPanel>
-            <InsetPanel className="col-span-2 p-3">
-              <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--color-text-soft)]">What this means</p>
-              <p className="mt-2 text-[13px] leading-relaxed text-[var(--color-text-secondary)]">{narrative}</p>
-            </InsetPanel>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <SectionHeading
-            title="Daily pattern"
-            description="A simple timeline of the latest logged day so the day shape stays visible."
-          />
-        </CardHeader>
-        <CardContent>
-          <SleepPatternTimeline logs={patternLogs} dayLabel={patternLabel} />
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <SectionHeading
-            title="Weekly pattern"
-            description="Seven-day sleep totals with week-by-week browsing."
-            action={(
-              <TrackerWeekSwitcher
-                weekOffset={weekOffset}
-                maxWeekOffset={maxWeekOffset}
-                onOlder={() => setWeekOffset((current) => Math.min(maxWeekOffset, current + 1))}
-                onNewer={() => setWeekOffset((current) => Math.max(0, current - 1))}
+              <TrackerMetricRing
+                value={predictionRing.value}
+                unit={predictionRing.unit}
+                label="Next predicted"
+                gradient={predictionRing.gradient}
               />
-            )}
-          />
-        </CardHeader>
-        <CardContent>
-          <TrackerWeekBarChart
-            data={filledWeek.map((day) => ({ ...day, value: day.count }))}
-            title={weekOffset === 0 ? "Last 7 days" : formatWeekLabel(startDate, endDate)}
-            summary={weekSummaryBits.join(" • ")}
-            gradient="linear-gradient(180deg, var(--color-info) 0%, var(--color-primary) 100%)"
-            valueLabel={(value) => `${value} hours`}
-          />
-        </CardContent>
-      </Card>
-
-      <DiscoveryLinks
-        eyebrow="Related"
-        title="Keep sleep connected"
-        description="Sleep patterns are easier to trust when you can move straight into the surrounding context."
-        compact
-        items={[
-          {
-            to: "/history",
-            title: "History",
-            description: "Review naps, nights, and nearby care events.",
-          },
-          {
-            to: "/milestones",
-            title: "Milestones",
-            description: "See teething, illness, solids, or other shifts.",
-            tone: "info",
-          },
-          {
-            to: "/guidance",
-            title: "Guidance",
-            description: "Open practical guidance when the rhythm changes.",
-            tone: "healthy",
-          },
-        ]}
-      />
-
-      {logs.length === 0 ? (
-        <EmptyState
-          icon={(
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" strokeWidth="1.75" className="h-8 w-8">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M21 12.79A9 9 0 1 1 11.21 3c-.12.64-.21 1.3-.21 2a9 9 0 0 0 10 7.79Z" />
-            </svg>
-          )}
-          title="Start the sleep page with the first log"
-          description="Once a few sleep blocks are in, this page starts surfacing wake windows, next likely rest, and the week pattern."
-          action={<Button variant="primary" onClick={() => setSheetOpen(true)}>Add first sleep log</Button>}
-        />
-      ) : (
-        <Card>
-          <CardHeader>
-            <div>
-              <div className="flex items-center gap-3">
-                <h3 className="font-[var(--font-display)] text-2xl font-semibold tracking-[-0.02em] text-[var(--color-text)]">
-                  Week entries
-                </h3>
-                <TrackerWeekRangePill label={formatWeekLabel(startDate, endDate)} animateKey={weekOffset} />
-              </div>
-              <p className="mt-2 max-w-[40ch] text-sm leading-relaxed text-[var(--color-text-secondary)]">
-                Every sleep block for the selected week, with tap-to-edit when the timing needs correcting.
-              </p>
+              <TrackerMetricRing
+                value={todayDurationRing.value}
+                unit={todayDurationRing.unit}
+                label="Total sleep"
+                gradient={totalTodayMinutes > 0 ? "var(--gradient-status-healthy)" : "var(--gradient-status-unknown)"}
+              />
             </div>
-          </CardHeader>
-          <CardContent>
-            <SleepLogList logs={weekLogs} onEdit={setEditingSleep} />
           </CardContent>
         </Card>
-      )}
 
-      <SleepLogSheet
-        open={sheetOpen}
-        onClose={() => {
-          setSheetOpen(false);
-          if (searchParams.get("add") === "1") {
-            navigate("/sleep", { replace: true });
-          }
-        }}
-        childId={activeChild.id}
-        onLogged={handleLogged}
-      />
+        {timerSession && (
+          <InsetPanel className="flex items-center justify-between gap-4">
+            <div>
+              <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--color-text-soft)]">
+                {timerSession.sleepType === "night" ? "Night timer running" : "Nap timer running"}
+              </p>
+              <p className="mt-2 text-2xl font-semibold tracking-[-0.03em] text-[var(--color-text)]">
+                {formatSleepTimerClock(getSleepTimerElapsedMs(timerSession, tick))}
+              </p>
+              <p className="mt-2 text-sm text-[var(--color-text-secondary)]">
+                Started {timeSince(timerSession.startedAt)} · {formatSleepTimerSummary(getSleepTimerElapsedMs(timerSession, tick))}
+              </p>
+            </div>
+            <Button variant="secondary" size="sm" onClick={() => setSheetOpen(true)}>
+              Open timer
+            </Button>
+          </InsetPanel>
+        )}
 
-      {editingSleep && (
-        <EditSleepSheet
-          key={editingSleep.id}
-          entry={editingSleep}
-          open={!!editingSleep}
-          onClose={() => setEditingSleep(null)}
-          onSaved={() => { void handleLogged(); }}
-          onDeleted={() => { void handleLogged(); }}
+        <Card>
+          <CardContent className="p-3.5">
+            <div>
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--color-text-soft)]">Current sleep status</p>
+                <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold leading-none ${wakeRisk.label === "High"
+                    ? "bg-[var(--color-alert-bg)] text-[var(--color-alert)]"
+                    : wakeRisk.label === "Medium"
+                      ? "bg-[var(--color-caution-bg)] text-[var(--color-caution)]"
+                      : "bg-[var(--color-healthy-bg)] text-[var(--color-healthy)]"
+                  }`}>
+                  {wakeRisk.label === "High" ? "Watch now" : wakeRisk.label === "Medium" ? "Soon" : "Normal"}
+                </span>
+              </div>
+              <p className="mt-1.5 text-[1.4rem] font-semibold tracking-[-0.035em] text-[var(--color-text)]">
+                {wakeRisk.label === "High" ? "Next sleep needs attention" : wakeRisk.label === "Medium" ? "Next rest is approaching" : "Wake rhythm looks settled"}
+              </p>
+              <p className="mt-1.5 max-w-[42ch] text-[13px] leading-relaxed text-[var(--color-text-secondary)]">{baseline.description}</p>
+            </div>
+
+            <div className="mt-3 grid grid-cols-2 gap-2.5">
+              <TrackerMetricPanel
+                eyebrow="Wake baseline"
+                value={formatBaselineRange(baseline)}
+                description={wakeComparison.label}
+                tone={wakeComparison.tone}
+              />
+              <TrackerMetricPanel
+                eyebrow="Due risk"
+                value={wakeRisk.label}
+                description={wakeRisk.description}
+                tone={wakeRisk.tone}
+              />
+              <InsetPanel className="col-span-2 border-[var(--color-info)]/18 bg-[var(--color-info-bg)] p-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--color-text-soft)]">Next likely sleep</p>
+                    <p className="mt-2 text-xl font-semibold tracking-[-0.02em] text-[var(--color-text)]">
+                      {getPredictionHeadline(prediction)}
+                    </p>
+                    <p className="mt-1 text-xs leading-relaxed text-[var(--color-text-secondary)]">
+                      {prediction ? getPredictionDescription(prediction) : "Needs at least two sleep logs to estimate a rhythm."}
+                    </p>
+                  </div>
+                  {prediction && (
+                    <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-semibold text-[var(--color-chip-text-on-light)]">
+                      {prediction.confidence}
+                    </span>
+                  )}
+                </div>
+                {prediction && (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-chip-text-on-light)]">
+                      Typical wake: {prediction.intervalLabel}
+                    </span>
+                    <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-chip-text-on-light)]">
+                      {formatPredictionRelative(prediction)}
+                    </span>
+                    <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-chip-text-on-light)]">
+                      Source: {prediction.source === "history" ? "recent rhythm" : "age baseline"}
+                    </span>
+                    <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-chip-text-on-light)]">
+                      Window: {formatPredictionRange(prediction)}
+                    </span>
+                    {prediction.adjustments.slice(0, 2).map((adjustment) => (
+                      <span
+                        key={adjustment.label}
+                        className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-chip-text-on-light)]"
+                      >
+                        {adjustment.direction === "earlier" ? "Earlier" : "Later"}: {adjustment.label}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </InsetPanel>
+              <InsetPanel className="col-span-2 p-3">
+                <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--color-text-soft)]">What this means</p>
+                <p className="mt-2 text-[13px] leading-relaxed text-[var(--color-text-secondary)]">{narrative}</p>
+              </InsetPanel>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <SectionHeading
+              title="Daily pattern"
+              description="A simple timeline of the latest logged day so the day shape stays visible."
+            />
+          </CardHeader>
+          <CardContent>
+            <SleepPatternTimeline logs={patternLogs} dayLabel={patternLabel} />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <SectionHeading
+              title="Weekly pattern"
+              description="Seven-day sleep totals with week-by-week browsing."
+              action={(
+                <TrackerWeekSwitcher
+                  weekOffset={weekOffset}
+                  maxWeekOffset={maxWeekOffset}
+                  onOlder={() => setWeekOffset((current) => Math.min(maxWeekOffset, current + 1))}
+                  onNewer={() => setWeekOffset((current) => Math.max(0, current - 1))}
+                />
+              )}
+            />
+          </CardHeader>
+          <CardContent>
+            <TrackerWeekBarChart
+              data={filledWeek.map((day) => ({ ...day, value: day.count }))}
+              title={weekOffset === 0 ? "Last 7 days" : formatWeekLabel(startDate, endDate)}
+              summary={weekSummaryBits.join(" • ")}
+              gradient="linear-gradient(180deg, var(--color-info) 0%, var(--color-primary) 100%)"
+              valueLabel={(value) => `${value} hours`}
+            />
+          </CardContent>
+        </Card>
+
+        <DiscoveryLinks
+          eyebrow="Related"
+          title="Keep sleep connected"
+          description="Sleep patterns are easier to trust when you can move straight into the surrounding context."
+          compact
+          items={[
+            {
+              to: "/history",
+              title: "History",
+              description: "Review naps, nights, and nearby care events.",
+            },
+            {
+              to: "/milestones",
+              title: "Milestones",
+              description: "See teething, illness, solids, or other shifts.",
+              tone: "info",
+            },
+            {
+              to: "/guidance",
+              title: "Guidance",
+              description: "Open practical guidance when the rhythm changes.",
+              tone: "healthy",
+            },
+          ]}
         />
-      )}
+
+        {logs.length === 0 ? (
+          <EmptyState
+            icon={(
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" strokeWidth="1.75" className="h-8 w-8">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M21 12.79A9 9 0 1 1 11.21 3c-.12.64-.21 1.3-.21 2a9 9 0 0 0 10 7.79Z" />
+              </svg>
+            )}
+            title="Start the sleep page with the first log"
+            description="Once a few sleep blocks are in, this page starts surfacing wake windows, next likely rest, and the week pattern."
+            action={<Button variant="primary" onClick={() => setSheetOpen(true)}>Add first sleep log</Button>}
+          />
+        ) : (
+          <Card>
+            <CardHeader>
+              <div>
+                <div className="flex items-center gap-3">
+                  <h3 className="font-[var(--font-display)] text-2xl font-semibold tracking-[-0.02em] text-[var(--color-text)]">
+                    Week entries
+                  </h3>
+                  <TrackerWeekRangePill label={formatWeekLabel(startDate, endDate)} animateKey={weekOffset} />
+                </div>
+                <p className="mt-2 max-w-[40ch] text-sm leading-relaxed text-[var(--color-text-secondary)]">
+                  Every sleep block for the selected week, with tap-to-edit when the timing needs correcting.
+                </p>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <SleepLogList logs={weekLogs} onEdit={setEditingSleep} />
+            </CardContent>
+          </Card>
+        )}
+
+        <SleepLogSheet
+          open={sheetOpen}
+          onClose={() => {
+            setSheetOpen(false);
+            if (searchParams.get("add") === "1") {
+              navigate("/sleep", { replace: true });
+            }
+          }}
+          childId={activeChild.id}
+          onLogged={handleLogged}
+        />
+
+        {editingSleep && (
+          <EditSleepSheet
+            key={editingSleep.id}
+            entry={editingSleep}
+            open={!!editingSleep}
+            onClose={() => setEditingSleep(null)}
+            onSaved={() => { void handleLogged(); }}
+            onDeleted={() => { void handleLogged(); }}
+          />
+        )}
       </div>
     </PageBody>
   );
