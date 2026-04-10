@@ -789,6 +789,20 @@ export async function getSleepLogs(childId: string, limit = 50): Promise<SleepEn
   );
 }
 
+export async function getSleepLogsForRange(
+  childId: string,
+  startDate: string,
+  endDate: string,
+): Promise<SleepEntry[]> {
+  const conn = await getDb();
+  return conn.select<SleepEntry[]>(
+    `SELECT * FROM sleep_logs
+     WHERE child_id = ? AND started_at >= ? AND started_at <= ?
+     ORDER BY started_at DESC`,
+    [childId, startDate, `${endDate}T23:59:59`],
+  );
+}
+
 export async function updateSleepLog(
   id: string,
   updates: {

@@ -1,13 +1,7 @@
 import { motion, useMotionValue, useTransform, AnimatePresence } from "framer-motion";
-import { useState, useEffect, useMemo, useRef, type ReactNode } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback, type ReactNode } from "react";
 import { useChildContext } from "../contexts/ChildContext";
 import { useUnits } from "../contexts/UnitsContext";
-import { usePoopLogs } from "../hooks/usePoopLogs";
-import { useFeedingLogs } from "../hooks/useFeedingLogs";
-import { useSleepLogs } from "../hooks/useSleepLogs";
-import { useSymptoms } from "../hooks/useSymptoms";
-import { useGrowthLogs } from "../hooks/useGrowthLogs";
-import { useMilestoneLogs } from "../hooks/useMilestoneLogs";
 import { BITSS_TYPES, STOOL_COLORS } from "../lib/constants";
 import { getFeedingEntryDetailParts, getFeedingEntryPrimaryLabel, getFeedingEntrySecondaryText } from "../lib/feeding";
 import { getMilestoneTypeLabel } from "../lib/milestone-constants";
@@ -90,6 +84,13 @@ function formatSleepDuration(entry: SleepEntry): string {
   if (hours === 0) return `${remainder}m`;
   if (remainder === 0) return `${hours}h`;
   return `${hours}h ${remainder}m`;
+}
+
+function addDaysToDateKey(dateKey: string, days: number): string {
+  const [year, month, day] = dateKey.split("-").map(Number);
+  const next = new Date(year, month - 1, day);
+  next.setDate(next.getDate() + days);
+  return formatLocalDateKey(next);
 }
 
 function SleepGlyph() {
@@ -596,54 +597,102 @@ function DayCard({
 }
 
 export function History() {
+  const RANGE_OPTIONS = [
+    { label: "Last 7 days", value: 7 },
+    { label: "Last 14 days", value: 14 },
+  ] as const;
   const { activeChild } = useChildContext();
   const { unitSystem } = useUnits();
-  const { logs: poopLogs, isLoading: poopLoading, refresh: refreshPoop } = usePoopLogs(activeChild?.id ?? null, 100);
-  const { logs: feedingLogs, isLoading: feedingLoading, refresh: refreshFeeding } = useFeedingLogs(activeChild?.id ?? null, 100);
-  const { logs: sleepLogs, isLoading: sleepLoading, refresh: refreshSleep } = useSleepLogs(activeChild?.id ?? null, 100);
-  const { logs: symptomLogs, isLoading: symptomLoading } = useSymptoms(activeChild?.id ?? null);
-  const { logs: growthLogs, isLoading: growthLoading } = useGrowthLogs(activeChild?.id ?? null);
-  const { logs: milestoneLogs, isLoading: milestoneLoading } = useMilestoneLogs(activeChild?.id ?? null);
+  const [poopLogs, setPoopLogs] = useState<PoopEntry[]>([]);
+  const [feedingLogs, setFeedingLogs] = useState<FeedingEntry[]>([]);
+  const [sleepLogs, setSleepLogs] = useState<SleepEntry[]>([]);
+  const [symptomLogs, setSymptomLogs] = useState<SymptomEntry[]>([]);
+  const [growthLogs, setGrowthLogs] = useState<GrowthEntry[]>([]);
+  const [milestoneLogs, setMilestoneLogs] = useState<MilestoneEntry[]>([]);
   const [episodes, setEpisodes] = useState<Episode[]>([]);
   const [episodeEvents, setEpisodeEvents] = useState<EpisodeEvent[]>([]);
-  const [extraLoading, setExtraLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const requestIdRef = useRef(0);
   const [expandedDay, setExpandedDay] = useState<string | null>(null);
   const [searchDate, setSearchDate] = useState<string | null>(null);
+  const [quickRangeDays, setQuickRangeDays] = useState<7 | 14>(7);
   const [editingPoop, setEditingPoop] = useState<PoopEntry | null>(null);
   const [editingMeal, setEditingMeal] = useState<FeedingEntry | null>(null);
   const [editingSleep, setEditingSleep] = useState<SleepEntry | null>(null);
+  const today = formatLocalDateKey(new Date());
 
-  useEffect(() => {
+  const refreshHistory = useCallback(async () => {
     const requestId = ++requestIdRef.current;
 
     if (!activeChild) {
+      setPoopLogs([]);
+      setFeedingLogs([]);
+      setSleepLogs([]);
+      setSymptomLogs([]);
+      setGrowthLogs([]);
+      setMilestoneLogs([]);
       setEpisodes([]);
       setEpisodeEvents([]);
-      setExtraLoading(false);
+      setIsLoading(false);
       return;
     }
 
-    setExtraLoading(true);
-    Promise.all([
-      db.getEpisodes(activeChild.id, 100),
-      db.getEpisodeEventsByChild(activeChild.id, 100),
-    ])
-      .then(([nextEpisodes, nextEvents]) => {
-        if (requestId !== requestIdRef.current) return;
-        setEpisodes(nextEpisodes);
-        setEpisodeEvents(nextEvents);
-        setExtraLoading(false);
-      })
-      .catch(() => {
-        if (requestId !== requestIdRef.current) return;
-        setEpisodes([]);
-        setEpisodeEvents([]);
-        setExtraLoading(false);
-      });
-  }, [activeChild]);
+    const rangeEnd = searchDate ?? today;
+    const rangeStart = searchDate ?? addDaysToDateKey(today, -(quickRangeDays - 1));
 
-  const isLoading = poopLoading || feedingLoading || sleepLoading || symptomLoading || growthLoading || milestoneLoading || extraLoading;
+    setIsLoading(true);
+
+    try {
+      const [
+        nextPoops,
+        nextMeals,
+        nextSleep,
+        nextSymptoms,
+        nextGrowth,
+        nextMilestones,
+        nextEpisodes,
+        nextEpisodeEvents,
+      ] = await Promise.all([
+        db.getPoopLogsForRange(activeChild.id, rangeStart, rangeEnd),
+        db.getFeedingLogsForRange(activeChild.id, rangeStart, rangeEnd),
+        db.getSleepLogsForRange(activeChild.id, rangeStart, rangeEnd),
+        db.getSymptomsForRange(activeChild.id, rangeStart, rangeEnd),
+        db.getGrowthLogsForRange(activeChild.id, rangeStart, rangeEnd),
+        db.getMilestonesForRange(activeChild.id, rangeStart, rangeEnd),
+        db.getEpisodesForRange(activeChild.id, rangeStart, rangeEnd),
+        db.getEpisodeEventsForRange(activeChild.id, rangeStart, rangeEnd),
+      ]);
+
+      if (requestId !== requestIdRef.current) return;
+
+      setPoopLogs(nextPoops);
+      setFeedingLogs(nextMeals);
+      setSleepLogs(nextSleep);
+      setSymptomLogs(nextSymptoms);
+      setGrowthLogs(nextGrowth);
+      setMilestoneLogs(nextMilestones);
+      setEpisodes(nextEpisodes);
+      setEpisodeEvents(nextEpisodeEvents);
+    } catch {
+      if (requestId !== requestIdRef.current) return;
+      setPoopLogs([]);
+      setFeedingLogs([]);
+      setSleepLogs([]);
+      setSymptomLogs([]);
+      setGrowthLogs([]);
+      setMilestoneLogs([]);
+      setEpisodes([]);
+      setEpisodeEvents([]);
+    }
+
+    if (requestId === requestIdRef.current) {
+      setIsLoading(false);
+    }
+  }, [activeChild, quickRangeDays, searchDate, today]);
+
+  useEffect(() => {
+    void refreshHistory();
+  }, [refreshHistory]);
 
   const grouped = useMemo(() => groupByDay({
     poopLogs,
@@ -697,29 +746,54 @@ export function History() {
   const handleDeletePoop = async (id: string) => {
     const entry = poopLogs.find((log) => log.id === id);
     await db.deletePoopLog(entry ?? id);
-    await refreshPoop();
+    await refreshHistory();
   };
 
   const handleDeleteMeal = async (id: string) => {
     await db.deleteFeedingLog(id);
-    await refreshFeeding();
+    await refreshHistory();
   };
 
   const handleDeleteSleep = async (id: string) => {
     await db.deleteSleepLog(id);
-    await refreshSleep();
+    await refreshHistory();
   };
 
-  const today = formatLocalDateKey(new Date());
   const allDates = [...grouped.keys()];
   const earliestDate = allDates.length > 0 ? allDates[allDates.length - 1] : today;
 
   return (
     <div className="mb-5 px-4 pb-5">
       <div className="mb-4">
-        <h2 className="font-[var(--font-display)] text-2xl text-[var(--color-text)]">
-          History
-        </h2>
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="font-[var(--font-display)] text-2xl text-[var(--color-text)]">
+            History
+          </h2>
+          <div className="flex rounded-full border border-[var(--color-border)] bg-[var(--color-bg-elevated)] p-1">
+            {RANGE_OPTIONS.map((option) => {
+              const active = !searchDate && quickRangeDays === option.value;
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => {
+                    setSearchDate(null);
+                    setExpandedDay(null);
+                    setQuickRangeDays(option.value);
+                  }}
+                  className={cn(
+                    "rounded-full px-3 py-1.5 text-[11px] font-semibold transition-colors duration-200",
+                    active
+                      ? "bg-[var(--color-primary)] text-[var(--color-on-primary)]"
+                      : "text-[var(--color-text-secondary)] hover:bg-[var(--color-surface)]",
+                  )}
+                >
+                  {option.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
         <div className="mt-3 flex items-center gap-2">
           <div className="flex-1">
             <DatePicker
@@ -774,8 +848,8 @@ export function History() {
           entry={editingPoop}
           open={!!editingPoop}
           onClose={() => setEditingPoop(null)}
-          onSaved={() => { void refreshPoop(); void refreshFeeding(); }}
-          onDeleted={() => { void refreshPoop(); void refreshFeeding(); }}
+          onSaved={() => { void refreshHistory(); }}
+          onDeleted={() => { void refreshHistory(); }}
         />
       )}
       {editingMeal && (
@@ -784,8 +858,8 @@ export function History() {
           entry={editingMeal}
           open={!!editingMeal}
           onClose={() => setEditingMeal(null)}
-          onSaved={() => { void refreshPoop(); void refreshFeeding(); }}
-          onDeleted={() => { void refreshPoop(); void refreshFeeding(); }}
+          onSaved={() => { void refreshHistory(); }}
+          onDeleted={() => { void refreshHistory(); }}
         />
       )}
       {editingSleep && (
@@ -794,8 +868,8 @@ export function History() {
           entry={editingSleep}
           open={!!editingSleep}
           onClose={() => setEditingSleep(null)}
-          onSaved={() => { void refreshSleep(); }}
-          onDeleted={() => { void refreshSleep(); }}
+          onSaved={() => { void refreshHistory(); }}
+          onDeleted={() => { void refreshHistory(); }}
         />
       )}
     </div>
