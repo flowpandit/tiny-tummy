@@ -2,7 +2,6 @@ import { useUnits } from "../../contexts/UnitsContext";
 import { useNavigate } from "react-router-dom";
 import {
   HomeActionBottleIcon,
-  HomeActionDiaperIcon,
   HomeActionSymptomIcon,
 } from "../ui/icons";
 import type { DiaperEntry, FeedingEntry, PoopEntry } from "../../lib/types";
@@ -10,6 +9,16 @@ import { timeSince } from "../../lib/utils";
 import { BITSS_TYPES, STOOL_COLORS } from "../../lib/constants";
 import { getFeedingEntryDisplayLabel } from "../../lib/feeding";
 import { getDiaperTypeLabel, getUrineColorLabel } from "../../lib/diaper";
+import diaperWetIcon from "../../assets/svg-assets/icons/diaper-wet.svg";
+import diaperDirtyIcon from "../../assets/svg-assets/icons/diaper-dirty.svg";
+import diaperMixedIcon from "../../assets/svg-assets/icons/diaper-mixed.svg";
+import poop1Icon from "../../assets/svg-assets/icons/poop-1.svg";
+import poop2Icon from "../../assets/svg-assets/icons/poop-2.svg";
+import poop3Icon from "../../assets/svg-assets/icons/poop-3.svg";
+import poop4Icon from "../../assets/svg-assets/icons/poop-4.svg";
+import poop5Icon from "../../assets/svg-assets/icons/poop-5.svg";
+import poop6Icon from "../../assets/svg-assets/icons/poop-6.svg";
+import poop7Icon from "../../assets/svg-assets/icons/poop-7.svg";
 
 type ActivityItem =
   | { kind: "poop"; entry: PoopEntry }
@@ -25,6 +34,16 @@ interface RecentActivityProps {
   onEditMeal: (entry: FeedingEntry) => void;
 }
 
+const POOP_ICONS: Record<number, string> = {
+  1: poop1Icon,
+  2: poop2Icon,
+  3: poop3Icon,
+  4: poop4Icon,
+  5: poop5Icon,
+  6: poop6Icon,
+  7: poop7Icon,
+};
+
 export function RecentActivity({ poopLogs, diaperLogs, feedingLogs, onEditPoop, onEditDiaper, onEditMeal }: RecentActivityProps) {
   const { unitSystem } = useUnits();
   const navigate = useNavigate();
@@ -37,6 +56,27 @@ export function RecentActivity({ poopLogs, diaperLogs, feedingLogs, onEditPoop, 
     .slice(0, 3);
 
   if (items.length === 0) return null;
+
+  const getDiaperIcon = (diaperType: DiaperEntry["diaper_type"]) => {
+    if (diaperType === "wet") return diaperWetIcon;
+    if (diaperType === "mixed") return diaperMixedIcon;
+    return diaperDirtyIcon;
+  };
+
+  const getDiaperTintStyle = (diaperType: DiaperEntry["diaper_type"]) => {
+    if (diaperType === "wet") {
+      return { backgroundColor: "color-mix(in srgb, var(--color-info) 28%, transparent)" };
+    }
+    if (diaperType === "mixed") {
+      return {
+        backgroundImage: "linear-gradient(135deg, color-mix(in srgb, var(--color-info) 30%, transparent) 0%, color-mix(in srgb, #c08937 30%, transparent) 100%)",
+      };
+    }
+    return { backgroundColor: "color-mix(in srgb, #c08937 28%, transparent)" };
+  };
+
+  const getPoopColorHex = (color: PoopEntry["color"]) =>
+    STOOL_COLORS.find((item) => item.value === color)?.hex ?? "#b58754";
 
   return (
     <div className="px-4">
@@ -77,13 +117,30 @@ export function RecentActivity({ poopLogs, diaperLogs, feedingLogs, onEditPoop, 
                 onClick={() => onEditPoop(log)}
                 className="flex min-w-0 items-center gap-2 rounded-[14px] px-0 py-1 text-left transition-colors hover:bg-[var(--color-home-hover-surface)]"
               >
-                <div
-                  className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full"
+                <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full"
                   style={{
-                    backgroundColor: log.is_no_poop ? "#f4f1ea" : colorHex ?? "var(--color-home-activity-icon-caution)",
+                    backgroundColor: log.is_no_poop ? "#f4f1ea" : `${getPoopColorHex(log.color)}20`,
                   }}
                 >
-                  <HomeActionSymptomIcon className="h-4 w-4 text-[var(--color-chip-text-on-light)]" />
+                  {log.is_no_poop ? (
+                    <HomeActionSymptomIcon className="h-4 w-4 text-[var(--color-chip-text-on-light)]" />
+                  ) : (
+                    <span
+                      aria-hidden="true"
+                      className="inline-block h-5 w-5"
+                      style={{
+                        backgroundColor: getPoopColorHex(log.color),
+                        WebkitMaskImage: `url(${POOP_ICONS[log.stool_type ?? 4] ?? poop4Icon})`,
+                        WebkitMaskRepeat: "no-repeat",
+                        WebkitMaskPosition: "center",
+                        WebkitMaskSize: "contain",
+                        maskImage: `url(${POOP_ICONS[log.stool_type ?? 4] ?? poop4Icon})`,
+                        maskRepeat: "no-repeat",
+                        maskPosition: "center",
+                        maskSize: "contain",
+                      }}
+                    />
+                  )}
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-[0.78rem] font-semibold leading-tight text-[var(--color-text)]">{rowLabel}</p>
@@ -95,9 +152,6 @@ export function RecentActivity({ poopLogs, diaperLogs, feedingLogs, onEditPoop, 
 
           if (item.kind === "diaper") {
             const diaper = item.entry;
-            const colorHex = diaper.color
-              ? STOOL_COLORS.find((c) => c.value === diaper.color)?.hex
-              : undefined;
             const rowLabel = [
               getDiaperTypeLabel(diaper.diaper_type),
               getUrineColorLabel(diaper.urine_color),
@@ -112,9 +166,13 @@ export function RecentActivity({ poopLogs, diaperLogs, feedingLogs, onEditPoop, 
               >
                 <div
                   className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full text-[var(--color-chip-text-on-light)]"
-                  style={{ backgroundColor: colorHex ?? "var(--color-home-activity-icon-caution)" }}
+                  style={getDiaperTintStyle(diaper.diaper_type)}
                 >
-                  <HomeActionDiaperIcon className="h-4 w-4" />
+                  <span
+                    className="contents"
+                  >
+                    <img src={getDiaperIcon(diaper.diaper_type)} alt="" aria-hidden="true" className="h-4 w-4 object-contain" />
+                  </span>
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-[0.78rem] font-semibold leading-tight text-[var(--color-text)]">{rowLabel}</p>
@@ -136,7 +194,11 @@ export function RecentActivity({ poopLogs, diaperLogs, feedingLogs, onEditPoop, 
                 className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full text-[var(--color-chip-text-on-light)]"
                 style={{ backgroundColor: "#f4f1ea" }}
               >
-                <HomeActionBottleIcon className="h-4 w-4" />
+                <span
+                  className="contents"
+                >
+                  <HomeActionBottleIcon className="h-4 w-4" />
+                </span>
               </div>
               <div className="min-w-0 flex-1">
                 <p className="truncate text-[0.78rem] font-semibold leading-tight text-[var(--color-text)]">{getFeedingEntryDisplayLabel(meal, unitSystem)}</p>

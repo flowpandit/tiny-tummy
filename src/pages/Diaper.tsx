@@ -468,8 +468,11 @@ export function Diaper() {
 
                   <div className="mt-2.5 space-y-2">
                     {recentLogs.map((log, index) => {
-                      const colorHex = log.color ? STOOL_COLORS.find((item) => item.value === log.color)?.hex : undefined;
-                      const tint = `${colorHex ?? (log.diaper_type === "wet" ? "#d6b74f" : log.diaper_type === "mixed" ? "#7f9cf5" : "#c08937")}22`;
+                      const tint = log.diaper_type === "wet"
+                        ? "color-mix(in srgb, var(--color-info) 28%, transparent)"
+                        : log.diaper_type === "mixed"
+                          ? "linear-gradient(135deg, color-mix(in srgb, var(--color-info) 30%, transparent) 0%, color-mix(in srgb, #c08937 30%, transparent) 100%)"
+                          : "color-mix(in srgb, #c08937 28%, transparent)";
 
                       return (
                         <button
@@ -487,7 +490,7 @@ export function Diaper() {
                             )}
                             <span
                               className="flex h-9 w-9 items-center justify-center rounded-full"
-                              style={{ backgroundColor: tint }}
+                              style={log.diaper_type === "mixed" ? { backgroundImage: tint } : { backgroundColor: tint }}
                             >
                               <img
                                 src={getRecentHistoryDiaperIcon(log.diaper_type)}
