@@ -257,19 +257,21 @@ function BaseItem({
   onTap?: () => void;
 }) {
   const className = cn(
-    "flex items-center gap-3 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2.5 transition-colors",
-    onTap ? "cursor-pointer hover:bg-[var(--color-bg)]" : "",
+    "flex items-start gap-3 px-3.5 py-2 transition-colors",
+    onTap ? "cursor-pointer hover:bg-[var(--color-bg-elevated)]/42" : "",
   );
 
   return (
     <div onClick={onTap} className={className}>
       {icon}
-      <span className="w-14 flex-shrink-0 text-xs text-[var(--color-muted)]">{time}</span>
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium text-[var(--color-text)]">{title}</p>
-        {subtitle && <p className="truncate text-xs text-[var(--color-text-secondary)]">{subtitle}</p>}
+      <div className="min-w-0 flex-1 pt-0.5">
+        <div className="flex items-start justify-between gap-3">
+          <span className="pt-0.5 text-[0.84rem] font-medium leading-none text-[var(--color-text-secondary)]">{time}</span>
+        </div>
+        <p className="mt-1 text-[0.88rem] font-medium leading-[1.08] text-[var(--color-text)]">{title}</p>
+        {subtitle && <p className="mt-0.5 text-[0.8rem] leading-[1.08] text-[var(--color-text-secondary)]">{subtitle}</p>}
       </div>
-      {tail}
+      {tail && <div className="flex-shrink-0">{tail}</div>}
     </div>
   );
 }
@@ -277,19 +279,38 @@ function BaseItem({
 function PoopItem({ log, onTap }: { log: PoopEntry; onTap: () => void }) {
   const typeInfo = log.stool_type ? BITSS_TYPES.find((item) => item.type === log.stool_type) : null;
   const colorInfo = log.color ? STOOL_COLORS.find((item) => item.value === log.color) : null;
+  const poopTone = colorInfo?.isRedFlag
+    ? { bg: "var(--color-alert-bg)", fg: "var(--color-alert)" }
+    : { bg: "color-mix(in srgb, var(--color-cta) 18%, transparent)", fg: "var(--color-cta)" };
 
   return (
     <BaseItem
       onTap={onTap}
-      icon={log.is_no_poop ? <NoPoopIcon className="h-5 w-5 flex-shrink-0" /> : <PoopIcon className="h-5 w-5 flex-shrink-0" color={colorInfo?.hex ?? "#8B6914"} />}
+      icon={(
+        <span
+          className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full"
+          style={{ backgroundColor: poopTone.bg }}
+        >
+          {log.is_no_poop
+            ? <NoPoopIcon className="h-4 w-4 flex-shrink-0" color={poopTone.fg} />
+            : <PoopIcon className="h-4 w-4 flex-shrink-0" color={colorInfo?.hex ?? poopTone.fg} />}
+        </span>
+      )}
       time={formatTime(log.logged_at)}
       title={log.is_no_poop ? "No poop day" : typeInfo ? `Type ${typeInfo.type}: ${typeInfo.label}` : "Poop logged"}
       subtitle={log.notes}
       tail={(
         <div className="flex items-center gap-1">
           {log.photo_path && <PhotoThumbnail photoPath={log.photo_path} />}
-          {log.size && <Badge variant="default">{log.size}</Badge>}
-          {colorInfo?.isRedFlag && <Badge variant="alert">flag</Badge>}
+          {log.size && (
+            <Badge
+              className="min-h-0 px-2.5 py-[0.33rem] text-[0.74rem] capitalize"
+              style={{ backgroundColor: poopTone.bg, color: poopTone.fg }}
+            >
+              {log.size}
+            </Badge>
+          )}
+          {colorInfo?.isRedFlag && <Badge className="min-h-0 px-2.5 py-[0.33rem] text-[0.74rem]" variant="alert">flag</Badge>}
         </div>
       )}
     />
@@ -299,64 +320,108 @@ function PoopItem({ log, onTap }: { log: PoopEntry; onTap: () => void }) {
 function MealItem({ meal, unitSystem, onTap }: { meal: FeedingEntry; unitSystem: "metric" | "imperial"; onTap: () => void }) {
   const detailText = getFeedingEntryDetailParts(meal, unitSystem).join(" · ");
   const secondaryText = [detailText, getFeedingEntrySecondaryText(meal)].filter(Boolean).join(" • ");
+  const mealTone = {
+    bg: "color-mix(in srgb, var(--color-cta) 16%, transparent)",
+    fg: "var(--color-cta)",
+  };
 
   return (
     <BaseItem
       onTap={onTap}
-      icon={<MealIcon className="h-5 w-5 flex-shrink-0" color="var(--color-primary)" />}
+      icon={(
+        <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full" style={{ backgroundColor: mealTone.bg }}>
+          <MealIcon className="h-4 w-4 flex-shrink-0" color={mealTone.fg} />
+        </span>
+      )}
       time={formatTime(meal.logged_at)}
       title={getFeedingEntryPrimaryLabel(meal)}
       subtitle={secondaryText}
-      tail={<Badge variant="info">feed</Badge>}
+      tail={<Badge className="min-h-0 px-2.5 py-[0.33rem] text-[0.74rem]" style={{ backgroundColor: mealTone.bg, color: mealTone.fg }}>feed</Badge>}
     />
   );
 }
 
 function SleepItem({ entry, onTap }: { entry: SleepEntry; onTap: () => void }) {
+  const sleepTone = {
+    bg: "color-mix(in srgb, var(--color-info) 18%, transparent)",
+    fg: "var(--color-info)",
+  };
+
   return (
     <BaseItem
       onTap={onTap}
-      icon={<SleepGlyph />}
+      icon={(
+        <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full" style={{ backgroundColor: sleepTone.bg }}>
+          <SleepGlyph />
+        </span>
+      )}
       time={formatTime(entry.started_at)}
       title={entry.sleep_type === "night" ? "Night sleep" : "Nap"}
       subtitle={`${formatSleepDuration(entry)} • ${formatTime(entry.started_at)} - ${formatTime(entry.ended_at)}${entry.notes ? ` • ${entry.notes}` : ""}`}
-      tail={<Badge variant={entry.sleep_type === "night" ? "healthy" : "info"}>{entry.sleep_type}</Badge>}
+      tail={<Badge className="min-h-0 px-2.5 py-[0.33rem] text-[0.74rem]" style={{ backgroundColor: sleepTone.bg, color: sleepTone.fg }}>{entry.sleep_type}</Badge>}
     />
   );
 }
 
 function SymptomItem({ entry }: { entry: SymptomEntry }) {
+  const symptomTone = {
+    bg: "color-mix(in srgb, var(--color-caution) 18%, transparent)",
+    fg: "var(--color-caution)",
+  };
+
   return (
     <BaseItem
-      icon={<SymptomGlyph />}
+      icon={(
+        <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full" style={{ backgroundColor: symptomTone.bg }}>
+          <SymptomGlyph />
+        </span>
+      )}
       time={formatTime(entry.logged_at)}
       title={getSymptomTypeLabel(entry.symptom_type)}
       subtitle={[entry.notes, entry.episode_id ? "linked to episode" : null].filter(Boolean).join(" • ")}
-      tail={<Badge variant={getSymptomSeverityBadgeVariant(entry.severity)}>{getSymptomSeverityLabel(entry.severity)}</Badge>}
+      tail={<Badge className="min-h-0 px-2.5 py-[0.33rem] text-[0.74rem]" variant={getSymptomSeverityBadgeVariant(entry.severity)}>{getSymptomSeverityLabel(entry.severity)}</Badge>}
     />
   );
 }
 
 function GrowthItem({ entry, unitSystem }: { entry: GrowthEntry; unitSystem: "metric" | "imperial" }) {
+  const growthTone = {
+    bg: "color-mix(in srgb, var(--color-healthy) 18%, transparent)",
+    fg: "var(--color-healthy)",
+  };
+
   return (
     <BaseItem
-      icon={<GrowthGlyph />}
+      icon={(
+        <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full" style={{ backgroundColor: growthTone.bg }}>
+          <GrowthGlyph />
+        </span>
+      )}
       time={formatTime(entry.measured_at)}
       title="Growth check"
       subtitle={[formatGrowthSummaryWithUnits(entry, unitSystem), entry.notes].filter(Boolean).join(" • ")}
-      tail={<Badge variant="healthy">growth</Badge>}
+      tail={<Badge className="min-h-0 px-2.5 py-[0.33rem] text-[0.74rem]" style={{ backgroundColor: growthTone.bg, color: growthTone.fg }}>growth</Badge>}
     />
   );
 }
 
 function MilestoneItem({ entry }: { entry: MilestoneEntry }) {
+  const milestoneTone = {
+    bg: "color-mix(in srgb, #9f7aea 18%, transparent)",
+    fg: "#8b67d7",
+  };
+
   return (
     <BaseItem
-      icon={<MilestoneGlyph />}
+      icon={(
+        <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full" style={{ backgroundColor: milestoneTone.bg }}>
+          <MilestoneGlyph />
+        </span>
+      )}
       time={formatTime(entry.logged_at)}
       title={getMilestoneTypeLabel(entry.milestone_type)}
       subtitle={entry.notes}
-      tail={<Badge variant="default">milestone</Badge>}
+      tail={<Badge className="min-h-0 px-2.5 py-[0.33rem] text-[0.74rem]" style={{ backgroundColor: milestoneTone.bg, color: milestoneTone.fg }}>milestone</Badge>}
     />
   );
 }
@@ -368,23 +433,36 @@ function EpisodeItem({ entry }: { entry: Episode }) {
 
   return (
     <BaseItem
-      icon={<EpisodeGlyph />}
+      icon={(
+        <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full" style={{ backgroundColor: "color-mix(in srgb, var(--color-cta) 16%, transparent)" }}>
+          <EpisodeGlyph />
+        </span>
+      )}
       time={formatTime(entry.started_at)}
       title={`${getEpisodeTypeLabel(entry.episode_type)} episode`}
       subtitle={[statusText, entry.summary ?? entry.outcome].filter(Boolean).join(" • ")}
-      tail={<Badge variant={entry.status === "resolved" ? "healthy" : "caution"}>{entry.status}</Badge>}
+      tail={<Badge className="min-h-0 px-2.5 py-[0.33rem] text-[0.74rem]" variant={entry.status === "resolved" ? "healthy" : "caution"}>{entry.status}</Badge>}
     />
   );
 }
 
 function EpisodeEventItem({ entry }: { entry: EpisodeEvent }) {
+  const eventTone = {
+    bg: "color-mix(in srgb, var(--color-primary) 16%, transparent)",
+    fg: "var(--color-primary)",
+  };
+
   return (
     <BaseItem
-      icon={<EpisodeGlyph />}
+      icon={(
+        <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full" style={{ backgroundColor: eventTone.bg }}>
+          <EpisodeGlyph />
+        </span>
+      )}
       time={formatTime(entry.logged_at)}
       title={entry.title}
       subtitle={[getEpisodeEventTypeLabel(entry.event_type), entry.notes].filter(Boolean).join(" • ")}
-      tail={<Badge variant="default">{getEpisodeEventTypeLabel(entry.event_type).toLowerCase()}</Badge>}
+      tail={<Badge className="min-h-0 px-2.5 py-[0.33rem] text-[0.74rem]" variant="default">{getEpisodeEventTypeLabel(entry.event_type).toLowerCase()}</Badge>}
     />
   );
 }
@@ -419,35 +497,40 @@ function DayCard({
   const sleepCount = events.filter((event) => event.kind === "sleep").length;
   const otherCount = events.filter((event) => !["poop", "meal", "sleep"].includes(event.kind)).length;
   const noPoopCount = events.filter((event) => event.kind === "poop" && event.entry.is_no_poop === 1).length;
+  const summaryClassName = "text-[0.92rem] font-medium";
 
   return (
-    <div>
+    <div className="overflow-hidden rounded-[22px] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[var(--shadow-soft)]">
       <button
         onClick={onToggle}
         className={cn(
-          "flex w-full items-center justify-between rounded-[var(--radius-md)] px-4 py-3 transition-colors",
+          "flex w-full items-start justify-between gap-3 px-4 py-3 text-left transition-colors",
           isExpanded
-            ? "border border-[var(--color-primary)]/20 bg-[var(--color-primary)]/5"
-            : "border border-[var(--color-border)] bg-[var(--color-surface)] hover:border-[var(--color-muted)]",
+            ? "bg-[var(--color-surface-strong)]"
+            : "hover:bg-[var(--color-surface-strong)]/72",
         )}
         aria-expanded={isExpanded}
       >
-        <div className="flex items-center gap-3">
-          <span className={cn("text-sm font-semibold", isExpanded ? "text-[var(--color-primary)]" : "text-[var(--color-text)]")}>
+        <div className="min-w-0 flex items-center gap-3">
+          <span className="text-[1.22rem] font-semibold leading-none text-[var(--color-text)]">
             {formatDayHeader(date)}
           </span>
         </div>
-        <div className="flex items-center gap-2">
-          {poopCount > 0 && <span className="text-xs font-medium text-[var(--color-cta)]">{poopCount} poop{poopCount === 1 ? "" : "s"}</span>}
-          {feedCount > 0 && <span className="text-xs font-medium text-[var(--color-primary)]">{feedCount} feed{feedCount === 1 ? "" : "s"}</span>}
-          {sleepCount > 0 && <span className="text-xs font-medium text-[var(--color-info)]">{sleepCount} sleep</span>}
-          {otherCount > 0 && <span className="text-xs text-[var(--color-text-soft)]">+{otherCount} other</span>}
-          {noPoopCount > 0 && <span className="text-xs text-[var(--color-muted)]">no poop</span>}
+        <div className="flex items-start gap-2">
+          <div className="max-w-[11.5rem] pt-0.5 text-right leading-tight">
+            <div className="flex flex-wrap justify-end gap-x-1.5 gap-y-0.5">
+              {poopCount > 0 && <span className={cn(summaryClassName, "text-[var(--color-cta)]")}>{poopCount} poop{poopCount === 1 ? "" : "s"}</span>}
+              {feedCount > 0 && <span className={cn(summaryClassName, "text-[var(--color-primary)]")}>{feedCount} feed{feedCount === 1 ? "" : "s"}</span>}
+              {sleepCount > 0 && <span className={cn(summaryClassName, "text-[var(--color-info)]")}>{sleepCount} sleep{sleepCount === 1 ? "" : "s"}</span>}
+            </div>
+            {otherCount > 0 && <div className="mt-0.5 text-[0.88rem] text-[var(--color-text-soft)]">+{otherCount} other</div>}
+            {noPoopCount > 0 && <div className="mt-0.5 text-[0.8rem] text-[var(--color-muted)]">no poop</div>}
+          </div>
           <motion.svg
             xmlns="http://www.w3.org/2000/svg"
             viewBox="0 0 20 20"
             fill="currentColor"
-            className={cn("h-4 w-4", isExpanded ? "text-[var(--color-primary)]" : "text-[var(--color-muted)]")}
+            className="mt-0.5 h-4 w-4 flex-shrink-0 text-[var(--color-text-soft)]"
             animate={{ rotate: isExpanded ? 180 : 0 }}
             transition={{ duration: 0.12, ease: [0.22, 1, 0.36, 1] }}
           >
@@ -465,37 +548,43 @@ function DayCard({
             transition={{ duration: 0.14, ease: [0.22, 1, 0.36, 1] }}
             className="overflow-hidden"
           >
-            <div className="flex flex-col gap-1.5 pl-2 pt-2">
+            <div className="bg-[var(--color-surface)] px-3 pb-2">
               {events.map((event) => {
                 switch (event.kind) {
                   case "poop":
                     return (
-                      <SwipeableItem key={`poop-${event.entry.id}`} onDelete={() => onDeletePoop(event.entry.id)}>
-                        <PoopItem log={event.entry} onTap={() => onEditPoop(event.entry)} />
-                      </SwipeableItem>
+                      <div key={`poop-wrap-${event.entry.id}`} className="border-t border-[var(--color-border)]/45 first:border-t-0">
+                        <SwipeableItem key={`poop-${event.entry.id}`} onDelete={() => onDeletePoop(event.entry.id)}>
+                          <PoopItem log={event.entry} onTap={() => onEditPoop(event.entry)} />
+                        </SwipeableItem>
+                      </div>
                     );
                   case "meal":
                     return (
-                      <SwipeableItem key={`meal-${event.entry.id}`} onDelete={() => onDeleteMeal(event.entry.id)}>
-                        <MealItem meal={event.entry} unitSystem={unitSystem} onTap={() => onEditMeal(event.entry)} />
-                      </SwipeableItem>
+                      <div key={`meal-wrap-${event.entry.id}`} className="border-t border-[var(--color-border)]/45 first:border-t-0">
+                        <SwipeableItem key={`meal-${event.entry.id}`} onDelete={() => onDeleteMeal(event.entry.id)}>
+                          <MealItem meal={event.entry} unitSystem={unitSystem} onTap={() => onEditMeal(event.entry)} />
+                        </SwipeableItem>
+                      </div>
                     );
                   case "sleep":
                     return (
-                      <SwipeableItem key={`sleep-${event.entry.id}`} onDelete={() => onDeleteSleep(event.entry.id)}>
-                        <SleepItem entry={event.entry} onTap={() => onEditSleep(event.entry)} />
-                      </SwipeableItem>
+                      <div key={`sleep-wrap-${event.entry.id}`} className="border-t border-[var(--color-border)]/45 first:border-t-0">
+                        <SwipeableItem key={`sleep-${event.entry.id}`} onDelete={() => onDeleteSleep(event.entry.id)}>
+                          <SleepItem entry={event.entry} onTap={() => onEditSleep(event.entry)} />
+                        </SwipeableItem>
+                      </div>
                     );
                   case "symptom":
-                    return <SymptomItem key={`symptom-${event.entry.id}`} entry={event.entry} />;
+                    return <div key={`symptom-${event.entry.id}`} className="border-t border-[var(--color-border)]/45 first:border-t-0"><SymptomItem entry={event.entry} /></div>;
                   case "growth":
-                    return <GrowthItem key={`growth-${event.entry.id}`} entry={event.entry} unitSystem={unitSystem} />;
+                    return <div key={`growth-${event.entry.id}`} className="border-t border-[var(--color-border)]/45 first:border-t-0"><GrowthItem entry={event.entry} unitSystem={unitSystem} /></div>;
                   case "milestone":
-                    return <MilestoneItem key={`milestone-${event.entry.id}`} entry={event.entry} />;
+                    return <div key={`milestone-${event.entry.id}`} className="border-t border-[var(--color-border)]/45 first:border-t-0"><MilestoneItem entry={event.entry} /></div>;
                   case "episode":
-                    return <EpisodeItem key={`episode-${event.entry.id}`} entry={event.entry} />;
+                    return <div key={`episode-${event.entry.id}`} className="border-t border-[var(--color-border)]/45 first:border-t-0"><EpisodeItem entry={event.entry} /></div>;
                   case "episode_event":
-                    return <EpisodeEventItem key={`episode-event-${event.entry.id}`} entry={event.entry} />;
+                    return <div key={`episode-event-${event.entry.id}`} className="border-t border-[var(--color-border)]/45 first:border-t-0"><EpisodeEventItem entry={event.entry} /></div>;
                 }
               })}
             </div>
