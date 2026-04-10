@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useChildContext } from "../contexts/ChildContext";
 import { useDiaperLogs } from "../hooks/useDiaperLogs";
 import { useSymptoms } from "../hooks/useSymptoms";
@@ -14,14 +14,11 @@ import { AlertBanner } from "../components/dashboard/AlertBanner";
 import { DiaperLogForm } from "../components/logging/DiaperLogForm";
 import { EditDiaperSheet } from "../components/logging/EditDiaperSheet";
 import { ScenicHero } from "../components/layout/ScenicHero";
-import { Card, CardContent, CardHeader } from "../components/ui/card";
+import { Card, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
-import { EmptyState, InsetPanel, PageBody, SectionHeading } from "../components/ui/page-layout";
-import { DiscoveryLinks } from "../components/discovery/DiscoveryLinks";
+import { EmptyState, InsetPanel, PageBody } from "../components/ui/page-layout";
 import { TimeSinceIndicator } from "../components/home/TimeSinceIndicator";
 import {
-  TrackerEntryRow,
-  TrackerEntryTable,
   TrackerMetricPanel,
   TrackerMetricRing,
 } from "../components/tracking/TrackerPrimitives";
@@ -151,6 +148,16 @@ function getHydrationRingDisplay(status: ReturnType<typeof getHydrationStatus>, 
   };
 }
 
+function getDiaperSummary(log: DiaperEntry): string {
+  const stoolLabel = log.stool_type ? BITSS_TYPES.find((item) => item.type === log.stool_type)?.label : null;
+  const urineLabel = getUrineColorLabel(log.urine_color);
+  return [
+    getDiaperTypeLabel(log.diaper_type),
+    urineLabel,
+    stoolLabel ? `Type ${log.stool_type}${stoolLabel ? `, ${stoolLabel}` : ""}` : null,
+  ].filter(Boolean).join(" · ");
+}
+
 export function Diaper() {
   const navigate = useNavigate();
   const { activeChild } = useChildContext();
@@ -175,7 +182,7 @@ export function Diaper() {
   const todayDirtyCount = todayLogs.filter((log) => diaperIncludesStool(log.diaper_type)).length;
   const todayMixedCount = todayLogs.filter((log) => log.diaper_type === "mixed").length;
   const hydrationStatus = getHydrationStatus(logs, symptomLogs[0]?.symptom_type);
-  const recentLogs = useMemo(() => logs.slice(0, 10), [logs]);
+  const recentLogs = useMemo(() => logs.slice(0, 3), [logs]);
 
   if (!activeChild) return null;
   if (experience.mode === "poop") return null;
@@ -282,29 +289,6 @@ export function Diaper() {
             </CardContent>
           </Card>
 
-          <DiscoveryLinks
-            eyebrow="Adjacent views"
-            title="Keep stool-focused work close by"
-            description="Diaper tracking handles the young-baby workflow, while the poop page stays available when you want the full bowel-specific view."
-            items={[
-              {
-                to: "/poop",
-                title: "Poop page",
-                description: "Open the bowel-first analysis surface directly.",
-              },
-              {
-                to: "/history",
-                title: "History",
-                description: "Review the wider timeline across logs.",
-              },
-              {
-                to: "/feed",
-                title: "Feed",
-                description: "Compare feeding timing with wet and dirty output.",
-                tone: "info",
-              },
-            ]}
-          />
         </div>
 
         <div className="space-y-4">
@@ -380,7 +364,7 @@ export function Diaper() {
             </CardContent>
           </Card>
 
-          {recentLogs.length === 0 ? (
+          {logs.length === 0 ? (
             <EmptyState
               icon={<span className="text-2xl text-[var(--color-primary)]">+</span>}
               title="Start the diaper page with the first log"
@@ -388,50 +372,81 @@ export function Diaper() {
               action={<Button variant="primary" onClick={() => setFormOpen(true)}>Add first diaper log</Button>}
             />
           ) : (
-            <Card>
-              <CardHeader>
-                <div>
-                  <SectionHeading
-                    title="Recent diaper entries"
-                    description="Every recent diaper log in one list, with quick editing when details need correcting."
-                  />
-                </div>
-              </CardHeader>
-              <CardContent>
-                <TrackerEntryTable leftHeader="When" mainHeader="Details">
-                  {recentLogs.map((log) => {
-                    const colorHex = log.color ? STOOL_COLORS.find((item) => item.value === log.color)?.hex : undefined;
-                    const stoolLabel = log.stool_type ? BITSS_TYPES.find((item) => item.type === log.stool_type)?.label : null;
-                    const urineLabel = getUrineColorLabel(log.urine_color);
-                    const summary = [
-                      getDiaperTypeLabel(log.diaper_type),
-                      urineLabel,
-                      stoolLabel ? `Type ${log.stool_type} ${stoolLabel}` : null,
-                      log.color ? STOOL_COLORS.find((item) => item.value === log.color)?.label ?? log.color : null,
-                    ].filter(Boolean).join(" · ");
-
-                    return (
-                      <TrackerEntryRow key={log.id} onClick={() => setEditingLog(log)}>
-                        <div>
-                          <p className="text-sm font-semibold text-[var(--color-text)]">{timeSince(log.logged_at)}</p>
-                          <p className="mt-1 text-xs text-[var(--color-text-soft)]">{new Date(log.logged_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}</p>
+            <div className="space-y-4">
+              {lastDiaper && (
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="rounded-[20px] border border-[var(--color-border)] bg-[var(--color-surface-strong)] p-4">
+                      <p className="text-[1.05rem] font-semibold text-[var(--color-text)]">Current status</p>
+                      <div className="mt-3 flex items-center gap-4">
+                        <div
+                          className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-full"
+                          style={{ background: lastDiaper.color ? `${STOOL_COLORS.find((item) => item.value === lastDiaper.color)?.hex ?? "#c08937"}22` : "rgba(192, 137, 55, 0.18)" }}
+                        >
+                          <span className="text-[1.6rem]">{lastDiaper.diaper_type === "wet" ? "💧" : lastDiaper.diaper_type === "mixed" ? "🍼" : "🟤"}</span>
                         </div>
                         <div className="min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span
-                              className="h-2.5 w-2.5 rounded-full"
-                              style={{ backgroundColor: colorHex ?? (log.diaper_type === "wet" ? "#d6b74f" : "#c08937") }}
-                            />
-                            <p className="truncate text-sm font-semibold text-[var(--color-text)]">{summary}</p>
-                          </div>
-                          <p className="mt-1 truncate text-xs text-[var(--color-text-secondary)]">{log.notes || "No extra notes"}</p>
+                          <p className="text-[1rem] font-medium text-[var(--color-text)]">
+                            Today: {getDiaperSummary(lastDiaper)}
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => setEditingLog(lastDiaper)}
+                            className="mt-2 rounded-full border border-[var(--color-border)] bg-[var(--color-primary)]/10 px-3 py-1.5 text-[0.8rem] font-semibold text-[var(--color-primary)] transition-colors hover:bg-[var(--color-primary)]/15"
+                          >
+                            Why this matters
+                          </button>
                         </div>
-                      </TrackerEntryRow>
-                    );
-                  })}
-                </TrackerEntryTable>
-              </CardContent>
-            </Card>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-[1.05rem] font-semibold text-[var(--color-text)]">Recent history</p>
+                    <Link
+                      to="/history"
+                      className="text-[0.82rem] font-semibold text-[var(--color-cta)] transition-opacity hover:opacity-80"
+                    >
+                      See all
+                    </Link>
+                  </div>
+
+                  <div className="mt-4 space-y-0">
+                    {recentLogs.map((log, index) => {
+                      const colorHex = log.color ? STOOL_COLORS.find((item) => item.value === log.color)?.hex : undefined;
+                      const isLast = index === recentLogs.length - 1;
+                      return (
+                        <button
+                          key={log.id}
+                          type="button"
+                          onClick={() => setEditingLog(log)}
+                          className="flex w-full items-start gap-4 text-left"
+                        >
+                          <div className="flex w-10 flex-col items-center">
+                            <div
+                              className="flex h-10 w-10 items-center justify-center rounded-full"
+                              style={{ background: `${colorHex ?? (log.diaper_type === "wet" ? "#d6b74f" : "#c08937")}22` }}
+                            >
+                              <span className="text-[1.1rem]">{log.diaper_type === "wet" ? "💧" : log.diaper_type === "mixed" ? "🍼" : "🟤"}</span>
+                            </div>
+                            {!isLast && <div className="h-10 w-px bg-[var(--color-border-strong)]" />}
+                          </div>
+                          <div className="flex-1 pt-1">
+                            <p className="text-[0.98rem] text-[var(--color-text)]">
+                              {index === 0 ? "Today" : timeSince(log.logged_at)}: {getDiaperSummary(log)}
+                            </p>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           )}
         </div>
       </div>

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useChildContext } from "../contexts/ChildContext";
 import { usePoopLogs } from "../hooks/usePoopLogs";
 import { useFeedingLogs } from "../hooks/useFeedingLogs";
@@ -35,12 +35,16 @@ import {
   TrackerWeekSwitcher,
 } from "../components/tracking/TrackerPrimitives";
 import { AlertBanner } from "../components/dashboard/AlertBanner";
-import { DiscoveryLinks } from "../components/discovery/DiscoveryLinks";
 import { PoopPresetEditorSheet } from "../components/home/QuickPresetCustomizerSheet";
 import { LogForm } from "../components/logging/LogForm";
 import { EditPoopSheet } from "../components/logging/EditPoopSheet";
 import { TimeSinceIndicator } from "../components/home/TimeSinceIndicator";
 import { useToast } from "../components/ui/toast";
+import {
+  HomeToolGrowthIcon,
+  HomeToolHistoryIcon,
+  HomeToolMilestonesIcon,
+} from "../components/ui/icons";
 import type { Alert, FeedingEntry, HealthStatus, PoopEntry, PoopLogDraft, SymptomEntry } from "../lib/types";
 
 type PredictionConfidence = "low" | "medium" | "high";
@@ -121,15 +125,98 @@ function getRepeatablePoopEntry(lastPoop: PoopEntry | null): PoopEntry | null {
   return lastPoop;
 }
 
-function getPoopPatternLabel(entry: PoopEntry): string {
-  const typeLabel = entry.stool_type
-    ? BITSS_TYPES.find((item) => item.type === entry.stool_type)?.label ?? `Type ${entry.stool_type}`
-    : "Logged";
-  const colorLabel = entry.color
-    ? STOOL_COLORS.find((item) => item.value === entry.color)?.label ?? entry.color
-    : "No color";
+function getPoopColorHex(color: PoopEntry["color"] | Partial<PoopLogDraft>["color"]): string {
+  return STOOL_COLORS.find((item) => item.value === color)?.hex ?? "#b58754";
+}
 
-  return `Type ${entry.stool_type} · ${typeLabel} · ${colorLabel} · ${entry.size}`;
+function getPoopPresetIconPath(stoolType: number | null): string {
+  if (stoolType !== null && stoolType <= 2) {
+    return "M12 5.5c3 0 5 1.92 5 4.28 0 1.43-.86 2.4-1.9 3.02 1.6.5 2.65 1.75 2.65 3.42 0 2.47-2.3 4.28-5.75 4.28S6.25 18.7 6.25 16.22c0-1.67 1.05-2.92 2.65-3.42-1.04-.62-1.9-1.6-1.9-3.02C7 7.42 9 5.5 12 5.5Z";
+  }
+
+  if (stoolType !== null && stoolType >= 6) {
+    return "M8 7.25c1.38 0 2.08 1.06 2.2 1.98.48-.73 1.31-1.48 2.8-1.48 1.88 0 3.25 1.35 3.25 3.12 0 .49-.11.93-.27 1.3 1.18.23 2.02 1.2 2.02 2.48 0 1.58-1.26 2.85-2.88 2.85-.36 0-.68-.06-.98-.16-.36 1.1-1.42 1.91-2.64 1.91-1.16 0-2.18-.73-2.58-1.74-.38.19-.81.29-1.27.29-1.62 0-2.9-1.28-2.9-2.86 0-1.32.91-2.34 2.11-2.53A2.96 2.96 0 0 1 4.75 9.9c0-1.47 1.27-2.65 2.84-2.65.18 0 .28 0 .41.02Z";
+  }
+
+  return "M12 4.75c1.43 0 2.62.95 2.98 2.24.12.43.38.8.74 1.06A4.3 4.3 0 0 1 17.5 11.5c0 .84-.25 1.6-.69 2.25 1.08.56 1.82 1.56 1.82 2.87 0 2.02-1.85 3.63-4.16 3.63H9.53c-2.31 0-4.16-1.6-4.16-3.63 0-1.31.74-2.31 1.82-2.87A3.9 3.9 0 0 1 6.5 11.5a4.3 4.3 0 0 1 1.78-3.45c.36-.26.62-.63.74-1.06A3.08 3.08 0 0 1 12 4.75Z";
+}
+
+function PoopPresetIcon({
+  draft,
+  className = "h-10 w-10",
+}: {
+  draft: Partial<PoopLogDraft>;
+  className?: string;
+}) {
+  const fill = getPoopColorHex(draft.color ?? null);
+  const shadow = draft.color === "green" ? "rgba(113, 144, 69, 0.35)" : "rgba(181, 135, 84, 0.28)";
+  const iconId = `${draft.stool_type ?? "default"}-${draft.color ?? "none"}`;
+  const filterId = `poop-shadow-${iconId}`;
+  const gradientId = `poop-highlight-${iconId}`;
+
+  return (
+    <svg viewBox="0 0 24 24" className={className} aria-hidden="true">
+      <defs>
+        <filter id={filterId}>
+          <feDropShadow dx="0" dy="1.5" stdDeviation="1.5" floodColor={shadow} floodOpacity="1" />
+        </filter>
+        <linearGradient id={gradientId} x1="7" y1="5" x2="17" y2="19" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#fff7d8" />
+          <stop offset="1" stopColor="#ffffff" stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      <path
+        d={getPoopPresetIconPath(draft.stool_type ?? 4)}
+        fill={fill}
+        filter={`url(#${filterId})`}
+      />
+      <path
+        d={getPoopPresetIconPath(draft.stool_type ?? 4)}
+        fill={`url(#${gradientId})`}
+        opacity="0.35"
+      />
+    </svg>
+  );
+}
+
+function WeeklyPatternDots({
+  filledWeek,
+}: {
+  filledWeek: Array<{ date: string; count: number; weekdayLabel: string }>;
+}) {
+  return (
+    <div className="flex items-end gap-1.5">
+      {filledWeek.map((day) => {
+        const slots = [2, 1, 0];
+        return (
+          <div key={day.date} className="flex min-w-[22px] flex-col items-center gap-0.5">
+            <div className="flex h-[46px] flex-col justify-end gap-1">
+              {slots.map((slot) => {
+                const active = day.count > slot;
+                const isBar = day.count >= 3 && slot === 0;
+                return (
+                  <span
+                    key={`${day.date}-${slot}`}
+                    className={isBar ? "h-8 w-2.5 rounded-full" : "h-2.5 w-2.5 rounded-full"}
+                    style={{
+                      background: !active
+                        ? "rgba(148, 158, 176, 0.22)"
+                        : slot === 2
+                          ? "rgba(236, 112, 89, 0.92)"
+                          : slot === 1
+                            ? "rgba(104, 205, 110, 0.9)"
+                            : "rgba(245, 171, 82, 0.95)",
+                    }}
+                  />
+                );
+              })}
+            </div>
+            <span className="text-[0.66rem] leading-none text-[var(--color-text-secondary)]">{day.weekdayLabel}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
 }
 
 function getAgeBaseline(dateOfBirth: string, feedingType: string): AgeBaseline {
@@ -1051,51 +1138,47 @@ export function Poop() {
 
       <Card>
         <CardContent className="p-4">
-          <div>
+          <div className="flex items-center justify-between gap-3">
             <div>
-              <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--color-text-soft)]">Quick poop start</p>
-              <p className="mt-2 max-w-[34ch] text-[14px] leading-relaxed text-[var(--color-text-secondary)]">
-                Start with the most likely pattern, then change anything in the sheet if it is not exact.
-              </p>
+              <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--color-text-soft)]">Quick log</p>
+              {repeatablePoop && (
+                <p className="mt-1 text-[12px] text-[var(--color-text-soft)]">Last safe pattern ready to repeat.</p>
+              )}
             </div>
-            <div className="mt-3 flex flex-wrap gap-2">
+            <div className="flex items-center gap-2">
               {repeatablePoop && (
                 <button
                   type="button"
                   onClick={() => { void handleRepeatLastPoop(); }}
-                  className="rounded-full border border-[var(--color-primary)]/20 bg-[var(--color-primary)]/10 px-3 py-2 text-[12px] font-semibold text-[var(--color-primary)] transition-colors hover:bg-[var(--color-primary)]/15"
+                  className="rounded-full border border-[var(--color-primary)]/20 bg-[var(--color-primary)]/10 px-3 py-1.5 text-[11px] font-semibold text-[var(--color-primary)] transition-colors hover:bg-[var(--color-primary)]/15"
                 >
-                  Repeat last normal poop
+                  Repeat
                 </button>
               )}
               <button
                 type="button"
                 onClick={() => setPoopPresetSheetOpen(true)}
-                className="rounded-full border border-[var(--color-border)] bg-[var(--color-surface-strong)] px-3 py-2 text-[12px] font-semibold text-[var(--color-text-secondary)] transition-colors hover:bg-white/70"
+                className="rounded-full border border-[var(--color-border)] bg-[var(--color-surface-strong)] px-3 py-1.5 text-[11px] font-semibold text-[var(--color-text-secondary)] transition-colors hover:bg-white/70"
               >
-                Edit tiles
+                Edit
               </button>
             </div>
           </div>
 
-          {repeatablePoop && (
-            <p className="mt-3 text-[12px] text-[var(--color-text-soft)]">
-              Last safe pattern: {getPoopPatternLabel(repeatablePoop)}
-            </p>
-          )}
-
-          <div className="mt-3 grid grid-cols-2 gap-2">
-            {quickPoopPresets.map((preset) => (
-              <button
-                key={preset.id}
-                type="button"
-                onClick={() => { void handleQuickPoopPreset(preset); }}
-                className="rounded-[16px] border border-[var(--color-border)] bg-[var(--color-surface-strong)] px-4 py-3 text-left transition-colors hover:bg-white/70"
-              >
-                <p className="text-[14px] font-medium text-[var(--color-text)]">{preset.label}</p>
-                <p className="mt-1 text-[12px] leading-relaxed text-[var(--color-text-soft)]">{preset.description}</p>
-              </button>
-            ))}
+          <div className="mt-3 overflow-x-auto pb-1">
+            <div className="flex w-max gap-3 pr-2">
+              {quickPoopPresets.map((preset) => (
+                <button
+                  key={preset.id}
+                  type="button"
+                  onClick={() => { void handleQuickPoopPreset(preset); }}
+                  className="flex min-h-[118px] min-w-[92px] flex-col items-center justify-between rounded-[18px] border border-[var(--color-border)] bg-[var(--color-surface-strong)] px-3 py-3 text-center transition-colors hover:bg-white/70"
+                >
+                  <PoopPresetIcon draft={preset.draft} className="h-12 w-12" />
+                  <p className="text-[0.82rem] font-medium leading-none text-[var(--color-text)]">{preset.label}</p>
+                </button>
+              ))}
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -1178,6 +1261,36 @@ export function Poop() {
         </CardContent>
       </Card>
 
+      <div className="px-1">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--color-text-soft)]">Weekly overview</p>
+            <p className="mt-1 text-[12px] text-[var(--color-text-secondary)]">{weekOffset === 0 ? "Last 7 days" : formatWeekLabel(startDate, endDate)}</p>
+          </div>
+          <TrackerWeekSwitcher
+            weekOffset={weekOffset}
+            maxWeekOffset={maxWeekOffset}
+            onOlder={() => setWeekOffset((current) => Math.min(maxWeekOffset, current + 1))}
+            onNewer={() => setWeekOffset((current) => Math.max(0, current - 1))}
+          />
+        </div>
+
+        <div className="mt-2.5 rounded-[22px] border border-[var(--color-border)] bg-[var(--color-surface-strong)] px-4 py-3 shadow-[var(--shadow-soft)]">
+          <div className="flex min-h-[74px] items-center justify-between gap-4">
+            <div className="min-w-0 flex-1">
+              <p className="text-[0.8rem] font-medium uppercase leading-[1.15] tracking-[0.1em] text-[var(--color-text-soft)]">
+                Weekly
+                <br />
+                Pattern
+              </p>
+            </div>
+            <div className="flex-shrink-0">
+              <WeeklyPatternDots filledWeek={filledWeek} />
+            </div>
+          </div>
+        </div>
+      </div>
+
       <Card>
         <CardHeader>
           <SectionHeading
@@ -1205,31 +1318,43 @@ export function Poop() {
         </CardContent>
       </Card>
 
-      <DiscoveryLinks
-        eyebrow="Related"
-        title="Keep the picture connected"
-        description="Use the adjacent pages when you need more context than the poop page alone."
-        compact
-        items={[
-          {
-            to: "/dashboard",
-            title: "Trend",
-            description: "Compare longer poop patterns and color shifts.",
-            tone: "info",
-          },
-          {
-            to: "/history",
-            title: "History",
-            description: "See the full timeline around this week.",
-          },
-          {
-            to: "/guidance",
-            title: "Guidance",
-            description: "Check what colors and patterns may mean.",
-            tone: "healthy",
-          },
-        ]}
-      />
+      <div className="px-1">
+        <div>
+          <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--color-text-soft)]">Related</p>
+          <div className="mt-2.5 grid grid-cols-3 gap-2">
+            <Link
+              to="/dashboard"
+              className="flex min-h-[86px] flex-col items-start justify-between rounded-[14px] px-2.5 py-2.5 text-left text-white shadow-[var(--shadow-medium)] transition-transform hover:-translate-y-0.5"
+              style={{ background: "var(--color-home-tool-growth)" }}
+            >
+              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white/18">
+                <HomeToolGrowthIcon className="h-4 w-4" />
+              </span>
+              <span className="text-[0.72rem] font-semibold leading-tight">Trend</span>
+            </Link>
+            <Link
+              to="/history"
+              className="flex min-h-[86px] flex-col items-start justify-between rounded-[14px] px-2.5 py-2.5 text-left text-white shadow-[var(--shadow-medium)] transition-transform hover:-translate-y-0.5"
+              style={{ background: "var(--color-home-tool-history)" }}
+            >
+              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white/18">
+                <HomeToolHistoryIcon className="h-4 w-4" />
+              </span>
+              <span className="text-[0.72rem] font-semibold leading-tight">History</span>
+            </Link>
+            <Link
+              to="/guidance"
+              className="flex min-h-[86px] flex-col items-start justify-between rounded-[14px] px-2.5 py-2.5 text-left text-white shadow-[var(--shadow-medium)] transition-transform hover:-translate-y-0.5"
+              style={{ background: "var(--color-home-tool-milestone)" }}
+            >
+              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white/18">
+                <HomeToolMilestonesIcon className="h-4 w-4" />
+              </span>
+              <span className="text-[0.72rem] font-semibold leading-tight">Guidance</span>
+            </Link>
+          </div>
+        </div>
+      </div>
 
       {logs.length === 0 ? (
         <EmptyState
