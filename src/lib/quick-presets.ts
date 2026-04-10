@@ -179,24 +179,14 @@ export function describePoopPresetDraft(draft: Partial<PoopLogDraft>): {
 } {
   const stoolType = draft.stool_type ?? 4;
   const typeLabel = BITSS_TYPES.find((item) => item.type === stoolType)?.label ?? `Type ${stoolType}`;
+  const shortTypeLabel = typeLabel.split(" ")[0] ?? typeLabel;
   const colorLabel = draft.color
     ? STOOL_COLORS.find((item) => item.value === draft.color)?.label ?? draft.color
     : null;
   const sizeLabel = draft.size ?? null;
 
-  let label = `Type ${stoolType}`;
-  if (draft.color === "yellow" && stoolType === 5) {
-    label = "Mustard";
-  } else if (stoolType <= 2) {
-    label = "Hard";
-  } else if (stoolType >= 6) {
-    label = "Loose";
-  } else if (draft.size === "large") {
-    label = "Large";
-  }
-
   return {
-    label,
+    label: shortTypeLabel,
     description: [typeLabel, colorLabel, sizeLabel].filter(Boolean).join(", "),
   };
 }
@@ -243,7 +233,7 @@ export function hydratePoopPresets(entries: QuickPresetEntry[]): QuickPoopPreset
       const preview = describePoopPresetDraft(draft);
       return {
         id: entry.id,
-        label: entry.label || preview.label,
+        label: preview.label,
         description: entry.description ?? preview.description,
         draft,
       };

@@ -45,6 +45,13 @@ import {
   HomeToolHistoryIcon,
   HomeToolMilestonesIcon,
 } from "../components/ui/icons";
+import poop1Icon from "../assets/svg-assets/icons/poop-1.svg";
+import poop2Icon from "../assets/svg-assets/icons/poop-2.svg";
+import poop3Icon from "../assets/svg-assets/icons/poop-3.svg";
+import poop4Icon from "../assets/svg-assets/icons/poop-4.svg";
+import poop5Icon from "../assets/svg-assets/icons/poop-5.svg";
+import poop6Icon from "../assets/svg-assets/icons/poop-6.svg";
+import poop7Icon from "../assets/svg-assets/icons/poop-7.svg";
 import type { Alert, FeedingEntry, HealthStatus, PoopEntry, PoopLogDraft, SymptomEntry } from "../lib/types";
 
 type PredictionConfidence = "low" | "medium" | "high";
@@ -129,17 +136,15 @@ function getPoopColorHex(color: PoopEntry["color"] | Partial<PoopLogDraft>["colo
   return STOOL_COLORS.find((item) => item.value === color)?.hex ?? "#b58754";
 }
 
-function getPoopPresetIconPath(stoolType: number | null): string {
-  if (stoolType !== null && stoolType <= 2) {
-    return "M12 5.5c3 0 5 1.92 5 4.28 0 1.43-.86 2.4-1.9 3.02 1.6.5 2.65 1.75 2.65 3.42 0 2.47-2.3 4.28-5.75 4.28S6.25 18.7 6.25 16.22c0-1.67 1.05-2.92 2.65-3.42-1.04-.62-1.9-1.6-1.9-3.02C7 7.42 9 5.5 12 5.5Z";
-  }
-
-  if (stoolType !== null && stoolType >= 6) {
-    return "M8 7.25c1.38 0 2.08 1.06 2.2 1.98.48-.73 1.31-1.48 2.8-1.48 1.88 0 3.25 1.35 3.25 3.12 0 .49-.11.93-.27 1.3 1.18.23 2.02 1.2 2.02 2.48 0 1.58-1.26 2.85-2.88 2.85-.36 0-.68-.06-.98-.16-.36 1.1-1.42 1.91-2.64 1.91-1.16 0-2.18-.73-2.58-1.74-.38.19-.81.29-1.27.29-1.62 0-2.9-1.28-2.9-2.86 0-1.32.91-2.34 2.11-2.53A2.96 2.96 0 0 1 4.75 9.9c0-1.47 1.27-2.65 2.84-2.65.18 0 .28 0 .41.02Z";
-  }
-
-  return "M12 4.75c1.43 0 2.62.95 2.98 2.24.12.43.38.8.74 1.06A4.3 4.3 0 0 1 17.5 11.5c0 .84-.25 1.6-.69 2.25 1.08.56 1.82 1.56 1.82 2.87 0 2.02-1.85 3.63-4.16 3.63H9.53c-2.31 0-4.16-1.6-4.16-3.63 0-1.31.74-2.31 1.82-2.87A3.9 3.9 0 0 1 6.5 11.5a4.3 4.3 0 0 1 1.78-3.45c.36-.26.62-.63.74-1.06A3.08 3.08 0 0 1 12 4.75Z";
-}
+const POOP_PRESET_ICONS: Record<number, string> = {
+  1: poop1Icon,
+  2: poop2Icon,
+  3: poop3Icon,
+  4: poop4Icon,
+  5: poop5Icon,
+  6: poop6Icon,
+  7: poop7Icon,
+};
 
 function PoopPresetIcon({
   draft,
@@ -150,32 +155,26 @@ function PoopPresetIcon({
 }) {
   const fill = getPoopColorHex(draft.color ?? null);
   const shadow = draft.color === "green" ? "rgba(113, 144, 69, 0.35)" : "rgba(181, 135, 84, 0.28)";
-  const iconId = `${draft.stool_type ?? "default"}-${draft.color ?? "none"}`;
-  const filterId = `poop-shadow-${iconId}`;
-  const gradientId = `poop-highlight-${iconId}`;
+  const iconSrc = POOP_PRESET_ICONS[draft.stool_type ?? 4] ?? poop4Icon;
 
   return (
-    <svg viewBox="0 0 24 24" className={className} aria-hidden="true">
-      <defs>
-        <filter id={filterId}>
-          <feDropShadow dx="0" dy="1.5" stdDeviation="1.5" floodColor={shadow} floodOpacity="1" />
-        </filter>
-        <linearGradient id={gradientId} x1="7" y1="5" x2="17" y2="19" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#fff7d8" />
-          <stop offset="1" stopColor="#ffffff" stopOpacity="0" />
-        </linearGradient>
-      </defs>
-      <path
-        d={getPoopPresetIconPath(draft.stool_type ?? 4)}
-        fill={fill}
-        filter={`url(#${filterId})`}
-      />
-      <path
-        d={getPoopPresetIconPath(draft.stool_type ?? 4)}
-        fill={`url(#${gradientId})`}
-        opacity="0.35"
-      />
-    </svg>
+    <span
+      aria-hidden="true"
+      className={className}
+      style={{
+        display: "inline-block",
+        backgroundColor: fill,
+        filter: `drop-shadow(0 2px 4px ${shadow})`,
+        WebkitMaskImage: `url(${iconSrc})`,
+        WebkitMaskRepeat: "no-repeat",
+        WebkitMaskPosition: "center",
+        WebkitMaskSize: "contain",
+        maskImage: `url(${iconSrc})`,
+        maskRepeat: "no-repeat",
+        maskPosition: "center",
+        maskSize: "contain",
+      }}
+    />
   );
 }
 
@@ -1110,313 +1109,313 @@ export function Poop() {
       <div className="space-y-4 px-4 py-5 md:px-6 lg:px-8">
         <Card className="-mt-32 relative z-10 border-transparent bg-transparent shadow-none backdrop-blur-0">
           <CardContent className="p-4 pt-4">
-          <div className="grid grid-cols-3 gap-3">
-            <div className="flex flex-col items-center gap-2 text-center">
-              <TimeSinceIndicator
-                timestamp={lastRealPoop?.logged_at ?? null}
-                status={status === "alert" ? "alert" : status === "caution" ? "caution" : "healthy"}
+            <div className="grid grid-cols-3 gap-3">
+              <div className="flex flex-col items-center gap-2 text-center">
+                <TimeSinceIndicator
+                  timestamp={lastRealPoop?.logged_at ?? null}
+                  status={status === "alert" ? "alert" : status === "caution" ? "caution" : "healthy"}
+                />
+                <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-[var(--color-text-soft)]">Last poop</p>
+              </div>
+              <TrackerMetricRing
+                value={predictionRing.value}
+                unit={predictionRing.unit}
+                label="Next predicted"
+                gradient={predictionRing.gradient}
               />
-              <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-[var(--color-text-soft)]">Last poop</p>
+              <TrackerMetricRing
+                value={alertRing.value}
+                unit={alertRing.unit}
+                label="Alerts"
+                gradient={alertRing.gradient}
+              />
             </div>
-            <TrackerMetricRing
-              value={predictionRing.value}
-              unit={predictionRing.unit}
-              label="Next predicted"
-              gradient={predictionRing.gradient}
-            />
-            <TrackerMetricRing
-              value={alertRing.value}
-              unit={alertRing.unit}
-              label="Alerts"
-              gradient={alertRing.gradient}
-            />
-          </div>
           </CardContent>
         </Card>
 
-      <AlertBanner alerts={alerts} onDismiss={dismiss} />
+        <AlertBanner alerts={alerts} onDismiss={dismiss} />
 
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--color-text-soft)]">Quick log</p>
-              {repeatablePoop && (
-                <p className="mt-1 text-[12px] text-[var(--color-text-soft)]">Last safe pattern ready to repeat.</p>
-              )}
-            </div>
-            <div className="flex items-center gap-2">
-              {repeatablePoop && (
-                <button
-                  type="button"
-                  onClick={() => { void handleRepeatLastPoop(); }}
-                  className="rounded-full border border-[var(--color-primary)]/20 bg-[var(--color-primary)]/10 px-3 py-1.5 text-[11px] font-semibold text-[var(--color-primary)] transition-colors hover:bg-[var(--color-primary)]/15"
-                >
-                  Repeat
-                </button>
-              )}
-              <button
-                type="button"
-                onClick={() => setPoopPresetSheetOpen(true)}
-                className="rounded-full border border-[var(--color-border)] bg-[var(--color-surface-strong)] px-3 py-1.5 text-[11px] font-semibold text-[var(--color-text-secondary)] transition-colors hover:bg-white/70"
-              >
-                Edit
-              </button>
-            </div>
-          </div>
-
-          <div className="mt-3 overflow-x-auto pb-1">
-            <div className="flex w-max gap-3 pr-2">
-              {quickPoopPresets.map((preset) => (
-                <button
-                  key={preset.id}
-                  type="button"
-                  onClick={() => { void handleQuickPoopPreset(preset); }}
-                  className="flex min-h-[118px] min-w-[92px] flex-col items-center justify-between rounded-[18px] border border-[var(--color-border)] bg-[var(--color-surface-strong)] px-3 py-3 text-center transition-colors hover:bg-white/70"
-                >
-                  <PoopPresetIcon draft={preset.draft} className="h-12 w-12" />
-                  <p className="text-[0.82rem] font-medium leading-none text-[var(--color-text)]">{preset.label}</p>
-                </button>
-              ))}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardContent className="p-3.5">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--color-text-soft)]">Current poop status</p>
-              <p className="mt-1.5 text-[1.4rem] font-semibold tracking-[-0.035em] text-[var(--color-text)]">
-                {status === "healthy" ? "Looks in the usual range" : status === "caution" ? "Pattern needs watching" : "Pattern needs attention"}
-              </p>
-              <p className="mt-1.5 max-w-[42ch] text-[13px] leading-relaxed text-[var(--color-text-secondary)]">{normalDescription}</p>
-            </div>
-            <span className={`rounded-full px-3 py-1.5 text-[12px] font-semibold ${statusBadge.className}`}>
-              {statusBadge.label}
-            </span>
-          </div>
-
-          <div className="mt-3 grid grid-cols-2 gap-2.5">
-            <TrackerMetricPanel
-              eyebrow="Age baseline"
-              value={formatBaselineRange(baseline)}
-              description={baseline.label}
-              tone={baselineComparison.tone}
-            />
-            <TrackerMetricPanel
-              eyebrow="Due risk"
-              value={dueRisk.label}
-              description={dueRisk.description}
-              tone={dueRisk.tone}
-            />
-            <InsetPanel className="col-span-2 border-[var(--color-info)]/18 bg-[var(--color-info-bg)] p-3">
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--color-text-soft)]">Next likely poop</p>
-                  <p className="mt-2 text-xl font-semibold tracking-[-0.02em] text-[var(--color-text)]">
-                    {getPredictionHeadline(prediction)}
-                  </p>
-                  <p className="mt-1 text-xs leading-relaxed text-[var(--color-text-secondary)]">
-                    {prediction ? getPredictionDescription(prediction) : "Needs at least two real poop logs to estimate a rhythm."}
-                  </p>
-                </div>
-                {prediction && (
-                  <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-semibold text-[var(--color-chip-text-on-light)]">
-                    {prediction.confidence}
-                  </span>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--color-text-soft)]">Quick log</p>
+                {repeatablePoop && (
+                  <p className="mt-1 text-[12px] text-[var(--color-text-soft)]">Last safe pattern ready to repeat.</p>
                 )}
               </div>
-              {prediction && (
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-chip-text-on-light)]">
-                    Typical gap: {prediction.intervalLabel}
-                  </span>
-                  <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-chip-text-on-light)]">
-                    {formatPredictionRelative(prediction)}
-                  </span>
-                  <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-chip-text-on-light)]">
-                    Source: {prediction.source === "history" ? "recent rhythm" : "age baseline"}
-                  </span>
-                  <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-chip-text-on-light)]">
-                    Window: {formatPredictionRange(prediction)}
-                  </span>
-                  {prediction.adjustments.slice(0, 2).map((adjustment) => (
-                    <span
-                      key={adjustment.label}
-                      className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-chip-text-on-light)]"
-                    >
-                      {adjustment.direction === "earlier" ? "Earlier" : "Later"}: {adjustment.label}
-                    </span>
-                  ))}
-                </div>
-              )}
-            </InsetPanel>
-            <InsetPanel className="col-span-2 p-3">
-              <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--color-text-soft)]">What this means</p>
-              <p className="mt-2 text-[13px] leading-relaxed text-[var(--color-text-secondary)]">{patternNarrative}</p>
-            </InsetPanel>
-          </div>
-        </CardContent>
-      </Card>
-
-      <div className="px-1">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--color-text-soft)]">Weekly overview</p>
-            <p className="mt-1 text-[12px] text-[var(--color-text-secondary)]">{weekOffset === 0 ? "Last 7 days" : formatWeekLabel(startDate, endDate)}</p>
-          </div>
-          <TrackerWeekSwitcher
-            weekOffset={weekOffset}
-            maxWeekOffset={maxWeekOffset}
-            onOlder={() => setWeekOffset((current) => Math.min(maxWeekOffset, current + 1))}
-            onNewer={() => setWeekOffset((current) => Math.max(0, current - 1))}
-          />
-        </div>
-
-        <div className="mt-2.5 rounded-[22px] border border-[var(--color-border)] bg-[var(--color-surface-strong)] px-4 py-3 shadow-[var(--shadow-soft)]">
-          <div className="flex min-h-[74px] items-center justify-between gap-4">
-            <div className="min-w-0 flex-1">
-              <p className="text-[0.8rem] font-medium uppercase leading-[1.15] tracking-[0.1em] text-[var(--color-text-soft)]">
-                Weekly
-                <br />
-                Pattern
-              </p>
-            </div>
-            <div className="flex-shrink-0">
-              <WeeklyPatternDots filledWeek={filledWeek} />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <SectionHeading
-            title="Weekly pattern"
-            description="The same seven-day pattern view, but with week-by-week browsing so older rhythms are easier to compare."
-            action={(
-              <TrackerWeekSwitcher
-                weekOffset={weekOffset}
-                maxWeekOffset={maxWeekOffset}
-                onOlder={() => setWeekOffset((current) => Math.min(maxWeekOffset, current + 1))}
-                onNewer={() => setWeekOffset((current) => Math.max(0, current - 1))}
-              />
-            )}
-          />
-        </CardHeader>
-        <CardContent>
-          <TrackerWeekBarChart
-            data={filledWeek.map((day) => ({ ...day, value: day.count }))}
-            title={weekOffset === 0 ? "Last 7 days" : formatWeekLabel(startDate, endDate)}
-            summary={weekSummaryBits.join(" • ")}
-            markerDates={noPoopDates}
-            markerLegend={`Grey dots mark ${noPoopDates.size} no-poop day${noPoopDates.size === 1 ? "" : "s"} in this week.`}
-            valueLabel={(value) => `${value} poop${value === 1 ? "" : "s"}`}
-          />
-        </CardContent>
-      </Card>
-
-      <div className="px-1">
-        <div>
-          <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--color-text-soft)]">Related</p>
-          <div className="mt-2.5 grid grid-cols-3 gap-2">
-            <Link
-              to="/dashboard"
-              className="flex min-h-[86px] flex-col items-start justify-between rounded-[14px] px-2.5 py-2.5 text-left text-white shadow-[var(--shadow-medium)] transition-transform hover:-translate-y-0.5"
-              style={{ background: "var(--color-home-tool-growth)" }}
-            >
-              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white/18">
-                <HomeToolGrowthIcon className="h-4 w-4" />
-              </span>
-              <span className="text-[0.72rem] font-semibold leading-tight">Trend</span>
-            </Link>
-            <Link
-              to="/history"
-              className="flex min-h-[86px] flex-col items-start justify-between rounded-[14px] px-2.5 py-2.5 text-left text-white shadow-[var(--shadow-medium)] transition-transform hover:-translate-y-0.5"
-              style={{ background: "var(--color-home-tool-history)" }}
-            >
-              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white/18">
-                <HomeToolHistoryIcon className="h-4 w-4" />
-              </span>
-              <span className="text-[0.72rem] font-semibold leading-tight">History</span>
-            </Link>
-            <Link
-              to="/guidance"
-              className="flex min-h-[86px] flex-col items-start justify-between rounded-[14px] px-2.5 py-2.5 text-left text-white shadow-[var(--shadow-medium)] transition-transform hover:-translate-y-0.5"
-              style={{ background: "var(--color-home-tool-milestone)" }}
-            >
-              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white/18">
-                <HomeToolMilestonesIcon className="h-4 w-4" />
-              </span>
-              <span className="text-[0.72rem] font-semibold leading-tight">Guidance</span>
-            </Link>
-          </div>
-        </div>
-      </div>
-
-      {logs.length === 0 ? (
-        <EmptyState
-          icon={(
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="var(--color-primary)" className="h-8 w-8">
-              <path d="M12 3.75c.87 0 1.601.61 1.789 1.423.152.656.514 1.243 1.029 1.671A4.86 4.86 0 0 1 18 10.5c0 3.314-2.686 6-6 6s-6-2.686-6-6a4.86 4.86 0 0 1 3.182-4.556 3.01 3.01 0 0 0 1.029-1.671A1.835 1.835 0 0 1 12 3.75Z" />
-            </svg>
-          )}
-          title="Start the poop page with the first log"
-          description="Once the first few entries are in, this page starts surfacing timing, weekly rhythm, and when to pay attention."
-          action={<Button variant="primary" onClick={() => setLogFormOpen(true)}>Add first poop log</Button>}
-        />
-      ) : (
-        <Card>
-          <CardHeader>
-            <div>
-              <div className="flex items-center gap-3">
-                <h3 className="font-[var(--font-display)] text-2xl font-semibold tracking-[-0.02em] text-[var(--color-text)]">
-                  Week entries
-                </h3>
-                <TrackerWeekRangePill label={formatWeekLabel(startDate, endDate)} animateKey={weekOffset} />
+              <div className="flex items-center gap-2">
+                {repeatablePoop && (
+                  <button
+                    type="button"
+                    onClick={() => { void handleRepeatLastPoop(); }}
+                    className="rounded-full border border-[var(--color-primary)]/20 bg-[var(--color-primary)]/10 px-3 py-1.5 text-[11px] font-semibold text-[var(--color-primary)] transition-colors hover:bg-[var(--color-primary)]/15"
+                  >
+                    Repeat
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setPoopPresetSheetOpen(true)}
+                  className="rounded-full border border-[var(--color-border)] bg-[var(--color-surface-strong)] px-3 py-1.5 text-[11px] font-semibold text-[var(--color-text-secondary)] transition-colors hover:bg-white/70"
+                >
+                  Edit
+                </button>
               </div>
-              <p className="mt-2 max-w-[40ch] text-sm leading-relaxed text-[var(--color-text-secondary)]">
-                Every poop log for the selected week, with quick editing when details need correcting.
-              </p>
             </div>
-          </CardHeader>
-          <CardContent>
-            <PoopLogList logs={weekLogs} onEdit={setEditingPoop} />
+
+            <div className="mt-2 overflow-x-auto pb-1">
+              <div className="flex w-max gap-3 pr-2">
+                {quickPoopPresets.map((preset) => (
+                  <button
+                    key={preset.id}
+                    type="button"
+                    onClick={() => { void handleQuickPoopPreset(preset); }}
+                    className="flex min-h-[50px] min-w-[50px] flex-col items-center justify-center gap-0.25 rounded-[12px] border border-[var(--color-border)] bg-[var(--color-surface-strong)] px-2.5 py-0.5 text-center transition-colors hover:bg-white/70"
+                  >
+                    <PoopPresetIcon draft={preset.draft} className="h-10 w-10" />
+                    <p className="pb-2 text-[0.72rem] font-medium leading-none text-[var(--color-text)]">{preset.label}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
           </CardContent>
         </Card>
-      )}
 
-      <LogForm
-        open={logFormOpen}
-        onClose={() => {
-          setLogFormOpen(false);
-          setPoopDraft(null);
-        }}
-        childId={activeChild.id}
-        onLogged={handleRefresh}
-        initialDraft={poopDraft}
-      />
+        <Card>
+          <CardContent className="p-3.5">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--color-text-soft)]">Current poop status</p>
+                <p className="mt-1.5 text-[1.4rem] font-semibold tracking-[-0.035em] text-[var(--color-text)]">
+                  {status === "healthy" ? "Looks in the usual range" : status === "caution" ? "Pattern needs watching" : "Pattern needs attention"}
+                </p>
+                <p className="mt-1.5 max-w-[42ch] text-[13px] leading-relaxed text-[var(--color-text-secondary)]">{normalDescription}</p>
+              </div>
+              <span className={`rounded-full px-3 py-1.5 text-[12px] font-semibold ${statusBadge.className}`}>
+                {statusBadge.label}
+              </span>
+            </div>
 
-      {editingPoop && (
-        <EditPoopSheet
-          key={editingPoop.id}
-          entry={editingPoop}
-          open={!!editingPoop}
-          onClose={() => setEditingPoop(null)}
-          onSaved={() => { void handleRefresh(); }}
-          onDeleted={() => { void handleRefresh(); }}
+            <div className="mt-3 grid grid-cols-2 gap-2.5">
+              <TrackerMetricPanel
+                eyebrow="Age baseline"
+                value={formatBaselineRange(baseline)}
+                description={baseline.label}
+                tone={baselineComparison.tone}
+              />
+              <TrackerMetricPanel
+                eyebrow="Due risk"
+                value={dueRisk.label}
+                description={dueRisk.description}
+                tone={dueRisk.tone}
+              />
+              <InsetPanel className="col-span-2 border-[var(--color-info)]/18 bg-[var(--color-info-bg)] p-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--color-text-soft)]">Next likely poop</p>
+                    <p className="mt-2 text-xl font-semibold tracking-[-0.02em] text-[var(--color-text)]">
+                      {getPredictionHeadline(prediction)}
+                    </p>
+                    <p className="mt-1 text-xs leading-relaxed text-[var(--color-text-secondary)]">
+                      {prediction ? getPredictionDescription(prediction) : "Needs at least two real poop logs to estimate a rhythm."}
+                    </p>
+                  </div>
+                  {prediction && (
+                    <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-semibold text-[var(--color-chip-text-on-light)]">
+                      {prediction.confidence}
+                    </span>
+                  )}
+                </div>
+                {prediction && (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-chip-text-on-light)]">
+                      Typical gap: {prediction.intervalLabel}
+                    </span>
+                    <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-chip-text-on-light)]">
+                      {formatPredictionRelative(prediction)}
+                    </span>
+                    <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-chip-text-on-light)]">
+                      Source: {prediction.source === "history" ? "recent rhythm" : "age baseline"}
+                    </span>
+                    <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-chip-text-on-light)]">
+                      Window: {formatPredictionRange(prediction)}
+                    </span>
+                    {prediction.adjustments.slice(0, 2).map((adjustment) => (
+                      <span
+                        key={adjustment.label}
+                        className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-chip-text-on-light)]"
+                      >
+                        {adjustment.direction === "earlier" ? "Earlier" : "Later"}: {adjustment.label}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </InsetPanel>
+              <InsetPanel className="col-span-2 p-3">
+                <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--color-text-soft)]">What this means</p>
+                <p className="mt-2 text-[13px] leading-relaxed text-[var(--color-text-secondary)]">{patternNarrative}</p>
+              </InsetPanel>
+            </div>
+          </CardContent>
+        </Card>
+
+        <div className="px-1">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--color-text-soft)]">Weekly overview</p>
+              <p className="mt-1 text-[12px] text-[var(--color-text-secondary)]">{weekOffset === 0 ? "Last 7 days" : formatWeekLabel(startDate, endDate)}</p>
+            </div>
+            <TrackerWeekSwitcher
+              weekOffset={weekOffset}
+              maxWeekOffset={maxWeekOffset}
+              onOlder={() => setWeekOffset((current) => Math.min(maxWeekOffset, current + 1))}
+              onNewer={() => setWeekOffset((current) => Math.max(0, current - 1))}
+            />
+          </div>
+
+          <div className="mt-2.5 rounded-[22px] border border-[var(--color-border)] bg-[var(--color-surface-strong)] px-4 py-3 shadow-[var(--shadow-soft)]">
+            <div className="flex min-h-[74px] items-center justify-between gap-4">
+              <div className="min-w-0 flex-1">
+                <p className="text-[0.8rem] font-medium uppercase leading-[1.15] tracking-[0.1em] text-[var(--color-text-soft)]">
+                  Weekly
+                  <br />
+                  Pattern
+                </p>
+              </div>
+              <div className="flex-shrink-0">
+                <WeeklyPatternDots filledWeek={filledWeek} />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <Card>
+          <CardHeader>
+            <SectionHeading
+              title="Weekly pattern"
+              description="The same seven-day pattern view, but with week-by-week browsing so older rhythms are easier to compare."
+              action={(
+                <TrackerWeekSwitcher
+                  weekOffset={weekOffset}
+                  maxWeekOffset={maxWeekOffset}
+                  onOlder={() => setWeekOffset((current) => Math.min(maxWeekOffset, current + 1))}
+                  onNewer={() => setWeekOffset((current) => Math.max(0, current - 1))}
+                />
+              )}
+            />
+          </CardHeader>
+          <CardContent>
+            <TrackerWeekBarChart
+              data={filledWeek.map((day) => ({ ...day, value: day.count }))}
+              title={weekOffset === 0 ? "Last 7 days" : formatWeekLabel(startDate, endDate)}
+              summary={weekSummaryBits.join(" • ")}
+              markerDates={noPoopDates}
+              markerLegend={`Grey dots mark ${noPoopDates.size} no-poop day${noPoopDates.size === 1 ? "" : "s"} in this week.`}
+              valueLabel={(value) => `${value} poop${value === 1 ? "" : "s"}`}
+            />
+          </CardContent>
+        </Card>
+
+        <div className="px-1">
+          <div>
+            <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--color-text-soft)]">Related</p>
+            <div className="mt-2.5 grid grid-cols-3 gap-2">
+              <Link
+                to="/dashboard"
+                className="flex min-h-[86px] flex-col items-start justify-between rounded-[14px] px-2.5 py-2.5 text-left text-white shadow-[var(--shadow-medium)] transition-transform hover:-translate-y-0.5"
+                style={{ background: "var(--color-home-tool-growth)" }}
+              >
+                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white/18">
+                  <HomeToolGrowthIcon className="h-4 w-4" />
+                </span>
+                <span className="text-[0.72rem] font-semibold leading-tight">Trend</span>
+              </Link>
+              <Link
+                to="/history"
+                className="flex min-h-[86px] flex-col items-start justify-between rounded-[14px] px-2.5 py-2.5 text-left text-white shadow-[var(--shadow-medium)] transition-transform hover:-translate-y-0.5"
+                style={{ background: "var(--color-home-tool-history)" }}
+              >
+                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white/18">
+                  <HomeToolHistoryIcon className="h-4 w-4" />
+                </span>
+                <span className="text-[0.72rem] font-semibold leading-tight">History</span>
+              </Link>
+              <Link
+                to="/guidance"
+                className="flex min-h-[86px] flex-col items-start justify-between rounded-[14px] px-2.5 py-2.5 text-left text-white shadow-[var(--shadow-medium)] transition-transform hover:-translate-y-0.5"
+                style={{ background: "var(--color-home-tool-milestone)" }}
+              >
+                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white/18">
+                  <HomeToolMilestonesIcon className="h-4 w-4" />
+                </span>
+                <span className="text-[0.72rem] font-semibold leading-tight">Guidance</span>
+              </Link>
+            </div>
+          </div>
+        </div>
+
+        {logs.length === 0 ? (
+          <EmptyState
+            icon={(
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="var(--color-primary)" className="h-8 w-8">
+                <path d="M12 3.75c.87 0 1.601.61 1.789 1.423.152.656.514 1.243 1.029 1.671A4.86 4.86 0 0 1 18 10.5c0 3.314-2.686 6-6 6s-6-2.686-6-6a4.86 4.86 0 0 1 3.182-4.556 3.01 3.01 0 0 0 1.029-1.671A1.835 1.835 0 0 1 12 3.75Z" />
+              </svg>
+            )}
+            title="Start the poop page with the first log"
+            description="Once the first few entries are in, this page starts surfacing timing, weekly rhythm, and when to pay attention."
+            action={<Button variant="primary" onClick={() => setLogFormOpen(true)}>Add first poop log</Button>}
+          />
+        ) : (
+          <Card>
+            <CardHeader>
+              <div>
+                <div className="flex items-center gap-3">
+                  <h3 className="font-[var(--font-display)] text-2xl font-semibold tracking-[-0.02em] text-[var(--color-text)]">
+                    Week entries
+                  </h3>
+                  <TrackerWeekRangePill label={formatWeekLabel(startDate, endDate)} animateKey={weekOffset} />
+                </div>
+                <p className="mt-2 max-w-[40ch] text-sm leading-relaxed text-[var(--color-text-secondary)]">
+                  Every poop log for the selected week, with quick editing when details need correcting.
+                </p>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <PoopLogList logs={weekLogs} onEdit={setEditingPoop} />
+            </CardContent>
+          </Card>
+        )}
+
+        <LogForm
+          open={logFormOpen}
+          onClose={() => {
+            setLogFormOpen(false);
+            setPoopDraft(null);
+          }}
+          childId={activeChild.id}
+          onLogged={handleRefresh}
+          initialDraft={poopDraft}
         />
-      )}
 
-      <PoopPresetEditorSheet
-        open={poopPresetSheetOpen}
-        onClose={() => setPoopPresetSheetOpen(false)}
-        feedingType={activeChild.feeding_type}
-        presets={quickPoopPresets}
-        onSave={(drafts) => { void savePoopPresets(drafts); }}
-      />
+        {editingPoop && (
+          <EditPoopSheet
+            key={editingPoop.id}
+            entry={editingPoop}
+            open={!!editingPoop}
+            onClose={() => setEditingPoop(null)}
+            onSaved={() => { void handleRefresh(); }}
+            onDeleted={() => { void handleRefresh(); }}
+          />
+        )}
+
+        <PoopPresetEditorSheet
+          open={poopPresetSheetOpen}
+          onClose={() => setPoopPresetSheetOpen(false)}
+          feedingType={activeChild.feeding_type}
+          presets={quickPoopPresets}
+          onSave={(drafts) => { void savePoopPresets(drafts); }}
+        />
       </div>
     </PageBody>
   );

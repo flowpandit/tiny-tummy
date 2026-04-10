@@ -2,9 +2,9 @@ import type { StoolColor, FeedingType, ChildSex } from "./types";
 
 export const BITSS_TYPES = [
   { type: 1, label: "Hard lumps", description: "Separate hard lumps, like nuts (constipation)" },
-  { type: 2, label: "Lumpy sausage", description: "Sausage-shaped but lumpy (mild constipation)" },
+  { type: 2, label: "Lumpy", description: "Sausage-shaped but lumpy (mild constipation)" },
   { type: 3, label: "Cracked sausage", description: "Like a sausage with surface cracks (normal)" },
-  { type: 4, label: "Smooth snake", description: "Smooth, soft sausage or snake (ideal)" },
+  { type: 4, label: "Smooth", description: "Smooth, soft sausage or snake (ideal)" },
   { type: 5, label: "Soft blobs", description: "Soft blobs with clear-cut edges (lacking fibre)" },
   { type: 6, label: "Mushy", description: "Fluffy, mushy pieces with ragged edges (mild diarrhoea)" },
   { type: 7, label: "Liquid", description: "Watery, entirely liquid, no solid pieces (diarrhoea)" },
