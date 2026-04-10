@@ -1,3 +1,4 @@
+import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useChildContext } from "../contexts/ChildContext";
@@ -171,6 +172,12 @@ function getHydrationRingDisplay(status: ReturnType<typeof getHydrationStatus>, 
   };
 }
 
+function getHydrationAccentColor(tone: ReturnType<typeof getHydrationStatus>["tone"]): string {
+  if (tone === "cta") return "var(--color-alert)";
+  if (tone === "info") return "var(--color-info)";
+  return "var(--color-healthy)";
+}
+
 function getDiaperSummary(log: DiaperEntry): string {
   const stoolLabel = log.stool_type ? BITSS_TYPES.find((item) => item.type === log.stool_type)?.label : null;
   const urineLabel = getUrineColorLabel(log.urine_color);
@@ -198,6 +205,7 @@ export function Diaper() {
   const [formOpen, setFormOpen] = useState(false);
   const [draft, setDraft] = useState<Partial<DiaperLogDraft> | null>(null);
   const [editingLog, setEditingLog] = useState<DiaperEntry | null>(null);
+  const [statusExpanded, setStatusExpanded] = useState(false);
 
   useEffect(() => {
     if (experience.mode === "poop") {
@@ -274,7 +282,7 @@ export function Diaper() {
 
         <div className="grid gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:gap-5">
           <div className="space-y-4">
-            <Card>
+            <Card className="relative overflow-hidden">
               <CardContent className="p-4">
                 <div>
                   <div>
@@ -321,15 +329,23 @@ export function Diaper() {
           </div>
 
           <div className="space-y-4">
-            <Card>
-              <CardContent className="p-3.5">
+            <Card className="relative overflow-hidden">
+              <span
+                aria-hidden="true"
+                className="absolute bottom-1.5 left-0 top-1.5 w-1.5 rounded-r-full"
+                style={{ backgroundColor: getHydrationAccentColor(hydrationStatus.tone) }}
+              />
+              <CardContent className="overflow-hidden py-3.5 pl-7 pr-3.5">
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--color-text-soft)]">Current diaper status</p>
-                    <p className="mt-1.5 text-[1.4rem] font-semibold tracking-[-0.035em] text-[var(--color-text)]">
+                    <p
+                      className="mt-1 text-[0.95rem] font-semibold"
+                      style={{ color: getHydrationAccentColor(hydrationStatus.tone) }}
+                    >
                       {hydrationStatus.title}
                     </p>
-                    <p className="mt-1.5 max-w-[42ch] text-[13px] leading-relaxed text-[var(--color-text-secondary)]">{hydrationStatus.description}</p>
+                    <p className="mt-1 max-w-[34ch] text-[0.92rem] leading-snug text-[var(--color-text-secondary)]">{hydrationStatus.description}</p>
                   </div>
                   <span
                     className={`rounded-full px-3 py-1.5 text-[12px] font-semibold ${hydrationStatus.tone === "cta"
@@ -342,54 +358,91 @@ export function Diaper() {
                     {hydrationStatus.tone === "cta" ? "Watch" : hydrationStatus.tone === "info" ? "Monitor" : "Stable"}
                   </span>
                 </div>
-
-                <div className="mt-3 grid grid-cols-2 gap-2.5">
-                  <TrackerMetricPanel
-                    eyebrow="Today output"
-                    value={`${todayWetCount}/${todayDirtyCount}`}
-                    description={`${todayWetCount} wet and ${todayDirtyCount} dirty so far`}
-                    tone="healthy"
-                  />
-                  <TrackerMetricPanel
-                    eyebrow="Mixed diapers"
-                    value={`${todayMixedCount}`}
-                    description="Counted in both wet and dirty totals"
-                    tone="info"
-                  />
-                  <InsetPanel className="col-span-2 border-[var(--color-info)]/18 bg-[var(--color-info-bg)] p-3">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--color-text-soft)]">Next likely wet diaper</p>
-                        <p className="mt-2 text-xl font-semibold tracking-[-0.02em] text-[var(--color-text)]">{wetPrediction.title}</p>
-                        <p className="mt-1 text-xs leading-relaxed text-[var(--color-text-secondary)]">{wetPrediction.detail}</p>
-                      </div>
-                      <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-semibold text-[var(--color-text-secondary)]">
-                        hydration
-                      </span>
-                    </div>
-                  </InsetPanel>
-                  <InsetPanel className="col-span-2 p-3">
-                    <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--color-text-soft)]">Dirty diaper rhythm</p>
-                    <p className="mt-2 text-[13px] leading-relaxed text-[var(--color-text-secondary)]">{dirtyPrediction.detail}</p>
-                    {lastDirtyDiaper && (
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-text-secondary)]">
-                          Last dirty: {timeSince(lastDirtyDiaper.logged_at)}
-                        </span>
-                        {lastDirtyDiaper.stool_type && (
-                          <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-text-secondary)]">
-                            Type {lastDirtyDiaper.stool_type}
-                          </span>
-                        )}
-                        {lastDirtyDiaper.color && (
-                          <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-text-secondary)]">
-                            {STOOL_COLORS.find((item) => item.value === lastDirtyDiaper.color)?.label ?? lastDirtyDiaper.color}
-                          </span>
-                        )}
-                      </div>
-                    )}
-                  </InsetPanel>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => setStatusExpanded((current) => !current)}
+                  className="mt-2 inline-flex items-center gap-1.5 text-[0.82rem] font-medium text-[var(--color-text-secondary)] transition-opacity hover:opacity-75"
+                  aria-expanded={statusExpanded}
+                >
+                  {statusExpanded ? "See less" : "See more"}
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                    className={`h-4 w-4 transition-transform ${statusExpanded ? "rotate-180" : ""}`}
+                    aria-hidden="true"
+                  >
+                    <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 11.137l3.71-3.907a.75.75 0 1 1 1.08 1.04l-4.25 4.474a.75.75 0 0 1-1.08 0L5.21 8.27a.75.75 0 0 1 .02-1.06Z" clipRule="evenodd" />
+                  </svg>
+                </button>
+                <AnimatePresence initial={false}>
+                  {statusExpanded && (
+                    <motion.div
+                      key="status-details"
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+                      className="overflow-hidden"
+                    >
+                      <motion.div
+                        initial={{ y: -6 }}
+                        animate={{ y: 0 }}
+                        exit={{ y: -6 }}
+                        transition={{ duration: 0.18, ease: "easeOut" }}
+                        className="pt-2 pr-0.5"
+                      >
+                        <div className="grid grid-cols-2 gap-2.5">
+                          <TrackerMetricPanel
+                            eyebrow="Today output"
+                            value={`${todayWetCount}/${todayDirtyCount}`}
+                            description={`${todayWetCount} wet and ${todayDirtyCount} dirty so far`}
+                            tone="healthy"
+                          />
+                          <TrackerMetricPanel
+                            eyebrow="Mixed diapers"
+                            value={`${todayMixedCount}`}
+                            description="Counted in both wet and dirty totals"
+                            tone="info"
+                          />
+                          <InsetPanel className="col-span-2 border-[var(--color-info)]/18 bg-[var(--color-info-bg)] p-3">
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0">
+                                <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--color-text-soft)]">Next likely wet diaper</p>
+                                <p className="mt-2 text-xl font-semibold tracking-[-0.02em] text-[var(--color-text)]">{wetPrediction.title}</p>
+                                <p className="mt-1 text-xs leading-relaxed text-[var(--color-text-secondary)]">{wetPrediction.detail}</p>
+                              </div>
+                              <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-semibold text-[var(--color-text-secondary)]">
+                                hydration
+                              </span>
+                            </div>
+                          </InsetPanel>
+                          <InsetPanel className="col-span-2 p-3">
+                            <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--color-text-soft)]">Dirty diaper rhythm</p>
+                            <p className="mt-2 text-[13px] leading-relaxed text-[var(--color-text-secondary)]">{dirtyPrediction.detail}</p>
+                            {lastDirtyDiaper && (
+                              <div className="mt-3 flex flex-wrap gap-2">
+                                <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-text-secondary)]">
+                                  Last dirty: {timeSince(lastDirtyDiaper.logged_at)}
+                                </span>
+                                {lastDirtyDiaper.stool_type && (
+                                  <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-text-secondary)]">
+                                    Type {lastDirtyDiaper.stool_type}
+                                  </span>
+                                )}
+                                {lastDirtyDiaper.color && (
+                                  <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-text-secondary)]">
+                                    {STOOL_COLORS.find((item) => item.value === lastDirtyDiaper.color)?.label ?? lastDirtyDiaper.color}
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                          </InsetPanel>
+                        </div>
+                      </motion.div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </CardContent>
             </Card>
 
@@ -402,36 +455,6 @@ export function Diaper() {
               />
             ) : (
               <div className="space-y-4">
-                {lastDiaper && (
-                  <Card>
-                    <CardContent className="p-4">
-                      <div className="rounded-[20px] border border-[var(--color-border)] bg-[var(--color-surface-strong)] p-4">
-                        <p className="text-[1.05rem] font-semibold text-[var(--color-text)]">Current status</p>
-                        <div className="mt-3 flex items-center gap-4">
-                          <div
-                            className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-full"
-                            style={{ background: lastDiaper.color ? `${STOOL_COLORS.find((item) => item.value === lastDiaper.color)?.hex ?? "#c08937"}22` : "rgba(192, 137, 55, 0.18)" }}
-                          >
-                            <span className="text-[1.6rem]">{lastDiaper.diaper_type === "wet" ? "💧" : lastDiaper.diaper_type === "mixed" ? "🍼" : "🟤"}</span>
-                          </div>
-                          <div className="min-w-0">
-                            <p className="text-[1rem] font-medium text-[var(--color-text)]">
-                              Today: {getDiaperSummary(lastDiaper)}
-                            </p>
-                            <button
-                              type="button"
-                              onClick={() => setEditingLog(lastDiaper)}
-                              className="mt-2 rounded-full border border-[var(--color-border)] bg-[var(--color-primary)]/10 px-3 py-1.5 text-[0.8rem] font-semibold text-[var(--color-primary)] transition-colors hover:bg-[var(--color-primary)]/15"
-                            >
-                              Why this matters
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
-
                 <section className="px-1">
                   <div className="flex items-center justify-between gap-3">
                     <p className="text-[1rem] font-semibold text-[var(--color-text)]">Recent history</p>
