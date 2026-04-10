@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useChildContext } from "../contexts/ChildContext";
 import { useDiaperLogs } from "../hooks/useDiaperLogs";
@@ -183,13 +183,19 @@ function getHydrationAccentColor(tone: ReturnType<typeof getHydrationStatus>["to
   return "var(--color-healthy)";
 }
 
+function getStoolShortLabel(stoolType?: number | null): string | null {
+  if (!stoolType) return null;
+  const stoolLabel = BITSS_TYPES.find((item) => item.type === stoolType)?.label;
+  return stoolLabel?.split(" ")[0] ?? null;
+}
+
 function getDiaperSummary(log: DiaperEntry): string {
-  const stoolLabel = log.stool_type ? BITSS_TYPES.find((item) => item.type === log.stool_type)?.label : null;
+  const stoolLabel = getStoolShortLabel(log.stool_type);
   const urineLabel = getUrineColorLabel(log.urine_color);
   return [
     getDiaperTypeLabel(log.diaper_type),
     urineLabel,
-    stoolLabel ? `Type ${log.stool_type}${stoolLabel ? `, ${stoolLabel}` : ""}` : null,
+    stoolLabel,
   ].filter(Boolean).join(" · ");
 }
 
@@ -197,6 +203,28 @@ function getRecentHistoryDiaperIcon(diaperType: DiaperEntry["diaper_type"]): str
   if (diaperType === "wet") return diaperWetIcon;
   if (diaperType === "mixed") return diaperMixedIcon;
   return diaperDirtyIcon;
+}
+
+function getDiaperPatternTone(diaperType: DiaperEntry["diaper_type"]) {
+  if (diaperType === "wet") {
+    return {
+      bg: "color-mix(in srgb, var(--color-info) 32%, transparent)",
+      border: "color-mix(in srgb, var(--color-info) 52%, transparent)",
+      text: "var(--color-info)",
+    };
+  }
+  if (diaperType === "mixed") {
+    return {
+      bg: "linear-gradient(135deg, color-mix(in srgb, var(--color-info) 34%, transparent) 0%, color-mix(in srgb, #c08937 34%, transparent) 100%)",
+      border: "color-mix(in srgb, #9f8dbd 48%, transparent)",
+      text: "var(--color-primary)",
+    };
+  }
+  return {
+    bg: "color-mix(in srgb, #c08937 32%, transparent)",
+    border: "color-mix(in srgb, #c08937 54%, transparent)",
+    text: "#9a6b2f",
+  };
 }
 
 export function Diaper() {
@@ -211,6 +239,8 @@ export function Diaper() {
   const [draft, setDraft] = useState<Partial<DiaperLogDraft> | null>(null);
   const [editingLog, setEditingLog] = useState<DiaperEntry | null>(null);
   const [statusExpanded, setStatusExpanded] = useState(false);
+  const [selectedPatternLogId, setSelectedPatternLogId] = useState<string | null>(null);
+  const patternSectionRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (experience.mode === "poop") {
@@ -225,6 +255,32 @@ export function Diaper() {
   const todayMixedCount = todayLogs.filter((log) => log.diaper_type === "mixed").length;
   const hydrationStatus = getHydrationStatus(logs, symptomLogs[0]?.symptom_type);
   const recentLogs = useMemo(() => logs.slice(0, 3), [logs]);
+  const patternLogs = useMemo(
+    () => [...todayLogs].sort((left, right) => new Date(left.logged_at).getTime() - new Date(right.logged_at).getTime()),
+    [todayLogs],
+  );
+  const selectedPatternLog = useMemo(
+    () => patternLogs.find((log) => log.id === selectedPatternLogId) ?? null,
+    [patternLogs, selectedPatternLogId],
+  );
+
+  useEffect(() => {
+    if (!selectedPatternLogId) return;
+
+    const handlePointerDown = (event: MouseEvent | TouchEvent) => {
+      if (!patternSectionRef.current?.contains(event.target as Node)) {
+        setSelectedPatternLogId(null);
+      }
+    };
+
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("touchstart", handlePointerDown);
+
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("touchstart", handlePointerDown);
+    };
+  }, [selectedPatternLogId]);
 
   if (!activeChild) return null;
   if (experience.mode === "poop") return null;
@@ -286,7 +342,7 @@ export function Diaper() {
         <AlertBanner alerts={alerts} onDismiss={dismiss} />
 
         <div className="grid gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:gap-5">
-          <div className="space-y-4">
+          <div className="min-w-0 space-y-4">
             <Card className="relative overflow-hidden">
               <CardContent className="p-4">
                 <div>
@@ -325,7 +381,7 @@ export function Diaper() {
                   <p className="mt-3 text-[12px] text-[var(--color-text-soft)]">
                     Last logged: {getDiaperTypeLabel(lastDiaper.diaper_type)}
                     {lastDiaper.urine_color ? ` · ${getUrineColorLabel(lastDiaper.urine_color)}` : ""}
-                    {lastDiaper.stool_type ? ` · Type ${lastDiaper.stool_type}` : ""}
+                    {getStoolShortLabel(lastDiaper.stool_type) ? ` · ${getStoolShortLabel(lastDiaper.stool_type)}` : ""}
                   </p>
                 )}
               </CardContent>
@@ -333,7 +389,7 @@ export function Diaper() {
 
           </div>
 
-          <div className="space-y-4">
+          <div className="min-w-0 space-y-4">
             <Card className="relative overflow-hidden">
               <span
                 aria-hidden="true"
@@ -431,10 +487,10 @@ export function Diaper() {
                                   Last dirty: {timeSince(lastDirtyDiaper.logged_at)}
                                 </span>
                                 {lastDirtyDiaper.stool_type && (
-                                  <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-text-secondary)]">
-                                    Type {lastDirtyDiaper.stool_type}
-                                  </span>
-                                )}
+                                <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-text-secondary)]">
+                                    {getStoolShortLabel(lastDirtyDiaper.stool_type)}
+                                </span>
+                              )}
                                 {lastDirtyDiaper.color && (
                                   <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-text-secondary)]">
                                     {STOOL_COLORS.find((item) => item.value === lastDirtyDiaper.color)?.label ?? lastDirtyDiaper.color}
@@ -460,7 +516,7 @@ export function Diaper() {
               />
             ) : (
               <div className="space-y-4">
-                <section className="px-1">
+                <section className="px-1" ref={patternSectionRef}>
                   <div className="flex items-center justify-between gap-3">
                     <p className="text-[1rem] font-semibold text-[var(--color-text)]">Recent history</p>
                     <Link
@@ -512,6 +568,114 @@ export function Diaper() {
                         </button>
                       );
                     })}
+                  </div>
+                </section>
+
+                <section className="px-1">
+                  <div className="rounded-[22px] border border-[var(--color-border)] bg-[var(--color-surface-strong)] px-4 py-3 shadow-[var(--shadow-soft)]">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-[0.92rem] font-semibold text-[var(--color-text)]">24-hour pattern</p>
+                      </div>
+                    </div>
+
+                    <div className="mt-2.5 overflow-x-auto pb-1">
+                      <div className="w-[520px] min-w-full">
+                        <div className="space-y-2">
+                          <div className="relative h-[92px] rounded-[14px] border border-[var(--color-border)] bg-[var(--color-surface)]/72 px-2.5 py-2.5">
+                            {patternLogs.length === 0 ? (
+                              <div className="flex h-full items-center justify-center rounded-[10px] border border-dashed border-[var(--color-border)] text-[0.86rem] text-[var(--color-text-soft)]">
+                                No data yet
+                              </div>
+                            ) : (
+                              <>
+                                <div className="absolute inset-x-2.5 top-2.5 grid grid-cols-24 gap-1.5">
+                                  {Array.from({ length: 24 }, (_, hour) => (
+                                    <div key={hour} className="h-[64px] rounded-[8px] bg-[var(--color-bg-elevated)]/32" />
+                                  ))}
+                                </div>
+                                <div className="absolute inset-x-2.5 top-[14px] space-y-[8px]">
+                                  {(["wet", "dirty", "mixed"] as const).map((type) => (
+                                    <div key={type} className="relative h-4.5">
+                                      {patternLogs
+                                        .filter((log) => log.diaper_type === type)
+                                        .map((log) => {
+                                          const date = new Date(log.logged_at);
+                                          const left = ((date.getHours() + date.getMinutes() / 60) / 24) * 100;
+                                          const tone = getDiaperPatternTone(type);
+                                          return (
+                                            <button
+                                              type="button"
+                                              key={log.id}
+                                              aria-label={`${getDiaperTypeLabel(log.diaper_type)} at ${date.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}`}
+                                              className="absolute top-0 h-4.5 -translate-x-1/2 rounded-[6px] border shadow-[var(--shadow-soft)]"
+                                              onClick={() => setSelectedPatternLogId((current) => current === log.id ? null : log.id)}
+                                              style={{
+                                                left: `${left}%`,
+                                                width: log.diaper_type === "mixed" ? "28px" : "22px",
+                                                background: tone.bg,
+                                                borderColor: tone.border,
+                                              }}
+                                            />
+                                          );
+                                        })}
+                                    </div>
+                                  ))}
+                                </div>
+                                {selectedPatternLog && (
+                                  <div
+                                    className="absolute top-2 z-10 -translate-x-1/2 rounded-[10px] border border-[var(--color-border)] bg-[var(--color-surface)] px-2.5 py-2 text-left shadow-[var(--shadow-soft)]"
+                                    style={{
+                                      left: `${((new Date(selectedPatternLog.logged_at).getHours() + new Date(selectedPatternLog.logged_at).getMinutes() / 60) / 24) * 100}%`,
+                                      width: "100px",
+                                      maxWidth: "100px",
+                                    }}
+                                  >
+                                    <p className="text-[0.72rem] font-semibold text-[var(--color-text)]">
+                                      {getDiaperTypeLabel(selectedPatternLog.diaper_type)}
+                                    </p>
+                                    <p className="mt-0.5 text-[0.68rem] text-[var(--color-text-secondary)]">
+                                      {new Date(selectedPatternLog.logged_at).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}
+                                    </p>
+                                    <p className="mt-1 text-[0.68rem] leading-snug text-[var(--color-text-secondary)]">
+                                      {selectedPatternLog.diaper_type === "wet"
+                                        ? getUrineColorLabel(selectedPatternLog.urine_color)
+                                        : selectedPatternLog.diaper_type === "mixed"
+                                          ? [getUrineColorLabel(selectedPatternLog.urine_color), getStoolShortLabel(selectedPatternLog.stool_type)].filter(Boolean).join(" • ")
+                                          : getStoolShortLabel(selectedPatternLog.stool_type) ?? "Logged"}
+                                    </p>
+                                  </div>
+                                )}
+                              </>
+                            )}
+                          </div>
+
+                          <div className="grid grid-cols-5 px-0.5 text-[0.7rem] font-medium uppercase tracking-[0.12em] text-[var(--color-text-soft)]">
+                            <span>12A</span>
+                            <span className="text-center">6A</span>
+                            <span className="text-center">12P</span>
+                            <span className="text-center">6P</span>
+                            <span className="text-right">11:59P</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mt-2.5 flex flex-wrap gap-2">
+                      {(["wet", "dirty", "mixed"] as const).map((type) => {
+                        const tone = getDiaperPatternTone(type);
+                        return (
+                          <span
+                            key={type}
+                            className="inline-flex items-center gap-2 rounded-full border px-2.5 py-0.75 text-[10px] font-medium"
+                            style={{ borderColor: tone.border, color: tone.text, background: tone.bg }}
+                          >
+                            <span className="h-2 w-2 rounded-full" style={{ background: tone.bg }} />
+                            {getDiaperTypeLabel(type)}
+                          </span>
+                        );
+                      })}
+                    </div>
                   </div>
                 </section>
 
