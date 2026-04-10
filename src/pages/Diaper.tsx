@@ -10,6 +10,9 @@ import { diaperIncludesStool, diaperIncludesWet, getChildAgeDays, getDiaperTypeL
 import { formatLocalDateKey, isOnLocalDay, timeSince } from "../lib/utils";
 import { STOOL_COLORS, BITSS_TYPES } from "../lib/constants";
 import { syncSmartRemindersForChild } from "../lib/notifications";
+import diaperWetIcon from "../assets/svg-assets/icons/diaper-wet.svg";
+import diaperDirtyIcon from "../assets/svg-assets/icons/diaper-dirty.svg";
+import diaperMixedIcon from "../assets/svg-assets/icons/diaper-mixed.svg";
 import { AlertBanner } from "../components/dashboard/AlertBanner";
 import { DiaperLogForm } from "../components/logging/DiaperLogForm";
 import { EditDiaperSheet } from "../components/logging/EditDiaperSheet";
@@ -38,6 +41,26 @@ interface RingDisplay {
 
 function getDayKey(date: Date = new Date()): string {
   return formatLocalDateKey(date);
+}
+
+function getRecentHistoryDayLabel(dateStr: string): string {
+  const date = new Date(dateStr);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const yesterday = new Date(today);
+  yesterday.setDate(today.getDate() - 1);
+
+  const target = new Date(date);
+  target.setHours(0, 0, 0, 0);
+
+  if (target.getTime() === today.getTime()) return "Today";
+  if (target.getTime() === yesterday.getTime()) return "Yesterday";
+
+  const diffDays = Math.round((today.getTime() - target.getTime()) / 86400000);
+  if (diffDays > 1) return `${diffDays} days ago`;
+
+  return target.toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
 
 function getRelevantLogs(logs: DiaperEntry[], type: "wet" | "dirty") {
@@ -156,6 +179,12 @@ function getDiaperSummary(log: DiaperEntry): string {
     urineLabel,
     stoolLabel ? `Type ${log.stool_type}${stoolLabel ? `, ${stoolLabel}` : ""}` : null,
   ].filter(Boolean).join(" · ");
+}
+
+function getRecentHistoryDiaperIcon(diaperType: DiaperEntry["diaper_type"]): string {
+  if (diaperType === "wet") return diaperWetIcon;
+  if (diaperType === "mixed") return diaperMixedIcon;
+  return diaperDirtyIcon;
 }
 
 export function Diaper() {
@@ -403,49 +432,57 @@ export function Diaper() {
                   </Card>
                 )}
 
-                <Card>
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between gap-3">
-                      <p className="text-[1.05rem] font-semibold text-[var(--color-text)]">Recent history</p>
-                      <Link
-                        to="/history"
-                        className="text-[0.82rem] font-semibold text-[var(--color-cta)] transition-opacity hover:opacity-80"
-                      >
-                        See all
-                      </Link>
-                    </div>
+                <section className="px-1">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-[1rem] font-semibold text-[var(--color-text)]">Recent history</p>
+                    <Link
+                      to="/history"
+                      className="rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1 text-[11px] font-semibold text-[var(--color-text-secondary)] transition-colors hover:bg-[var(--color-surface-strong)]"
+                    >
+                      See all
+                    </Link>
+                  </div>
 
-                    <div className="mt-4 space-y-0">
-                      {recentLogs.map((log, index) => {
-                        const colorHex = log.color ? STOOL_COLORS.find((item) => item.value === log.color)?.hex : undefined;
-                        const isLast = index === recentLogs.length - 1;
-                        return (
-                          <button
-                            key={log.id}
-                            type="button"
-                            onClick={() => setEditingLog(log)}
-                            className="flex w-full items-start gap-4 text-left"
-                          >
-                            <div className="flex w-10 flex-col items-center">
-                              <div
-                                className="flex h-10 w-10 items-center justify-center rounded-full"
-                                style={{ background: `${colorHex ?? (log.diaper_type === "wet" ? "#d6b74f" : "#c08937")}22` }}
-                              >
-                                <span className="text-[1.1rem]">{log.diaper_type === "wet" ? "💧" : log.diaper_type === "mixed" ? "🍼" : "🟤"}</span>
-                              </div>
-                              {!isLast && <div className="h-10 w-px bg-[var(--color-border-strong)]" />}
-                            </div>
-                            <div className="flex-1 pt-1">
-                              <p className="text-[0.98rem] text-[var(--color-text)]">
-                                {index === 0 ? "Today" : timeSince(log.logged_at)}: {getDiaperSummary(log)}
-                              </p>
-                            </div>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </CardContent>
-                </Card>
+                  <div className="mt-2.5 space-y-2">
+                    {recentLogs.map((log, index) => {
+                      const colorHex = log.color ? STOOL_COLORS.find((item) => item.value === log.color)?.hex : undefined;
+                      const tint = `${colorHex ?? (log.diaper_type === "wet" ? "#d6b74f" : log.diaper_type === "mixed" ? "#7f9cf5" : "#c08937")}22`;
+
+                      return (
+                        <button
+                          key={log.id}
+                          type="button"
+                          onClick={() => setEditingLog(log)}
+                          className="flex w-full items-center gap-2.5 text-left"
+                        >
+                          <div className="relative flex h-10 w-10 flex-shrink-0 items-center justify-center">
+                            {index < recentLogs.length - 1 && (
+                              <span
+                                className="absolute left-1/2 top-8 h-6 w-px -translate-x-1/2"
+                                style={{ backgroundColor: "var(--color-border)" }}
+                              />
+                            )}
+                            <span
+                              className="flex h-9 w-9 items-center justify-center rounded-full"
+                              style={{ backgroundColor: tint }}
+                            >
+                              <img
+                                src={getRecentHistoryDiaperIcon(log.diaper_type)}
+                                alt=""
+                                aria-hidden="true"
+                                className="h-5 w-5 object-contain"
+                              />
+                            </span>
+                          </div>
+                          <p className="text-[0.95rem] leading-none text-[var(--color-text-secondary)]">
+                            <span className="font-medium text-[var(--color-text)]">{getRecentHistoryDayLabel(log.logged_at)}:</span>{" "}
+                            {getDiaperSummary(log)}
+                          </p>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </section>
               </div>
             )}
           </div>

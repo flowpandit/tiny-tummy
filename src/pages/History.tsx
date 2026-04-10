@@ -7,18 +7,24 @@ import { getFeedingEntryDetailParts, getFeedingEntryPrimaryLabel, getFeedingEntr
 import { getMilestoneTypeLabel } from "../lib/milestone-constants";
 import { getEpisodeEventTypeLabel, getEpisodeTypeLabel } from "../lib/episode-constants";
 import { getSymptomSeverityBadgeVariant, getSymptomSeverityLabel, getSymptomTypeLabel } from "../lib/symptom-constants";
+import { getDiaperTypeLabel, getUrineColorLabel } from "../lib/diaper";
 import { formatLocalDateKey } from "../lib/utils";
 import { Badge } from "../components/ui/badge";
 import { PoopIcon, MealIcon, NoPoopIcon } from "../components/ui/icons";
 import { DatePicker } from "../components/ui/date-picker";
 import { EditPoopSheet } from "../components/logging/EditPoopSheet";
 import { EditMealSheet } from "../components/logging/EditMealSheet";
+import { EditDiaperSheet } from "../components/logging/EditDiaperSheet";
 import { EditSleepSheet } from "../components/sleep/EditSleepSheet";
 import { loadPhoto } from "../lib/photos";
 import { cn } from "../lib/cn";
 import { formatGrowthSummary as formatGrowthSummaryWithUnits } from "../lib/units";
+import diaperWetIcon from "../assets/svg-assets/icons/diaper-wet.svg";
+import diaperDirtyIcon from "../assets/svg-assets/icons/diaper-dirty.svg";
+import diaperMixedIcon from "../assets/svg-assets/icons/diaper-mixed.svg";
 import * as db from "../lib/db";
 import type {
+  DiaperEntry,
   Episode,
   EpisodeEvent,
   FeedingEntry,
@@ -135,6 +141,7 @@ function EpisodeGlyph() {
 }
 
 type TimelineEvent =
+  | { kind: "diaper"; entry: DiaperEntry }
   | { kind: "poop"; entry: PoopEntry }
   | { kind: "meal"; entry: FeedingEntry }
   | { kind: "sleep"; entry: SleepEntry }
@@ -146,6 +153,7 @@ type TimelineEvent =
 
 function getEventTimestamp(event: TimelineEvent): string {
   switch (event.kind) {
+    case "diaper":
     case "poop":
     case "meal":
     case "symptom":
@@ -162,6 +170,7 @@ function getEventTimestamp(event: TimelineEvent): string {
 }
 
 function groupByDay({
+  diaperLogs,
   poopLogs,
   feedingLogs,
   sleepLogs,
@@ -171,6 +180,7 @@ function groupByDay({
   episodes,
   episodeEvents,
 }: {
+  diaperLogs: DiaperEntry[];
   poopLogs: PoopEntry[];
   feedingLogs: FeedingEntry[];
   sleepLogs: SleepEntry[];
@@ -181,6 +191,7 @@ function groupByDay({
   episodeEvents: EpisodeEvent[];
 }): Map<string, TimelineEvent[]> {
   const all: TimelineEvent[] = [
+    ...diaperLogs.map((entry) => ({ kind: "diaper" as const, entry })),
     ...poopLogs.map((entry) => ({ kind: "poop" as const, entry })),
     ...feedingLogs.map((entry) => ({ kind: "meal" as const, entry })),
     ...sleepLogs.map((entry) => ({ kind: "sleep" as const, entry })),
@@ -274,6 +285,46 @@ function BaseItem({
       </div>
       {tail && <div className="flex-shrink-0">{tail}</div>}
     </div>
+  );
+}
+
+function getDiaperHistoryIcon(diaperType: DiaperEntry["diaper_type"]): string {
+  if (diaperType === "wet") return diaperWetIcon;
+  if (diaperType === "mixed") return diaperMixedIcon;
+  return diaperDirtyIcon;
+}
+
+function DiaperItem({ entry, onTap }: { entry: DiaperEntry; onTap: () => void }) {
+  const diaperTone = entry.diaper_type === "wet"
+    ? { bg: "color-mix(in srgb, var(--color-info) 18%, transparent)", fg: "var(--color-info)" }
+    : entry.diaper_type === "mixed"
+      ? { bg: "color-mix(in srgb, var(--color-primary) 18%, transparent)", fg: "var(--color-primary)" }
+      : { bg: "color-mix(in srgb, var(--color-cta) 18%, transparent)", fg: "var(--color-cta)" };
+
+  const stoolLabel = entry.stool_type ? BITSS_TYPES.find((item) => item.type === entry.stool_type)?.label : null;
+  const details = [
+    entry.urine_color ? getUrineColorLabel(entry.urine_color) : null,
+    entry.stool_type ? `Type ${entry.stool_type}${stoolLabel ? `, ${stoolLabel}` : ""}` : null,
+    entry.notes,
+  ].filter(Boolean).join(" • ");
+
+  return (
+    <BaseItem
+      onTap={onTap}
+      icon={(
+        <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full" style={{ backgroundColor: diaperTone.bg }}>
+          <img src={getDiaperHistoryIcon(entry.diaper_type)} alt="" aria-hidden="true" className="h-4 w-4 object-contain" />
+        </span>
+      )}
+      time={formatTime(entry.logged_at)}
+      title={getDiaperTypeLabel(entry.diaper_type)}
+      subtitle={details || null}
+      tail={(
+        <Badge className="min-h-0 px-2.5 py-[0.33rem] text-[0.74rem]" style={{ backgroundColor: diaperTone.bg, color: diaperTone.fg }}>
+          {entry.diaper_type}
+        </Badge>
+      )}
+    />
   );
 }
 
@@ -473,9 +524,11 @@ function DayCard({
   events,
   isExpanded,
   onToggle,
+  onDeleteDiaper,
   onDeletePoop,
   onDeleteMeal,
   onDeleteSleep,
+  onEditDiaper,
   onEditPoop,
   onEditMeal,
   onEditSleep,
@@ -485,18 +538,21 @@ function DayCard({
   events: TimelineEvent[];
   isExpanded: boolean;
   onToggle: () => void;
+  onDeleteDiaper: (entry: DiaperEntry) => void;
   onDeletePoop: (id: string) => void;
   onDeleteMeal: (id: string) => void;
   onDeleteSleep: (id: string) => void;
+  onEditDiaper: (entry: DiaperEntry) => void;
   onEditPoop: (entry: PoopEntry) => void;
   onEditMeal: (entry: FeedingEntry) => void;
   onEditSleep: (entry: SleepEntry) => void;
   unitSystem: "metric" | "imperial";
 }) {
+  const diaperCount = events.filter((event) => event.kind === "diaper").length;
   const poopCount = events.filter((event) => event.kind === "poop" && event.entry.is_no_poop === 0).length;
   const feedCount = events.filter((event) => event.kind === "meal").length;
   const sleepCount = events.filter((event) => event.kind === "sleep").length;
-  const otherCount = events.filter((event) => !["poop", "meal", "sleep"].includes(event.kind)).length;
+  const otherCount = events.filter((event) => !["diaper", "poop", "meal", "sleep"].includes(event.kind)).length;
   const noPoopCount = events.filter((event) => event.kind === "poop" && event.entry.is_no_poop === 1).length;
   const summaryClassName = "text-[0.92rem] font-medium";
 
@@ -520,6 +576,7 @@ function DayCard({
         <div className="flex items-start gap-2">
           <div className="max-w-[11.5rem] pt-0.5 text-right leading-tight">
             <div className="flex flex-wrap justify-end gap-x-1.5 gap-y-0.5">
+              {diaperCount > 0 && <span className={cn(summaryClassName, "text-[var(--color-info)]")}>{diaperCount} diaper{diaperCount === 1 ? "" : "s"}</span>}
               {poopCount > 0 && <span className={cn(summaryClassName, "text-[var(--color-cta)]")}>{poopCount} poop{poopCount === 1 ? "" : "s"}</span>}
               {feedCount > 0 && <span className={cn(summaryClassName, "text-[var(--color-primary)]")}>{feedCount} feed{feedCount === 1 ? "" : "s"}</span>}
               {sleepCount > 0 && <span className={cn(summaryClassName, "text-[var(--color-info)]")}>{sleepCount} sleep{sleepCount === 1 ? "" : "s"}</span>}
@@ -552,6 +609,14 @@ function DayCard({
             <div className="bg-[var(--color-surface)] px-3 pb-2">
               {events.map((event) => {
                 switch (event.kind) {
+                  case "diaper":
+                    return (
+                      <div key={`diaper-wrap-${event.entry.id}`} className="border-t border-[var(--color-border)]/45 first:border-t-0">
+                        <SwipeableItem key={`diaper-${event.entry.id}`} onDelete={() => onDeleteDiaper(event.entry)}>
+                          <DiaperItem entry={event.entry} onTap={() => onEditDiaper(event.entry)} />
+                        </SwipeableItem>
+                      </div>
+                    );
                   case "poop":
                     return (
                       <div key={`poop-wrap-${event.entry.id}`} className="border-t border-[var(--color-border)]/45 first:border-t-0">
@@ -598,11 +663,13 @@ function DayCard({
 
 export function History() {
   const RANGE_OPTIONS = [
-    { label: "Last 7 days", value: 7 },
-    { label: "Last 14 days", value: 14 },
+    { label: "7 days", value: 7 },
+    { label: "14 days", value: 14 },
+    { label: "30 days", value: 30 },
   ] as const;
   const { activeChild } = useChildContext();
   const { unitSystem } = useUnits();
+  const [diaperLogs, setDiaperLogs] = useState<DiaperEntry[]>([]);
   const [poopLogs, setPoopLogs] = useState<PoopEntry[]>([]);
   const [feedingLogs, setFeedingLogs] = useState<FeedingEntry[]>([]);
   const [sleepLogs, setSleepLogs] = useState<SleepEntry[]>([]);
@@ -615,7 +682,8 @@ export function History() {
   const requestIdRef = useRef(0);
   const [expandedDay, setExpandedDay] = useState<string | null>(null);
   const [searchDate, setSearchDate] = useState<string | null>(null);
-  const [quickRangeDays, setQuickRangeDays] = useState<7 | 14>(7);
+  const [quickRangeDays, setQuickRangeDays] = useState<7 | 14 | 30>(7);
+  const [editingDiaper, setEditingDiaper] = useState<DiaperEntry | null>(null);
   const [editingPoop, setEditingPoop] = useState<PoopEntry | null>(null);
   const [editingMeal, setEditingMeal] = useState<FeedingEntry | null>(null);
   const [editingSleep, setEditingSleep] = useState<SleepEntry | null>(null);
@@ -625,6 +693,7 @@ export function History() {
     const requestId = ++requestIdRef.current;
 
     if (!activeChild) {
+      setDiaperLogs([]);
       setPoopLogs([]);
       setFeedingLogs([]);
       setSleepLogs([]);
@@ -644,6 +713,7 @@ export function History() {
 
     try {
       const [
+        nextDiapers,
         nextPoops,
         nextMeals,
         nextSleep,
@@ -653,6 +723,7 @@ export function History() {
         nextEpisodes,
         nextEpisodeEvents,
       ] = await Promise.all([
+        db.getDiaperLogsForRange(activeChild.id, rangeStart, rangeEnd),
         db.getPoopLogsForRange(activeChild.id, rangeStart, rangeEnd),
         db.getFeedingLogsForRange(activeChild.id, rangeStart, rangeEnd),
         db.getSleepLogsForRange(activeChild.id, rangeStart, rangeEnd),
@@ -665,6 +736,7 @@ export function History() {
 
       if (requestId !== requestIdRef.current) return;
 
+      setDiaperLogs(nextDiapers);
       setPoopLogs(nextPoops);
       setFeedingLogs(nextMeals);
       setSleepLogs(nextSleep);
@@ -675,6 +747,7 @@ export function History() {
       setEpisodeEvents(nextEpisodeEvents);
     } catch {
       if (requestId !== requestIdRef.current) return;
+      setDiaperLogs([]);
       setPoopLogs([]);
       setFeedingLogs([]);
       setSleepLogs([]);
@@ -694,8 +767,18 @@ export function History() {
     void refreshHistory();
   }, [refreshHistory]);
 
+  const visiblePoopLogs = useMemo(() => {
+    const linkedPoopIds = new Set(
+      diaperLogs
+        .map((log) => log.linked_poop_log_id)
+        .filter((id): id is string => Boolean(id)),
+    );
+    return poopLogs.filter((log) => !linkedPoopIds.has(log.id));
+  }, [diaperLogs, poopLogs]);
+
   const grouped = useMemo(() => groupByDay({
-    poopLogs,
+    diaperLogs,
+    poopLogs: visiblePoopLogs,
     feedingLogs,
     sleepLogs,
     symptomLogs,
@@ -703,7 +786,7 @@ export function History() {
     milestoneLogs,
     episodes,
     episodeEvents,
-  }), [poopLogs, feedingLogs, sleepLogs, symptomLogs, growthLogs, milestoneLogs, episodes, episodeEvents]);
+  }), [diaperLogs, visiblePoopLogs, feedingLogs, sleepLogs, symptomLogs, growthLogs, milestoneLogs, episodes, episodeEvents]);
 
   const displayDays = useMemo(() => {
     if (!searchDate) return [...grouped.entries()];
@@ -718,7 +801,8 @@ export function History() {
 
   if (!activeChild) return null;
 
-  const hasAnyLogs = poopLogs.length > 0
+  const hasAnyLogs = diaperLogs.length > 0
+    || poopLogs.length > 0
     || feedingLogs.length > 0
     || sleepLogs.length > 0
     || symptomLogs.length > 0
@@ -756,6 +840,11 @@ export function History() {
 
   const handleDeleteSleep = async (id: string) => {
     await db.deleteSleepLog(id);
+    await refreshHistory();
+  };
+
+  const handleDeleteDiaper = async (entry: DiaperEntry) => {
+    await db.deleteDiaperLog(entry);
     await refreshHistory();
   };
 
@@ -830,9 +919,11 @@ export function History() {
               events={events}
               isExpanded={expandedDay === date}
               onToggle={() => setExpandedDay(expandedDay === date ? null : date)}
+              onDeleteDiaper={handleDeleteDiaper}
               onDeletePoop={handleDeletePoop}
               onDeleteMeal={handleDeleteMeal}
               onDeleteSleep={handleDeleteSleep}
+              onEditDiaper={setEditingDiaper}
               onEditPoop={setEditingPoop}
               onEditMeal={setEditingMeal}
               onEditSleep={setEditingSleep}
@@ -850,6 +941,16 @@ export function History() {
           onClose={() => setEditingPoop(null)}
           onSaved={() => { void refreshHistory(); }}
           onDeleted={() => { void refreshHistory(); }}
+        />
+      )}
+      {editingDiaper && (
+        <EditDiaperSheet
+          key={editingDiaper.id}
+          entry={editingDiaper}
+          open={!!editingDiaper}
+          onClose={() => setEditingDiaper(null)}
+          onSaved={() => { setEditingDiaper(null); void refreshHistory(); }}
+          onDeleted={() => { setEditingDiaper(null); void refreshHistory(); }}
         />
       )}
       {editingMeal && (

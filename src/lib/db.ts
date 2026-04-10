@@ -439,6 +439,20 @@ export async function getDiaperLogs(childId: string, limit = 100): Promise<Diape
   );
 }
 
+export async function getDiaperLogsForRange(
+  childId: string,
+  startDate: string,
+  endDate: string,
+): Promise<DiaperEntry[]> {
+  const conn = await getDb();
+  return conn.select<DiaperEntry[]>(
+    `SELECT * FROM diaper_logs
+     WHERE child_id = ? AND logged_at >= ? AND logged_at <= ?
+     ORDER BY logged_at DESC`,
+    [childId, startDate, `${endDate}T23:59:59`],
+  );
+}
+
 export async function getLastDiaperLog(childId: string): Promise<DiaperEntry | null> {
   const conn = await getDb();
   const rows = await conn.select<DiaperEntry[]>(
