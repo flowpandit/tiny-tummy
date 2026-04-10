@@ -626,24 +626,12 @@ export function History() {
   const earliestDate = allDates.length > 0 ? allDates[allDates.length - 1] : today;
 
   return (
-    <div className="my-5 px-4 py-5">
-      <div className="my-5 rounded-[16px] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-[var(--shadow-soft)] backdrop-blur-xl">
-        <div className="flex items-center justify-between gap-4">
-          <div>
-            <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--color-text-soft)]">Timeline</p>
-            <h2 className="mt-2 font-[var(--font-display)] text-3xl font-semibold text-[var(--color-text)]">
-              History
-            </h2>
-            <p className="mt-2 max-w-[42ch] text-sm leading-relaxed text-[var(--color-text-secondary)]">
-              One place for poop, feeds, sleep, symptoms, milestones, growth checks, and episode updates.
-            </p>
-          </div>
-          <p className="text-xs text-[var(--color-muted)]">{grouped.size} day{grouped.size === 1 ? "" : "s"}</p>
-        </div>
-      </div>
-
-      <div className="mb-4 rounded-[14px] border border-[var(--color-border)] bg-[var(--color-surface)] p-3 shadow-[var(--shadow-soft)] backdrop-blur-xl">
-        <div className="flex items-center gap-2">
+    <div className="mb-5 px-4 pb-5">
+      <div className="mb-4">
+        <h2 className="font-[var(--font-display)] text-2xl text-[var(--color-text)]">
+          History
+        </h2>
+        <div className="mt-3 flex items-center gap-2">
           <div className="flex-1">
             <DatePicker
               value={searchDate ?? today}
