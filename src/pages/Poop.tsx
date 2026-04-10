@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { Link, useNavigate } from "react-router-dom";
 import { useChildContext } from "../contexts/ChildContext";
 import { usePoopLogs } from "../hooks/usePoopLogs";
@@ -564,6 +565,34 @@ function getStatusBadge(status: HealthStatus): { label: string; className: strin
   return { label: "Unknown", className: "bg-[var(--color-bg-elevated)] text-[var(--color-text-secondary)]" };
 }
 
+function getHealthInsightContent(status: HealthStatus, normalDescription: string): {
+  title: string;
+  detail: string;
+  accentColor: string;
+} {
+  if (status === "alert") {
+    return {
+      title: "Needs Attention",
+      detail: normalDescription || "Current timing and risk signals suggest this pattern needs closer attention right now.",
+      accentColor: "var(--color-alert)",
+    };
+  }
+
+  if (status === "caution") {
+    return {
+      title: "Keep Watching",
+      detail: normalDescription || "The pattern is edging out of the usual range, so it is worth monitoring a bit more closely.",
+      accentColor: "var(--color-caution)",
+    };
+  }
+
+  return {
+    title: "Health Insight",
+    detail: normalDescription || "Frequency is stable and the current pattern still looks within the usual range for this age.",
+    accentColor: "var(--color-healthy)",
+  };
+}
+
 function getPredictionRingDisplay(prediction: PoopPrediction | null): {
   value: string;
   unit: string;
@@ -802,6 +831,7 @@ export function Poop() {
   const [poopDraft, setPoopDraft] = useState<Partial<PoopLogDraft> | null>(null);
   const [editingPoop, setEditingPoop] = useState<PoopEntry | null>(null);
   const [poopPresetSheetOpen, setPoopPresetSheetOpen] = useState(false);
+  const [statusExpanded, setStatusExpanded] = useState(false);
   const [quickPoopPresets, setQuickPoopPresets] = useState<QuickPoopPreset[]>([]);
 
   useEffect(() => {
@@ -945,6 +975,10 @@ export function Poop() {
       activeEpisodeType: activeEpisode?.episode_type ?? null,
     }),
     [activeEpisode, alerts, baseline, baselineComparison, dueRisk, effectiveStatus, prediction, symptomLogs],
+  );
+  const healthInsight = useMemo(
+    () => getHealthInsightContent(effectiveStatus, normalDescription),
+    [effectiveStatus, normalDescription],
   );
   const predictionRing = useMemo(() => getPredictionRingDisplay(prediction), [prediction]);
   const alertRing = useMemo(() => getAlertRingDisplay(alerts), [alerts]);
@@ -1110,6 +1144,163 @@ export function Poop() {
           </CardContent>
         </Card>
 
+        <div className="px-1">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--color-text-soft)]">Weekly overview</p>
+              <p className="mt-1 text-[12px] text-[var(--color-text-secondary)]">{weekOffset === 0 ? "Last 7 days" : formatWeekLabel(startDate, endDate)}</p>
+            </div>
+            <TrackerWeekSwitcher
+              weekOffset={weekOffset}
+              maxWeekOffset={maxWeekOffset}
+              onOlder={() => setWeekOffset((current) => Math.min(maxWeekOffset, current + 1))}
+              onNewer={() => setWeekOffset((current) => Math.max(0, current - 1))}
+            />
+          </div>
+
+          <div className="mt-2.5 rounded-[22px] border border-[var(--color-border)] bg-[var(--color-surface-strong)] px-4 py-3 shadow-[var(--shadow-soft)]">
+            <div className="flex min-h-[74px] items-center justify-between gap-4">
+              <div className="min-w-0 flex-1">
+                <p className="text-[0.8rem] font-medium uppercase leading-[1.15] tracking-[0.1em] text-[var(--color-text-soft)]">
+                  Weekly
+                  <br />
+                  Pattern
+                </p>
+              </div>
+              <div className="flex-shrink-0">
+                <WeeklyPatternDots filledWeek={filledWeek} />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <Card className="relative overflow-hidden">
+          <span
+            aria-hidden="true"
+            className="absolute bottom-1.5 left-0 top-1.5 w-1.5 rounded-r-full"
+            style={{ backgroundColor: healthInsight.accentColor }}
+          />
+          <CardContent
+            className="overflow-hidden py-3.5 pl-7 pr-3.5"
+          >
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p
+                      className="text-[0.95rem] font-semibold"
+                      style={{ color: healthInsight.accentColor }}
+                    >
+                      {healthInsight.title}
+                    </p>
+                    <p className="mt-1 max-w-[34ch] text-[0.92rem] leading-snug text-[var(--color-text-secondary)]">
+                      {healthInsight.detail}
+                    </p>
+                  </div>
+                  <span className={`rounded-full px-3 py-1.5 text-[12px] font-semibold ${statusBadge.className}`}>
+                    {statusBadge.label}
+                  </span>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setStatusExpanded((current) => !current)}
+                  className="mt-2 inline-flex items-center gap-1.5 text-[0.82rem] font-medium text-[var(--color-text-secondary)] transition-opacity hover:opacity-75"
+                  aria-expanded={statusExpanded}
+                >
+                  {statusExpanded ? "See less" : "See more"}
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                    className={`h-4 w-4 transition-transform ${statusExpanded ? "rotate-180" : ""}`}
+                    aria-hidden="true"
+                  >
+                    <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 11.137l3.71-3.907a.75.75 0 1 1 1.08 1.04l-4.25 4.474a.75.75 0 0 1-1.08 0L5.21 8.27a.75.75 0 0 1 .02-1.06Z" clipRule="evenodd" />
+                  </svg>
+                </button>
+                <AnimatePresence initial={false}>
+                  {statusExpanded && (
+                    <motion.div
+                      key="status-details"
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+                      className="overflow-hidden"
+                    >
+                      <motion.div
+                        initial={{ y: -6 }}
+                        animate={{ y: 0 }}
+                        exit={{ y: -6 }}
+                        transition={{ duration: 0.18, ease: "easeOut" }}
+                        className="pt-2 pr-0.5"
+                      >
+                        <div className="grid grid-cols-2 gap-2.5">
+                          <TrackerMetricPanel
+                            eyebrow="Age baseline"
+                            value={formatBaselineRange(baseline)}
+                            description={baseline.label}
+                            tone={baselineComparison.tone}
+                          />
+                          <TrackerMetricPanel
+                            eyebrow="Due risk"
+                            value={dueRisk.label}
+                            description={dueRisk.description}
+                            tone={dueRisk.tone}
+                          />
+                          <InsetPanel className="col-span-2 border-[var(--color-info)]/18 bg-[var(--color-info-bg)] p-3">
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0">
+                                <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--color-text-soft)]">Next likely poop</p>
+                                <p className="mt-2 text-xl font-semibold tracking-[-0.02em] text-[var(--color-text)]">
+                                  {getPredictionHeadline(prediction)}
+                                </p>
+                                <p className="mt-1 text-xs leading-relaxed text-[var(--color-text-secondary)]">
+                                  {prediction ? getPredictionDescription(prediction) : "Needs at least two real poop logs to estimate a rhythm."}
+                                </p>
+                              </div>
+                              {prediction && (
+                                <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-semibold text-[var(--color-chip-text-on-light)]">
+                                  {prediction.confidence}
+                                </span>
+                              )}
+                            </div>
+                            {prediction && (
+                              <div className="mt-3 flex flex-wrap gap-2">
+                                <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-chip-text-on-light)]">
+                                  Typical gap: {prediction.intervalLabel}
+                                </span>
+                                <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-chip-text-on-light)]">
+                                  {formatPredictionRelative(prediction)}
+                                </span>
+                                <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-chip-text-on-light)]">
+                                  Source: {prediction.source === "history" ? "recent rhythm" : "age baseline"}
+                                </span>
+                                <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-chip-text-on-light)]">
+                                  Window: {formatPredictionRange(prediction)}
+                                </span>
+                                {prediction.adjustments.slice(0, 2).map((adjustment) => (
+                                  <span
+                                    key={adjustment.label}
+                                    className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-chip-text-on-light)]"
+                                  >
+                                    {adjustment.direction === "earlier" ? "Earlier" : "Later"}: {adjustment.label}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                          </InsetPanel>
+                          <InsetPanel className="col-span-2 p-3">
+                            <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--color-text-soft)]">What this means</p>
+                        <p className="mt-2 text-[13px] leading-relaxed text-[var(--color-text-secondary)]">{patternNarrative}</p>
+                      </InsetPanel>
+                    </div>
+                  </motion.div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </CardContent>
+        </Card>
+
         {recentHistory.length > 0 && (
           <section className="px-1">
             <div className="flex items-center justify-between gap-3">
@@ -1156,114 +1347,6 @@ export function Poop() {
             </div>
           </section>
         )}
-
-        <div className="px-1">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--color-text-soft)]">Weekly overview</p>
-              <p className="mt-1 text-[12px] text-[var(--color-text-secondary)]">{weekOffset === 0 ? "Last 7 days" : formatWeekLabel(startDate, endDate)}</p>
-            </div>
-            <TrackerWeekSwitcher
-              weekOffset={weekOffset}
-              maxWeekOffset={maxWeekOffset}
-              onOlder={() => setWeekOffset((current) => Math.min(maxWeekOffset, current + 1))}
-              onNewer={() => setWeekOffset((current) => Math.max(0, current - 1))}
-            />
-          </div>
-
-          <div className="mt-2.5 rounded-[22px] border border-[var(--color-border)] bg-[var(--color-surface-strong)] px-4 py-3 shadow-[var(--shadow-soft)]">
-            <div className="flex min-h-[74px] items-center justify-between gap-4">
-              <div className="min-w-0 flex-1">
-                <p className="text-[0.8rem] font-medium uppercase leading-[1.15] tracking-[0.1em] text-[var(--color-text-soft)]">
-                  Weekly
-                  <br />
-                  Pattern
-                </p>
-              </div>
-              <div className="flex-shrink-0">
-                <WeeklyPatternDots filledWeek={filledWeek} />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <Card>
-          <CardContent className="p-3.5">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--color-text-soft)]">Current poop status</p>
-                <p className="mt-1.5 text-[1.4rem] font-semibold tracking-[-0.035em] text-[var(--color-text)]">
-                  {effectiveStatus === "healthy" ? "Looks in the usual range" : effectiveStatus === "caution" ? "Pattern needs watching" : "Pattern needs attention"}
-                </p>
-                <p className="mt-1.5 max-w-[42ch] text-[13px] leading-relaxed text-[var(--color-text-secondary)]">{normalDescription}</p>
-              </div>
-              <span className={`rounded-full px-3 py-1.5 text-[12px] font-semibold ${statusBadge.className}`}>
-                {statusBadge.label}
-              </span>
-            </div>
-
-            <div className="mt-3 grid grid-cols-2 gap-2.5">
-              <TrackerMetricPanel
-                eyebrow="Age baseline"
-                value={formatBaselineRange(baseline)}
-                description={baseline.label}
-                tone={baselineComparison.tone}
-              />
-              <TrackerMetricPanel
-                eyebrow="Due risk"
-                value={dueRisk.label}
-                description={dueRisk.description}
-                tone={dueRisk.tone}
-              />
-              <InsetPanel className="col-span-2 border-[var(--color-info)]/18 bg-[var(--color-info-bg)] p-3">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--color-text-soft)]">Next likely poop</p>
-                    <p className="mt-2 text-xl font-semibold tracking-[-0.02em] text-[var(--color-text)]">
-                      {getPredictionHeadline(prediction)}
-                    </p>
-                    <p className="mt-1 text-xs leading-relaxed text-[var(--color-text-secondary)]">
-                      {prediction ? getPredictionDescription(prediction) : "Needs at least two real poop logs to estimate a rhythm."}
-                    </p>
-                  </div>
-                  {prediction && (
-                    <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-semibold text-[var(--color-chip-text-on-light)]">
-                      {prediction.confidence}
-                    </span>
-                  )}
-                </div>
-                {prediction && (
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-chip-text-on-light)]">
-                      Typical gap: {prediction.intervalLabel}
-                    </span>
-                    <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-chip-text-on-light)]">
-                      {formatPredictionRelative(prediction)}
-                    </span>
-                    <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-chip-text-on-light)]">
-                      Source: {prediction.source === "history" ? "recent rhythm" : "age baseline"}
-                    </span>
-                    <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-chip-text-on-light)]">
-                      Window: {formatPredictionRange(prediction)}
-                    </span>
-                    {prediction.adjustments.slice(0, 2).map((adjustment) => (
-                      <span
-                        key={adjustment.label}
-                        className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-chip-text-on-light)]"
-                      >
-                        {adjustment.direction === "earlier" ? "Earlier" : "Later"}: {adjustment.label}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </InsetPanel>
-              <InsetPanel className="col-span-2 p-3">
-                <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--color-text-soft)]">What this means</p>
-                <p className="mt-2 text-[13px] leading-relaxed text-[var(--color-text-secondary)]">{patternNarrative}</p>
-              </InsetPanel>
-            </div>
-          </CardContent>
-        </Card>
 
         <div className="px-1">
           <div>
