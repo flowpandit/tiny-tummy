@@ -9,10 +9,10 @@ import { useEpisodes } from "../hooks/useEpisodes";
 import { useSymptoms } from "../hooks/useSymptoms";
 import { useEliminationPreference } from "../hooks/useEliminationPreference";
 import { BITSS_TYPES, STOOL_COLORS } from "../lib/constants";
-import { fillDailyFrequencyDays, formatLocalDateKey, getRecentNoPoopDates } from "../lib/stats";
+import { fillDailyFrequencyDays, formatLocalDateKey } from "../lib/stats";
 import { DAYS_IN_WEEK, addDays, formatHoursCompact, formatHoursLong, formatWeekLabel, startOfDay } from "../lib/tracker";
 import { getChildStatus } from "../lib/tauri";
-import { combineLocalDateAndTimeToUtcIso, getCurrentLocalDate, getCurrentLocalTime, timeSince } from "../lib/utils";
+import { combineLocalDateAndTimeToUtcIso, getCurrentLocalDate, getCurrentLocalTime } from "../lib/utils";
 import {
   buildPoopPresetRecordInput,
   describePoopPresetDraft,
@@ -21,17 +21,13 @@ import {
   type QuickPoopPreset,
 } from "../lib/quick-presets";
 import * as db from "../lib/db";
-import { Card, CardContent, CardHeader } from "../components/ui/card";
+import { Card, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
-import { EmptyState, InsetPanel, PageBody, SectionHeading } from "../components/ui/page-layout";
+import { InsetPanel, PageBody } from "../components/ui/page-layout";
 import { ScenicHero } from "../components/layout/ScenicHero";
 import {
-  TrackerEntryRow,
-  TrackerEntryTable,
   TrackerMetricPanel,
   TrackerMetricRing,
-  TrackerWeekBarChart,
-  TrackerWeekRangePill,
   TrackerWeekSwitcher,
 } from "../components/tracking/TrackerPrimitives";
 import { AlertBanner } from "../components/dashboard/AlertBanner";
@@ -176,6 +172,18 @@ function PoopPresetIcon({
       }}
     />
   );
+}
+
+function getRecentHistoryDayLabel(dateStr: string): string {
+  const entryDate = new Date(dateStr);
+  const day = new Date(entryDate.getFullYear(), entryDate.getMonth(), entryDate.getDate());
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const diffDays = Math.round((today.getTime() - day.getTime()) / 86400000);
+
+  if (diffDays <= 0) return "Today";
+  if (diffDays === 1) return "Yesterday";
+  return `${diffDays} days ago`;
 }
 
 function WeeklyPatternDots({
@@ -556,68 +564,6 @@ function getStatusBadge(status: HealthStatus): { label: string; className: strin
   return { label: "Unknown", className: "bg-[var(--color-bg-elevated)] text-[var(--color-text-secondary)]" };
 }
 
-function PoopLogList({
-  logs,
-  onEdit,
-}: {
-  logs: PoopEntry[];
-  onEdit: (entry: PoopEntry) => void;
-}) {
-  if (logs.length === 0) {
-    return (
-      <InsetPanel>
-        <p className="text-sm text-[var(--color-text-secondary)]">No poop entries in this week.</p>
-      </InsetPanel>
-    );
-  }
-
-  return (
-    <TrackerEntryTable mainHeader="Pattern">
-      {logs.map((log) => {
-        const typeInfo = log.stool_type ? BITSS_TYPES.find((item) => item.type === log.stool_type) : null;
-        const colorInfo = log.color ? STOOL_COLORS.find((item) => item.value === log.color) : null;
-        const dateLabel = new Date(log.logged_at).toLocaleDateString(undefined, { month: "short", day: "numeric" });
-        const timeLabel = new Date(log.logged_at).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
-
-        return (
-          <TrackerEntryRow
-            key={log.id}
-            onClick={() => onEdit(log)}
-          >
-            <div>
-              <p className="text-xs font-medium text-[var(--color-text-secondary)]">{dateLabel}</p>
-              <p className="mt-0.5 text-xs text-[var(--color-text-soft)]">{timeLabel}</p>
-              <p className="mt-1 text-[11px] text-[var(--color-text-soft)]">{timeSince(log.logged_at)}</p>
-            </div>
-
-            <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <span
-                  className="h-3 w-3 flex-shrink-0 rounded-full"
-                  style={{ backgroundColor: log.is_no_poop ? "var(--color-text-soft)" : colorInfo?.hex ?? "var(--color-cta)" }}
-                />
-                <p className="truncate text-sm font-medium text-[var(--color-text)]">
-                  {log.is_no_poop ? "No-poop day" : typeInfo ? `Type ${typeInfo.type} · ${typeInfo.label}` : "Poop logged"}
-                </p>
-              </div>
-              {!log.is_no_poop && (
-                <p className="mt-1 text-xs text-[var(--color-text-soft)]">
-                  {[colorInfo?.label, log.size].filter(Boolean).join(" · ")}
-                </p>
-              )}
-              {log.notes && (
-                <p className="mt-1 text-xs leading-relaxed text-[var(--color-text-secondary)]">
-                  {log.notes}
-                </p>
-              )}
-            </div>
-          </TrackerEntryRow>
-        );
-      })}
-    </TrackerEntryTable>
-  );
-}
-
 function getPredictionRingDisplay(prediction: PoopPrediction | null): {
   value: string;
   unit: string;
@@ -939,11 +885,6 @@ export function Poop() {
     () => logs.filter((log) => log.is_no_poop === 0 && log.logged_at >= `${weekStartKey}T00:00:00` && log.logged_at <= `${weekEndKey}T23:59:59`),
     [logs, weekEndKey, weekStartKey],
   );
-  const weekLogs = useMemo(
-    () => logs.filter((log) => log.logged_at >= `${weekStartKey}T00:00:00` && log.logged_at <= `${weekEndKey}T23:59:59`),
-    [logs, weekEndKey, weekStartKey],
-  );
-
   const frequencyData = useMemo(() => {
     const counts = new Map<string, number>();
     for (const log of weeklyRealLogs) {
@@ -954,27 +895,6 @@ export function Poop() {
   }, [weeklyRealLogs]);
 
   const filledWeek = useMemo(() => fillDailyFrequencyDays(frequencyData, DAYS_IN_WEEK, endDate), [endDate, frequencyData]);
-  const noPoopDates = useMemo(() => getRecentNoPoopDates(weekLogs, DAYS_IN_WEEK, endDate), [endDate, weekLogs]);
-
-  const totalPoops = weeklyRealLogs.length;
-  const dominantType = useMemo(() => {
-    const counts = new Map<number, number>();
-    weeklyRealLogs.forEach((log) => {
-      if (log.stool_type !== null) {
-        counts.set(log.stool_type, (counts.get(log.stool_type) ?? 0) + 1);
-      }
-    });
-    return [...counts.entries()].sort((left, right) => right[1] - left[1])[0]?.[0] ?? null;
-  }, [weeklyRealLogs]);
-  const dominantColor = useMemo(() => {
-    const counts = new Map<string, number>();
-    weeklyRealLogs.forEach((log) => {
-      if (log.color) {
-        counts.set(log.color, (counts.get(log.color) ?? 0) + 1);
-      }
-    });
-    return [...counts.entries()].sort((left, right) => right[1] - left[1])[0]?.[0] ?? null;
-  }, [weeklyRealLogs]);
   const baseline = useMemo(
     () => getAgeBaseline(activeChild?.date_of_birth ?? getCurrentLocalDate(), activeChild?.feeding_type ?? "mixed"),
     [activeChild],
@@ -983,7 +903,6 @@ export function Poop() {
     () => getPrediction(logs, baseline, feedingLogs, symptomLogs, activeEpisode?.episode_type ?? null),
     [activeEpisode, baseline, feedingLogs, logs, symptomLogs],
   );
-  const statusBadge = getStatusBadge(status);
   const hoursSinceLastPoop = lastRealPoop
     ? (Date.now() - new Date(lastRealPoop.logged_at).getTime()) / 3600000
     : null;
@@ -1004,9 +923,19 @@ export function Poop() {
     ),
     [activeEpisode, alerts, baseline, feedingLogs, hoursSinceLastPoop, lastRealPoop, prediction, symptomLogs],
   );
+  const effectiveStatus = useMemo<HealthStatus>(() => {
+    if (alerts.some((alert) => alert.severity === "urgent") || dueRisk.label === "High" || status === "alert") {
+      return "alert";
+    }
+    if (alerts.some((alert) => alert.severity === "warning") || dueRisk.label === "Medium" || status === "caution") {
+      return "caution";
+    }
+    return status;
+  }, [alerts, dueRisk.label, status]);
+  const statusBadge = getStatusBadge(effectiveStatus);
   const patternNarrative = useMemo(
     () => buildPatternNarrative({
-      status,
+      status: effectiveStatus,
       baseline,
       baselineComparison,
       dueRisk,
@@ -1015,20 +944,18 @@ export function Poop() {
       symptomLogs,
       activeEpisodeType: activeEpisode?.episode_type ?? null,
     }),
-    [activeEpisode, alerts, baseline, baselineComparison, dueRisk, prediction, status, symptomLogs],
+    [activeEpisode, alerts, baseline, baselineComparison, dueRisk, effectiveStatus, prediction, symptomLogs],
   );
   const predictionRing = useMemo(() => getPredictionRingDisplay(prediction), [prediction]);
   const alertRing = useMemo(() => getAlertRingDisplay(alerts), [alerts]);
   const repeatablePoop = useMemo(() => getRepeatablePoopEntry(lastRealPoop), [lastRealPoop]);
+  const recentHistory = useMemo(
+    () => logs.filter((log) => log.is_no_poop === 0).slice(0, 3),
+    [logs],
+  );
 
   if (!activeChild) return null;
   if (experience.mode === "diaper") return null;
-
-  const weekSummaryBits = [
-    totalPoops === 0 ? "No poops logged in this week" : `${totalPoops} poop${totalPoops === 1 ? "" : "s"} in this week`,
-    dominantType ? `Mostly Type ${dominantType}` : null,
-    dominantColor ? `Mostly ${(STOOL_COLORS.find((item) => item.value === dominantColor)?.label ?? dominantColor).toLowerCase()}` : null,
-  ].filter(Boolean);
 
   const handleRefresh = async () => {
     await refresh();
@@ -1113,7 +1040,7 @@ export function Poop() {
               <div className="flex flex-col items-center gap-2 text-center">
                 <TimeSinceIndicator
                   timestamp={lastRealPoop?.logged_at ?? null}
-                  status={status === "alert" ? "alert" : status === "caution" ? "caution" : "healthy"}
+                  status={effectiveStatus === "alert" ? "alert" : effectiveStatus === "caution" ? "caution" : "healthy"}
                 />
                 <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-[var(--color-text-soft)]">Last poop</p>
               </div>
@@ -1179,8 +1106,86 @@ export function Poop() {
                 ))}
               </div>
             </div>
+
           </CardContent>
         </Card>
+
+        {recentHistory.length > 0 && (
+          <section className="px-1">
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-[1rem] font-semibold text-[var(--color-text)]">Recent history</p>
+              <Link
+                to="/history"
+                className="rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1 text-[11px] font-semibold text-[var(--color-text-secondary)] transition-colors hover:bg-[var(--color-surface-strong)]"
+              >
+                See all
+              </Link>
+            </div>
+            <div className="mt-2.5 space-y-2">
+              {recentHistory.map((log, index) => {
+                const typeInfo = log.stool_type ? BITSS_TYPES.find((item) => item.type === log.stool_type) : null;
+                const title = typeInfo?.label ?? "Logged";
+                const tint = log.color ? `${getPoopColorHex(log.color)}20` : "var(--color-bg-elevated)";
+
+                return (
+                  <div key={log.id} className="flex items-center gap-2.5">
+                    <div className="relative flex h-10 w-10 flex-shrink-0 items-center justify-center">
+                      {index < recentHistory.length - 1 && (
+                        <span
+                          className="absolute left-1/2 top-8 h-6 w-px -translate-x-1/2"
+                          style={{ backgroundColor: "var(--color-border)" }}
+                        />
+                      )}
+                      <span
+                        className="flex h-9 w-9 items-center justify-center rounded-full"
+                        style={{ backgroundColor: tint }}
+                      >
+                        <PoopPresetIcon
+                          draft={{ stool_type: log.stool_type, color: log.color, size: log.size }}
+                          className="h-5 w-5"
+                        />
+                      </span>
+                    </div>
+                    <p className="text-[0.95rem] leading-none text-[var(--color-text-secondary)]">
+                      <span className="font-medium text-[var(--color-text)]">{getRecentHistoryDayLabel(log.logged_at)}:</span>{" "}
+                      Type {log.stool_type ?? "?"}, {title}
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        )}
+
+        <div className="px-1">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--color-text-soft)]">Weekly overview</p>
+              <p className="mt-1 text-[12px] text-[var(--color-text-secondary)]">{weekOffset === 0 ? "Last 7 days" : formatWeekLabel(startDate, endDate)}</p>
+            </div>
+            <TrackerWeekSwitcher
+              weekOffset={weekOffset}
+              maxWeekOffset={maxWeekOffset}
+              onOlder={() => setWeekOffset((current) => Math.min(maxWeekOffset, current + 1))}
+              onNewer={() => setWeekOffset((current) => Math.max(0, current - 1))}
+            />
+          </div>
+
+          <div className="mt-2.5 rounded-[22px] border border-[var(--color-border)] bg-[var(--color-surface-strong)] px-4 py-3 shadow-[var(--shadow-soft)]">
+            <div className="flex min-h-[74px] items-center justify-between gap-4">
+              <div className="min-w-0 flex-1">
+                <p className="text-[0.8rem] font-medium uppercase leading-[1.15] tracking-[0.1em] text-[var(--color-text-soft)]">
+                  Weekly
+                  <br />
+                  Pattern
+                </p>
+              </div>
+              <div className="flex-shrink-0">
+                <WeeklyPatternDots filledWeek={filledWeek} />
+              </div>
+            </div>
+          </div>
+        </div>
 
         <Card>
           <CardContent className="p-3.5">
@@ -1188,7 +1193,7 @@ export function Poop() {
               <div>
                 <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--color-text-soft)]">Current poop status</p>
                 <p className="mt-1.5 text-[1.4rem] font-semibold tracking-[-0.035em] text-[var(--color-text)]">
-                  {status === "healthy" ? "Looks in the usual range" : status === "caution" ? "Pattern needs watching" : "Pattern needs attention"}
+                  {effectiveStatus === "healthy" ? "Looks in the usual range" : effectiveStatus === "caution" ? "Pattern needs watching" : "Pattern needs attention"}
                 </p>
                 <p className="mt-1.5 max-w-[42ch] text-[13px] leading-relaxed text-[var(--color-text-secondary)]">{normalDescription}</p>
               </div>
@@ -1261,63 +1266,6 @@ export function Poop() {
         </Card>
 
         <div className="px-1">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--color-text-soft)]">Weekly overview</p>
-              <p className="mt-1 text-[12px] text-[var(--color-text-secondary)]">{weekOffset === 0 ? "Last 7 days" : formatWeekLabel(startDate, endDate)}</p>
-            </div>
-            <TrackerWeekSwitcher
-              weekOffset={weekOffset}
-              maxWeekOffset={maxWeekOffset}
-              onOlder={() => setWeekOffset((current) => Math.min(maxWeekOffset, current + 1))}
-              onNewer={() => setWeekOffset((current) => Math.max(0, current - 1))}
-            />
-          </div>
-
-          <div className="mt-2.5 rounded-[22px] border border-[var(--color-border)] bg-[var(--color-surface-strong)] px-4 py-3 shadow-[var(--shadow-soft)]">
-            <div className="flex min-h-[74px] items-center justify-between gap-4">
-              <div className="min-w-0 flex-1">
-                <p className="text-[0.8rem] font-medium uppercase leading-[1.15] tracking-[0.1em] text-[var(--color-text-soft)]">
-                  Weekly
-                  <br />
-                  Pattern
-                </p>
-              </div>
-              <div className="flex-shrink-0">
-                <WeeklyPatternDots filledWeek={filledWeek} />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <Card>
-          <CardHeader>
-            <SectionHeading
-              title="Weekly pattern"
-              description="The same seven-day pattern view, but with week-by-week browsing so older rhythms are easier to compare."
-              action={(
-                <TrackerWeekSwitcher
-                  weekOffset={weekOffset}
-                  maxWeekOffset={maxWeekOffset}
-                  onOlder={() => setWeekOffset((current) => Math.min(maxWeekOffset, current + 1))}
-                  onNewer={() => setWeekOffset((current) => Math.max(0, current - 1))}
-                />
-              )}
-            />
-          </CardHeader>
-          <CardContent>
-            <TrackerWeekBarChart
-              data={filledWeek.map((day) => ({ ...day, value: day.count }))}
-              title={weekOffset === 0 ? "Last 7 days" : formatWeekLabel(startDate, endDate)}
-              summary={weekSummaryBits.join(" • ")}
-              markerDates={noPoopDates}
-              markerLegend={`Grey dots mark ${noPoopDates.size} no-poop day${noPoopDates.size === 1 ? "" : "s"} in this week.`}
-              valueLabel={(value) => `${value} poop${value === 1 ? "" : "s"}`}
-            />
-          </CardContent>
-        </Card>
-
-        <div className="px-1">
           <div>
             <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--color-text-soft)]">Related</p>
             <div className="mt-2.5 grid grid-cols-3 gap-2">
@@ -1354,38 +1302,6 @@ export function Poop() {
             </div>
           </div>
         </div>
-
-        {logs.length === 0 ? (
-          <EmptyState
-            icon={(
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="var(--color-primary)" className="h-8 w-8">
-                <path d="M12 3.75c.87 0 1.601.61 1.789 1.423.152.656.514 1.243 1.029 1.671A4.86 4.86 0 0 1 18 10.5c0 3.314-2.686 6-6 6s-6-2.686-6-6a4.86 4.86 0 0 1 3.182-4.556 3.01 3.01 0 0 0 1.029-1.671A1.835 1.835 0 0 1 12 3.75Z" />
-              </svg>
-            )}
-            title="Start the poop page with the first log"
-            description="Once the first few entries are in, this page starts surfacing timing, weekly rhythm, and when to pay attention."
-            action={<Button variant="primary" onClick={() => setLogFormOpen(true)}>Add first poop log</Button>}
-          />
-        ) : (
-          <Card>
-            <CardHeader>
-              <div>
-                <div className="flex items-center gap-3">
-                  <h3 className="font-[var(--font-display)] text-2xl font-semibold tracking-[-0.02em] text-[var(--color-text)]">
-                    Week entries
-                  </h3>
-                  <TrackerWeekRangePill label={formatWeekLabel(startDate, endDate)} animateKey={weekOffset} />
-                </div>
-                <p className="mt-2 max-w-[40ch] text-sm leading-relaxed text-[var(--color-text-secondary)]">
-                  Every poop log for the selected week, with quick editing when details need correcting.
-                </p>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <PoopLogList logs={weekLogs} onEdit={setEditingPoop} />
-            </CardContent>
-          </Card>
-        )}
 
         <LogForm
           open={logFormOpen}
