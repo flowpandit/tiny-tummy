@@ -1,8 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useChildContext } from "../../contexts/ChildContext";
 import { useEliminationPreference } from "../../hooks/useEliminationPreference";
 import { cn } from "../../lib/cn";
+import { Button } from "../ui/button";
+import { HomeActionBreastfeedIcon } from "../ui/icons";
+import * as db from "../../lib/db";
+import { getAgeInMonthsFromDob } from "../../lib/utils";
 
 const iconClassName = "h-5 w-5";
 
@@ -95,9 +99,11 @@ const NAV_ITEMS = [
 export function BottomNav() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { activeChild } = useChildContext();
+  const { activeChild, refreshChildren } = useChildContext();
   const { experience } = useEliminationPreference(activeChild);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const [showFeedingTransitionConfirm, setShowFeedingTransitionConfirm] = useState(false);
+  const [isUpdatingFeedingType, setIsUpdatingFeedingType] = useState(false);
 
   useEffect(() => {
     const body = document.body;
@@ -114,57 +120,152 @@ export function BottomNav() {
     return () => observer.disconnect();
   }, []);
 
-  const navItems = NAV_ITEMS.map((item) => {
-    if (item.path !== "/poop") return item;
-    return {
-      ...item,
-      path: experience.route,
-      label: experience.navLabel,
-      matches: (pathname: string) => pathname === "/poop" || pathname === "/diaper",
-    };
-  });
+  const isBreastOnly = activeChild?.feeding_type === "breast";
+  const isFeedingTransitionEligible = isBreastOnly && Boolean(activeChild) && getAgeInMonthsFromDob(activeChild.date_of_birth) >= 6;
+  const feedNavPath = isBreastOnly ? "/breastfeed" : "/feed";
+  const feedNavLabel = isBreastOnly ? "Breastfeed" : "Feed";
+
+  const navItems = useMemo(
+    () => NAV_ITEMS.map((item) => {
+      if (item.path === "/poop") {
+        return {
+          ...item,
+          path: experience.route,
+          label: experience.navLabel,
+          matches: (pathname: string) => pathname === "/poop" || pathname === "/diaper",
+        };
+      }
+
+      if (item.path === "/feed") {
+        return {
+          ...item,
+          path: feedNavPath,
+          label: feedNavLabel,
+          matches: (pathname: string) => pathname === "/feed" || pathname === "/breastfeed",
+          icon: (active: boolean) => (
+            isBreastOnly ? (
+              <HomeActionBreastfeedIcon className={cn(iconClassName, active ? "scale-110" : "")} />
+            ) : item.icon(active)
+          ),
+        };
+      }
+
+      return item;
+    }),
+    [experience.navLabel, experience.route, feedNavLabel, feedNavPath, isBreastOnly],
+  );
+
+  const handleFeedTransitionConfirm = async () => {
+    if (!activeChild) return;
+
+    try {
+      setIsUpdatingFeedingType(true);
+      await db.updateChild(activeChild.id, { feeding_type: "mixed" });
+      await refreshChildren();
+      setShowFeedingTransitionConfirm(false);
+      navigate("/feed");
+    } finally {
+      setIsUpdatingFeedingType(false);
+    }
+  };
+
+  const handleNavPress = (path: string) => {
+    if (
+      path === "/breastfeed"
+      && isFeedingTransitionEligible
+      && location.pathname === "/breastfeed"
+    ) {
+      setShowFeedingTransitionConfirm(true);
+      return;
+    }
+
+    navigate(path);
+  };
 
   return (
-    <nav
-      className={cn(
-        "fixed bottom-0 left-0 right-0 z-30 px-3 transition-all duration-200 md:px-6",
-        isSheetOpen ? "pointer-events-none translate-y-6 opacity-0" : "translate-y-0 opacity-100",
+    <>
+      {showFeedingTransitionConfirm && (
+        <div className="fixed inset-0 z-40 flex items-end justify-center bg-black/35 px-4 pb-[calc(var(--safe-area-bottom)+108px)] pt-10" onClick={() => setShowFeedingTransitionConfirm(false)}>
+          <div
+            className="w-full max-w-[420px] rounded-[28px] border border-[var(--color-border)] bg-[var(--color-surface-strong)] p-5 shadow-[var(--shadow-lg)]"
+            onClick={(event) => event.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="feeding-transition-title"
+          >
+            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[var(--color-text-secondary)]">
+              Feeding transition
+            </p>
+            <h2 id="feeding-transition-title" className="mt-2 text-xl font-semibold text-[var(--color-text)]">
+              Switch to mixed feeding?
+            </h2>
+            <p className="mt-2 text-sm leading-relaxed text-[var(--color-text-secondary)]">
+              Your baby is old enough to start trying solids. Confirm this once you want the bottom tab to open the full feed page instead of the breastfeeding timer.
+            </p>
+            <div className="mt-5 flex gap-3">
+              <Button
+                type="button"
+                variant="secondary"
+                className="flex-1"
+                onClick={() => setShowFeedingTransitionConfirm(false)}
+                disabled={isUpdatingFeedingType}
+              >
+                Not yet
+              </Button>
+              <Button
+                type="button"
+                variant="primary"
+                className="flex-1"
+                onClick={() => void handleFeedTransitionConfirm()}
+                disabled={isUpdatingFeedingType}
+              >
+                {isUpdatingFeedingType ? "Switching..." : "Switch to mixed"}
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
-      style={{ paddingBottom: "calc(var(--safe-area-bottom) + 8px)" }}
-    >
-      <div
-        className="mx-auto flex h-[78px] max-w-[720px] items-center justify-around rounded-[28px] border border-[var(--color-border)] px-2 shadow-[var(--shadow-lg)] backdrop-blur-[20px]"
-        style={{ background: "var(--color-nav-surface)" }}
+      <nav
+        className={cn(
+          "fixed bottom-0 left-0 right-0 z-30 px-3 transition-all duration-200 md:px-6",
+          isSheetOpen ? "pointer-events-none translate-y-6 opacity-0" : "translate-y-0 opacity-100",
+        )}
+        style={{ paddingBottom: "calc(var(--safe-area-bottom) + 8px)" }}
       >
-        {navItems.map((item) => {
-          const isActive = item.matches(location.pathname);
-          return (
-            <button
-              key={item.path}
-              onClick={() => navigate(item.path)}
-              className={cn(
-                "relative flex h-[64px] min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-[20px] cursor-pointer transition-all duration-200",
-                isActive
-                  ? "text-[var(--color-primary)] shadow-[var(--shadow-soft)]"
-                  : "text-[var(--color-nav-inactive)] hover:text-[var(--color-nav-inactive-hover)]",
-              )}
-              style={isActive ? { background: "var(--gradient-nav-active)" } : undefined}
-              aria-label={item.label}
+        <div
+          className="mx-auto flex h-[78px] max-w-[720px] items-center justify-around rounded-[28px] border border-[var(--color-border)] px-2 shadow-[var(--shadow-lg)] backdrop-blur-[20px]"
+          style={{ background: "var(--color-nav-surface)" }}
+        >
+          {navItems.map((item) => {
+            const isActive = item.matches(location.pathname);
+            return (
+              <button
+                key={item.path}
+                onClick={() => handleNavPress(item.path)}
+                className={cn(
+                  "relative flex h-[64px] min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-[20px] cursor-pointer transition-all duration-200",
+                  isActive
+                    ? "text-[var(--color-primary)] shadow-[var(--shadow-soft)]"
+                    : "text-[var(--color-nav-inactive)] hover:text-[var(--color-nav-inactive-hover)]",
+                )}
+                style={isActive ? { background: "var(--gradient-nav-active)" } : undefined}
+                aria-label={item.label}
               >
                 <span
                   className={cn(
-                  "absolute left-1/2 top-1.5 h-1 w-8 -translate-x-1/2 rounded-full transition-opacity duration-200",
-                  isActive ? "bg-[var(--color-nav-active-indicator)] opacity-100" : "opacity-0",
+                    "absolute left-1/2 top-1.5 h-1 w-8 -translate-x-1/2 rounded-full transition-opacity duration-200",
+                    isActive ? "bg-[var(--color-nav-active-indicator)] opacity-100" : "opacity-0",
                   )}
                 />
-              <span className="flex h-6 w-6 items-center justify-center">
-                {item.icon(isActive)}
-              </span>
-              <span className="max-w-full truncate px-1 text-[10px] font-semibold tracking-[0.01em]">{item.label}</span>
-            </button>
-          );
-        })}
-      </div>
-    </nav>
+                <span className="flex h-6 w-6 items-center justify-center">
+                  {item.icon(isActive)}
+                </span>
+                <span className="max-w-full truncate px-1 text-[10px] font-semibold tracking-[0.01em]">{item.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      </nav>
+    </>
   );
 }

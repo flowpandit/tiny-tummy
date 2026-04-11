@@ -70,6 +70,13 @@ export function getAgeLabelFromDob(dob: string): string {
   return `${years}y ${remainingMonths}m old`;
 }
 
+export function getAgeInMonthsFromDob(dob: string, referenceDate = new Date()): number {
+  const birth = parseLocalDate(dob);
+  const diffMs = referenceDate.getTime() - birth.getTime();
+  if (diffMs <= 0) return 0;
+  return diffMs / (1000 * 60 * 60 * 24 * (365.2425 / 12));
+}
+
 export function timeSince(dateStr: string): string {
   const date = new Date(dateStr);
   const now = new Date();

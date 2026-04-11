@@ -5,6 +5,7 @@ import { useChildContext } from "../../contexts/ChildContext";
 import { useEliminationPreference } from "../../hooks/useEliminationPreference";
 import { Header } from "./Header";
 import { BottomNav } from "./BottomNav";
+import { getAgeInMonthsFromDob } from "../../lib/utils";
 
 const pageVariants = {
   initial: (direction: number) => ({
@@ -94,9 +95,13 @@ export function AppShell() {
   const headerFallbackTo = headerBackFallbackByPath[location.pathname];
   const showHeaderBackButton = Boolean(headerFallbackTo);
   const revealHeaderOnScroll = revealOnScrollPaths.has(location.pathname);
+  const isBreastOnly = activeChild?.feeding_type === "breast";
+  const isFeedingTransitionEligible = isBreastOnly && Boolean(activeChild) && getAgeInMonthsFromDob(activeChild.date_of_birth) >= 6;
+  const feedNavPath = isBreastOnly ? "/breastfeed" : "/feed";
+  const feedNavLabel = isBreastOnly ? "Breastfeed" : "Feed";
   const bottomNavPaths = useMemo(
-    () => ["/", experience.route, "/dashboard", "/feed", "/sleep", "/settings"],
-    [experience.route],
+    () => ["/", experience.route, "/dashboard", feedNavPath, "/sleep", "/settings"],
+    [experience.route, feedNavPath],
   );
   const bottomNavMeta = useMemo<Record<string, { label: string; eyebrow: string; description: string }>>(
     () => ({
@@ -115,10 +120,14 @@ export function AppShell() {
         eyebrow: "Patterns",
         description: "Review frequency, consistency, and correlation trends.",
       },
-      "/feed": {
-        label: "Feed",
-        eyebrow: "Meals",
-        description: "Open feeding history and meal logging.",
+      [feedNavPath]: {
+        label: feedNavLabel,
+        eyebrow: isBreastOnly ? "Nursing" : "Meals",
+        description: isBreastOnly
+          ? isFeedingTransitionEligible
+            ? "Open breastfeeding now, or switch this tab to full feeding when you start solids."
+            : "Open the breastfeeding timer and recent sessions."
+          : "Open feeding history and meal logging.",
       },
       "/sleep": {
         label: "Sleep",
@@ -131,7 +140,7 @@ export function AppShell() {
         description: "Open reports, growth, milestones, and preferences.",
       },
     }),
-    [experience.navLabel, experience.route],
+    [experience.navLabel, experience.route, feedNavLabel, feedNavPath, isBreastOnly, isFeedingTransitionEligible],
   );
   const swipeRouteIndex = bottomNavPaths.indexOf(location.pathname);
   const canSwipeBetweenBottomRoutes = swipeRouteIndex !== -1;
@@ -181,6 +190,16 @@ export function AppShell() {
 
     previousPathRef.current = location.pathname;
   }, [bottomNavPaths, location.pathname]);
+
+  useEffect(() => {
+    if (location.pathname !== "/feed" && location.pathname !== "/breastfeed") {
+      return;
+    }
+
+    if (location.pathname !== feedNavPath) {
+      navigate(feedNavPath, { replace: true });
+    }
+  }, [feedNavPath, location.pathname, navigate]);
 
   useEffect(() => {
     if (!showHeader) {
