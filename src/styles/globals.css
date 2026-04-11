@@ -100,25 +100,6 @@ a,
   display: none;
 }
 
-.hero-cloud-scroll {
-  will-change: transform;
-  animation: hero-cloud-scroll 60s linear infinite;
-}
-
-.hero-cloud-scroll-item {
-  transform: translateZ(0);
-}
-
-@keyframes hero-cloud-scroll {
-  from {
-    transform: translate3d(0, 0, 0);
-  }
-
-  to {
-    transform: translate3d(-50%, 0, 0);
-  }
-}
-
 /* Reduced motion — disable animations for accessibility */
 @media (prefers-reduced-motion: reduce) {
 

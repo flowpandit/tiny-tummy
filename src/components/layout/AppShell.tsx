@@ -1,26 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { useChildContext } from "../../contexts/ChildContext";
 import { useEliminationPreference } from "../../hooks/useEliminationPreference";
 import { Header } from "./Header";
 import { BottomNav } from "./BottomNav";
 import { getAgeInMonthsFromDob } from "../../lib/utils";
-
-const pageVariants = {
-  initial: (direction: number) => ({
-    opacity: 0,
-    x: direction === 0 ? 0 : direction > 0 ? 28 : -28,
-  }),
-  animate: {
-    opacity: 1,
-    x: 0,
-  },
-  exit: (direction: number) => ({
-    opacity: 0,
-    x: direction === 0 ? 0 : direction > 0 ? -28 : 28,
-  }),
-};
 
 const SWIPE_MIN_DISTANCE = 72;
 const SWIPE_DIRECTION_LOCK_RATIO = 1.2;
@@ -56,7 +41,6 @@ export function AppShell() {
   const { experience } = useEliminationPreference(activeChild);
   const mainRef = useRef<HTMLElement | null>(null);
   const [isScrollHeaderVisible, setIsScrollHeaderVisible] = useState(false);
-  const [transitionDirection, setTransitionDirection] = useState(0);
   const [dragOffsetX, setDragOffsetX] = useState(0);
   const [pullOffsetY, setPullOffsetY] = useState(0);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -73,7 +57,6 @@ export function AppShell() {
     isEligible: boolean;
     canPullToRefresh: boolean;
   } | null>(null);
-  const previousPathRef = useRef(location.pathname);
   const swipeNavigateTimeoutRef = useRef<number | null>(null);
   const refreshTimeoutRef = useRef<number | null>(null);
   const isIOS = typeof window !== "undefined" && (
@@ -176,20 +159,6 @@ export function AppShell() {
       window.clearTimeout(refreshTimeoutRef.current);
     }
   }, []);
-
-  useEffect(() => {
-    const previousPath = previousPathRef.current;
-    const previousIndex = bottomNavPaths.indexOf(previousPath);
-    const nextIndex = bottomNavPaths.indexOf(location.pathname);
-
-    if (previousIndex !== -1 && nextIndex !== -1 && previousIndex !== nextIndex) {
-      setTransitionDirection(nextIndex > previousIndex ? 1 : -1);
-    } else {
-      setTransitionDirection(0);
-    }
-
-    previousPathRef.current = location.pathname;
-  }, [bottomNavPaths, location.pathname]);
 
   useEffect(() => {
     if (location.pathname !== "/feed" && location.pathname !== "/breastfeed") {
@@ -514,30 +483,22 @@ export function AppShell() {
             </div>
           </div>
         )}
-        <AnimatePresence mode="wait" initial={false}>
+        <div
+          key={location.pathname}
+          className="relative z-10 mx-auto w-full max-w-[1180px]"
+        >
           <motion.div
-            key={location.pathname}
-            custom={transitionDirection}
-            className="relative z-10 mx-auto w-full max-w-[1180px]"
-            variants={pageVariants}
-            initial="initial"
-            animate="animate"
-            exit="exit"
-            transition={{ duration: isIOS ? 0.2 : 0.24, ease: [0.22, 1, 0.36, 1] }}
+            animate={{ x: dragOffsetX, y: pullOffsetY }}
+            transition={contentTransition}
+            style={{
+              boxShadow: dragOffsetX === 0 && pullOffsetY === 0
+                ? "none"
+                : `0 20px 50px rgba(120, 92, 69, ${Math.max(contentShadowOpacity, Math.min(pullOffsetY / 420, 0.12))})`,
+            }}
           >
-            <motion.div
-              animate={{ x: dragOffsetX, y: pullOffsetY }}
-              transition={contentTransition}
-              style={{
-                boxShadow: dragOffsetX === 0 && pullOffsetY === 0
-                  ? "none"
-                  : `0 20px 50px rgba(120, 92, 69, ${Math.max(contentShadowOpacity, Math.min(pullOffsetY / 420, 0.12))})`,
-              }}
-            >
-              <Outlet />
-            </motion.div>
+            <Outlet />
           </motion.div>
-        </AnimatePresence>
+        </div>
       </main>
       <BottomNav />
     </div>

@@ -144,8 +144,8 @@ export function HomeTopSection({
         scene="home"
       />
 
-      <div className="px-4 md:px-6 lg:px-8">
-        <div className="-mt-24 grid grid-cols-3 gap-2.5">
+      <div className="relative z-10 px-4 md:px-6 lg:px-8">
+        <div className="-mt-32 grid grid-cols-3 gap-2.5">
           {moodCards.map((card) => (
             <button
               key={card.label}
@@ -159,7 +159,7 @@ export function HomeTopSection({
           ))}
         </div>
 
-        <div className="mt-4 rounded-[22px] border border-[var(--color-border)] bg-[var(--color-surface-strong)] p-4 shadow-[var(--shadow-soft)]">
+        <div className="mt-3 rounded-[22px] border border-[var(--color-border)] bg-[var(--color-surface-strong)] p-4 shadow-[var(--shadow-soft)]">
           <p className="text-[0.9rem] font-medium text-[var(--color-text)]">Quick Summary (Last 24h)</p>
           <div className="mt-3 grid grid-cols-3 gap-2">
             <QuickSummaryRing
