@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { Button } from "../components/ui/button";
 import { ScenicHero } from "../components/layout/ScenicHero";
 import { InsetPanel, PageBody } from "../components/ui/page-layout";
@@ -20,9 +20,54 @@ import {
 } from "../lib/breastfeeding";
 import { combineLocalDateAndTimeToUtcIso, getCurrentLocalDate, getCurrentLocalTime } from "../lib/utils";
 import * as db from "../lib/db";
-import type { BreastSide } from "../lib/types";
+import type { BreastSide, FeedingEntry } from "../lib/types";
 
 type SessionDurations = Record<"left" | "right", number>;
+
+function getRecentHistoryDayLabel(dateStr: string): string {
+  const date = new Date(dateStr);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const yesterday = new Date(today);
+  yesterday.setDate(today.getDate() - 1);
+
+  const target = new Date(date);
+  target.setHours(0, 0, 0, 0);
+
+  if (target.getTime() === today.getTime()) return "Today";
+  if (target.getTime() === yesterday.getTime()) return "Yesterday";
+
+  const diffDays = Math.round((today.getTime() - target.getTime()) / 86400000);
+  if (diffDays > 1) return `${diffDays} days ago`;
+
+  return target.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
+
+function getBreastHistoryTone(side: BreastSide | null) {
+  if (side === "left") {
+    return {
+      label: "L",
+      bg: "linear-gradient(135deg, color-mix(in srgb, #de5c9f 30%, transparent) 0%, color-mix(in srgb, #c84c89 30%, transparent) 100%)",
+    };
+  }
+  if (side === "right") {
+    return {
+      label: "R",
+      bg: "linear-gradient(135deg, color-mix(in srgb, #84a7ff 30%, transparent) 0%, color-mix(in srgb, #6f8df0 30%, transparent) 100%)",
+    };
+  }
+  return {
+    label: "B",
+    bg: "linear-gradient(135deg, color-mix(in srgb, #de5c9f 26%, transparent) 0%, color-mix(in srgb, #84a7ff 26%, transparent) 100%)",
+  };
+}
+
+function getBreastHistorySummary(log: FeedingEntry): string {
+  const sideLabel = log.breast_side === "both" ? "Both sides" : log.breast_side === "right" ? "Right side" : "Left side";
+  const durationLabel = log.duration_minutes ? `${log.duration_minutes} min` : "Logged";
+  return `${sideLabel} · ${durationLabel}`;
+}
 
 function BreastSideButton({
   side,
@@ -37,45 +82,95 @@ function BreastSideButton({
   durationMs: number;
   onClick: () => void;
 }) {
+  const sideLabel = side === "left" ? "Left" : "Right";
+  const sideInitial = side === "left" ? "L" : "R";
+  const tone = side === "left"
+    ? {
+      chipBg: "linear-gradient(135deg, #de5c9f 0%, #c84c89 100%)",
+      cardBg: "color-mix(in srgb, var(--color-surface-strong) 84%, #de5c9f 16%)",
+      buttonBg: "linear-gradient(135deg, #de5c9f 0%, #ca4d8e 100%)",
+    }
+    : {
+      chipBg: "linear-gradient(135deg, #84a7ff 0%, #6f8df0 100%)",
+      cardBg: "color-mix(in srgb, var(--color-surface-strong) 84%, #84a7ff 16%)",
+      buttonBg: "linear-gradient(135deg, #84a7ff 0%, #6f8df0 100%)",
+    };
+
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`rounded-[24px] border px-5 py-5 text-left transition-all duration-200 ${isActive
-          ? "border-[var(--color-primary)] bg-[var(--color-surface-tint)] shadow-[var(--shadow-soft)]"
-          : "border-[var(--color-border)] bg-[var(--color-surface)] hover:bg-[var(--color-bg-elevated)]"
+    <div
+      className={`relative min-w-0 rounded-[24px] border px-3 pb-11 pt-3 text-left transition-all duration-200 ${isActive
+        ? "border-[var(--color-primary)] shadow-[var(--shadow-medium)]"
+        : "border-[var(--color-border)] shadow-[var(--shadow-soft)]"
         }`}
+      style={{ background: tone.cardBg }}
     >
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--color-text-soft)]">
-            {side}
-          </p>
-          <p className="mt-3 font-[var(--font-display)] text-4xl font-semibold tracking-[-0.04em] text-[var(--color-text)]">
-            {formatBreastfeedingClock(durationMs)}
-          </p>
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex min-w-0 items-center gap-2">
+          <span
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[0.95rem] font-semibold text-white shadow-[var(--shadow-soft)]"
+            style={{ background: tone.chipBg }}
+          >
+            {sideInitial}
+          </span>
+          <div className="min-w-0">
+            <p className="truncate text-[1rem] font-semibold tracking-[-0.03em] text-[var(--color-text)]">
+              {sideLabel}
+            </p>
+            {isLastUsed && !isActive && (
+              <span className="mt-1.5 inline-flex rounded-full border border-[var(--color-border)] bg-white/55 px-2 py-0.5 text-[9px] font-semibold text-[var(--color-text-secondary)]">
+                Used last
+              </span>
+            )}
+          </div>
         </div>
-        <div className="flex flex-col items-end gap-2">
-          {isActive && (
-            <span className="rounded-full bg-[var(--color-primary)] px-3 py-1 text-[11px] font-semibold text-[var(--color-on-primary)]">
-              Running
-            </span>
-          )}
-          {isLastUsed && !isActive && (
-            <span className="rounded-full border border-[var(--color-border)] bg-[var(--color-bg-elevated)] px-3 py-1 text-[11px] font-semibold text-[var(--color-text-secondary)]">
-              Used last
-            </span>
-          )}
-        </div>
+        {isActive && (
+          <span className="shrink-0 rounded-full bg-white/70 px-2 py-0.5 text-[9px] font-semibold text-[var(--color-text)]">
+            Running
+          </span>
+        )}
       </div>
-      <p className="mt-4 text-sm leading-relaxed text-[var(--color-text-secondary)]">
-        Tap to {isActive ? "keep timing this side" : `start or resume ${side} side`}.
-      </p>
-    </button>
+
+      <div className="px-0.5 pb-0 pt-1 text-center">
+        <p className="font-[var(--font-display)] text-[2.55rem] font-semibold tracking-[-0.06em] leading-none text-[var(--color-text)]">
+          {formatBreastfeedingClock(durationMs)}
+        </p>
+        <p className="mt-2 text-[0.82rem] leading-tight text-[var(--color-text-secondary)]">
+          {isActive ? "Tap to keep timing." : "Tap to start."}
+        </p>
+      </div>
+
+      <button
+        type="button"
+        onClick={onClick}
+        className="absolute bottom-[-14px] left-1/2 flex h-[56px] w-[56px] -translate-x-1/2 items-center justify-center rounded-full text-white shadow-[var(--shadow-medium)] transition-transform duration-200 hover:scale-[1.02] active:scale-[0.98]"
+        style={{ background: tone.buttonBg }}
+        aria-label={isActive ? `Continue timing ${sideLabel}` : `Start ${sideLabel}`}
+      >
+        {isActive ? (
+          <span className="flex items-center gap-1.5">
+            <span className="h-6 w-2 rounded-full bg-white" />
+            <span className="h-6 w-2 rounded-full bg-white" />
+          </span>
+        ) : (
+          <span
+            className="ml-0.5 h-0 w-0 border-b-[11px] border-l-[18px] border-t-[11px] border-b-transparent border-l-white border-t-transparent"
+            aria-hidden="true"
+          />
+        )}
+      </button>
+    </div>
   );
 }
 
 function getDurationRingDisplay(durationMs: number, gradient: string) {
+  if (durationMs <= 0) {
+    return {
+      value: "0",
+      unit: "mins",
+      gradient,
+    };
+  }
+
   const roundedMinutes = getRoundedDurationMinutes(durationMs);
 
   if (roundedMinutes >= 60) {
@@ -96,8 +191,6 @@ function getDurationRingDisplay(durationMs: number, gradient: string) {
 }
 
 export function Breastfeed() {
-  const navigate = useNavigate();
-  const location = useLocation();
   const { activeChild } = useChildContext();
   const { showError, showSuccess } = useToast();
   const [durations, setDurations] = useState<SessionDurations>({ left: 0, right: 0 });
@@ -106,10 +199,8 @@ export function Breastfeed() {
   const [lastUsedSide, setLastUsedSide] = useState<BreastSide | null>(null);
   const [tick, setTick] = useState(Date.now());
   const [isSaving, setIsSaving] = useState(false);
+  const [recentHistory, setRecentHistory] = useState<FeedingEntry[]>([]);
   const supportsBreastfeeding = activeChild?.feeding_type === "breast" || activeChild?.feeding_type === "mixed";
-  const originPath = location.state && typeof location.state === "object" && "origin" in location.state
-    ? (location.state as { origin?: string }).origin
-    : undefined;
 
   useEffect(() => {
     if (!activeSide) return;
@@ -133,6 +224,7 @@ export function Breastfeed() {
       setActiveSide(null);
       setActiveStartedAt(null);
       setLastUsedSide(null);
+      setRecentHistory([]);
       setTick(Date.now());
       return;
     }
@@ -143,6 +235,7 @@ export function Breastfeed() {
     setActiveSide(null);
     setActiveStartedAt(null);
     setLastUsedSide(null);
+    setRecentHistory([]);
     setTick(Date.now());
 
     Promise.all([
@@ -165,6 +258,11 @@ export function Breastfeed() {
       setActiveSide(restoredSession.activeSide);
       setActiveStartedAt(restoredSession.activeStartedAt);
       setLastUsedSide(nextLastUsedSide);
+      setRecentHistory(
+        feedingLogs
+          .filter((log) => log.food_type === "breast_milk" && (log.breast_side === "left" || log.breast_side === "right" || log.breast_side === "both"))
+          .slice(0, 3),
+      );
       setTick(Date.now());
     }).catch(() => {
       if (!cancelled) {
@@ -172,6 +270,7 @@ export function Breastfeed() {
         setActiveSide(null);
         setActiveStartedAt(null);
         setLastUsedSide(null);
+        setRecentHistory([]);
       }
     });
 
@@ -250,19 +349,6 @@ export function Breastfeed() {
     await persistSession(nextSession);
   };
 
-  const handlePause = async () => {
-    await flushActiveDuration();
-  };
-
-  const handleReset = async () => {
-    const nextSession = getEmptyBreastfeedingSession(lastUsedSide);
-    setDurations(nextSession.durations);
-    setActiveSide(null);
-    setActiveStartedAt(null);
-    setTick(Date.now());
-    await persistSession(nextSession);
-  };
-
   const handleSave = async () => {
     const finalSession = await flushActiveDuration();
     const saveSide = finalSession.lastUsedSide;
@@ -296,10 +382,20 @@ export function Breastfeed() {
       }
 
       const clearedSession = getEmptyBreastfeedingSession(saveSide);
+      setDurations(clearedSession.durations);
+      setActiveSide(null);
+      setActiveStartedAt(null);
+      setLastUsedSide(clearedSession.lastUsedSide);
+      setTick(Date.now());
       await persistSession(clearedSession);
       await syncSmartRemindersForChild(activeChild);
+      const feedingLogs = await db.getFeedingLogs(activeChild.id, 12);
+      setRecentHistory(
+        feedingLogs
+          .filter((log) => log.food_type === "breast_milk" && (log.breast_side === "left" || log.breast_side === "right" || log.breast_side === "both"))
+          .slice(0, 3),
+      );
       showSuccess("Breastfeeding session saved.");
-      navigate(originPath ?? "/");
     } catch {
       showError("Could not save the breastfeeding session.");
       setDurations(finalSession.durations);
@@ -312,12 +408,16 @@ export function Breastfeed() {
   const leftRing = getDurationRingDisplay(leftDuration, "var(--gradient-status-healthy)");
   const rightRing = getDurationRingDisplay(rightDuration, "var(--gradient-status-head)");
 
+  const handlePause = async () => {
+    await flushActiveDuration();
+  };
+
   return (
     <PageBody className="mt-0 space-y-0 px-0 py-0">
       <ScenicHero
         child={activeChild}
         title="Breastfeed"
-        description="Tap left or right to start timing. Switching sides pauses the first side automatically and keeps both totals together."
+        description="Tap left or right to start. Switching sides pauses the other side."
         action={(
           <Button variant="cta" size="sm" onClick={handleSave} disabled={totalDuration < 1000 || isSaving}>
             {isSaving ? "Saving..." : "Save"}
@@ -358,37 +458,24 @@ export function Breastfeed() {
               />
             </div>
 
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="grid grid-cols-2 gap-3">
               <BreastSideButton
                 side="left"
                 isActive={activeSide === "left"}
                 isLastUsed={lastUsedSide === "left"}
                 durationMs={leftDuration}
-                onClick={() => handleStartSide("left")}
+                onClick={() => { void (activeSide === "left" ? handlePause() : handleStartSide("left")); }}
               />
               <BreastSideButton
                 side="right"
                 isActive={activeSide === "right"}
                 isLastUsed={lastUsedSide === "right"}
                 durationMs={rightDuration}
-                onClick={() => handleStartSide("right")}
+                onClick={() => { void (activeSide === "right" ? handlePause() : handleStartSide("right")); }}
               />
             </div>
 
             <InsetPanel className="space-y-4">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--color-text-soft)]">Current session</p>
-                  <p className="mt-2 text-2xl font-semibold tracking-[-0.03em] text-[var(--color-text)]">
-                    {formatBreastfeedingSummary(totalDuration)}
-                  </p>
-                </div>
-                {activeSide && (
-                  <span className="rounded-full bg-[var(--color-healthy-bg)] px-3 py-1 text-[11px] font-semibold text-[var(--color-healthy)]">
-                    {activeSide} side running
-                  </span>
-                )}
-              </div>
               {lastUsedSide && !activeSide && (
                 <div className="rounded-[18px] border border-[var(--color-border)] bg-[var(--color-bg-elevated)]/72 px-4 py-3">
                   <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--color-text-soft)]">Next suggested side</p>
@@ -400,42 +487,56 @@ export function Breastfeed() {
                   </p>
                 </div>
               )}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="rounded-[18px] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3">
-                  <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--color-text-soft)]">Left total</p>
-                  <p className="mt-2 text-lg font-semibold text-[var(--color-text)]">{formatBreastfeedingSummary(leftDuration)}</p>
-                </div>
-                <div className="rounded-[18px] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3">
-                  <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--color-text-soft)]">Right total</p>
-                  <p className="mt-2 text-lg font-semibold text-[var(--color-text)]">{formatBreastfeedingSummary(rightDuration)}</p>
-                </div>
-              </div>
-              <div className="flex gap-3">
-                <Button variant="secondary" className="flex-1" onClick={handlePause} disabled={!activeSide}>
-                  Pause
-                </Button>
-                <Button variant="ghost" className="flex-1" onClick={handleReset} disabled={totalDuration < 1000}>
-                  Reset
-                </Button>
-              </div>
-            </InsetPanel>
-
-            <div className="rounded-[24px] border border-[var(--color-border)] bg-[var(--color-surface)] px-5 py-5 shadow-[var(--shadow-soft)]">
-              <p className="text-sm font-medium text-[var(--color-text)]">
-                Save left and right as separate breastfeed entries.
-              </p>
-              <p className="mt-2 text-sm leading-relaxed text-[var(--color-text-secondary)]">
-                The most recently used side will be remembered here next time.
-              </p>
               <Button
                 variant="cta"
-                className="mt-4 w-full"
+                className="w-full"
                 onClick={handleSave}
                 disabled={totalDuration < 1000 || isSaving}
               >
                 {isSaving ? "Saving..." : "Save breastfeeding session"}
               </Button>
-            </div>
+            </InsetPanel>
+
+            {recentHistory.length > 0 && (
+              <section className="px-1">
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-[1rem] font-semibold text-[var(--color-text)]">Recent history</p>
+                  <Link
+                    to="/history"
+                    className="rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1 text-[11px] font-semibold text-[var(--color-text-secondary)] transition-colors hover:bg-[var(--color-surface-strong)]"
+                  >
+                    See all
+                  </Link>
+                </div>
+                <div className="mt-2.5 space-y-2">
+                  {recentHistory.map((log, index) => {
+                    const tone = getBreastHistoryTone(log.breast_side);
+                    return (
+                      <div key={log.id} className="flex items-center gap-2.5">
+                        <div className="relative flex h-10 w-10 flex-shrink-0 items-center justify-center">
+                          {index < recentHistory.length - 1 && (
+                            <span
+                              className="absolute left-1/2 top-8 h-6 w-px -translate-x-1/2"
+                              style={{ backgroundColor: "var(--color-border)" }}
+                            />
+                          )}
+                          <span
+                            className="flex h-9 w-9 items-center justify-center rounded-full text-[0.88rem] font-semibold text-[var(--color-text)]"
+                            style={{ background: tone.bg }}
+                          >
+                            {tone.label}
+                          </span>
+                        </div>
+                        <p className="text-[0.95rem] leading-none text-[var(--color-text-secondary)]">
+                          <span className="font-medium text-[var(--color-text)]">{getRecentHistoryDayLabel(log.logged_at)}:</span>{" "}
+                          {getBreastHistorySummary(log)}
+                        </p>
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
+            )}
           </>
         )}
       </div>
