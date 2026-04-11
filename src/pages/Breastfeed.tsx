@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import breastfeedIcon from "../assets/svg-assets/icons/breastfeed-icon.svg";
 import { Button } from "../components/ui/button";
 import { ScenicHero } from "../components/layout/ScenicHero";
 import { InsetPanel, PageBody } from "../components/ui/page-layout";
@@ -83,7 +84,6 @@ function BreastSideButton({
   onClick: () => void;
 }) {
   const sideLabel = side === "left" ? "Left" : "Right";
-  const sideInitial = side === "left" ? "L" : "R";
   const tone = side === "left"
     ? {
       chipBg: "linear-gradient(135deg, #de5c9f 0%, #c84c89 100%)",
@@ -107,10 +107,25 @@ function BreastSideButton({
       <div className="flex items-start justify-between gap-2">
         <div className="flex min-w-0 items-center gap-2">
           <span
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[0.95rem] font-semibold text-white shadow-[var(--shadow-soft)]"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white shadow-[var(--shadow-soft)]"
             style={{ background: tone.chipBg }}
           >
-            {sideInitial}
+            <span
+              aria-hidden="true"
+              className="inline-block h-4.5 w-4.5"
+              style={{
+                backgroundColor: "white",
+                transform: side === "right" ? "scaleX(-1)" : undefined,
+                WebkitMaskImage: `url(${breastfeedIcon})`,
+                WebkitMaskRepeat: "no-repeat",
+                WebkitMaskPosition: "center",
+                WebkitMaskSize: "contain",
+                maskImage: `url(${breastfeedIcon})`,
+                maskRepeat: "no-repeat",
+                maskPosition: "center",
+                maskSize: "contain",
+              }}
+            />
           </span>
           <div className="min-w-0">
             <p className="truncate text-[1rem] font-semibold tracking-[-0.03em] text-[var(--color-text)]">

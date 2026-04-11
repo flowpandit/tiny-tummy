@@ -1,8 +1,13 @@
 import bottleIcon from "../../assets/svg-assets/icons/bottle-icon.svg";
+import bottlefeedIcon from "../../assets/svg-assets/icons/bottlefeed-icon.svg";
+import breastfeedIcon from "../../assets/svg-assets/icons/breastfeed-icon.svg";
 import diaperIcon from "../../assets/svg-assets/icons/diaper-icon.svg";
+import diaperIcon2 from "../../assets/svg-assets/icons/diaper-icon-2.svg";
+import episodeIcon from "../../assets/svg-assets/icons/episode-icon.svg";
 import moonIcon from "../../assets/svg-assets/icons/moon-icon.svg";
 import rainbowIcon from "../../assets/svg-assets/icons/rainbow-icon.svg";
 import sunIcon from "../../assets/svg-assets/icons/sun-icon.svg";
+import symptomIcon from "../../assets/svg-assets/icons/symptom-icon.svg";
 
 interface IconProps {
   className?: string;
@@ -15,6 +20,26 @@ interface StrokeIconProps {
 
 function SvgAssetIcon({ src, className }: { src: string; className: string }) {
   return <img src={src} alt="" aria-hidden="true" className={className} />;
+}
+
+function MaskAssetIcon({ src, className }: { src: string; className: string }) {
+  return (
+    <span
+      aria-hidden="true"
+      className={`inline-block ${className}`}
+      style={{
+        backgroundColor: "currentColor",
+        WebkitMaskImage: `url(${src})`,
+        WebkitMaskRepeat: "no-repeat",
+        WebkitMaskPosition: "center",
+        WebkitMaskSize: "contain",
+        maskImage: `url(${src})`,
+        maskRepeat: "no-repeat",
+        maskPosition: "center",
+        maskSize: "contain",
+      }}
+    />
+  );
 }
 
 export function PoopIcon({ className = "w-5 h-5", color = "currentColor" }: IconProps) {
@@ -70,33 +95,15 @@ export function HomeSummarySleepIcon({ className = "h-7 w-7" }: StrokeIconProps)
 }
 
 export function HomeActionDiaperIcon({ className = "h-5 w-5" }: StrokeIconProps) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
-      <path d="M4.5 9.25C4.5 7.18 6.18 5.5 8.25 5.5h7.5c2.07 0 3.75 1.68 3.75 3.75v2.5c0 3.18-2.57 5.75-5.75 5.75h-3.5c-3.18 0-5.75-2.57-5.75-5.75v-2.5Z" />
-      <path d="M7 15.25c.47-1.08 1.41-1.9 2.58-2.23M17 15.25c-.47-1.08-1.41-1.9-2.58-2.23" />
-      <path d="M8 5.75V4.5M16 5.75V4.5" />
-    </svg>
-  );
+  return <MaskAssetIcon src={diaperIcon2} className={className} />;
 }
 
 export function HomeActionBottleIcon({ className = "h-5 w-5" }: StrokeIconProps) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
-      <path d="M10 3.75h4" />
-      <path d="M10.75 3.75v2.1c0 .53-.21 1.04-.59 1.41l-.56.56a3 3 0 0 0-.88 2.12v7.31A2.75 2.75 0 0 0 11.47 20h1.06a2.75 2.75 0 0 0 2.75-2.75V9.94a3 3 0 0 0-.88-2.12l-.56-.56a1.99 1.99 0 0 1-.59-1.41v-2.1" />
-      <path d="M9.1 11.5h5.8M9.1 14.5h5.8" />
-    </svg>
-  );
+  return <MaskAssetIcon src={bottlefeedIcon} className={className} />;
 }
 
 export function HomeActionBreastfeedIcon({ className = "h-5 w-5" }: StrokeIconProps) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
-      <path d="M12 6.25a4.25 4.25 0 1 0 0 8.5 4.25 4.25 0 0 0 0-8.5Z" />
-      <path d="M12 10.5h.01" />
-      <path d="M8.25 14.25c-1.86.7-3.1 2.24-3.75 4.25M15.75 14.25c1.86.7 3.1 2.24 3.75 4.25" />
-    </svg>
-  );
+  return <MaskAssetIcon src={breastfeedIcon} className={className} />;
 }
 
 export function HomeActionSleepIcon({ className = "h-5 w-5" }: StrokeIconProps) {
@@ -109,25 +116,11 @@ export function HomeActionSleepIcon({ className = "h-5 w-5" }: StrokeIconProps) 
 }
 
 export function HomeActionEpisodeIcon({ className = "h-5 w-5" }: StrokeIconProps) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
-      <path d="M6.25 17.75h11.5" />
-      <path d="M7.75 13.5V10a4.25 4.25 0 1 1 8.5 0v3.5" />
-      <path d="M10.25 17.75V20M13.75 17.75V20" />
-      <path d="M12 5.75v1.5" />
-    </svg>
-  );
+  return <MaskAssetIcon src={episodeIcon} className={className} />;
 }
 
 export function HomeActionSymptomIcon({ className = "h-5 w-5" }: StrokeIconProps) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
-      <path d="M12 4.75c3.45 0 6.25 2.8 6.25 6.25S15.45 17.25 12 17.25 5.75 14.45 5.75 11 8.55 4.75 12 4.75Z" />
-      <path d="M12 8.25v3.25" />
-      <path d="M12 14.25h.01" />
-      <path d="M8.25 19.25h7.5" />
-    </svg>
-  );
+  return <MaskAssetIcon src={symptomIcon} className={className} />;
 }
 
 export function HomeToolHistoryIcon({ className = "h-5 w-5" }: StrokeIconProps) {

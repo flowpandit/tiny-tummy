@@ -12,6 +12,7 @@ import { getDiaperTypeLabel, getUrineColorLabel } from "../../lib/diaper";
 import diaperWetIcon from "../../assets/svg-assets/icons/diaper-wet.svg";
 import diaperDirtyIcon from "../../assets/svg-assets/icons/diaper-dirty.svg";
 import diaperMixedIcon from "../../assets/svg-assets/icons/diaper-mixed.svg";
+import breastfeedIcon from "../../assets/svg-assets/icons/breastfeed-icon.svg";
 import poop1Icon from "../../assets/svg-assets/icons/poop-1.svg";
 import poop2Icon from "../../assets/svg-assets/icons/poop-2.svg";
 import poop3Icon from "../../assets/svg-assets/icons/poop-3.svg";
@@ -192,13 +193,33 @@ export function RecentActivity({ poopLogs, diaperLogs, feedingLogs, onEditPoop, 
             >
               <div
                 className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full text-[var(--color-chip-text-on-light)]"
-                style={{ backgroundColor: "#f4f1ea" }}
+                style={meal.food_type === "breast_milk"
+                  ? { background: "linear-gradient(135deg, color-mix(in srgb, #de5c9f 24%, transparent) 0%, color-mix(in srgb, #84a7ff 24%, transparent) 100%)" }
+                  : { backgroundColor: "#f4f1ea" }}
               >
-                <span
-                  className="contents"
-                >
-                  <HomeActionBottleIcon className="h-4 w-4" />
-                </span>
+                {meal.food_type === "breast_milk" ? (
+                  <span
+                    aria-hidden="true"
+                    className="inline-block h-5 w-5"
+                    style={{
+                      backgroundColor: "var(--color-text)",
+                      WebkitMaskImage: `url(${breastfeedIcon})`,
+                      WebkitMaskRepeat: "no-repeat",
+                      WebkitMaskPosition: "center",
+                      WebkitMaskSize: "contain",
+                      maskImage: `url(${breastfeedIcon})`,
+                      maskRepeat: "no-repeat",
+                      maskPosition: "center",
+                      maskSize: "contain",
+                    }}
+                  />
+                ) : (
+                  <span
+                    className="contents"
+                  >
+                    <HomeActionBottleIcon className="h-4 w-4" />
+                  </span>
+                )}
               </div>
               <div className="min-w-0 flex-1">
                 <p className="truncate text-[0.78rem] font-semibold leading-tight text-[var(--color-text)]">{getFeedingEntryDisplayLabel(meal, unitSystem)}</p>
