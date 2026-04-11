@@ -1,4 +1,4 @@
-import { useEffect, useId, useState, type ReactNode, type RefObject } from "react";
+import { useEffect, useState, type ReactNode, type RefObject } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import watercolorClouds from "../../assets/svg-assets/hero-pieces/watercolor-clouds.svg";
 import watercolorCloudsDark from "../../assets/svg-assets/hero-pieces/watercolor-clouds-dark.svg";
@@ -45,7 +45,6 @@ export function ScenicHero({
   className,
   scene = "default",
 }: ScenicHeroProps) {
-  const clipPathId = useId();
   const { children, setActiveChildId } = useChildContext();
   const { resolved } = useTheme();
   const isDarkArtwork = resolved !== "light";
@@ -74,18 +73,14 @@ export function ScenicHero({
 
   return (
     <section className={className}>
-      <svg width="0" height="0" className="absolute" aria-hidden="true" focusable="false">
-        <defs>
-          <clipPath id={clipPathId} clipPathUnits="objectBoundingBox">
-            <path d="M0,0 H1 V0.62 Q0.6,0.74 0,0.64 Z" />
-          </clipPath>
-        </defs>
-      </svg>
       <div
         className={useHomeScene
           ? "relative h-[350px] overflow-hidden px-4 pt-6 md:h-[380px] md:px-0 lg:h-[410px] lg:px-0"
           : "relative h-[350px] overflow-hidden px-4 pt-6 md:h-[380px] md:px-0 lg:h-[400px] lg:px-0"}
-        style={{ clipPath: `url(#${clipPathId})` }}
+        style={{
+          borderBottomLeftRadius: "38% 12%",
+          borderBottomRightRadius: "38% 12%",
+        }}
       >
         {!useHomeScene && (
           <>
@@ -128,7 +123,7 @@ export function ScenicHero({
               className="pointer-events-none absolute inset-x-[-20px] top-[40px] overflow-hidden md:inset-x-0 md:top-[72px] lg:top-[84px]"
               aria-hidden="true"
             >
-              <div className="hero-cloud-scroll flex w-[200%]">
+              <div className="flex w-[200%]">
                 <img
                   src={skyArt}
                   alt=""
@@ -407,12 +402,7 @@ export function ScenicHero({
         <div className="pointer-events-none absolute left-[72px] top-[108px] h-9 w-9 rounded-full blur-[8px]" style={{ background: "var(--color-hero-cloud-soft)" }} />
         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-28" style={{ background: "var(--gradient-hero-floor)" }} />
         <div className="relative flex h-full items-start pt-8">
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.34, ease: [0.22, 1, 0.36, 1] }}
-            className="w-full px-4 md:px-6 lg:px-8"
-          >
+          <div className="w-full px-4 md:px-6 lg:px-8">
             <div className="flex items-start justify-between gap-4">
               <div className="min-w-0 max-w-[18rem] md:max-w-[23rem] lg:max-w-[25rem]">
                 <h1 className="font-[var(--font-display)] text-[2.05rem] font-extrabold leading-[1.1] tracking-[-0.05em] text-[var(--color-hero-title)] md:text-[2.5rem] lg:text-[2.8rem]">
@@ -484,7 +474,7 @@ export function ScenicHero({
                 </div>
               </div>
             )}
-          </motion.div>
+          </div>
         </div>
       </div>
     </section>
