@@ -48,18 +48,18 @@ function getRecentHistoryDayLabel(dateStr: string): string {
 function getBreastHistoryTone(side: BreastSide | null) {
   if (side === "left") {
     return {
-      label: "L",
+      mirrored: false,
       bg: "linear-gradient(135deg, color-mix(in srgb, #de5c9f 30%, transparent) 0%, color-mix(in srgb, #c84c89 30%, transparent) 100%)",
     };
   }
   if (side === "right") {
     return {
-      label: "R",
+      mirrored: true,
       bg: "linear-gradient(135deg, color-mix(in srgb, #84a7ff 30%, transparent) 0%, color-mix(in srgb, #6f8df0 30%, transparent) 100%)",
     };
   }
   return {
-    label: "B",
+    mirrored: false,
     bg: "linear-gradient(135deg, color-mix(in srgb, #de5c9f 26%, transparent) 0%, color-mix(in srgb, #84a7ff 26%, transparent) 100%)",
   };
 }
@@ -536,10 +536,25 @@ export function Breastfeed() {
                             />
                           )}
                           <span
-                            className="flex h-9 w-9 items-center justify-center rounded-full text-[0.88rem] font-semibold text-[var(--color-text)]"
+                            className="flex h-9 w-9 items-center justify-center rounded-full text-[var(--color-text)]"
                             style={{ background: tone.bg }}
                           >
-                            {tone.label}
+                            <span
+                              aria-hidden="true"
+                              className="inline-block h-4.5 w-4.5"
+                              style={{
+                                backgroundColor: "var(--color-text)",
+                                transform: tone.mirrored ? "scaleX(-1)" : undefined,
+                                WebkitMaskImage: `url(${breastfeedIcon})`,
+                                WebkitMaskRepeat: "no-repeat",
+                                WebkitMaskPosition: "center",
+                                WebkitMaskSize: "contain",
+                                maskImage: `url(${breastfeedIcon})`,
+                                maskRepeat: "no-repeat",
+                                maskPosition: "center",
+                                maskSize: "contain",
+                              }}
+                            />
                           </span>
                         </div>
                         <p className="text-[0.95rem] leading-none text-[var(--color-text-secondary)]">
