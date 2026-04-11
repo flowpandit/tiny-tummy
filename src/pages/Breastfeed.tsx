@@ -5,6 +5,7 @@ import { Button } from "../components/ui/button";
 import { ScenicHero } from "../components/layout/ScenicHero";
 import { InsetPanel, PageBody } from "../components/ui/page-layout";
 import { TrackerMetricRing } from "../components/tracking/TrackerPrimitives";
+import { DietLogForm } from "../components/logging/DietLogForm";
 import { useToast } from "../components/ui/toast";
 import { useChildContext } from "../contexts/ChildContext";
 import { syncSmartRemindersForChild } from "../lib/notifications";
@@ -21,7 +22,7 @@ import {
 } from "../lib/breastfeeding";
 import { combineLocalDateAndTimeToUtcIso, getCurrentLocalDate, getCurrentLocalTime } from "../lib/utils";
 import * as db from "../lib/db";
-import type { BreastSide, FeedingEntry } from "../lib/types";
+import type { BreastSide, FeedingEntry, FeedingLogDraft } from "../lib/types";
 
 type SessionDurations = Record<"left" | "right", number>;
 
@@ -247,6 +248,8 @@ export function Breastfeed() {
   const [selectedPatternLogId, setSelectedPatternLogId] = useState<string | null>(null);
   const [showTransitionConfirm, setShowTransitionConfirm] = useState(false);
   const [isTransitioningToMixed, setIsTransitioningToMixed] = useState(false);
+  const [feedingFormOpen, setFeedingFormOpen] = useState(false);
+  const [feedingDraft, setFeedingDraft] = useState<Partial<FeedingLogDraft> | null>(null);
   const supportsBreastfeeding = activeChild?.feeding_type === "breast" || activeChild?.feeding_type === "mixed";
   const patternSectionRef = useRef<HTMLDivElement | null>(null);
 
@@ -375,6 +378,20 @@ export function Breastfeed() {
 
   if (!activeChild) return null;
 
+  const openFeedingForm = (draft?: Partial<FeedingLogDraft> | null) => {
+    setFeedingDraft(draft ?? null);
+    setFeedingFormOpen(true);
+  };
+
+  const refreshRecentBreastHistory = async () => {
+    const feedingLogs = await db.getFeedingLogs(activeChild.id, 32);
+    setRecentHistory(
+      feedingLogs
+        .filter((log) => log.food_type === "breast_milk" && (log.breast_side === "left" || log.breast_side === "right" || log.breast_side === "both"))
+        .slice(0, 32),
+    );
+  };
+
   const persistSession = async (session: BreastfeedingSessionState) => {
     await db.setSetting(getBreastfeedingSessionSettingKey(activeChild.id), JSON.stringify(session));
   };
@@ -471,12 +488,7 @@ export function Breastfeed() {
       setTick(Date.now());
       await persistSession(clearedSession);
       await syncSmartRemindersForChild(activeChild);
-      const feedingLogs = await db.getFeedingLogs(activeChild.id, 32);
-      setRecentHistory(
-        feedingLogs
-          .filter((log) => log.food_type === "breast_milk" && (log.breast_side === "left" || log.breast_side === "right" || log.breast_side === "both"))
-          .slice(0, 32),
-      );
+      await refreshRecentBreastHistory();
       showSuccess("Breastfeeding session saved.");
     } catch {
       showError("Could not save the breastfeeding session.");
@@ -506,6 +518,11 @@ export function Breastfeed() {
     } finally {
       setIsTransitioningToMixed(false);
     }
+  };
+
+  const handleFeedLogged = async () => {
+    await refreshRecentBreastHistory();
+    await syncSmartRemindersForChild(activeChild);
   };
 
   return (
@@ -632,6 +649,13 @@ export function Breastfeed() {
                 disabled={totalDuration < 1000 || isSaving}
               >
                 {isSaving ? "Saving..." : "Save breastfeeding session"}
+              </Button>
+              <Button
+                variant="secondary"
+                className="w-full"
+                onClick={() => openFeedingForm()}
+              >
+                Log bottle, formula, or other feed
               </Button>
             </InsetPanel>
 
@@ -809,6 +833,16 @@ export function Breastfeed() {
           </>
         )}
       </div>
+      <DietLogForm
+        open={feedingFormOpen}
+        onClose={() => {
+          setFeedingFormOpen(false);
+          setFeedingDraft(null);
+        }}
+        childId={activeChild.id}
+        initialDraft={feedingDraft}
+        onLogged={() => void handleFeedLogged()}
+      />
     </PageBody>
   );
 }
