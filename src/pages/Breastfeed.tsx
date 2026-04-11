@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import breastfeedIcon from "../assets/svg-assets/icons/breastfeed-icon.svg";
 import { Button } from "../components/ui/button";
+import { CareToolsSection } from "../components/home/CareToolsSection";
 import { ScenicHero } from "../components/layout/ScenicHero";
 import { InsetPanel, PageBody } from "../components/ui/page-layout";
 import { TrackerMetricRing } from "../components/tracking/TrackerPrimitives";
@@ -830,6 +831,8 @@ export function Breastfeed() {
                 </Button>
               </section>
             )}
+
+            <CareToolsSection className="px-1" />
           </>
         )}
       </div>

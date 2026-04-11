@@ -34,9 +34,9 @@ import {
 } from "../components/tracking/TrackerPrimitives";
 import { FeedPresetEditorSheet } from "../components/home/QuickPresetCustomizerSheet";
 import { TimeSinceIndicator } from "../components/home/TimeSinceIndicator";
+import { CareToolsSection } from "../components/home/CareToolsSection";
 import { DietLogForm } from "../components/logging/DietLogForm";
 import { EditMealSheet } from "../components/logging/EditMealSheet";
-import { DiscoveryLinks } from "../components/discovery/DiscoveryLinks";
 import { useToast } from "../components/ui/toast";
 import type { FeedingEntry, FeedingLogDraft, FeedingType, HealthStatus, UnitSystem } from "../lib/types";
 
@@ -1162,32 +1162,6 @@ export function Feed() {
           </CardContent>
         </Card>
 
-        <DiscoveryLinks
-          eyebrow="Related"
-          title="Keep feeding in context"
-          description="Feed rhythm makes more sense when it stays connected to the wider care picture."
-          compact
-          items={[
-            {
-              to: "/history",
-              title: "History",
-              description: "Review the full feed and poop timeline.",
-            },
-            {
-              to: "/milestones",
-              title: "Milestones",
-              description: "See solids, illness, or medication changes.",
-              tone: "info",
-            },
-            {
-              to: "/guidance",
-              title: "Guidance",
-              description: "Open practical feeding and stool guidance.",
-              tone: "healthy",
-            },
-          ]}
-        />
-
         {logs.length === 0 ? (
           <EmptyState
             icon={(
@@ -1222,6 +1196,8 @@ export function Feed() {
             </CardContent>
           </Card>
         )}
+
+        <CareToolsSection className="px-1" />
 
         <DietLogForm
           open={formOpen}

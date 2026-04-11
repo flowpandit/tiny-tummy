@@ -22,10 +22,10 @@ import {
   TrackerWeekSwitcher,
 } from "../components/tracking/TrackerPrimitives";
 import { TimeSinceIndicator } from "../components/home/TimeSinceIndicator";
+import { CareToolsSection } from "../components/home/CareToolsSection";
 import { EditSleepSheet } from "../components/sleep/EditSleepSheet";
 import { SleepLogSheet } from "../components/sleep/SleepLogSheet";
 import { SleepPatternTimeline } from "../components/sleep/SleepPatternTimeline";
-import { DiscoveryLinks } from "../components/discovery/DiscoveryLinks";
 import type { HealthStatus, SleepEntry } from "../lib/types";
 
 type PredictionConfidence = "low" | "medium" | "high";
@@ -910,31 +910,7 @@ export function Sleep() {
           </CardContent>
         </Card>
 
-        <DiscoveryLinks
-          eyebrow="Related"
-          title="Keep sleep connected"
-          description="Sleep patterns are easier to trust when you can move straight into the surrounding context."
-          compact
-          items={[
-            {
-              to: "/history",
-              title: "History",
-              description: "Review naps, nights, and nearby care events.",
-            },
-            {
-              to: "/milestones",
-              title: "Milestones",
-              description: "See teething, illness, solids, or other shifts.",
-              tone: "info",
-            },
-            {
-              to: "/guidance",
-              title: "Guidance",
-              description: "Open practical guidance when the rhythm changes.",
-              tone: "healthy",
-            },
-          ]}
-        />
+        <CareToolsSection className="px-1" />
 
         {logs.length === 0 ? (
           <EmptyState
