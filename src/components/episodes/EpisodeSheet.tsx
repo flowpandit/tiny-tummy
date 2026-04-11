@@ -6,6 +6,7 @@ import { DatePicker } from "../ui/date-picker";
 import { TimePicker } from "../ui/time-picker";
 import { Card, CardContent } from "../ui/card";
 import { useToast } from "../ui/toast";
+import { useChildContext } from "../../contexts/ChildContext";
 import { cn } from "../../lib/cn";
 import { EPISODE_EVENT_TYPES, EPISODE_TYPES, getEpisodeEventTypeLabel, getEpisodeTypeLabel } from "../../lib/episode-constants";
 import { combineLocalDateAndTimeToUtcIso, formatDate, getCurrentLocalDate, getCurrentLocalTime, getLocalDateTimeParts } from "../../lib/utils";
@@ -46,6 +47,7 @@ export function EpisodeSheet({
   initialMode = "default",
 }: EpisodeSheetProps) {
   const { showError, showSuccess } = useToast();
+  const { children, refreshChildren } = useChildContext();
   const [episodeType, setEpisodeType] = useState<EpisodeType | null>(null);
   const [episodeDate, setEpisodeDate] = useState(getCurrentLocalDate());
   const [episodeTime, setEpisodeTime] = useState(getCurrentLocalTime());
@@ -103,6 +105,11 @@ export function EpisodeSheet({
         started_at: combineLocalDateAndTimeToUtcIso(episodeDate, episodeTime),
         summary: summary.trim() || null,
       });
+      const child = children.find((entry) => entry.id === childId);
+      if (episodeType === "solids_transition" && child?.feeding_type === "breast") {
+        await db.updateChild(childId, { feeding_type: "mixed" });
+        await refreshChildren();
+      }
       await onUpdated();
       showSuccess("Episode started.");
     } catch {

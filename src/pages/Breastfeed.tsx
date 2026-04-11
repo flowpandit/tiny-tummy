@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import breastfeedIcon from "../assets/svg-assets/icons/breastfeed-icon.svg";
 import { Button } from "../components/ui/button";
 import { ScenicHero } from "../components/layout/ScenicHero";
@@ -68,6 +68,34 @@ function getBreastHistorySummary(log: FeedingEntry): string {
   const sideLabel = log.breast_side === "both" ? "Both sides" : log.breast_side === "right" ? "Right side" : "Left side";
   const durationLabel = log.duration_minutes ? `${log.duration_minutes} min` : "Logged";
   return `${sideLabel} · ${durationLabel}`;
+}
+
+function getBreastPatternLabel(side: BreastSide | null) {
+  if (side === "left") return "Left";
+  if (side === "right") return "Right";
+  return "Both";
+}
+
+function getBreastPatternTone(side: BreastSide | null) {
+  if (side === "left") {
+    return {
+      bg: "linear-gradient(135deg, color-mix(in srgb, #de5c9f 70%, white) 0%, color-mix(in srgb, #c84c89 76%, white) 100%)",
+      border: "color-mix(in srgb, #c84c89 72%, white)",
+      text: "color-mix(in srgb, #7a2453 88%, black)",
+    };
+  }
+  if (side === "right") {
+    return {
+      bg: "linear-gradient(135deg, color-mix(in srgb, #84a7ff 72%, white) 0%, color-mix(in srgb, #6f8df0 78%, white) 100%)",
+      border: "color-mix(in srgb, #6f8df0 72%, white)",
+      text: "color-mix(in srgb, #28498c 88%, black)",
+    };
+  }
+  return {
+    bg: "linear-gradient(135deg, color-mix(in srgb, #de5c9f 58%, white) 0%, color-mix(in srgb, #84a7ff 62%, white) 100%)",
+    border: "color-mix(in srgb, #8f83c9 70%, white)",
+    text: "color-mix(in srgb, #55487f 90%, black)",
+  };
 }
 
 function BreastSideButton({
@@ -206,7 +234,8 @@ function getDurationRingDisplay(durationMs: number, gradient: string) {
 }
 
 export function Breastfeed() {
-  const { activeChild } = useChildContext();
+  const navigate = useNavigate();
+  const { activeChild, refreshChildren } = useChildContext();
   const { showError, showSuccess } = useToast();
   const [durations, setDurations] = useState<SessionDurations>({ left: 0, right: 0 });
   const [activeSide, setActiveSide] = useState<"left" | "right" | null>(null);
@@ -215,7 +244,11 @@ export function Breastfeed() {
   const [tick, setTick] = useState(Date.now());
   const [isSaving, setIsSaving] = useState(false);
   const [recentHistory, setRecentHistory] = useState<FeedingEntry[]>([]);
+  const [selectedPatternLogId, setSelectedPatternLogId] = useState<string | null>(null);
+  const [showTransitionConfirm, setShowTransitionConfirm] = useState(false);
+  const [isTransitioningToMixed, setIsTransitioningToMixed] = useState(false);
   const supportsBreastfeeding = activeChild?.feeding_type === "breast" || activeChild?.feeding_type === "mixed";
+  const patternSectionRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (!activeSide) return;
@@ -232,6 +265,24 @@ export function Breastfeed() {
       document.removeEventListener("visibilitychange", refreshTick);
     };
   }, []);
+
+  useEffect(() => {
+    if (!selectedPatternLogId) return;
+
+    const handlePointerDown = (event: MouseEvent | TouchEvent) => {
+      if (!patternSectionRef.current?.contains(event.target as Node)) {
+        setSelectedPatternLogId(null);
+      }
+    };
+
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("touchstart", handlePointerDown);
+
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("touchstart", handlePointerDown);
+    };
+  }, [selectedPatternLogId]);
 
   useEffect(() => {
     if (!activeChild) {
@@ -256,7 +307,7 @@ export function Breastfeed() {
     Promise.all([
       db.getSetting(getBreastfeedingSessionSettingKey(activeChild.id)),
       db.getSetting(getBreastfeedingLastSideSettingKey(activeChild.id)),
-      db.getFeedingLogs(activeChild.id, 12),
+      db.getFeedingLogs(activeChild.id, 32),
     ]).then(([sessionRaw, savedSide, feedingLogs]) => {
       if (cancelled) return;
 
@@ -305,6 +356,22 @@ export function Breastfeed() {
   const rightDuration = getLiveDuration("right");
   const totalDuration = leftDuration + rightDuration;
   const suggestedStartSide = useMemo(() => getOppositeBreastSide(lastUsedSide), [lastUsedSide]);
+  const displayRecentHistory = useMemo(() => recentHistory.slice(0, 3), [recentHistory]);
+  const patternLogs = useMemo(() => {
+    const cutoff = Date.now() - (24 * 60 * 60 * 1000);
+    return recentHistory
+      .filter((log) => {
+        if (log.food_type !== "breast_milk") return false;
+        if (log.breast_side !== "left" && log.breast_side !== "right" && log.breast_side !== "both") return false;
+        return new Date(log.logged_at).getTime() >= cutoff;
+      })
+      .sort((left, right) => new Date(left.logged_at).getTime() - new Date(right.logged_at).getTime());
+  }, [recentHistory]);
+  const selectedPatternLog = useMemo(
+    () => patternLogs.find((log) => log.id === selectedPatternLogId) ?? null,
+    [patternLogs, selectedPatternLogId],
+  );
+  const canShowSolidTransition = activeChild?.feeding_type === "breast";
 
   if (!activeChild) return null;
 
@@ -404,11 +471,11 @@ export function Breastfeed() {
       setTick(Date.now());
       await persistSession(clearedSession);
       await syncSmartRemindersForChild(activeChild);
-      const feedingLogs = await db.getFeedingLogs(activeChild.id, 12);
+      const feedingLogs = await db.getFeedingLogs(activeChild.id, 32);
       setRecentHistory(
         feedingLogs
           .filter((log) => log.food_type === "breast_milk" && (log.breast_side === "left" || log.breast_side === "right" || log.breast_side === "both"))
-          .slice(0, 3),
+          .slice(0, 32),
       );
       showSuccess("Breastfeeding session saved.");
     } catch {
@@ -427,8 +494,64 @@ export function Breastfeed() {
     await flushActiveDuration();
   };
 
+  const handleConfirmSolidTransition = async () => {
+    try {
+      setIsTransitioningToMixed(true);
+      await db.updateChild(activeChild.id, { feeding_type: "mixed" });
+      await refreshChildren();
+      setShowTransitionConfirm(false);
+      navigate("/feed", { replace: true });
+    } catch {
+      showError("Could not switch this child to mixed feeding.");
+    } finally {
+      setIsTransitioningToMixed(false);
+    }
+  };
+
   return (
     <PageBody className="mt-0 space-y-0 px-0 py-0">
+      {showTransitionConfirm && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/35 px-4 pb-[calc(var(--safe-area-bottom)+108px)] pt-10" onClick={() => setShowTransitionConfirm(false)}>
+          <div
+            className="w-full max-w-[420px] rounded-[28px] border border-[var(--color-border)] bg-[var(--color-surface-strong)] p-5 shadow-[var(--shadow-lg)]"
+            onClick={(event) => event.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="solid-transition-title"
+          >
+            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[var(--color-text-secondary)]">
+              Solids transition
+            </p>
+            <h2 id="solid-transition-title" className="mt-2 text-xl font-semibold text-[var(--color-text)]">
+              Switch to mixed feeding?
+            </h2>
+            <p className="mt-2 text-sm leading-relaxed text-[var(--color-text-secondary)]">
+              Switch this child to mixed feeding once they are having both breastfeeds and other foods. The Feed page will let you log
+              breastfeeding alongside solids, bottles, and other feeds.
+            </p>
+            <div className="mt-5 flex gap-3">
+              <Button
+                type="button"
+                variant="secondary"
+                className="flex-1"
+                onClick={() => setShowTransitionConfirm(false)}
+                disabled={isTransitioningToMixed}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                variant="primary"
+                className="flex-1"
+                onClick={() => void handleConfirmSolidTransition()}
+                disabled={isTransitioningToMixed}
+              >
+                {isTransitioningToMixed ? "Switching..." : "Confirm"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
       <ScenicHero
         child={activeChild}
         title="Breastfeed"
@@ -512,7 +635,7 @@ export function Breastfeed() {
               </Button>
             </InsetPanel>
 
-            {recentHistory.length > 0 && (
+            {displayRecentHistory.length > 0 && (
               <section className="px-1">
                 <div className="flex items-center justify-between gap-3">
                   <p className="text-[1rem] font-semibold text-[var(--color-text)]">Recent history</p>
@@ -524,12 +647,12 @@ export function Breastfeed() {
                   </Link>
                 </div>
                 <div className="mt-2.5 space-y-2">
-                  {recentHistory.map((log, index) => {
+                  {displayRecentHistory.map((log, index) => {
                     const tone = getBreastHistoryTone(log.breast_side);
                     return (
                       <div key={log.id} className="flex items-center gap-2.5">
                         <div className="relative flex h-10 w-10 flex-shrink-0 items-center justify-center">
-                          {index < recentHistory.length - 1 && (
+                          {index < displayRecentHistory.length - 1 && (
                             <span
                               className="absolute left-1/2 top-8 h-6 w-px -translate-x-1/2"
                               style={{ backgroundColor: "var(--color-border)" }}
@@ -565,6 +688,122 @@ export function Breastfeed() {
                     );
                   })}
                 </div>
+              </section>
+            )}
+
+            <section className="px-1" ref={patternSectionRef}>
+              <div className="rounded-[22px] border border-[var(--color-border)] bg-[var(--color-surface-strong)] px-4 py-3 shadow-[var(--shadow-soft)]">
+                <p className="text-[0.9rem] font-semibold text-[var(--color-text)]">24-hour pattern</p>
+
+                <div className="mt-2.5 overflow-x-auto pb-1">
+                  <div className="w-[520px] min-w-full">
+                    <div className="space-y-2">
+                      <div className="relative h-[92px] rounded-[14px] border border-[var(--color-border)] bg-[var(--color-surface)]/72 px-2.5 py-2.5">
+                        {patternLogs.length === 0 ? (
+                          <div className="flex h-full items-center justify-center rounded-[10px] border border-dashed border-[var(--color-border)] text-[0.86rem] text-[var(--color-text-soft)]">
+                            No breastfeeding logs yet
+                          </div>
+                        ) : (
+                          <>
+                            <div className="absolute inset-x-2.5 top-2.5 grid grid-cols-24 gap-1.5">
+                              {Array.from({ length: 24 }, (_, hour) => (
+                                <div key={hour} className="h-[64px] rounded-[8px] bg-[var(--color-bg-elevated)]/32" />
+                              ))}
+                            </div>
+                            <div className="absolute inset-x-2.5 top-[14px] space-y-[8px]">
+                              {(["left", "right", "both"] as const).map((side) => (
+                                <div key={side} className="relative h-4.5">
+                                  {patternLogs
+                                    .filter((log) => log.breast_side === side)
+                                    .map((log) => {
+                                      const loggedAt = new Date(log.logged_at);
+                                      const left = ((loggedAt.getHours() + loggedAt.getMinutes() / 60) / 24) * 100;
+                                      const durationMinutes = Math.max(log.duration_minutes ?? 0, 1);
+                                      const widthPercent = Math.max((durationMinutes / (24 * 60)) * 100, 1.4);
+                                      const tone = getBreastPatternTone(log.breast_side);
+                                      return (
+                                        <button
+                                          type="button"
+                                          key={log.id}
+                                          aria-label={`${getBreastPatternLabel(log.breast_side)} feed at ${loggedAt.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })} for ${durationMinutes} minutes`}
+                                          className="absolute top-0 h-4.5 rounded-[6px] border shadow-[var(--shadow-soft)]"
+                                          onClick={() => setSelectedPatternLogId((current) => current === log.id ? null : log.id)}
+                                          style={{
+                                            left: `${left}%`,
+                                            width: `${widthPercent}%`,
+                                            minWidth: durationMinutes < 8 ? "16px" : "20px",
+                                            maxWidth: "96px",
+                                            background: tone.bg,
+                                            borderColor: tone.border,
+                                          }}
+                                        />
+                                      );
+                                    })}
+                                </div>
+                              ))}
+                            </div>
+                            {selectedPatternLog && (
+                              <div
+                                className="absolute top-2 z-10 -translate-x-1/2 rounded-[10px] border border-[var(--color-border)] bg-[var(--color-surface)] px-2.5 py-2 text-left shadow-[var(--shadow-soft)]"
+                                style={{
+                                  left: `${((new Date(selectedPatternLog.logged_at).getHours() + new Date(selectedPatternLog.logged_at).getMinutes() / 60) / 24) * 100}%`,
+                                  width: "132px",
+                                  maxWidth: "132px",
+                                }}
+                              >
+                                <p className="text-[0.72rem] font-semibold text-[var(--color-text)]">
+                                  {getBreastPatternLabel(selectedPatternLog.breast_side)} feed
+                                </p>
+                                <p className="mt-0.5 text-[0.68rem] text-[var(--color-text-secondary)]">
+                                  {new Date(selectedPatternLog.logged_at).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}
+                                </p>
+                                <p className="mt-1 text-[0.68rem] leading-snug text-[var(--color-text-secondary)]">
+                                  {selectedPatternLog.duration_minutes ? `${selectedPatternLog.duration_minutes} min` : "Logged"}
+                                </p>
+                              </div>
+                            )}
+                          </>
+                        )}
+                      </div>
+
+                      <div className="grid grid-cols-5 px-0.5 text-[0.7rem] font-medium uppercase tracking-[0.12em] text-[var(--color-text-soft)]">
+                        <span>12A</span>
+                        <span className="text-center">6A</span>
+                        <span className="text-center">12P</span>
+                        <span className="text-center">6P</span>
+                        <span className="text-right">11:59P</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-2.5 flex flex-wrap gap-2">
+                  {(["left", "right", "both"] as const).map((side) => {
+                    const tone = getBreastPatternTone(side);
+                    return (
+                      <span
+                        key={side}
+                        className="inline-flex items-center gap-2 rounded-full border px-2.5 py-0.75 text-[10px] font-medium"
+                        style={{ borderColor: tone.border, color: tone.text, background: tone.bg }}
+                      >
+                        <span className="h-2 w-2 rounded-full" style={{ background: tone.bg }} />
+                        {getBreastPatternLabel(side)}
+                      </span>
+                    );
+                  })}
+                </div>
+              </div>
+            </section>
+
+            {canShowSolidTransition && (
+              <section className="px-1">
+                <Button
+                  variant="secondary"
+                  className="w-full"
+                  onClick={() => setShowTransitionConfirm(true)}
+                >
+                  Start solids transition
+                </Button>
               </section>
             )}
           </>
