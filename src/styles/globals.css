@@ -100,6 +100,110 @@ a,
   display: none;
 }
 
+.mood-burst-particle {
+  opacity: 0;
+  will-change: transform, opacity;
+  animation: mood-burst-float 920ms var(--ease-out-soft) forwards;
+}
+
+.mood-heart-float {
+  opacity: 0;
+  will-change: transform, opacity;
+  animation: mood-heart-float 1400ms var(--ease-out-soft) forwards;
+}
+
+.mood-heart-center {
+  opacity: 0;
+  will-change: transform, opacity;
+  animation: mood-heart-center 2200ms var(--ease-out-soft) forwards;
+  transform: translate(-50%, -50%) scale(1);
+}
+
+@keyframes mood-burst-float {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.72);
+  }
+
+  16% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+    transform:
+      translate(calc(-50% + var(--burst-x, 0px)), calc(-50% + var(--burst-y, -80px)))
+      rotate(var(--burst-rotate, 0deg))
+      scale(1);
+  }
+}
+
+@keyframes mood-heart-float {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.7);
+  }
+
+  18% {
+    opacity: 0.95;
+  }
+
+  52% {
+    opacity: 0.9;
+    transform:
+      translate(calc(-50% + (var(--burst-x, 0px) * 0.56)), calc(-50% + (var(--burst-y, -80px) * 0.42)))
+      rotate(calc(var(--burst-rotate, 0deg) * 0.45))
+      scale(1);
+  }
+
+  100% {
+    opacity: 0;
+    transform:
+      translate(calc(-50% + var(--burst-x, 0px)), calc(-50% + var(--burst-y, -80px)))
+      rotate(var(--burst-rotate, 0deg))
+      scale(0.96);
+  }
+}
+
+@keyframes mood-heart-center {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.76);
+  }
+
+  8% {
+    opacity: 0.98;
+    transform: translate(-50%, -50%) scale(1);
+  }
+
+  14% {
+    transform: translate(-50%, -50%) scale(1.18);
+  }
+
+  21% {
+    transform: translate(-50%, -50%) scale(0.98);
+  }
+
+  28% {
+    transform: translate(-50%, -50%) scale(1.14);
+  }
+
+  38% {
+    opacity: 0.96;
+    transform: translate(-50%, -50%) scale(1);
+  }
+
+  62% {
+    opacity: 0.84;
+    transform: translate(-50%, -50%) scale(1.03);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(-50%, calc(-50% - 32px)) scale(0.94);
+  }
+}
+
 /* Reduced motion — disable animations for accessibility */
 @media (prefers-reduced-motion: reduce) {
 
