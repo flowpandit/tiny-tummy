@@ -6,6 +6,10 @@ import {
   HomeToolMilestonesIcon,
 } from "../ui/icons";
 
+interface CareToolsSectionProps {
+  className?: string;
+}
+
 const CARE_TOOL_ITEMS = [
   {
     label: "History",
@@ -33,7 +37,7 @@ const CARE_TOOL_ITEMS = [
   },
 ] as const;
 
-export function CareToolsSection({ className = "px-4" }: { className?: string }) {
+export function CareToolsSection({ className = "px-4" }: CareToolsSectionProps) {
   const navigate = useNavigate();
 
   return (

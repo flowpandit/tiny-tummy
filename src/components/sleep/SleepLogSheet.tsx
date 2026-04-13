@@ -1,5 +1,5 @@
 import type { FormEvent } from "react";
-import { Sheet } from "../ui/sheet";
+import { Sheet, type SheetVisibilityProps } from "../ui/sheet";
 import { Button } from "../ui/button";
 import { DatePicker } from "../ui/date-picker";
 import { TimePicker } from "../ui/time-picker";
@@ -14,9 +14,7 @@ import {
 } from "../../lib/sleep-timer";
 import { getCurrentLocalDate } from "../../lib/utils";
 
-interface SleepLogSheetProps {
-  open: boolean;
-  onClose: () => void;
+interface SleepLogSheetProps extends SheetVisibilityProps {
   childId: string;
   onLogged: () => Promise<void> | void;
 }

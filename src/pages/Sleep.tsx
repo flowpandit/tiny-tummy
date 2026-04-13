@@ -15,8 +15,8 @@ import {
   TrackerMetricRing,
   TrackerWeekRangePill,
 } from "../components/tracking/TrackerPrimitives";
-import { TimeSinceIndicator } from "../components/home/TimeSinceIndicator";
-import { CareToolsSection } from "../components/home/CareToolsSection";
+import { TimeSinceIndicator } from "../components/tracking/TimeSinceIndicator";
+import { CareToolsSection } from "../components/care/CareToolsSection";
 import { EditSleepSheet } from "../components/sleep/EditSleepSheet";
 import { SleepLogSheet } from "../components/sleep/SleepLogSheet";
 import { SleepLogList } from "../components/sleep/SleepLogList";

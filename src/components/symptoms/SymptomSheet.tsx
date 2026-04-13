@@ -1,5 +1,5 @@
 import type { FormEvent } from "react";
-import { Sheet } from "../ui/sheet";
+import { Sheet, type SheetVisibilityProps } from "../ui/sheet";
 import { Button } from "../ui/button";
 import { DatePicker } from "../ui/date-picker";
 import { TimePicker } from "../ui/time-picker";
@@ -17,9 +17,7 @@ import {
 import { getCurrentLocalDate } from "../../lib/utils";
 import type { Episode } from "../../lib/types";
 
-interface SymptomSheetProps {
-  open: boolean;
-  onClose: () => void;
+interface SymptomSheetProps extends SheetVisibilityProps {
   childId: string;
   activeEpisode: Episode | null;
   onLogged: () => Promise<void> | void;

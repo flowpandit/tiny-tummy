@@ -1,5 +1,5 @@
 import type { FormEvent } from "react";
-import { Sheet } from "../ui/sheet";
+import { Sheet, type SheetVisibilityProps } from "../ui/sheet";
 import { Button } from "../ui/button";
 import { DatePicker } from "../ui/date-picker";
 import { TimePicker } from "../ui/time-picker";
@@ -12,10 +12,8 @@ import { getCurrentLocalDate } from "../../lib/utils";
 import { getVolumeUnitLabel } from "../../lib/units";
 import type { DietEntry } from "../../lib/types";
 
-interface EditMealSheetProps {
+interface EditMealSheetProps extends SheetVisibilityProps {
   entry: DietEntry;
-  open: boolean;
-  onClose: () => void;
   onSaved: () => void;
   onDeleted: () => void;
 }

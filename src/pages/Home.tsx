@@ -19,12 +19,12 @@ import { buildChildDailySummary } from "../lib/child-summary";
 import { buildHomeSleepSummary } from "../lib/home-insights";
 import { HomeTopSection } from "../components/home/HomeTopSection";
 import { RecentActivity } from "../components/home/RecentActivity";
-import { CareToolsSection } from "../components/home/CareToolsSection";
+import { CareToolsSection } from "../components/care/CareToolsSection";
 import { HomeQuickActions } from "../components/home/HomeQuickActions";
 import { HomeCaregiverNoteCard } from "../components/home/HomeCaregiverNoteCard";
 import { HomeSheets } from "../components/home/HomeSheets";
 import { AlertBanner } from "../components/dashboard/AlertBanner";
-import { NoLogsYet } from "../components/empty-states/NoLogsYet";
+import { NoLogsYet } from "../components/home/NoLogsYet";
 import { useToast } from "../components/ui/toast";
 import { CompactChildNav } from "../components/layout/CompactChildNav";
 

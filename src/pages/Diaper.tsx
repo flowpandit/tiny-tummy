@@ -21,7 +21,7 @@ import { ScenicHero } from "../components/layout/ScenicHero";
 import { Card, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { EmptyState, PageBody } from "../components/ui/page-layout";
-import { TimeSinceIndicator } from "../components/home/TimeSinceIndicator";
+import { TimeSinceIndicator } from "../components/tracking/TimeSinceIndicator";
 import { TrackerMetricRing } from "../components/tracking/TrackerPrimitives";
 import type { DiaperEntry, DiaperLogDraft } from "../lib/types";
 import {

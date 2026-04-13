@@ -1,5 +1,5 @@
 import type { FormEvent } from "react";
-import { Sheet } from "../ui/sheet";
+import { Sheet, type SheetVisibilityProps } from "../ui/sheet";
 import { Button } from "../ui/button";
 import { DatePicker } from "../ui/date-picker";
 import { TimePicker } from "../ui/time-picker";
@@ -14,19 +14,19 @@ import { diaperIncludesStool, diaperIncludesWet } from "../../lib/diaper";
 import { getCurrentLocalDate } from "../../lib/utils";
 import type { DiaperEntry } from "../../lib/types";
 
+interface EditDiaperSheetProps extends SheetVisibilityProps {
+  entry: DiaperEntry;
+  onSaved: () => void;
+  onDeleted: () => void;
+}
+
 export function EditDiaperSheet({
   entry,
   open,
   onClose,
   onSaved,
   onDeleted,
-}: {
-  entry: DiaperEntry;
-  open: boolean;
-  onClose: () => void;
-  onSaved: () => void;
-  onDeleted: () => void;
-}) {
+}: EditDiaperSheetProps) {
   const { showError } = useToast();
   const {
     logDate,

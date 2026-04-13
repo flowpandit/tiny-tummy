@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { FieldLabel, Input } from "../ui/field";
 import { SegmentedControl } from "../ui/segmented-control";
 import { DatePicker } from "../ui/date-picker";
-import { Sheet } from "../ui/sheet";
+import { Sheet, type SheetVisibilityProps } from "../ui/sheet";
 import { Button } from "../ui/button";
 import { AvatarUpload } from "../child/AvatarUpload";
 import { AVATAR_COLORS, CHILD_SEX_OPTIONS, FEEDING_TYPES } from "../../lib/constants";
@@ -12,17 +12,17 @@ import { getCurrentLocalDate } from "../../lib/utils";
 import { saveAvatar, deleteAvatar } from "../../lib/photos";
 import type { Child, ChildSex, FeedingType } from "../../lib/types";
 
+interface EditChildSheetProps extends SheetVisibilityProps {
+  child: Child;
+  onSaved: () => void;
+}
+
 export function EditChildSheet({
   child,
   open,
   onClose,
   onSaved,
-}: {
-  child: Child;
-  open: boolean;
-  onClose: () => void;
-  onSaved: () => void;
-}) {
+}: EditChildSheetProps) {
   const [name, setName] = useState(child.name);
   const [dob, setDob] = useState(child.date_of_birth);
   const [sex, setSex] = useState<ChildSex | null>(child.sex);

@@ -1,5 +1,5 @@
 import type { FormEvent } from "react";
-import { Sheet } from "../ui/sheet";
+import { Sheet, type SheetVisibilityProps } from "../ui/sheet";
 import { Button } from "../ui/button";
 import { DatePicker } from "../ui/date-picker";
 import { TimePicker } from "../ui/time-picker";
@@ -10,10 +10,8 @@ import { useEditSleepSheetState } from "../../hooks/useEditSleepSheetState";
 import { getCurrentLocalDate } from "../../lib/utils";
 import type { SleepEntry, SleepType } from "../../lib/types";
 
-interface EditSleepSheetProps {
+interface EditSleepSheetProps extends SheetVisibilityProps {
   entry: SleepEntry;
-  open: boolean;
-  onClose: () => void;
   onSaved: () => void;
   onDeleted: () => void;
 }

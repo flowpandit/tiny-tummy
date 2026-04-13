@@ -4,7 +4,7 @@ import { BreastSideButton } from "../components/breastfeed/BreastSideButton";
 import { BreastfeedPatternCard } from "../components/breastfeed/BreastfeedPatternCard";
 import { BreastfeedRecentHistorySection } from "../components/breastfeed/BreastfeedRecentHistorySection";
 import { Button } from "../components/ui/button";
-import { CareToolsSection } from "../components/home/CareToolsSection";
+import { CareToolsSection } from "../components/care/CareToolsSection";
 import { ScenicHero } from "../components/layout/ScenicHero";
 import { InsetPanel, PageBody } from "../components/ui/page-layout";
 import { TrackerMetricRing } from "../components/tracking/TrackerPrimitives";

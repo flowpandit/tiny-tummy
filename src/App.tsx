@@ -7,7 +7,7 @@ import { ErrorBoundary } from "./components/ui/error-boundary";
 import { ToastProvider } from "./components/ui/toast";
 import { AppShell } from "./components/layout/AppShell";
 import { TrialProvider, useTrial } from "./contexts/TrialContext";
-import { Paywall } from "./components/ui/Paywall";
+import { Paywall } from "./components/billing/Paywall";
 
 
 import { Home } from "./pages/Home";

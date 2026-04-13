@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { useUnits } from "../../contexts/UnitsContext";
-import { Sheet } from "../ui/sheet";
+import { Sheet, type SheetVisibilityProps } from "../ui/sheet";
 import { Button } from "../ui/button";
 import { FieldLabel, Input, fieldInputClassName } from "../ui/field";
 import { SegmentedControl } from "../ui/segmented-control";
@@ -26,20 +26,25 @@ import type {
   StoolSize,
 } from "../../lib/types";
 
-interface FeedPresetEditorSheetProps {
-  open: boolean;
-  onClose: () => void;
+interface FeedPresetEditorSheetProps extends SheetVisibilityProps {
   feedingType: FeedingType;
   presets: QuickFeedPreset[];
   onSave: (drafts: Array<Partial<FeedingLogDraft>>) => void;
 }
 
-interface PoopPresetEditorSheetProps {
-  open: boolean;
-  onClose: () => void;
+interface PoopPresetEditorSheetProps extends SheetVisibilityProps {
   feedingType: FeedingType;
   presets: QuickPoopPreset[];
   onSave: (drafts: Array<Partial<PoopLogDraft>>) => void;
+}
+
+interface EditorFrameProps extends SheetVisibilityProps {
+  title: string;
+  description: string;
+  children: ReactNode;
+  onReset: () => void;
+  onSave: () => void;
+  saveLabel: string;
 }
 
 function EditorFrame({
@@ -51,16 +56,7 @@ function EditorFrame({
   onReset,
   onSave,
   saveLabel,
-}: {
-  open: boolean;
-  onClose: () => void;
-  title: string;
-  description: string;
-  children: ReactNode;
-  onReset: () => void;
-  onSave: () => void;
-  saveLabel: string;
-}) {
+}: EditorFrameProps) {
   return (
     <Sheet open={open} onClose={onClose}>
       <div className="px-5 pb-8">

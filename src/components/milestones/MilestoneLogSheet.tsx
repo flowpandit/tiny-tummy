@@ -1,5 +1,5 @@
 import type { FormEvent } from "react";
-import { Sheet } from "../ui/sheet";
+import { Sheet, type SheetVisibilityProps } from "../ui/sheet";
 import { Button } from "../ui/button";
 import { DatePicker } from "../ui/date-picker";
 import { TimePicker } from "../ui/time-picker";
@@ -9,9 +9,7 @@ import { useMilestoneLogSheetState } from "../../hooks/useMilestoneLogSheetState
 import { MILESTONE_OPTIONS } from "../../lib/milestone-constants";
 import { getCurrentLocalDate } from "../../lib/utils";
 
-interface MilestoneLogSheetProps {
-  open: boolean;
-  onClose: () => void;
+interface MilestoneLogSheetProps extends SheetVisibilityProps {
   childId: string;
   onLogged: () => Promise<void> | void;
 }

@@ -15,9 +15,9 @@ import {
   TrackerMetricRing,
   TrackerWeekRangePill,
 } from "../components/tracking/TrackerPrimitives";
-import { FeedPresetEditorSheet } from "../components/home/QuickPresetCustomizerSheet";
-import { TimeSinceIndicator } from "../components/home/TimeSinceIndicator";
-import { CareToolsSection } from "../components/home/CareToolsSection";
+import { FeedPresetEditorSheet } from "../components/presets/QuickPresetEditorSheet";
+import { TimeSinceIndicator } from "../components/tracking/TimeSinceIndicator";
+import { CareToolsSection } from "../components/care/CareToolsSection";
 import { DietLogForm } from "../components/logging/DietLogForm";
 import { EditMealSheet } from "../components/logging/EditMealSheet";
 import { FeedLogList } from "../components/feed/FeedLogList";

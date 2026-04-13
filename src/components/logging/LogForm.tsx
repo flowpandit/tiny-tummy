@@ -1,5 +1,5 @@
 import type { FormEvent } from "react";
-import { Sheet } from "../ui/sheet";
+import { Sheet, type SheetVisibilityProps } from "../ui/sheet";
 import { Button } from "../ui/button";
 import { useToast } from "../ui/toast";
 import { StoolTypePicker } from "./StoolTypePicker";
@@ -20,9 +20,7 @@ import {
 import { getLoggingLabelClassName } from "./logging-form-classnames";
 import type { PoopLogDraft } from "../../lib/types";
 
-interface LogFormProps {
-  open: boolean;
-  onClose: () => void;
+interface LogFormProps extends SheetVisibilityProps {
   childId: string;
   onLogged: () => void;
   initialDraft?: Partial<PoopLogDraft> | null;

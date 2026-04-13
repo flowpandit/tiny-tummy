@@ -1,5 +1,5 @@
 import type { FormEvent } from "react";
-import { Sheet } from "../ui/sheet";
+import { Sheet, type SheetVisibilityProps } from "../ui/sheet";
 import { Button } from "../ui/button";
 import { DatePicker } from "../ui/date-picker";
 import { TimePicker } from "../ui/time-picker";
@@ -11,10 +11,8 @@ import { useEditPoopSheetState } from "../../hooks/useEditPoopSheetState";
 import { getCurrentLocalDate } from "../../lib/utils";
 import type { PoopEntry } from "../../lib/types";
 
-interface EditPoopSheetProps {
+interface EditPoopSheetProps extends SheetVisibilityProps {
   entry: PoopEntry;
-  open: boolean;
-  onClose: () => void;
   onSaved: () => void;
   onDeleted: () => void;
 }

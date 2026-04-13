@@ -2,9 +2,9 @@ import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { useTrial } from "../../contexts/TrialContext";
-import { Button } from "./button";
-import { Logo } from "./Logo";
-import { useToast } from "./toast";
+import { Button } from "../ui/button";
+import { Logo } from "../ui/Logo";
+import { useToast } from "../ui/toast";
 
 function CheckIcon(props: React.ComponentProps<"svg">) {
   return (

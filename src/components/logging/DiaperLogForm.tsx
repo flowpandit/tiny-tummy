@@ -1,5 +1,5 @@
 import type { FormEvent } from "react";
-import { Sheet } from "../ui/sheet";
+import { Sheet, type SheetVisibilityProps } from "../ui/sheet";
 import { Button } from "../ui/button";
 import { useToast } from "../ui/toast";
 import { LogSuccess } from "./LogSuccess";
@@ -18,6 +18,12 @@ import { useLoggingSheetLifecycle } from "../../hooks/useLoggingSheetLifecycle";
 import { usePhotoField } from "../../hooks/usePhotoField";
 import type { DiaperLogDraft, DiaperType } from "../../lib/types";
 
+interface DiaperLogFormProps extends SheetVisibilityProps {
+  childId: string;
+  onLogged: () => void;
+  initialDraft?: Partial<DiaperLogDraft> | null;
+}
+
 function showsUrineFields(type: DiaperType | null): boolean {
   return type ? diaperIncludesWet(type) : false;
 }
@@ -32,13 +38,7 @@ export function DiaperLogForm({
   childId,
   onLogged,
   initialDraft = null,
-}: {
-  open: boolean;
-  onClose: () => void;
-  childId: string;
-  onLogged: () => void;
-  initialDraft?: Partial<DiaperLogDraft> | null;
-}) {
+}: DiaperLogFormProps) {
   const { showError } = useToast();
   const { resolved } = useTheme();
   const nightMode = resolved === "night";

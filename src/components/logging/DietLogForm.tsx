@@ -1,5 +1,5 @@
 import type { FormEvent } from "react";
-import { Sheet } from "../ui/sheet";
+import { Sheet, type SheetVisibilityProps } from "../ui/sheet";
 import { Button } from "../ui/button";
 import { useToast } from "../ui/toast";
 import { BOTTLE_CONTENTS, BREAST_SIDES, FOOD_TYPES } from "../../lib/diet-constants";
@@ -22,9 +22,7 @@ import { LogDateTimeFields } from "./LogDateTimeFields";
 import { getVolumeUnitLabel } from "../../lib/units";
 import type { FeedingLogDraft } from "../../lib/types";
 
-interface DietLogFormProps {
-  open: boolean;
-  onClose: () => void;
+interface DietLogFormProps extends SheetVisibilityProps {
   childId: string;
   onLogged: () => void;
   initialDraft?: Partial<FeedingLogDraft> | null;

@@ -415,7 +415,7 @@ Reduce direct storage coupling inside UI and create cleaner seams for mocking an
 
 ## Phase 7: Component Layering And API Cleanup
 
-Status: `[Todo]`
+Status: `[Done]`
 
 ### Goal
 
@@ -423,12 +423,26 @@ Make component APIs consistent, reusable, and predictable across the repo.
 
 ### Tasks
 
-- [ ] Audit `ui/` primitives and ensure they stay generic.
-- [ ] Move domain-specific styling/behavior out of generic primitives.
-- [ ] Normalize prop naming patterns across repeated component families.
-- [ ] Remove components that exist only for one page if they should instead be local feature sections.
-- [ ] Promote repeated local sections into reusable feature components only when there is real reuse.
-- [ ] Add short documentation comments only where the API contract is not obvious.
+- [x] Audit `ui/` primitives and ensure they stay generic.
+- [x] Move domain-specific styling/behavior out of generic primitives.
+- [x] Normalize prop naming patterns across repeated component families.
+- [x] Remove components that exist only for one page if they should instead be local feature sections.
+- [x] Promote repeated local sections into reusable feature components only when there is real reuse.
+- [x] Add short documentation comments only where the API contract is not obvious.
+
+### Progress
+
+- [x] Added a shared `SheetVisibilityProps` contract in
+  [src/components/ui/sheet.tsx](/Users/nikhilmehral/dev/tiny-tummy/src/components/ui/sheet.tsx)
+  and reused it across sheet-style components to standardize the `open` / `onClose` API.
+- [x] Moved repeated cross-page sections out of `home` into better-owned feature layers:
+  [src/components/care/CareToolsSection.tsx](/Users/nikhilmehral/dev/tiny-tummy/src/components/care/CareToolsSection.tsx),
+  [src/components/presets/QuickPresetEditorSheet.tsx](/Users/nikhilmehral/dev/tiny-tummy/src/components/presets/QuickPresetEditorSheet.tsx),
+  [src/components/tracking/TimeSinceIndicator.tsx](/Users/nikhilmehral/dev/tiny-tummy/src/components/tracking/TimeSinceIndicator.tsx)
+- [x] Revalidated imports, lint, build, tests, and dead-code scan after the layering cleanup.
+- [x] Moved route-specific components out of overly generic layers:
+  [src/components/billing/Paywall.tsx](/Users/nikhilmehral/dev/tiny-tummy/src/components/billing/Paywall.tsx),
+  [src/components/home/NoLogsYet.tsx](/Users/nikhilmehral/dev/tiny-tummy/src/components/home/NoLogsYet.tsx)
 
 ### Exit Criteria
 

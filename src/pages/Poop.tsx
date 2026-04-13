@@ -21,10 +21,10 @@ import {
   TrackerMetricRing,
 } from "../components/tracking/TrackerPrimitives";
 import { AlertBanner } from "../components/dashboard/AlertBanner";
-import { PoopPresetEditorSheet } from "../components/home/QuickPresetCustomizerSheet";
+import { PoopPresetEditorSheet } from "../components/presets/QuickPresetEditorSheet";
 import { LogForm } from "../components/logging/LogForm";
 import { EditPoopSheet } from "../components/logging/EditPoopSheet";
-import { TimeSinceIndicator } from "../components/home/TimeSinceIndicator";
+import { TimeSinceIndicator } from "../components/tracking/TimeSinceIndicator";
 import { useToast } from "../components/ui/toast";
 import { PoopHealthInsightCard } from "../components/poop/PoopHealthInsightCard";
 import { PoopQuickLogCard } from "../components/poop/PoopQuickLogCard";

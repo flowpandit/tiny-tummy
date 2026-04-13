@@ -1,5 +1,5 @@
 import type { FormEvent } from "react";
-import { Sheet } from "../ui/sheet";
+import { Sheet, type SheetVisibilityProps } from "../ui/sheet";
 import { Button } from "../ui/button";
 import { Badge } from "../ui/badge";
 import { DatePicker } from "../ui/date-picker";
@@ -19,9 +19,7 @@ function getEpisodeBadgeVariant(episodeType: EpisodeType) {
   return "info";
 }
 
-interface EpisodeSheetProps {
-  open: boolean;
-  onClose: () => void;
+interface EpisodeSheetProps extends SheetVisibilityProps {
   childId: string;
   activeEpisode: Episode | null;
   events: EpisodeEvent[];

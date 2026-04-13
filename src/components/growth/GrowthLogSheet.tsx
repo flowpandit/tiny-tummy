@@ -1,5 +1,5 @@
 import type { FormEvent } from "react";
-import { Sheet } from "../ui/sheet";
+import { Sheet, type SheetVisibilityProps } from "../ui/sheet";
 import { Button } from "../ui/button";
 import { DatePicker } from "../ui/date-picker";
 import { TimePicker } from "../ui/time-picker";
@@ -10,9 +10,7 @@ import { getCurrentLocalDate } from "../../lib/utils";
 import { getGrowthUnitLabel } from "../../lib/units";
 import type { GrowthEntry } from "../../lib/types";
 
-interface GrowthLogSheetProps {
-  open: boolean;
-  onClose: () => void;
+interface GrowthLogSheetProps extends SheetVisibilityProps {
   childId: string;
   onLogged: () => Promise<void> | void;
   entry?: GrowthEntry | null;
