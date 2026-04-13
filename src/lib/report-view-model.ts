@@ -1,6 +1,6 @@
-import { formatLocalDateKey, getAgeLabelFromDob } from "./utils";
-import type { Child } from "./types";
-import type { ReportData, ReportOptions } from "./reporting";
+import { formatLocalDateKey, getAgeLabelFromDob } from "./utils.ts";
+import type { Child } from "./types.ts";
+import type { ReportData, ReportOptions } from "./reporting.ts";
 
 export interface ReportOptionToggle {
   key: keyof ReportOptions;

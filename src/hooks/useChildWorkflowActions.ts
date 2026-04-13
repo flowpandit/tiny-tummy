@@ -1,7 +1,7 @@
 import { useCallback } from "react";
-import { syncSmartRemindersForChild } from "../lib/notifications";
-import type { Child } from "../lib/types";
-import { useAlertEngine } from "./useAlertEngine";
+import { syncSmartRemindersForChild } from "../lib/notifications.ts";
+import type { Child } from "../lib/types.ts";
+import { useAlertEngine } from "./useAlertEngine.ts";
 
 interface PostLogOptions {
   refresh?: Array<() => void | Promise<void>>;
@@ -9,22 +9,30 @@ interface PostLogOptions {
   reminders?: boolean;
 }
 
+interface ChildWorkflowActionDeps {
+  runChecks?: (child: Child) => Promise<void>;
+  syncSmartRemindersForChild?: (child: Child) => Promise<void>;
+}
+
 export function useChildWorkflowActions(
   child: Child | null,
   refreshAlerts?: (() => Promise<void>) | null,
+  deps: ChildWorkflowActionDeps = {},
 ) {
   const { runChecks } = useAlertEngine();
+  const runAlertChecks = deps.runChecks ?? runChecks;
+  const syncReminders = deps.syncSmartRemindersForChild ?? syncSmartRemindersForChild;
 
   const refreshChildAlerts = useCallback(async () => {
     if (!child || !refreshAlerts) return;
-    await runChecks(child);
+    await runAlertChecks(child);
     await refreshAlerts();
-  }, [child, refreshAlerts, runChecks]);
+  }, [child, refreshAlerts, runAlertChecks]);
 
   const syncChildReminders = useCallback(async () => {
     if (!child) return;
-    await syncSmartRemindersForChild(child);
-  }, [child]);
+    await syncReminders(child);
+  }, [child, syncReminders]);
 
   const runPostLogActions = useCallback(async ({
     refresh = [],

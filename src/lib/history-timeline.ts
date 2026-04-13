@@ -1,4 +1,4 @@
-import { formatLocalDateKey } from "./utils";
+import { formatLocalDateKey } from "./utils.ts";
 import type {
   DiaperEntry,
   Episode,
@@ -9,7 +9,7 @@ import type {
   PoopEntry,
   SleepEntry,
   SymptomEntry,
-} from "./types";
+} from "./types.ts";
 
 export type TimelineEvent =
   | { kind: "diaper"; entry: DiaperEntry }

@@ -10,10 +10,12 @@ import type { Child, ChildSex, FeedingType } from "../../lib/types";
 
 interface AddChildStepProps {
   onChildCreated: (child: Child) => void;
+  createChildAction?: ReturnType<typeof useCreateChildAction>;
 }
 
-export function AddChildStep({ onChildCreated }: AddChildStepProps) {
-  const createChild = useCreateChildAction();
+export function AddChildStep({ onChildCreated, createChildAction }: AddChildStepProps) {
+  const defaultCreateChild = useCreateChildAction();
+  const createChild = createChildAction ?? defaultCreateChild;
   const [name, setName] = useState("");
   const [dob, setDob] = useState(getCurrentLocalDate());
   const [sex, setSex] = useState<ChildSex | null>(null);

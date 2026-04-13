@@ -534,7 +534,7 @@ Verify that the codebase is actually in a testable shape before broad test expan
 
 ## Phase 10: Testing Expansion
 
-Status: `[Todo]`
+Status: `[Done]`
 
 ### Goal
 
@@ -542,13 +542,48 @@ Only after the refactor phases are complete, expand testing aggressively across 
 
 ### Tasks
 
-- [ ] Add unit tests for extracted pure helpers and feature view-model logic.
-- [ ] Add hook tests for shared workflow hooks and form lifecycle hooks.
-- [ ] Add component tests for reusable form primitives and feature sections.
-- [ ] Add integration tests for key route flows with mocked storage boundaries.
-- [ ] Add regression coverage for reminders, alerts, reports, and logging flows.
-- [ ] Add smoke coverage for the largest user-critical paths:
+- [x] Add unit tests for extracted pure helpers and feature view-model logic.
+- [x] Add hook tests for shared workflow hooks and form lifecycle hooks.
+- [x] Add component tests for reusable form primitives and feature sections.
+- [x] Add integration tests for key route flows with mocked storage boundaries.
+- [x] Add regression coverage for reminders, alerts, reports, and logging flows.
+- [x] Add smoke coverage for the largest user-critical paths:
   onboarding, logging, history editing, report generation, child switching.
+
+### Progress
+
+- [x] Added unit coverage for report/date/history/tracker helper modules:
+  [tests/report-view-model.test.ts](/Users/nikhilmehral/dev/tiny-tummy/tests/report-view-model.test.ts),
+  [tests/date-labels.test.ts](/Users/nikhilmehral/dev/tiny-tummy/tests/date-labels.test.ts),
+  [tests/history-timeline.test.ts](/Users/nikhilmehral/dev/tiny-tummy/tests/history-timeline.test.ts),
+  [tests/tracker.test.ts](/Users/nikhilmehral/dev/tiny-tummy/tests/tracker.test.ts)
+- [x] Expanded the Node test suite from 11 passing tests to 33 passing tests while keeping `npm run check:all` green.
+- [x] Updated the tested pure modules to use `.ts` specifiers where needed so they resolve under the existing `node --test --experimental-strip-types` runner:
+  [src/lib/report-view-model.ts](/Users/nikhilmehral/dev/tiny-tummy/src/lib/report-view-model.ts),
+  [src/lib/history-timeline.ts](/Users/nikhilmehral/dev/tiny-tummy/src/lib/history-timeline.ts)
+- [x] Added hook-level coverage for the shared lifecycle hooks in
+  [tests/hooks.test.ts](/Users/nikhilmehral/dev/tiny-tummy/tests/hooks.test.ts),
+  covering [src/hooks/useLoggingSheetLifecycle.ts](/Users/nikhilmehral/dev/tiny-tummy/src/hooks/useLoggingSheetLifecycle.ts),
+  [src/hooks/usePhotoField.ts](/Users/nikhilmehral/dev/tiny-tummy/src/hooks/usePhotoField.ts),
+  and [src/hooks/useVisibilityRefresh.ts](/Users/nikhilmehral/dev/tiny-tummy/src/hooks/useVisibilityRefresh.ts)
+- [x] Expanded hook coverage to the shared post-log workflow in
+  [src/hooks/useChildWorkflowActions.ts](/Users/nikhilmehral/dev/tiny-tummy/src/hooks/useChildWorkflowActions.ts)
+  with dependency-injected reminder/alert assertions in
+  [tests/hooks.test.ts](/Users/nikhilmehral/dev/tiny-tummy/tests/hooks.test.ts)
+- [x] Replaced the temporary deprecated `react-test-renderer` harness with the supported `@testing-library/react` + `jsdom` stack for hook tests, and pinned `react` / `react-dom` to the same exact version in [package.json](/Users/nikhilmehral/dev/tiny-tummy/package.json)
+- [x] Added component and smoke coverage in
+  [tests/components.test.ts](/Users/nikhilmehral/dev/tiny-tummy/tests/components.test.ts)
+  for reusable logging primitives, onboarding completion, and child switching:
+  [src/components/logging/logging-form-primitives.tsx](/Users/nikhilmehral/dev/tiny-tummy/src/components/logging/logging-form-primitives.tsx),
+  [src/components/onboarding/NormalRangeIntro.tsx](/Users/nikhilmehral/dev/tiny-tummy/src/components/onboarding/NormalRangeIntro.tsx),
+  [src/components/layout/CompactChildNav.tsx](/Users/nikhilmehral/dev/tiny-tummy/src/components/layout/CompactChildNav.tsx)
+- [x] Added small dependency-injection seams for testable integration coverage without changing production behavior:
+  [src/components/onboarding/AddChildStep.tsx](/Users/nikhilmehral/dev/tiny-tummy/src/components/onboarding/AddChildStep.tsx),
+  [src/components/onboarding/NormalRangeIntro.tsx](/Users/nikhilmehral/dev/tiny-tummy/src/components/onboarding/NormalRangeIntro.tsx),
+  [src/components/layout/CompactChildNav.tsx](/Users/nikhilmehral/dev/tiny-tummy/src/components/layout/CompactChildNav.tsx),
+  [src/hooks/useChildWorkflowActions.ts](/Users/nikhilmehral/dev/tiny-tummy/src/hooks/useChildWorkflowActions.ts)
+- [x] Migrated the test runner from raw `node --experimental-strip-types` to `node --import tsx --test` so the suite can cover `.tsx` modules directly while keeping the lightweight Node test flow.
+- [x] Expanded the automated suite from 11 passing tests at the start of Phase 10 to 44 passing tests with `npm run check:all` green.
 
 ### Exit Criteria
 
