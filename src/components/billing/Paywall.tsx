@@ -32,8 +32,8 @@ const featureRows = [
 
 export function Paywall() {
   const navigate = useNavigate();
-  const { unlockPremium } = useTrial();
-  const { showSuccess } = useToast();
+  const { daysRemaining, restorePremium, unlockPremium } = useTrial();
+  const { showError, showSuccess } = useToast();
   const [isProcessing, setIsProcessing] = useState(false);
   const checkoutTimerRef = useRef<number | null>(null);
   const isMountedRef = useRef(true);
@@ -55,6 +55,8 @@ export function Paywall() {
       try {
         await unlockPremium();
         showSuccess("Tiny Tummy unlocked.");
+      } catch (error) {
+        showError(error instanceof Error ? error.message : "Unlock failed. Please try again.");
       } finally {
         if (isMountedRef.current) {
           setIsProcessing(false);
@@ -63,8 +65,13 @@ export function Paywall() {
     }, 1200);
   };
 
-  const handleRestore = () => {
-    showSuccess("Restore will connect once native billing is wired.");
+  const handleRestore = async () => {
+    try {
+      await restorePremium();
+      showSuccess("Purchase restored.");
+    } catch (error) {
+      showError(error instanceof Error ? error.message : "Restore failed. Please try again.");
+    }
   };
 
   return (
@@ -101,7 +108,9 @@ export function Paywall() {
               </div>
               <div>
                 <p className="font-[var(--font-display)] text-xl font-semibold tracking-[-0.03em]">Tiny Tummy</p>
-                <p className="text-sm text-[var(--color-text-secondary)]">Trial ended</p>
+                <p className="text-sm text-[var(--color-text-secondary)]">
+                  {daysRemaining > 0 ? `${daysRemaining} day${daysRemaining === 1 ? "" : "s"} left in trial` : "Trial ended"}
+                </p>
               </div>
             </div>
             <div className="rounded-full border border-white/70 bg-white/55 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--color-text-soft)] backdrop-blur">
@@ -213,10 +222,19 @@ export function Paywall() {
               </motion.div>
 
               <button
-                onClick={handleRestore}
+                onClick={() => {
+                  void handleRestore();
+                }}
                 className="mt-3 w-full rounded-full px-4 py-3 text-sm font-medium text-[var(--color-text-secondary)] transition-opacity active:opacity-60"
               >
                 Restore purchases
+              </button>
+
+              <button
+                onClick={() => navigate("/settings")}
+                className="w-full rounded-full px-4 py-2 text-sm font-medium text-[var(--color-text-secondary)] transition-opacity active:opacity-60"
+              >
+                Open settings
               </button>
 
               <div className="mt-6 rounded-[24px] bg-[var(--color-surface-tint)] px-4 py-4">

@@ -1,3 +1,4 @@
+mod billing;
 mod downloads;
 mod engine;
 mod report_pdf;
@@ -137,9 +138,13 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_os::init())
+        .plugin(billing::init())
         .plugin(downloads::init())
         .plugin(statusbar::init())
         .invoke_handler(tauri::generate_handler![
+            billing::billing_purchase_premium,
+            billing::billing_restore_premium,
+            billing::billing_check_owned_premium,
             check_frequency_alert,
             check_color_alert,
             get_child_status,

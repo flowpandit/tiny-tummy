@@ -123,6 +123,9 @@ function AppRoutes() {
     return (
       <Suspense fallback={<PageLoader />}>
         <Routes>
+          <Route element={<AppShell />}>
+            <Route path="/settings" element={<Settings />} />
+          </Route>
           <Route path="/privacy" element={<Privacy />} />
           <Route path="*" element={<Paywall />} />
         </Routes>

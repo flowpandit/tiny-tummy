@@ -5,6 +5,7 @@ import { useTrial } from "../contexts/TrialContext";
 import { ScenicHero } from "../components/layout/ScenicHero";
 import { EditChildSheet } from "../components/settings/EditChildSheet";
 import {
+  AccessSection,
   AboutSection,
   ChildrenSection,
   DeveloperToolsSection,
@@ -20,7 +21,7 @@ import type { Child } from "../lib/types";
 
 export function Settings() {
   const { children, activeChild, refreshChildren } = useChildContext();
-  const { simulateExpiration } = useTrial();
+  const { clearPremium, resetTrial, setTrialDaysAgo, simulateExpiration, unlockPremium } = useTrial();
   const navigate = useNavigate();
   const deleteChild = useDeleteChildAction(refreshChildren);
   const [editingChild, setEditingChild] = useState<Child | null>(null);
@@ -72,6 +73,8 @@ export function Settings() {
         {/* Notifications */}
         <NotificationSection children={children} />
 
+        <AccessSection />
+
         <RecordsSection />
 
         {/* Reports */}
@@ -80,7 +83,23 @@ export function Settings() {
         {/* About */}
         <AboutSection />
 
-        <DeveloperToolsSection onSimulateExpiration={simulateExpiration} />
+        <DeveloperToolsSection
+          onSimulateExpiration={() => {
+            void simulateExpiration();
+          }}
+          onResetTrial={() => {
+            void resetTrial();
+          }}
+          onSetTrialDaysAgo={(daysAgo) => {
+            void setTrialDaysAgo(daysAgo);
+          }}
+          onClearPremium={() => {
+            void clearPremium();
+          }}
+          onSimulatePremiumUnlock={() => {
+            void unlockPremium();
+          }}
+        />
       </div>
 
       {/* Edit sheet */}

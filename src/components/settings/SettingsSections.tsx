@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTheme } from "../../contexts/ThemeContext";
 import { useUnits } from "../../contexts/UnitsContext";
+import { useTrial } from "../../contexts/TrialContext";
 import { useEliminationPreference } from "../../hooks/useEliminationPreference";
 import { Card, CardContent } from "../ui/card";
 import { Button } from "../ui/button";
@@ -397,6 +398,39 @@ export function SupportSection() {
   );
 }
 
+export function AccessSection() {
+  const { daysRemaining, isLocked, restorePremium } = useTrial();
+  const { showError, showSuccess } = useToast();
+
+  const handleRestore = async () => {
+    try {
+      await restorePremium();
+      showSuccess("Purchase restored.");
+    } catch (error) {
+      showError(error instanceof Error ? error.message : "Restore failed. Please try again.");
+    }
+  };
+
+  return (
+    <div className="mb-6">
+      <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]">Access</h3>
+      <Card>
+        <CardContent className="py-3">
+          <p className="text-sm font-medium text-[var(--color-text)]">
+            {isLocked ? "Trial expired" : `${daysRemaining} day${daysRemaining === 1 ? "" : "s"} left in trial`}
+          </p>
+          <p className="mt-1 text-xs text-[var(--color-text-secondary)]">
+            Tiny Tummy uses a local 14-day trial and a one-time premium unlock. Restores work from the current store account once mobile billing is wired.
+          </p>
+          <Button variant="secondary" className="mt-4 w-full" onClick={() => { void handleRestore(); }}>
+            Restore Purchases
+          </Button>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 export function AboutSection() {
   const navigate = useNavigate();
 
@@ -418,7 +452,19 @@ export function AboutSection() {
   );
 }
 
-export function DeveloperToolsSection({ onSimulateExpiration }: { onSimulateExpiration: () => void }) {
+export function DeveloperToolsSection({
+  onSimulateExpiration,
+  onResetTrial,
+  onSetTrialDaysAgo,
+  onClearPremium,
+  onSimulatePremiumUnlock,
+}: {
+  onSimulateExpiration: () => void;
+  onResetTrial: () => void;
+  onSetTrialDaysAgo: (daysAgo: number) => void;
+  onClearPremium: () => void;
+  onSimulatePremiumUnlock: () => void;
+}) {
   if (!import.meta.env.DEV) {
     return null;
   }
@@ -432,9 +478,37 @@ export function DeveloperToolsSection({ onSimulateExpiration }: { onSimulateExpi
           <Button
             variant="secondary"
             className="w-full border border-[var(--color-alert)]/30 text-[var(--color-alert)] hover:bg-[var(--color-alert)]/10"
+            onClick={onResetTrial}
+          >
+            Reset Trial To Today
+          </Button>
+          <Button
+            variant="secondary"
+            className="w-full border border-[var(--color-alert)]/30 text-[var(--color-alert)] hover:bg-[var(--color-alert)]/10"
+            onClick={() => onSetTrialDaysAgo(13)}
+          >
+            Set Trial To 13 Days Ago
+          </Button>
+          <Button
+            variant="secondary"
+            className="w-full border border-[var(--color-alert)]/30 text-[var(--color-alert)] hover:bg-[var(--color-alert)]/10"
             onClick={onSimulateExpiration}
           >
             Simulate Trial Expiration
+          </Button>
+          <Button
+            variant="secondary"
+            className="w-full border border-[var(--color-alert)]/30 text-[var(--color-alert)] hover:bg-[var(--color-alert)]/10"
+            onClick={onClearPremium}
+          >
+            Clear Premium Unlock
+          </Button>
+          <Button
+            variant="secondary"
+            className="w-full border border-[var(--color-alert)]/30 text-[var(--color-alert)] hover:bg-[var(--color-alert)]/10"
+            onClick={onSimulatePremiumUnlock}
+          >
+            Simulate Premium Unlock
           </Button>
         </CardContent>
       </Card>
