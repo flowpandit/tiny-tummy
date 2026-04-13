@@ -459,15 +459,27 @@ export function DeveloperToolsSection({
   onClearPremium,
   onSimulatePremiumUnlock,
 }: {
-  onSimulateExpiration: () => void;
-  onResetTrial: () => void;
-  onSetTrialDaysAgo: (daysAgo: number) => void;
-  onClearPremium: () => void;
-  onSimulatePremiumUnlock: () => void;
+  onSimulateExpiration: () => Promise<void> | void;
+  onResetTrial: () => Promise<void> | void;
+  onSetTrialDaysAgo: (daysAgo: number) => Promise<void> | void;
+  onClearPremium: () => Promise<void> | void;
+  onSimulatePremiumUnlock: () => Promise<void> | void;
 }) {
+  const { daysRemaining, isLocked } = useTrial();
+  const { showError, showSuccess } = useToast();
+
   if (!import.meta.env.DEV) {
     return null;
   }
+
+  const runAction = async (action: () => Promise<void> | void, successMessage: string) => {
+    try {
+      await action();
+      showSuccess(successMessage);
+    } catch (error) {
+      showError(error instanceof Error ? error.message : "Developer tool action failed.");
+    }
+  };
 
   return (
     <div className="mb-12">
@@ -475,38 +487,51 @@ export function DeveloperToolsSection({
       <Card className="border-[var(--color-alert)]/30">
         <CardContent className="flex flex-col gap-3 py-3">
           <p className="text-xs text-[var(--color-text-secondary)]">These tools only appear during local development.</p>
+          <p className="rounded-[var(--radius-sm)] bg-[var(--color-alert)]/8 px-3 py-2 text-xs text-[var(--color-text)]">
+            Current access state: {isLocked ? "Trial expired" : `${daysRemaining} day${daysRemaining === 1 ? "" : "s"} left in trial`}
+          </p>
           <Button
             variant="secondary"
             className="w-full border border-[var(--color-alert)]/30 text-[var(--color-alert)] hover:bg-[var(--color-alert)]/10"
-            onClick={onResetTrial}
+            onClick={() => {
+              void runAction(onResetTrial, "Trial reset to today.");
+            }}
           >
             Reset Trial To Today
           </Button>
           <Button
             variant="secondary"
             className="w-full border border-[var(--color-alert)]/30 text-[var(--color-alert)] hover:bg-[var(--color-alert)]/10"
-            onClick={() => onSetTrialDaysAgo(13)}
+            onClick={() => {
+              void runAction(() => onSetTrialDaysAgo(13), "Trial set to 13 days ago.");
+            }}
           >
             Set Trial To 13 Days Ago
           </Button>
           <Button
             variant="secondary"
             className="w-full border border-[var(--color-alert)]/30 text-[var(--color-alert)] hover:bg-[var(--color-alert)]/10"
-            onClick={onSimulateExpiration}
+            onClick={() => {
+              void runAction(onSimulateExpiration, "Trial expired. Settings stays available by design.");
+            }}
           >
             Simulate Trial Expiration
           </Button>
           <Button
             variant="secondary"
             className="w-full border border-[var(--color-alert)]/30 text-[var(--color-alert)] hover:bg-[var(--color-alert)]/10"
-            onClick={onClearPremium}
+            onClick={() => {
+              void runAction(onClearPremium, "Premium unlock cleared.");
+            }}
           >
             Clear Premium Unlock
           </Button>
           <Button
             variant="secondary"
             className="w-full border border-[var(--color-alert)]/30 text-[var(--color-alert)] hover:bg-[var(--color-alert)]/10"
-            onClick={onSimulatePremiumUnlock}
+            onClick={() => {
+              void runAction(onSimulatePremiumUnlock, "Premium unlock simulated.");
+            }}
           >
             Simulate Premium Unlock
           </Button>

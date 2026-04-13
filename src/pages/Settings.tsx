@@ -84,8 +84,9 @@ export function Settings() {
         <AboutSection />
 
         <DeveloperToolsSection
-          onSimulateExpiration={() => {
-            void simulateExpiration();
+          onSimulateExpiration={async () => {
+            await simulateExpiration();
+            navigate("/", { replace: true });
           }}
           onResetTrial={() => {
             void resetTrial();
