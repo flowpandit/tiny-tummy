@@ -1,13 +1,15 @@
-import bottleIcon from "../../assets/svg-assets/icons/bottle-icon.svg";
-import bottlefeedIcon from "../../assets/svg-assets/icons/bottlefeed-icon.svg";
-import breastfeedIcon from "../../assets/svg-assets/icons/breastfeed-icon.svg";
-import diaperIcon from "../../assets/svg-assets/icons/diaper-icon.svg";
-import diaperIcon2 from "../../assets/svg-assets/icons/diaper-icon-2.svg";
-import episodeIcon from "../../assets/svg-assets/icons/episode-icon.svg";
-import moonIcon from "../../assets/svg-assets/icons/moon-icon.svg";
-import rainbowIcon from "../../assets/svg-assets/icons/rainbow-icon.svg";
-import sunIcon from "../../assets/svg-assets/icons/sun-icon.svg";
-import symptomIcon from "../../assets/svg-assets/icons/symptom-icon.svg";
+import {
+  bottleIcon,
+  bottlefeedIcon,
+  breastfeedIcon,
+  diaperIcon,
+  diaperIcon2,
+  episodeIcon,
+  moonIcon,
+  rainbowIcon,
+  sunIcon,
+  symptomIcon,
+} from "../../assets/icons";
 
 interface IconProps {
   className?: string;

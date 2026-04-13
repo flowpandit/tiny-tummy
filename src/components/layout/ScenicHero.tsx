@@ -1,19 +1,21 @@
 import { useEffect, useState, type ReactNode, type RefObject } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import watercolorClouds from "../../assets/svg-assets/hero-pieces/watercolor-clouds.svg";
-import watercolorCloudsDark from "../../assets/svg-assets/hero-pieces/watercolor-clouds-dark.svg";
-import watercolorMountains from "../../assets/svg-assets/hero-pieces/watercolor-mountains.svg";
-import watercolorMountainsDark from "../../assets/svg-assets/hero-pieces/watercolor-mountains-dark.svg";
-import heroBackgroundArt from "../../assets/svg-assets/hero-background.svg";
-import heroBackgroundArtDark from "../../assets/svg-assets/hero-background-dark.svg";
-import breastfeedingSceneArt from "../../assets/svg-assets/breastfeeding.svg";
-import diaperSceneArt from "../../assets/svg-assets/diaper.svg";
-import feedSceneArt from "../../assets/svg-assets/feed.svg";
-import growthSceneArt from "../../assets/svg-assets/growth.svg";
-import poopSceneArt from "../../assets/svg-assets/poop.svg";
-import sleepSceneArt from "../../assets/svg-assets/sleep.svg";
-import sceneMoon from "../../assets/svg-assets/moon.svg";
-import sceneSun from "../../assets/svg-assets/sun.svg";
+import {
+  breastfeedingSceneArt,
+  diaperSceneArt,
+  feedSceneArt,
+  growthSceneArt,
+  heroBackgroundArt,
+  heroBackgroundArtDark,
+  poopSceneArt,
+  sceneMoon,
+  sceneSun,
+  sleepSceneArt,
+  watercolorClouds,
+  watercolorCloudsDark,
+  watercolorMountains,
+  watercolorMountainsDark,
+} from "../../assets/illustrations";
 import type { Child } from "../../lib/types";
 import { getAgeLabelFromDob } from "../../lib/utils";
 import { useChildContext } from "../../contexts/ChildContext";

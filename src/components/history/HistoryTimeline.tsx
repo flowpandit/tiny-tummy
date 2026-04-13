@@ -18,9 +18,7 @@ import {
 import { formatGrowthSummary as formatGrowthSummaryWithUnits } from "../../lib/units";
 import { Badge } from "../ui/badge";
 import { MealIcon, NoPoopIcon, PoopIcon } from "../ui/icons";
-import diaperDirtyIcon from "../../assets/svg-assets/icons/diaper-dirty.svg";
-import diaperMixedIcon from "../../assets/svg-assets/icons/diaper-mixed.svg";
-import diaperWetIcon from "../../assets/svg-assets/icons/diaper-wet.svg";
+import { diaperDirtyIcon, diaperMixedIcon, diaperWetIcon } from "../../assets/icons";
 import type {
   DiaperEntry,
   Episode,

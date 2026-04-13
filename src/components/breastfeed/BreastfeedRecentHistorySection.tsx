@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import breastfeedIcon from "../../assets/svg-assets/icons/breastfeed-icon.svg";
+import { breastfeedIcon } from "../../assets/icons";
 import { getBreastHistorySummary, getBreastHistoryTone, getRecentHistoryDayLabel } from "../../lib/breastfeed-insights";
 import type { FeedingEntry } from "../../lib/types";
 

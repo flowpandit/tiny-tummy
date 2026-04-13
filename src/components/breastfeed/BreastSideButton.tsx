@@ -1,4 +1,4 @@
-import breastfeedIcon from "../../assets/svg-assets/icons/breastfeed-icon.svg";
+import { breastfeedIcon } from "../../assets/icons";
 import { formatBreastfeedingClock } from "../../lib/breastfeeding";
 
 export function BreastSideButton({
