@@ -75,22 +75,30 @@ export function Paywall() {
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto overflow-x-hidden bg-[radial-gradient(circle_at_top,#fffef8_0%,#fff5ea_42%,#ffe9dc_100%)] text-[var(--color-text)]">
+    <div
+      className="fixed inset-0 z-50 overflow-y-auto overflow-x-hidden text-[var(--color-text)]"
+      style={{
+        background: "linear-gradient(180deg, var(--color-bg-elevated) 0%, var(--color-bg) 100%)",
+      }}
+    >
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         <motion.div
           animate={{ x: [0, 20, 0], y: [0, 16, 0] }}
           transition={{ duration: 12, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" }}
-          className="absolute left-[-12%] top-[-6%] h-64 w-64 rounded-full bg-[color:rgba(255,180,142,0.34)] blur-3xl"
+          className="absolute left-[-12%] top-[-6%] h-64 w-64 rounded-full blur-3xl"
+          style={{ background: "rgba(255,180,142,0.24)" }}
         />
         <motion.div
           animate={{ x: [0, -18, 0], y: [0, -14, 0] }}
           transition={{ duration: 14, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" }}
-          className="absolute right-[-10%] top-[18%] h-72 w-72 rounded-full bg-[color:rgba(154,219,193,0.22)] blur-3xl"
+          className="absolute right-[-10%] top-[18%] h-72 w-72 rounded-full blur-3xl"
+          style={{ background: "rgba(154,219,193,0.16)" }}
         />
         <motion.div
           animate={{ x: [0, 14, 0], y: [0, -10, 0] }}
           transition={{ duration: 10, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" }}
-          className="absolute bottom-[-10%] left-[18%] h-72 w-72 rounded-full bg-[color:rgba(231,203,109,0.2)] blur-3xl"
+          className="absolute bottom-[-10%] left-[18%] h-72 w-72 rounded-full blur-3xl"
+          style={{ background: "rgba(231,203,109,0.14)" }}
         />
       </div>
 
@@ -103,7 +111,7 @@ export function Paywall() {
             className="flex items-center justify-between gap-4"
           >
             <div className="flex items-center gap-3">
-              <div className="h-12 w-12 rounded-[20px] bg-white/72 p-2.5 shadow-[var(--shadow-soft)] ring-1 ring-white/70 backdrop-blur">
+              <div className="h-12 w-12 rounded-[20px] p-2.5 shadow-[var(--shadow-soft)] ring-1 backdrop-blur" style={{ background: "var(--color-surface-strong)", borderColor: "var(--color-border)" }}>
                 <Logo className="h-full w-full" />
               </div>
               <div>
@@ -113,7 +121,7 @@ export function Paywall() {
                 </p>
               </div>
             </div>
-            <div className="rounded-full border border-white/70 bg-white/55 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--color-text-soft)] backdrop-blur">
+            <div className="rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--color-text-soft)] backdrop-blur" style={{ borderColor: "var(--color-border)", background: "var(--color-surface)" }}>
               Lifetime unlock
             </div>
           </motion.div>
@@ -124,7 +132,8 @@ export function Paywall() {
                 initial={{ opacity: 0, y: 18 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: 0.08, ease: "easeOut" }}
-                className="mb-5 inline-flex items-center gap-2 rounded-full border border-[var(--color-border)] bg-white/60 px-3 py-1.5 text-sm text-[var(--color-text-secondary)] backdrop-blur"
+                className="mb-5 inline-flex items-center gap-2 rounded-full border border-[var(--color-border)] px-3 py-1.5 text-sm text-[var(--color-text-secondary)] backdrop-blur"
+                style={{ background: "var(--color-surface)" }}
               >
                 <LockIcon className="h-4 w-4 text-[var(--color-primary)]" />
                 Continue tracking with one purchase
@@ -157,7 +166,12 @@ export function Paywall() {
                 {featureRows.map((feature) => (
                   <div
                     key={feature}
-                    className="flex items-start gap-3 rounded-[24px] border border-white/70 bg-white/58 px-4 py-4 shadow-[0_12px_30px_rgba(122,88,56,0.08)] backdrop-blur"
+                    className="flex items-start gap-3 rounded-[24px] border px-4 py-4 backdrop-blur"
+                    style={{
+                      borderColor: "var(--color-border)",
+                      background: "var(--color-surface)",
+                      boxShadow: "0 12px 30px rgba(17, 24, 39, 0.12)",
+                    }}
                   >
                     <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--color-primary)] text-[var(--color-on-primary)]">
                       <CheckIcon className="h-4 w-4" />
@@ -172,9 +186,13 @@ export function Paywall() {
               initial={{ opacity: 0, y: 24, scale: 0.98 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               transition={{ duration: 0.55, delay: 0.18, ease: "easeOut" }}
-              className="relative overflow-hidden rounded-[32px] border border-white/75 bg-[linear-gradient(180deg,rgba(255,255,255,0.88),rgba(255,248,241,0.96))] p-6 shadow-[var(--shadow-lg)] backdrop-blur-xl"
+              className="relative overflow-hidden rounded-[32px] border p-6 shadow-[var(--shadow-lg)] backdrop-blur-xl"
+              style={{
+                borderColor: "var(--color-border)",
+                background: "linear-gradient(180deg, var(--color-surface) 0%, var(--color-surface-strong) 100%)",
+              }}
             >
-              <div className="absolute inset-x-6 top-0 h-px bg-[linear-gradient(90deg,transparent,rgba(43,57,86,0.28),transparent)]" />
+              <div className="absolute inset-x-6 top-0 h-px" style={{ background: "linear-gradient(90deg, transparent, var(--color-border-strong), transparent)" }} />
 
               <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[var(--color-text-soft)]">One-time unlock</p>
               <div className="mt-4 flex items-end gap-2">
@@ -225,14 +243,14 @@ export function Paywall() {
                 onClick={() => {
                   void handleRestore();
                 }}
-                className="mt-3 w-full rounded-full px-4 py-3 text-sm font-medium text-[var(--color-text-secondary)] transition-opacity active:opacity-60"
+                className="mt-3 w-full rounded-full px-4 py-3 text-sm font-medium text-[var(--color-text-secondary)] transition-opacity hover:bg-[var(--color-surface-tint)] active:opacity-60"
               >
                 Restore purchases
               </button>
 
               <button
                 onClick={() => navigate("/settings")}
-                className="w-full rounded-full px-4 py-2 text-sm font-medium text-[var(--color-text-secondary)] transition-opacity active:opacity-60"
+                className="w-full rounded-full px-4 py-2 text-sm font-medium text-[var(--color-text-secondary)] transition-opacity hover:bg-[var(--color-surface-tint)] active:opacity-60"
               >
                 Open settings
               </button>
