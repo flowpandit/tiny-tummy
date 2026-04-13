@@ -1,10 +1,9 @@
-import { useState, useRef, useEffect, type FormEvent } from "react";
+import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { Sheet } from "../ui/sheet";
 import { Button } from "../ui/button";
 import { useToast } from "../ui/toast";
-import { DatePicker } from "../ui/date-picker";
-import { TimePicker } from "../ui/time-picker";
 import { LogSuccess } from "./LogSuccess";
+import { LogDateTimeFields } from "./LogDateTimeFields";
 import { DiaperTypePicker } from "./DiaperTypePicker";
 import { UrineColorPicker } from "./UrineColorPicker";
 import { StoolTypePicker } from "./StoolTypePicker";
@@ -16,6 +15,8 @@ import { cn } from "../../lib/cn";
 import { diaperIncludesStool, diaperIncludesWet } from "../../lib/diaper";
 import { savePhoto } from "../../lib/photos";
 import { combineLocalDateAndTimeToUtcIso, getCurrentLocalDate, getCurrentLocalTime } from "../../lib/utils";
+import { useLoggingSheetLifecycle } from "../../hooks/useLoggingSheetLifecycle";
+import { usePhotoField } from "../../hooks/usePhotoField";
 import * as db from "../../lib/db";
 import type { DiaperLogDraft, DiaperType, StoolColor, StoolSize, UrineColor } from "../../lib/types";
 
@@ -58,15 +59,13 @@ export function DiaperLogForm({
   const [color, setColor] = useState<StoolColor | null>(null);
   const [size, setSize] = useState<StoolSize | null>(null);
   const [notes, setNotes] = useState("");
-  const [photoFile, setPhotoFile] = useState<File | null>(null);
-  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const { resolved } = useTheme();
   const nightMode = resolved === "night";
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { fileInputRef, photoFile, photoPreview, resetPhoto, setPhotoFromChange } = usePhotoField();
 
-  const applyDraft = (draft?: Partial<DiaperLogDraft> | null) => {
+  const applyDraft = useCallback((draft?: Partial<DiaperLogDraft> | null) => {
     const nextDraft = { ...EMPTY_DRAFT, ...draft };
     setLogDate(getCurrentLocalDate());
     setLogTime(getCurrentLocalTime());
@@ -76,34 +75,21 @@ export function DiaperLogForm({
     setColor(nextDraft.color);
     setSize(nextDraft.size);
     setNotes(nextDraft.notes);
-    setPhotoFile(null);
-    if (photoPreview) URL.revokeObjectURL(photoPreview);
-    setPhotoPreview(null);
+    resetPhoto();
     setShowSuccess(false);
-  };
+  }, [resetPhoto]);
+
+  const { handleClose, handleLoggedSuccess } = useLoggingSheetLifecycle({
+    onClose,
+    onReset: () => applyDraft(null),
+    onLogged,
+  });
 
   useEffect(() => {
     if (open) {
       applyDraft(initialDraft);
     }
-  }, [open, initialDraft]);
-
-  const reset = () => applyDraft(null);
-
-  const handlePhotoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    setPhotoFile(file);
-    const url = URL.createObjectURL(file);
-    setPhotoPreview(url);
-  };
-
-  const removePhoto = () => {
-    setPhotoFile(null);
-    if (photoPreview) URL.revokeObjectURL(photoPreview);
-    setPhotoPreview(null);
-    if (fileInputRef.current) fileInputRef.current.value = "";
-  };
+  }, [applyDraft, initialDraft, open]);
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -135,17 +121,7 @@ export function DiaperLogForm({
 
     setIsSubmitting(false);
     setShowSuccess(true);
-
-    setTimeout(() => {
-      onLogged();
-      onClose();
-      setTimeout(reset, 300);
-    }, 1200);
-  };
-
-  const handleClose = () => {
-    onClose();
-    setTimeout(reset, 300);
+    handleLoggedSuccess();
   };
 
   return (
@@ -159,13 +135,13 @@ export function DiaperLogForm({
           </h2>
 
           <div className="flex flex-col gap-5">
-            <div>
-              <FieldLabel className="mb-1.5">When</FieldLabel>
-              <div className="grid grid-cols-2 gap-2">
-                <DatePicker value={logDate} onChange={setLogDate} max={getCurrentLocalDate()} nightMode={nightMode} />
-                <TimePicker value={logTime} onChange={setLogTime} nightMode={nightMode} />
-              </div>
-            </div>
+            <LogDateTimeFields
+              date={logDate}
+              time={logTime}
+              onDateChange={setLogDate}
+              onTimeChange={setLogTime}
+              nightMode={nightMode}
+            />
 
             <DiaperTypePicker value={diaperType} onChange={setDiaperType} nightMode={nightMode} />
 
@@ -201,7 +177,7 @@ export function DiaperLogForm({
                   type="file"
                   accept="image/*"
                   capture="environment"
-                  onChange={handlePhotoChange}
+                  onChange={setPhotoFromChange}
                   className="hidden"
                   id="diaper-photo-input"
                 />
@@ -214,7 +190,7 @@ export function DiaperLogForm({
                     />
                     <button
                       type="button"
-                      onClick={removePhoto}
+                      onClick={resetPhoto}
                       className="absolute -right-3 -top-3 flex h-8 w-8 min-h-[44px] min-w-[44px] items-center justify-center rounded-full bg-[var(--color-alert)] text-white"
                       aria-label="Remove photo"
                     >

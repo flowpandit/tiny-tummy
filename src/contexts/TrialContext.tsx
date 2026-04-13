@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useState, ReactNode } from "react";
 import { getSetting, setSetting } from "../lib/db";
 import { nowISO } from "../lib/utils";
 import { withTimeout } from "../lib/async";
@@ -33,7 +33,7 @@ export function TrialProvider({ children }: { children: ReactNode }) {
     setDaysRemaining(0);
   };
 
-  async function refreshTrial() {
+  const refreshTrial = useCallback(async () => {
     setIsLoading(true);
     if (!hasLoadedOnce) {
       setLoadError(null);
@@ -71,11 +71,11 @@ export function TrialProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  }
+  }, [hasLoadedOnce]);
 
   useEffect(() => {
     void refreshTrial();
-  }, []);
+  }, [refreshTrial]);
 
   const unlockPremium = async () => {
     await setSetting("app_is_premium", "1");

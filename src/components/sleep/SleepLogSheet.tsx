@@ -6,6 +6,7 @@ import { TimePicker } from "../ui/time-picker";
 import { FieldLabel, Textarea } from "../ui/field";
 import { SegmentedControl } from "../ui/segmented-control";
 import { useToast } from "../ui/toast";
+import { useVisibilityRefresh } from "../../hooks/useVisibilityRefresh";
 import { cn } from "../../lib/cn";
 import * as db from "../../lib/db";
 import type { SleepType } from "../../lib/types";
@@ -87,7 +88,7 @@ export function SleepLogSheet({ open, onClose, childId, onLogged }: SleepLogShee
     return () => {
       cancelled = true;
     };
-  }, [open]);
+  }, [childId, open]);
 
   useEffect(() => {
     if (!open || !timerSession) return;
@@ -95,17 +96,10 @@ export function SleepLogSheet({ open, onClose, childId, onLogged }: SleepLogShee
     return () => window.clearInterval(interval);
   }, [open, timerSession]);
 
-  useEffect(() => {
+  useVisibilityRefresh(() => {
     if (!open) return;
-
-    const refreshTick = () => setTick(Date.now());
-    window.addEventListener("focus", refreshTick);
-    document.addEventListener("visibilitychange", refreshTick);
-    return () => {
-      window.removeEventListener("focus", refreshTick);
-      document.removeEventListener("visibilitychange", refreshTick);
-    };
-  }, [open]);
+    setTick(Date.now());
+  }, open);
 
   const persistTimerSession = async (session: SleepTimerSession | null) => {
     await db.setSetting(getSleepTimerSettingKey(childId), session ? JSON.stringify(session) : "");

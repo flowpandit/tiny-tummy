@@ -7,6 +7,9 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "test": "node --test --experimental-strip-types tests/*.test.ts",
+    "lint": "eslint .",
+    "check:dead-code": "node ./scripts/check-dead-code.mjs",
+    "check:all": "npm run build && npm test && npm run lint && npm run check:dead-code",
     "preview": "vite preview",
     "tauri": "tauri"
   },
@@ -27,13 +30,19 @@
     "tailwind-merge": "^3.5.0"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.4",
     "@tailwindcss/vite": "^4.2.2",
     "@tauri-apps/cli": "^2",
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
     "@vitejs/plugin-react": "^4.6.0",
+    "eslint": "^9.39.4",
+    "eslint-plugin-react-hooks": "^7.0.1",
+    "eslint-plugin-react-refresh": "^0.5.2",
+    "globals": "^17.5.0",
     "tailwindcss": "^4.2.2",
     "typescript": "~5.8.3",
+    "typescript-eslint": "^8.58.1",
     "vite": "^7.0.4"
   }
 }

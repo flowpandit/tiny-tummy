@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { useUnits } from "../../contexts/UnitsContext";
 import { Sheet } from "../ui/sheet";
 import { Button } from "../ui/button";
@@ -99,14 +99,14 @@ export function FeedPresetEditorSheet({
   const [drafts, setDrafts] = useState<Array<Partial<FeedingLogDraft>>>([]);
   const volumeUnit = getVolumeUnitLabel(unitSystem);
 
-  const toEditorDraft = (draft: Partial<FeedingLogDraft>): Partial<FeedingLogDraft> => ({
+  const toEditorDraft = useCallback((draft: Partial<FeedingLogDraft>): Partial<FeedingLogDraft> => ({
     ...draft,
     amount_ml: draft.amount_ml?.trim()
       ? formatVolumeValue(Number(draft.amount_ml), unitSystem, { includeUnit: false })
       : "",
-  });
+  }), [unitSystem]);
 
-  const toStoredDraft = (draft: Partial<FeedingLogDraft>): Partial<FeedingLogDraft> => {
+  const toStoredDraft = useCallback((draft: Partial<FeedingLogDraft>): Partial<FeedingLogDraft> => {
     const amount = draft.amount_ml?.trim();
     if (!amount) {
       return { ...draft, amount_ml: "" };
@@ -122,12 +122,12 @@ export function FeedPresetEditorSheet({
       : Math.round(parsed);
 
     return { ...draft, amount_ml: String(canonicalMl) };
-  };
+  }, [unitSystem]);
 
   useEffect(() => {
     if (!open) return;
     setDrafts(presets.map((preset) => toEditorDraft(preset.draft)));
-  }, [open, presets, unitSystem]);
+  }, [open, presets, toEditorDraft]);
 
   const updateDraft = (index: number, updates: Partial<FeedingLogDraft>) => {
     setDrafts((current) => current.map((draft, currentIndex) => (

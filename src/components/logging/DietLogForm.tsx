@@ -1,8 +1,6 @@
-import { useState, useEffect, type FormEvent } from "react";
+import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { Sheet } from "../ui/sheet";
 import { Button } from "../ui/button";
-import { DatePicker } from "../ui/date-picker";
-import { TimePicker } from "../ui/time-picker";
 import { useToast } from "../ui/toast";
 import { BOTTLE_CONTENTS, BREAST_SIDES, FOOD_TYPES } from "../../lib/diet-constants";
 import { cn } from "../../lib/cn";
@@ -10,13 +8,17 @@ import * as db from "../../lib/db";
 import { useTheme } from "../../contexts/ThemeContext";
 import { useUnits } from "../../contexts/UnitsContext";
 import { Input, Textarea } from "../ui/field";
+import { useLoggingSheetLifecycle } from "../../hooks/useLoggingSheetLifecycle";
+import {
+  LoggingFieldGroup,
+  LoggingFormHeader,
+} from "./logging-form-primitives";
 import {
   getLoggingChipClassName,
   getLoggingInputClassName,
   getLoggingTextareaClassName,
-  LoggingFieldGroup,
-  LoggingFormHeader,
-} from "./logging-form-primitives";
+} from "./logging-form-classnames";
+import { LogDateTimeFields } from "./LogDateTimeFields";
 import { combineLocalDateAndTimeToUtcIso, getCurrentLocalDate, getCurrentLocalTime } from "../../lib/utils";
 import { getVolumeUnitLabel, parseVolumeInputToMl } from "../../lib/units";
 import type { BottleContent, FoodType, BreastSide, FeedingLogDraft } from "../../lib/types";
@@ -66,7 +68,7 @@ export function DietLogForm({ open, onClose, childId, onLogged, initialDraft = n
   const nightMode = resolved === "night";
   const volumeUnit = getVolumeUnitLabel(unitSystem);
 
-  const applyDraft = (draft?: Partial<FeedingLogDraft> | null) => {
+  const applyDraft = useCallback((draft?: Partial<FeedingLogDraft> | null) => {
     const nextDraft = { ...EMPTY_DRAFT, ...draft };
     setLogDate(getCurrentLocalDate());
     setLogTime(getCurrentLocalTime());
@@ -79,17 +81,19 @@ export function DietLogForm({ open, onClose, childId, onLogged, initialDraft = n
     setReactionNotes(nextDraft.reaction_notes);
     setIsConstipationSupport(nextDraft.is_constipation_support);
     setNotes(nextDraft.notes);
-  };
+  }, []);
+
+  const { handleClose } = useLoggingSheetLifecycle({
+    onClose,
+    onReset: () => applyDraft(null),
+    onLogged,
+  });
 
   useEffect(() => {
     if (open) {
       applyDraft(initialDraft);
     }
-  }, [open, initialDraft]);
-
-  const reset = () => {
-    applyDraft(null);
-  };
+  }, [applyDraft, initialDraft, open]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -124,14 +128,8 @@ export function DietLogForm({ open, onClose, childId, onLogged, initialDraft = n
     }
 
     setIsSubmitting(false);
-    onLogged();
-    onClose();
-    setTimeout(reset, 300);
-  };
-
-  const handleClose = () => {
-    onClose();
-    setTimeout(reset, 300);
+    void onLogged();
+    handleClose();
   };
 
   return (
@@ -140,12 +138,13 @@ export function DietLogForm({ open, onClose, childId, onLogged, initialDraft = n
         <LoggingFormHeader title="Log a feed" isNight={nightMode} />
 
         <div className="flex flex-col gap-5">
-          <LoggingFieldGroup label="When" isNight={nightMode}>
-            <div className="grid grid-cols-2 gap-2">
-              <DatePicker value={logDate} onChange={setLogDate} max={getCurrentLocalDate()} nightMode={nightMode} />
-              <TimePicker value={logTime} onChange={setLogTime} nightMode={nightMode} />
-            </div>
-          </LoggingFieldGroup>
+          <LogDateTimeFields
+            date={logDate}
+            time={logTime}
+            onDateChange={setLogDate}
+            onTimeChange={setLogTime}
+            nightMode={nightMode}
+          />
 
           <LoggingFieldGroup label="Type" isNight={nightMode}>
             <div className="flex flex-wrap gap-2">
@@ -285,7 +284,9 @@ export function DietLogForm({ open, onClose, childId, onLogged, initialDraft = n
                 )}
               >
                 <div>
-                  <p className={cn("text-sm font-medium", nightMode ? "text-slate-100" : "text-[var(--color-text)]")}>Constipation support food</p>
+                  <p className={cn("text-sm font-medium", nightMode ? "text-slate-100" : "text-[var(--color-text)]")}>
+                    Constipation support food
+                  </p>
                   <p className={cn("text-xs", nightMode ? "text-slate-400" : "text-[var(--color-text-secondary)]")}>
                     Mark foods like pears, prunes, peas, or extra water-rich foods.
                   </p>
@@ -302,7 +303,6 @@ export function DietLogForm({ open, onClose, childId, onLogged, initialDraft = n
             </>
           )}
 
-          {/* Reaction notes */}
           {(foodType === "solids" || foodType === "other" || foodType === "formula" || foodType === "bottle") && (
             <LoggingFieldGroup label="Reactions or tummy notes" isNight={nightMode}>
               <Textarea
@@ -321,21 +321,15 @@ export function DietLogForm({ open, onClose, childId, onLogged, initialDraft = n
               id="diet-notes"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="Any observations..."
+              placeholder="Any extra context..."
               rows={2}
               className={getLoggingTextareaClassName(nightMode)}
             />
           </LoggingFieldGroup>
         </div>
 
-        <Button
-          type="submit"
-          variant="primary"
-          size="lg"
-          className={cn("w-full mt-6", nightMode && "shadow-none")}
-          disabled={!foodType || isSubmitting}
-        >
-          {isSubmitting ? "Saving..." : "Save Feed"}
+        <Button type="submit" variant="cta" size="lg" className="mt-6 w-full" disabled={isSubmitting || !foodType}>
+          {isSubmitting ? "Saving..." : "Save"}
         </Button>
       </form>
     </Sheet>

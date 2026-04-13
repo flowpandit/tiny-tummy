@@ -1,7 +1,7 @@
 import { cn } from "../../lib/cn";
 import { BITSS_TYPES } from "../../lib/constants";
 import { useTheme } from "../../contexts/ThemeContext";
-import { getLoggingLabelClassName } from "./logging-form-primitives";
+import { getLoggingLabelClassName } from "./logging-form-classnames";
 import poop1Icon from "../../assets/svg-assets/icons/poop-1.svg";
 import poop2Icon from "../../assets/svg-assets/icons/poop-2.svg";
 import poop3Icon from "../../assets/svg-assets/icons/poop-3.svg";
