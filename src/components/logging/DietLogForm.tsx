@@ -1,13 +1,13 @@
-import { useCallback, useEffect, useState, type FormEvent } from "react";
+import type { FormEvent } from "react";
 import { Sheet } from "../ui/sheet";
 import { Button } from "../ui/button";
 import { useToast } from "../ui/toast";
 import { BOTTLE_CONTENTS, BREAST_SIDES, FOOD_TYPES } from "../../lib/diet-constants";
 import { cn } from "../../lib/cn";
-import * as db from "../../lib/db";
 import { useTheme } from "../../contexts/ThemeContext";
 import { useUnits } from "../../contexts/UnitsContext";
 import { Input, Textarea } from "../ui/field";
+import { useDietLogFormState } from "../../hooks/useDietLogFormState";
 import { useLoggingSheetLifecycle } from "../../hooks/useLoggingSheetLifecycle";
 import {
   LoggingFieldGroup,
@@ -19,27 +19,8 @@ import {
   getLoggingTextareaClassName,
 } from "./logging-form-classnames";
 import { LogDateTimeFields } from "./LogDateTimeFields";
-import { combineLocalDateAndTimeToUtcIso, getCurrentLocalDate, getCurrentLocalTime } from "../../lib/utils";
-import { getVolumeUnitLabel, parseVolumeInputToMl } from "../../lib/units";
-import type { BottleContent, FoodType, BreastSide, FeedingLogDraft } from "../../lib/types";
-
-function parseInteger(value: string): number | null {
-  if (!value.trim()) return null;
-  const parsed = Number.parseInt(value, 10);
-  return Number.isFinite(parsed) ? parsed : null;
-}
-
-const EMPTY_DRAFT: FeedingLogDraft = {
-  food_type: null,
-  food_name: "",
-  amount_ml: "",
-  duration_minutes: "",
-  breast_side: null,
-  bottle_content: null,
-  reaction_notes: "",
-  is_constipation_support: false,
-  notes: "",
-};
+import { getVolumeUnitLabel } from "../../lib/units";
+import type { FeedingLogDraft } from "../../lib/types";
 
 interface DietLogFormProps {
   open: boolean;
@@ -51,90 +32,26 @@ interface DietLogFormProps {
 
 export function DietLogForm({ open, onClose, childId, onLogged, initialDraft = null }: DietLogFormProps) {
   const { showError } = useToast();
-  const [logDate, setLogDate] = useState(getCurrentLocalDate());
-  const [logTime, setLogTime] = useState(getCurrentLocalTime());
-  const [foodType, setFoodType] = useState<FoodType | null>(null);
-  const [foodName, setFoodName] = useState("");
-  const [amountMl, setAmountMl] = useState("");
-  const [durationMinutes, setDurationMinutes] = useState("");
-  const [breastSide, setBreastSide] = useState<BreastSide | null>(null);
-  const [bottleContent, setBottleContent] = useState<BottleContent | null>(null);
-  const [reactionNotes, setReactionNotes] = useState("");
-  const [isConstipationSupport, setIsConstipationSupport] = useState(false);
-  const [notes, setNotes] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const { resolved } = useTheme();
   const { unitSystem } = useUnits();
   const nightMode = resolved === "night";
   const volumeUnit = getVolumeUnitLabel(unitSystem);
 
-  const applyDraft = useCallback((draft?: Partial<FeedingLogDraft> | null) => {
-    const nextDraft = { ...EMPTY_DRAFT, ...draft };
-    setLogDate(getCurrentLocalDate());
-    setLogTime(getCurrentLocalTime());
-    setFoodType(nextDraft.food_type);
-    setFoodName(nextDraft.food_name);
-    setAmountMl(nextDraft.amount_ml);
-    setDurationMinutes(nextDraft.duration_minutes);
-    setBreastSide(nextDraft.breast_side);
-    setBottleContent(nextDraft.bottle_content);
-    setReactionNotes(nextDraft.reaction_notes);
-    setIsConstipationSupport(nextDraft.is_constipation_support);
-    setNotes(nextDraft.notes);
-  }, []);
-
   const { handleClose } = useLoggingSheetLifecycle({
     onClose,
-    onReset: () => applyDraft(null),
+    onReset: () => {},
     onLogged,
   });
-
-  useEffect(() => {
-    if (open) {
-      applyDraft(initialDraft);
-    }
-  }, [applyDraft, initialDraft, open]);
-
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-    if (!foodType || isSubmitting) return;
-
-    const showsFoodName = foodType === "solids" || foodType === "other";
-    const showsAmount = foodType === "formula" || foodType === "bottle" || foodType === "pumping" || foodType === "water";
-    const showsDuration = foodType === "breast_milk" || foodType === "pumping";
-    const showsBreastSide = foodType === "breast_milk";
-    const showsBottleContent = foodType === "bottle";
-    const showsConstipationSupport = foodType === "solids" || foodType === "other";
-
-    setIsSubmitting(true);
-    try {
-      await db.createDietLog({
-        child_id: childId,
-        logged_at: combineLocalDateAndTimeToUtcIso(logDate, logTime),
-        food_type: foodType,
-        food_name: showsFoodName ? foodName.trim() || null : null,
-        amount_ml: showsAmount ? parseVolumeInputToMl(amountMl, unitSystem) : null,
-        duration_minutes: showsDuration ? parseInteger(durationMinutes) : null,
-        breast_side: showsBreastSide ? breastSide : null,
-        bottle_content: showsBottleContent ? bottleContent : null,
-        reaction_notes: reactionNotes.trim() || null,
-        is_constipation_support: showsConstipationSupport && isConstipationSupport ? 1 : 0,
-        notes: notes.trim() || null,
-      });
-    } catch {
-      setIsSubmitting(false);
-      showError("Failed to save feed. Please try again.");
-      return;
-    }
-
-    setIsSubmitting(false);
-    void onLogged();
-    handleClose();
-  };
+  const {
+    logDate, setLogDate, logTime, setLogTime, foodType, setFoodType, foodName, setFoodName,
+    amountMl, setAmountMl, durationMinutes, setDurationMinutes, breastSide, setBreastSide,
+    bottleContent, setBottleContent, reactionNotes, setReactionNotes, isConstipationSupport,
+    setIsConstipationSupport, notes, setNotes, isSubmitting, handleSubmit,
+  } = useDietLogFormState({ open, childId, unitSystem, initialDraft, onLogged, onClose: handleClose, onError: showError });
 
   return (
     <Sheet open={open} onClose={handleClose} tone={nightMode ? "night" : "default"}>
-      <form onSubmit={handleSubmit} className="px-5 pb-8">
+      <form onSubmit={(e: FormEvent) => { e.preventDefault(); void handleSubmit(); }} className="px-5 pb-8">
         <LoggingFormHeader title="Log a feed" isNight={nightMode} />
 
         <div className="flex flex-col gap-5">

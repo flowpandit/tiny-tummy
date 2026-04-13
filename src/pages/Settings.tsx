@@ -15,19 +15,19 @@ import {
   SupportSection,
   ThemeSection,
 } from "../components/settings/SettingsSections";
-import * as db from "../lib/db";
+import { useDeleteChildAction } from "../hooks/useSettingsActions";
 import type { Child } from "../lib/types";
 
 export function Settings() {
   const { children, activeChild, refreshChildren } = useChildContext();
   const { simulateExpiration } = useTrial();
   const navigate = useNavigate();
+  const deleteChild = useDeleteChildAction(refreshChildren);
   const [editingChild, setEditingChild] = useState<Child | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
   const handleDelete = async (id: string) => {
-    await db.deleteChild(id);
-    await refreshChildren();
+    await deleteChild(id);
     setConfirmDelete(null);
     // If we deleted the active child, context will auto-select another
   };

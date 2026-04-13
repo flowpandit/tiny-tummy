@@ -76,6 +76,15 @@ export function formatDurationRing(minutes: number): { value: string; unit: stri
   return { value: `${hours}`, unit: "h today" };
 }
 
+export function buildSleepWeekSummary(weekLogCount: number, totalTodayMinutes: number) {
+  return [
+    weekLogCount === 0
+      ? "No sleep blocks logged in this week"
+      : `${weekLogCount} sleep block${weekLogCount === 1 ? "" : "s"} in this week`,
+    totalTodayMinutes > 0 ? `Today total ${formatSleepDuration(totalTodayMinutes)}` : null,
+  ].filter(Boolean).join(" • ");
+}
+
 export function getTodayKey(): string {
   const now = new Date();
   return `${now.getFullYear()}-${`${now.getMonth() + 1}`.padStart(2, "0")}-${`${now.getDate()}`.padStart(2, "0")}`;

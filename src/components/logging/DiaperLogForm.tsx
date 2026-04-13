@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type FormEvent } from "react";
+import type { FormEvent } from "react";
 import { Sheet } from "../ui/sheet";
 import { Button } from "../ui/button";
 import { useToast } from "../ui/toast";
@@ -13,21 +13,10 @@ import { FieldLabel, Textarea } from "../ui/field";
 import { useTheme } from "../../contexts/ThemeContext";
 import { cn } from "../../lib/cn";
 import { diaperIncludesStool, diaperIncludesWet } from "../../lib/diaper";
-import { savePhoto } from "../../lib/photos";
-import { combineLocalDateAndTimeToUtcIso, getCurrentLocalDate, getCurrentLocalTime } from "../../lib/utils";
+import { useDiaperLogFormState } from "../../hooks/useDiaperLogFormState";
 import { useLoggingSheetLifecycle } from "../../hooks/useLoggingSheetLifecycle";
 import { usePhotoField } from "../../hooks/usePhotoField";
-import * as db from "../../lib/db";
-import type { DiaperLogDraft, DiaperType, StoolColor, StoolSize, UrineColor } from "../../lib/types";
-
-const EMPTY_DRAFT: DiaperLogDraft = {
-  diaper_type: null,
-  urine_color: null,
-  stool_type: null,
-  color: null,
-  size: null,
-  notes: "",
-};
+import type { DiaperLogDraft, DiaperType } from "../../lib/types";
 
 function showsUrineFields(type: DiaperType | null): boolean {
   return type ? diaperIncludesWet(type) : false;
@@ -51,85 +40,28 @@ export function DiaperLogForm({
   initialDraft?: Partial<DiaperLogDraft> | null;
 }) {
   const { showError } = useToast();
-  const [logDate, setLogDate] = useState(getCurrentLocalDate());
-  const [logTime, setLogTime] = useState(getCurrentLocalTime());
-  const [diaperType, setDiaperType] = useState<DiaperType | null>(null);
-  const [urineColor, setUrineColor] = useState<UrineColor | null>(null);
-  const [stoolType, setStoolType] = useState<number | null>(null);
-  const [color, setColor] = useState<StoolColor | null>(null);
-  const [size, setSize] = useState<StoolSize | null>(null);
-  const [notes, setNotes] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showSuccess, setShowSuccess] = useState(false);
   const { resolved } = useTheme();
   const nightMode = resolved === "night";
   const { fileInputRef, photoFile, photoPreview, resetPhoto, setPhotoFromChange } = usePhotoField();
 
-  const applyDraft = useCallback((draft?: Partial<DiaperLogDraft> | null) => {
-    const nextDraft = { ...EMPTY_DRAFT, ...draft };
-    setLogDate(getCurrentLocalDate());
-    setLogTime(getCurrentLocalTime());
-    setDiaperType(nextDraft.diaper_type);
-    setUrineColor(nextDraft.urine_color);
-    setStoolType(nextDraft.stool_type);
-    setColor(nextDraft.color);
-    setSize(nextDraft.size);
-    setNotes(nextDraft.notes);
-    resetPhoto();
-    setShowSuccess(false);
-  }, [resetPhoto]);
-
   const { handleClose, handleLoggedSuccess } = useLoggingSheetLifecycle({
     onClose,
-    onReset: () => applyDraft(null),
+    onReset: resetPhoto,
     onLogged,
   });
-
-  useEffect(() => {
-    if (open) {
-      applyDraft(initialDraft);
-    }
-  }, [applyDraft, initialDraft, open]);
-
-  const handleSubmit = async (event: FormEvent) => {
-    event.preventDefault();
-    if (isSubmitting || !diaperType) return;
-
-    setIsSubmitting(true);
-    try {
-      let photoPath: string | null = null;
-      if (photoFile) {
-        try { photoPath = await savePhoto(photoFile); } catch { /* photo save is non-critical */ }
-      }
-
-      await db.createDiaperLog({
-        child_id: childId,
-        logged_at: combineLocalDateAndTimeToUtcIso(logDate, logTime),
-        diaper_type: diaperType,
-        urine_color: showsUrineFields(diaperType) ? urineColor : null,
-        stool_type: showsStoolFields(diaperType) ? stoolType : null,
-        color: showsStoolFields(diaperType) ? color : null,
-        size: showsStoolFields(diaperType) ? size : null,
-        notes: notes.trim() || null,
-        photo_path: photoPath,
-      });
-    } catch {
-      setIsSubmitting(false);
-      showError("Failed to save diaper log. Please try again.");
-      return;
-    }
-
-    setIsSubmitting(false);
-    setShowSuccess(true);
-    handleLoggedSuccess();
-  };
+  const {
+    logDate, setLogDate, logTime, setLogTime, diaperType, setDiaperType, urineColor, setUrineColor,
+    stoolType, setStoolType, color, setColor, size, setSize, notes, setNotes, isSubmitting, showSuccess, handleSubmit,
+  } = useDiaperLogFormState({
+    open, childId, initialDraft, onLoggedSuccess: handleLoggedSuccess, onError: showError, resetPhoto, photoFile,
+  });
 
   return (
     <Sheet open={open} onClose={handleClose} tone={nightMode ? "night" : "default"}>
       {showSuccess ? (
         <LogSuccess />
       ) : (
-        <form onSubmit={handleSubmit} className="px-5 pb-8">
+        <form onSubmit={(event: FormEvent) => { event.preventDefault(); void handleSubmit(); }} className="px-5 pb-8">
           <h2 className="mb-5 text-center font-[var(--font-display)] text-lg font-semibold text-[var(--color-text)]">
             Log a diaper
           </h2>

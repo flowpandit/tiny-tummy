@@ -172,6 +172,22 @@ export function getFeedMixSnapshot(logs: FeedingEntry[]): FeedMixSnapshot {
   };
 }
 
+export function buildFeedWeekSummary(
+  weeklyPredictableLogs: FeedingEntry[],
+  unitSystem: UnitSystem,
+  weekTrackedMl: number,
+) {
+  const dominantType = [...getFeedTypeCounts(weeklyPredictableLogs).entries()].sort((left, right) => right[1] - left[1])[0]?.[0] ?? null;
+
+  return [
+    weeklyPredictableLogs.length === 0
+      ? "No feeds logged in this week"
+      : `${weeklyPredictableLogs.length} feed${weeklyPredictableLogs.length === 1 ? "" : "s"} in this week`,
+    dominantType ? `Mostly ${getFoodTypeLabel(dominantType).toLowerCase()}` : null,
+    weekTrackedMl > 0 ? `${formatVolumeValue(weekTrackedMl, unitSystem)} tracked` : null,
+  ].filter(Boolean).join(" • ");
+}
+
 function lowerConfidence(confidence: PredictionConfidence): PredictionConfidence {
   if (confidence === "high") return "medium";
   if (confidence === "medium") return "low";

@@ -6,20 +6,13 @@ import { useFeedingLogs } from "../hooks/useFeedingLogs";
 import { useAlerts } from "../hooks/useAlerts";
 import { useEpisodes } from "../hooks/useEpisodes";
 import { useSymptoms } from "../hooks/useSymptoms";
+import { usePoopPageState } from "../hooks/usePoopPageState";
 import { useEliminationPreference } from "../hooks/useEliminationPreference";
 import { useChildWorkflowActions } from "../hooks/useChildWorkflowActions";
 import { fillDailyFrequencyDays, formatLocalDateKey } from "../lib/stats";
-import { DAYS_IN_WEEK, addDays, startOfDay } from "../lib/tracker";
+import { DAYS_IN_WEEK, getEarliestLoggedDate, getMaxWeekOffset, getWeekRange } from "../lib/tracker";
 import { getChildStatus } from "../lib/tauri";
-import { combineLocalDateAndTimeToUtcIso, getCurrentLocalDate, getCurrentLocalTime } from "../lib/utils";
-import {
-  buildPoopPresetRecordInput,
-  describePoopPresetDraft,
-  getDefaultQuickPoopPresets,
-  hydratePoopPresets,
-  type QuickPoopPreset,
-} from "../lib/quick-presets";
-import * as db from "../lib/db";
+import { getCurrentLocalDate } from "../lib/utils";
 import { Card, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { PageBody } from "../components/ui/page-layout";
@@ -52,10 +45,6 @@ import {
   getStatusBadge,
 } from "../lib/poop-insights";
 
-function getCurrentPoopTimestamp(): string {
-  return combineLocalDateAndTimeToUtcIso(getCurrentLocalDate(), getCurrentLocalTime());
-}
-
 export function Poop() {
   const navigate = useNavigate();
   const { activeChild } = useChildContext();
@@ -75,7 +64,6 @@ export function Poop() {
   const [editingPoop, setEditingPoop] = useState<PoopEntry | null>(null);
   const [poopPresetSheetOpen, setPoopPresetSheetOpen] = useState(false);
   const [statusExpanded, setStatusExpanded] = useState(false);
-  const [quickPoopPresets, setQuickPoopPresets] = useState<QuickPoopPreset[]>([]);
 
   useEffect(() => {
     if (experience.mode === "diaper") {
@@ -107,40 +95,12 @@ export function Poop() {
     };
   }, [activeChild, lastRealPoop]);
 
-  useEffect(() => {
-    if (!activeChild) return;
-
-    let cancelled = false;
-
-    db.getQuickPresets(activeChild.id, "poop")
-      .then((rows) => {
-        if (cancelled) return;
-        const hydrated = hydratePoopPresets(rows);
-        setQuickPoopPresets(
-          hydrated.length > 0 ? hydrated : getDefaultQuickPoopPresets(activeChild.feeding_type),
-        );
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setQuickPoopPresets(getDefaultQuickPoopPresets(activeChild.feeding_type));
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [activeChild]);
-
   const earliestLoggedDate = useMemo(() => {
-    if (logs.length === 0) return null;
-    return startOfDay(new Date(logs[logs.length - 1].logged_at));
+    return getEarliestLoggedDate(logs, (log) => log.logged_at);
   }, [logs]);
 
   const maxWeekOffset = useMemo(() => {
-    if (!earliestLoggedDate) return 0;
-    const today = startOfDay(new Date());
-    const diffDays = Math.floor((today.getTime() - earliestLoggedDate.getTime()) / 86400000);
-    return Math.max(0, Math.floor(diffDays / DAYS_IN_WEEK));
+    return getMaxWeekOffset(earliestLoggedDate);
   }, [earliestLoggedDate]);
 
   useEffect(() => {
@@ -149,8 +109,7 @@ export function Poop() {
     }
   }, [maxWeekOffset, weekOffset]);
 
-  const endDate = useMemo(() => addDays(startOfDay(new Date()), -weekOffset * DAYS_IN_WEEK), [weekOffset]);
-  const startDate = useMemo(() => addDays(endDate, -(DAYS_IN_WEEK - 1)), [endDate]);
+  const { startDate, endDate } = useMemo(() => getWeekRange(weekOffset), [weekOffset]);
   const weekStartKey = formatLocalDateKey(startDate);
   const weekEndKey = formatLocalDateKey(endDate);
 
@@ -231,74 +190,26 @@ export function Poop() {
     [logs],
   );
 
-  if (!activeChild) return null;
-  if (experience.mode === "diaper") return null;
-
   const handleRefresh = async () => {
     await runPostLogActions({
       refresh: [refresh],
       alerts: true,
     });
   };
+  const {
+    quickPoopPresets,
+    repeatLastPoop,
+    logQuickPoopPreset,
+    savePoopPresets,
+  } = usePoopPageState({
+    activeChild,
+    onError: showError,
+    onSuccess: showSuccess,
+    refreshLogs: handleRefresh,
+  });
 
-  const handleRepeatLastPoop = async () => {
-    if (!repeatablePoop) return;
-
-    try {
-      await db.createPoopLog({
-        child_id: activeChild.id,
-        logged_at: getCurrentPoopTimestamp(),
-        stool_type: repeatablePoop.stool_type,
-        color: repeatablePoop.color,
-        size: repeatablePoop.size,
-        notes: null,
-        photo_path: null,
-      });
-      await handleRefresh();
-      showSuccess("Repeated the last normal poop pattern.");
-    } catch {
-      showError("Could not repeat the last poop pattern. Please try again.");
-    }
-  };
-
-  const handleQuickPoopPreset = async (preset: QuickPoopPreset) => {
-    try {
-      await db.createPoopLog({
-        child_id: activeChild.id,
-        logged_at: getCurrentPoopTimestamp(),
-        stool_type: preset.draft.stool_type ?? null,
-        color: preset.draft.color ?? null,
-        size: preset.draft.size ?? null,
-        notes: null,
-        photo_path: null,
-      });
-      await handleRefresh();
-      showSuccess(`${preset.label} logged.`);
-    } catch {
-      showError("Could not log that poop. Please try again.");
-    }
-  };
-
-  const savePoopPresets = async (drafts: Array<Partial<PoopLogDraft>>) => {
-    const nextPresets = drafts.map((draft, index) => {
-      const preview = describePoopPresetDraft(draft);
-      return {
-        id: `poop-preset-${index}`,
-        label: preview.label,
-        description: preview.description,
-        draft,
-      };
-    });
-
-    try {
-      await db.replaceQuickPresets(activeChild.id, "poop", buildPoopPresetRecordInput(drafts));
-      setQuickPoopPresets(nextPresets);
-      setPoopPresetSheetOpen(false);
-      showSuccess("Quick poop tiles updated.");
-    } catch {
-      showError("Could not save the quick poop tiles. Please try again.");
-    }
-  };
+  if (!activeChild) return null;
+  if (experience.mode === "diaper") return null;
 
   return (
     <PageBody className="mt-0 space-y-0 px-0 py-0">
@@ -344,8 +255,8 @@ export function Poop() {
           quickPoopPresets={quickPoopPresets}
           repeatablePoop={repeatablePoop}
           onEditPresets={() => setPoopPresetSheetOpen(true)}
-          onRepeatLastPoop={() => { void handleRepeatLastPoop(); }}
-          onQuickPreset={(preset) => { void handleQuickPoopPreset(preset); }}
+          onRepeatLastPoop={() => { void repeatLastPoop(repeatablePoop); }}
+          onQuickPreset={(preset) => { void logQuickPoopPreset(preset); }}
         />
 
         <PoopWeeklyPatternCard filledWeek={filledWeek} />
@@ -393,7 +304,12 @@ export function Poop() {
           onClose={() => setPoopPresetSheetOpen(false)}
           feedingType={activeChild.feeding_type}
           presets={quickPoopPresets}
-          onSave={(drafts) => { void savePoopPresets(drafts); }}
+          onSave={async (drafts) => {
+            const saved = await savePoopPresets(drafts);
+            if (saved) {
+              setPoopPresetSheetOpen(false);
+            }
+          }}
         />
       </div>
     </PageBody>

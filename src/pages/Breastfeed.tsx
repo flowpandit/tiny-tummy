@@ -11,53 +11,45 @@ import { TrackerMetricRing } from "../components/tracking/TrackerPrimitives";
 import { DietLogForm } from "../components/logging/DietLogForm";
 import { useToast } from "../components/ui/toast";
 import { useChildContext } from "../contexts/ChildContext";
+import { useBreastfeedingTimerState } from "../hooks/useBreastfeedingTimerState";
 import { useChildWorkflowActions } from "../hooks/useChildWorkflowActions";
-import { useVisibilityRefresh } from "../hooks/useVisibilityRefresh";
-import {
-  type BreastfeedingSessionState,
-  getBreastfeedingSessionSettingKey,
-  formatBreastfeedingSummary,
-  getEmptyBreastfeedingSession,
-  getBreastfeedingLastSideSettingKey,
-  getOppositeBreastSide,
-  getRoundedDurationMinutes,
-  parseBreastfeedingSession,
-} from "../lib/breastfeeding";
 import { getDurationRingDisplay } from "../lib/breastfeed-insights";
-import { combineLocalDateAndTimeToUtcIso, getCurrentLocalDate, getCurrentLocalTime } from "../lib/utils";
-import * as db from "../lib/db";
-import type { BreastSide, FeedingEntry, FeedingLogDraft } from "../lib/types";
-
-type SessionDurations = Record<"left" | "right", number>;
+import type { FeedingLogDraft } from "../lib/types";
 
 export function Breastfeed() {
   const navigate = useNavigate();
   const { activeChild, refreshChildren } = useChildContext();
   const { showError, showSuccess } = useToast();
   const { runPostLogActions } = useChildWorkflowActions(activeChild);
-  const [durations, setDurations] = useState<SessionDurations>({ left: 0, right: 0 });
-  const [activeSide, setActiveSide] = useState<"left" | "right" | null>(null);
-  const [activeStartedAt, setActiveStartedAt] = useState<number | null>(null);
-  const [lastUsedSide, setLastUsedSide] = useState<BreastSide | null>(null);
-  const [tick, setTick] = useState(Date.now());
-  const [isSaving, setIsSaving] = useState(false);
-  const [recentHistory, setRecentHistory] = useState<FeedingEntry[]>([]);
   const [selectedPatternLogId, setSelectedPatternLogId] = useState<string | null>(null);
   const [showTransitionConfirm, setShowTransitionConfirm] = useState(false);
-  const [isTransitioningToMixed, setIsTransitioningToMixed] = useState(false);
   const [feedingFormOpen, setFeedingFormOpen] = useState(false);
   const [feedingDraft, setFeedingDraft] = useState<Partial<FeedingLogDraft> | null>(null);
   const supportsBreastfeeding = activeChild?.feeding_type === "breast" || activeChild?.feeding_type === "mixed";
   const patternSectionRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    if (!activeSide) return;
-    const interval = window.setInterval(() => setTick(Date.now()), 1000);
-    return () => window.clearInterval(interval);
-  }, [activeSide]);
-
-  useVisibilityRefresh(() => {
-    setTick(Date.now());
+  const {
+    activeSide,
+    canShowSolidTransition,
+    displayRecentHistory,
+    handleConfirmSolidTransition,
+    handleFeedLogged,
+    handlePause,
+    handleSave,
+    handleStartSide,
+    isSaving,
+    isTransitioningToMixed,
+    lastUsedSide,
+    leftDuration,
+    patternLogs,
+    rightDuration,
+    suggestedStartSide,
+    totalDuration,
+  } = useBreastfeedingTimerState({
+    activeChild,
+    refreshChildren,
+    runPostLogActions,
+    onError: showError,
+    onSuccess: showSuccess,
   });
 
   useEffect(() => {
@@ -77,95 +69,10 @@ export function Breastfeed() {
       document.removeEventListener("touchstart", handlePointerDown);
     };
   }, [selectedPatternLogId]);
-
-  useEffect(() => {
-    if (!activeChild) {
-      setDurations({ left: 0, right: 0 });
-      setActiveSide(null);
-      setActiveStartedAt(null);
-      setLastUsedSide(null);
-      setRecentHistory([]);
-      setTick(Date.now());
-      return;
-    }
-
-    let cancelled = false;
-
-    setDurations({ left: 0, right: 0 });
-    setActiveSide(null);
-    setActiveStartedAt(null);
-    setLastUsedSide(null);
-    setRecentHistory([]);
-    setTick(Date.now());
-
-    Promise.all([
-      db.getSetting(getBreastfeedingSessionSettingKey(activeChild.id)),
-      db.getSetting(getBreastfeedingLastSideSettingKey(activeChild.id)),
-      db.getFeedingLogs(activeChild.id, 32),
-    ]).then(([sessionRaw, savedSide, feedingLogs]) => {
-      if (cancelled) return;
-
-      const recentBreastLog = feedingLogs.find(
-        (log) => log.food_type === "breast_milk" && (log.breast_side === "left" || log.breast_side === "right"),
-      );
-      const resolvedSide = (savedSide === "left" || savedSide === "right")
-        ? savedSide
-        : recentBreastLog?.breast_side ?? null;
-      const restoredSession = parseBreastfeedingSession(sessionRaw) ?? getEmptyBreastfeedingSession(resolvedSide);
-      const nextLastUsedSide = restoredSession.lastUsedSide ?? resolvedSide;
-
-      setDurations(restoredSession.durations);
-      setActiveSide(restoredSession.activeSide);
-      setActiveStartedAt(restoredSession.activeStartedAt);
-      setLastUsedSide(nextLastUsedSide);
-      setRecentHistory(
-        feedingLogs
-          .filter((log) => log.food_type === "breast_milk" && (log.breast_side === "left" || log.breast_side === "right" || log.breast_side === "both"))
-          .slice(0, 3),
-      );
-      setTick(Date.now());
-    }).catch(() => {
-      if (!cancelled) {
-        setDurations({ left: 0, right: 0 });
-        setActiveSide(null);
-        setActiveStartedAt(null);
-        setLastUsedSide(null);
-        setRecentHistory([]);
-      }
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [activeChild]);
-
-  const getLiveDuration = (side: "left" | "right") => {
-    if (activeSide === side && activeStartedAt) {
-      return durations[side] + (tick - activeStartedAt);
-    }
-    return durations[side];
-  };
-
-  const leftDuration = getLiveDuration("left");
-  const rightDuration = getLiveDuration("right");
-  const totalDuration = leftDuration + rightDuration;
-  const suggestedStartSide = useMemo(() => getOppositeBreastSide(lastUsedSide), [lastUsedSide]);
-  const displayRecentHistory = useMemo(() => recentHistory.slice(0, 3), [recentHistory]);
-  const patternLogs = useMemo(() => {
-    const cutoff = Date.now() - (24 * 60 * 60 * 1000);
-    return recentHistory
-      .filter((log) => {
-        if (log.food_type !== "breast_milk") return false;
-        if (log.breast_side !== "left" && log.breast_side !== "right" && log.breast_side !== "both") return false;
-        return new Date(log.logged_at).getTime() >= cutoff;
-      })
-      .sort((left, right) => new Date(left.logged_at).getTime() - new Date(right.logged_at).getTime());
-  }, [recentHistory]);
   const selectedPatternLog = useMemo(
     () => patternLogs.find((log) => log.id === selectedPatternLogId) ?? null,
     [patternLogs, selectedPatternLogId],
   );
-  const canShowSolidTransition = activeChild?.feeding_type === "breast";
 
   if (!activeChild) return null;
 
@@ -174,151 +81,9 @@ export function Breastfeed() {
     setFeedingFormOpen(true);
   };
 
-  const refreshRecentBreastHistory = async () => {
-    const feedingLogs = await db.getFeedingLogs(activeChild.id, 32);
-    setRecentHistory(
-      feedingLogs
-        .filter((log) => log.food_type === "breast_milk" && (log.breast_side === "left" || log.breast_side === "right" || log.breast_side === "both"))
-        .slice(0, 32),
-    );
-  };
-
-  const persistSession = async (session: BreastfeedingSessionState) => {
-    await db.setSetting(getBreastfeedingSessionSettingKey(activeChild.id), JSON.stringify(session));
-  };
-
-  const flushActiveDuration = async (): Promise<BreastfeedingSessionState> => {
-    if (!activeSide || !activeStartedAt) {
-      return {
-        durations,
-        activeSide,
-        activeStartedAt,
-        lastUsedSide,
-      };
-    }
-
-    const nextSession: BreastfeedingSessionState = {
-      durations: {
-        ...durations,
-        [activeSide]: durations[activeSide] + (Date.now() - activeStartedAt),
-      },
-      activeSide: null,
-      activeStartedAt: null,
-      lastUsedSide: activeSide,
-    };
-    setDurations(nextSession.durations);
-    setLastUsedSide(nextSession.lastUsedSide);
-    setActiveSide(null);
-    setActiveStartedAt(null);
-    setTick(Date.now());
-    await persistSession(nextSession);
-    return nextSession;
-  };
-
-  const handleStartSide = async (side: "left" | "right") => {
-    const now = Date.now();
-    const nextDurations = activeSide && activeStartedAt
-      ? {
-        ...durations,
-        [activeSide]: durations[activeSide] + (now - activeStartedAt),
-      }
-      : durations;
-
-    const nextSession: BreastfeedingSessionState = {
-      durations: nextDurations,
-      activeSide: side,
-      activeStartedAt: now,
-      lastUsedSide: side,
-    };
-
-    setDurations(nextDurations);
-    setTick(now);
-    setActiveSide(side);
-    setActiveStartedAt(now);
-    setLastUsedSide(side);
-    await persistSession(nextSession);
-  };
-
-  const handleSave = async () => {
-    const finalSession = await flushActiveDuration();
-    const saveSide = finalSession.lastUsedSide;
-    const sidesUsed = (["left", "right"] as const).filter((side) => finalSession.durations[side] >= 1000);
-
-    if (sidesUsed.length === 0) {
-      showError("Start a side before saving the feed.");
-      return;
-    }
-
-    setIsSaving(true);
-
-    try {
-      const totalDurationMs = sidesUsed.reduce((sum, side) => sum + finalSession.durations[side], 0);
-      const sideBreakdown = sidesUsed
-        .map((side) => `${side === "left" ? "Left" : "Right"} ${formatBreastfeedingSummary(finalSession.durations[side])}`)
-        .join(" • ");
-      const breastSide = sidesUsed.length === 2 ? "both" : sidesUsed[0];
-
-      await db.createFeedingLog({
-        child_id: activeChild.id,
-        logged_at: combineLocalDateAndTimeToUtcIso(getCurrentLocalDate(), getCurrentLocalTime()),
-        food_type: "breast_milk",
-        duration_minutes: getRoundedDurationMinutes(totalDurationMs),
-        breast_side: breastSide,
-        notes: `Timed breastfeeding session • ${sideBreakdown}`,
-      });
-
-      if (saveSide === "left" || saveSide === "right") {
-        await db.setSetting(getBreastfeedingLastSideSettingKey(activeChild.id), saveSide);
-      }
-
-      const clearedSession = getEmptyBreastfeedingSession(saveSide);
-      setDurations(clearedSession.durations);
-      setActiveSide(null);
-      setActiveStartedAt(null);
-      setLastUsedSide(clearedSession.lastUsedSide);
-      setTick(Date.now());
-      await persistSession(clearedSession);
-      await runPostLogActions({
-        refresh: [refreshRecentBreastHistory],
-        reminders: true,
-      });
-      showSuccess("Breastfeeding session saved.");
-    } catch {
-      showError("Could not save the breastfeeding session.");
-      setDurations(finalSession.durations);
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
   const currentSessionRing = getDurationRingDisplay(totalDuration, "var(--gradient-status-caution)");
   const leftRing = getDurationRingDisplay(leftDuration, "var(--gradient-status-healthy)");
   const rightRing = getDurationRingDisplay(rightDuration, "var(--gradient-status-head)");
-
-  const handlePause = async () => {
-    await flushActiveDuration();
-  };
-
-  const handleConfirmSolidTransition = async () => {
-    try {
-      setIsTransitioningToMixed(true);
-      await db.updateChild(activeChild.id, { feeding_type: "mixed" });
-      await refreshChildren();
-      setShowTransitionConfirm(false);
-      navigate("/feed", { replace: true });
-    } catch {
-      showError("Could not switch this child to mixed feeding.");
-    } finally {
-      setIsTransitioningToMixed(false);
-    }
-  };
-
-  const handleFeedLogged = async () => {
-    await runPostLogActions({
-      refresh: [refreshRecentBreastHistory],
-      reminders: true,
-    });
-  };
 
   return (
     <PageBody className="mt-0 space-y-0 px-0 py-0">
@@ -355,7 +120,13 @@ export function Breastfeed() {
                 type="button"
                 variant="primary"
                 className="flex-1"
-                onClick={() => void handleConfirmSolidTransition()}
+                onClick={() => {
+                  void handleConfirmSolidTransition().then((didSwitch) => {
+                    if (!didSwitch) return;
+                    setShowTransitionConfirm(false);
+                    navigate("/feed", { replace: true });
+                  });
+                }}
                 disabled={isTransitioningToMixed}
               >
                 {isTransitioningToMixed ? "Switching..." : "Confirm"}

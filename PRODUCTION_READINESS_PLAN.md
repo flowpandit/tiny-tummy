@@ -230,11 +230,11 @@ Break oversized route pages into feature modules so they become maintainable and
 
 ### For Each Page
 
-- [ ] Extract derived data into pure helpers.
-- [ ] Extract page-local effects into dedicated hooks.
-- [ ] Extract large UI sections into feature components.
-- [ ] Keep route file focused on composition, navigation, and high-level state ownership.
-- [ ] Remove duplicated inline helper logic once the new abstractions exist.
+- [x] Extract derived data into pure helpers.
+- [x] Extract page-local effects into dedicated hooks where needed.
+- [x] Extract large UI sections into feature components.
+- [x] Keep route file focused on composition, navigation, and high-level state ownership.
+- [x] Remove duplicated inline helper logic once the new abstractions exist.
 
 ### Suggested Structure Pattern
 
@@ -321,7 +321,7 @@ For a given page, move toward:
 
 ## Phase 5: Business Logic Isolation
 
-Status: `[Todo]`
+Status: `[Done]`
 
 ### Goal
 
@@ -329,12 +329,12 @@ Move logic out of UI components so behavior is testable without rendering the wh
 
 ### Tasks
 
-- [ ] Extract derived summary logic from route pages into pure `lib` modules.
-- [ ] Extract prediction/status formatting logic where it is currently embedded in page files.
-- [ ] Move report shaping logic behind pure functions and stable interfaces.
-- [ ] Review timeline/history grouping logic for separation from rendering.
-- [ ] Review formatting helpers for duplication across features.
-- [ ] Ensure pure helpers do not import UI components.
+- [x] Extract derived summary logic from route pages into pure `lib` modules.
+- [x] Extract prediction/status formatting logic where it is currently embedded in page files.
+- [x] Move report shaping logic behind pure functions and stable interfaces.
+- [x] Review timeline/history grouping logic for separation from rendering.
+- [x] Review formatting helpers for duplication across features.
+- [x] Ensure pure helpers do not import UI components.
 
 ### Hotspots
 
@@ -349,11 +349,24 @@ Move logic out of UI components so behavior is testable without rendering the wh
 - Most non-trivial behavior can be tested through pure functions or focused hooks.
 - UI files mainly map prepared data into markup.
 
+### Progress
+
+- [x] Home sleep summary shaping moved out of [src/pages/Home.tsx](/Users/nikhilmehral/dev/tiny-tummy/src/pages/Home.tsx) into [src/lib/home-insights.ts](/Users/nikhilmehral/dev/tiny-tummy/src/lib/home-insights.ts)
+- [x] Report source fetching separated from report shaping in [src/lib/reporting.ts](/Users/nikhilmehral/dev/tiny-tummy/src/lib/reporting.ts) via `fetchReportSourceData` and pure `buildReportData`
+- [x] Report preview/date/platform view-model logic extracted from [src/pages/Report.tsx](/Users/nikhilmehral/dev/tiny-tummy/src/pages/Report.tsx) into [src/lib/report-view-model.ts](/Users/nikhilmehral/dev/tiny-tummy/src/lib/report-view-model.ts)
+- [x] Report page async setup and generation flow extracted from [src/pages/Report.tsx](/Users/nikhilmehral/dev/tiny-tummy/src/pages/Report.tsx) into [src/hooks/useReportPageState.ts](/Users/nikhilmehral/dev/tiny-tummy/src/hooks/useReportPageState.ts)
+- [x] Existing route-level insight modules remain in place for `poop`, `feed`, `sleep`, `diaper`, and `breastfeed`, reducing logic inside UI sections
+- [x] Shared relative-day labeling extracted into [src/lib/date-labels.ts](/Users/nikhilmehral/dev/tiny-tummy/src/lib/date-labels.ts) and reused across `poop`, `diaper`, and `breastfeed`
+- [x] History range/display/emptiness calculations extracted from [src/pages/History.tsx](/Users/nikhilmehral/dev/tiny-tummy/src/pages/History.tsx) into [src/lib/history-timeline.ts](/Users/nikhilmehral/dev/tiny-tummy/src/lib/history-timeline.ts)
+- [x] Shared weekly range helpers extracted into [src/lib/tracker.ts](/Users/nikhilmehral/dev/tiny-tummy/src/lib/tracker.ts) and reused by `poop`, `feed`, and `sleep`
+- [x] Weekly summary formatting moved out of [src/pages/Feed.tsx](/Users/nikhilmehral/dev/tiny-tummy/src/pages/Feed.tsx) and [src/pages/Sleep.tsx](/Users/nikhilmehral/dev/tiny-tummy/src/pages/Sleep.tsx) into [src/lib/feed-insights.ts](/Users/nikhilmehral/dev/tiny-tummy/src/lib/feed-insights.ts) and [src/lib/sleep-insights.ts](/Users/nikhilmehral/dev/tiny-tummy/src/lib/sleep-insights.ts)
+- [x] `src/lib` and focused data/view-model hooks were verified to avoid UI component imports, keeping pure logic independent from rendering
+
 ---
 
 ## Phase 6: Data Access Boundary Cleanup
 
-Status: `[Todo]`
+Status: `[Done]`
 
 ### Goal
 
@@ -361,11 +374,11 @@ Reduce direct storage coupling inside UI and create cleaner seams for mocking an
 
 ### Tasks
 
-- [ ] Audit direct `db.*` usage inside pages and components.
-- [ ] Move page-specific storage orchestration into hooks or feature service modules.
-- [ ] Keep raw DB calls out of generic UI components.
-- [ ] Standardize return shapes and error handling for storage-backed hooks.
-- [ ] Review context providers for clear ownership and minimal side effects.
+- [x] Audit direct `db.*` usage inside pages and components.
+- [x] Move page-specific storage orchestration into hooks or feature service modules.
+- [x] Keep raw DB calls out of generic UI components.
+- [x] Standardize return shapes and error handling for storage-backed hooks.
+- [x] Review context providers for clear ownership and minimal side effects.
 
 ### Likely Areas
 
@@ -380,6 +393,23 @@ Reduce direct storage coupling inside UI and create cleaner seams for mocking an
 
 - Components can be rendered with controlled inputs and mocked callbacks.
 - Storage behavior is easier to stub in tests.
+
+### Progress
+
+- [x] Report page storage-backed orchestration moved behind [src/hooks/useReportPageState.ts](/Users/nikhilmehral/dev/tiny-tummy/src/hooks/useReportPageState.ts)
+- [x] Breastfeeding timer/session persistence and storage-backed history loading moved out of [src/pages/Breastfeed.tsx](/Users/nikhilmehral/dev/tiny-tummy/src/pages/Breastfeed.tsx) into [src/hooks/useBreastfeedingTimerState.ts](/Users/nikhilmehral/dev/tiny-tummy/src/hooks/useBreastfeedingTimerState.ts)
+- [x] Feed preset loading/saving, breastfeeding-session lookup, and quick-feed logging moved out of [src/pages/Feed.tsx](/Users/nikhilmehral/dev/tiny-tummy/src/pages/Feed.tsx) into [src/hooks/useFeedPageState.ts](/Users/nikhilmehral/dev/tiny-tummy/src/hooks/useFeedPageState.ts)
+- [x] History range-based loading and delete flows moved out of [src/pages/History.tsx](/Users/nikhilmehral/dev/tiny-tummy/src/pages/History.tsx) into [src/hooks/useHistoryPageState.ts](/Users/nikhilmehral/dev/tiny-tummy/src/hooks/useHistoryPageState.ts)
+- [x] Poop preset hydration, quick-log creation, and preset persistence moved out of [src/pages/Poop.tsx](/Users/nikhilmehral/dev/tiny-tummy/src/pages/Poop.tsx) into [src/hooks/usePoopPageState.ts](/Users/nikhilmehral/dev/tiny-tummy/src/hooks/usePoopPageState.ts)
+- [x] Theme preference storage loading and persistence moved out of [src/contexts/ThemeContext.tsx](/Users/nikhilmehral/dev/tiny-tummy/src/contexts/ThemeContext.tsx) into [src/hooks/useThemePreferences.ts](/Users/nikhilmehral/dev/tiny-tummy/src/hooks/useThemePreferences.ts)
+- [x] Unit-system storage loading and persistence moved out of [src/contexts/UnitsContext.tsx](/Users/nikhilmehral/dev/tiny-tummy/src/contexts/UnitsContext.tsx) into [src/hooks/useUnitsState.ts](/Users/nikhilmehral/dev/tiny-tummy/src/hooks/useUnitsState.ts)
+- [x] Child loading, timeout handling, and active-child reconciliation moved out of [src/contexts/ChildContext.tsx](/Users/nikhilmehral/dev/tiny-tummy/src/contexts/ChildContext.tsx) into [src/hooks/useChildrenState.ts](/Users/nikhilmehral/dev/tiny-tummy/src/hooks/useChildrenState.ts)
+- [x] Sleep timer restore, persistence, and save flows moved out of [src/components/sleep/SleepLogSheet.tsx](/Users/nikhilmehral/dev/tiny-tummy/src/components/sleep/SleepLogSheet.tsx) into [src/hooks/useSleepLogSheetState.ts](/Users/nikhilmehral/dev/tiny-tummy/src/hooks/useSleepLogSheetState.ts)
+- [x] Poop edit persistence moved out of [src/components/logging/EditPoopSheet.tsx](/Users/nikhilmehral/dev/tiny-tummy/src/components/logging/EditPoopSheet.tsx) into [src/hooks/useEditPoopSheetState.ts](/Users/nikhilmehral/dev/tiny-tummy/src/hooks/useEditPoopSheetState.ts)
+- [x] Diaper edit persistence moved out of [src/components/logging/EditDiaperSheet.tsx](/Users/nikhilmehral/dev/tiny-tummy/src/components/logging/EditDiaperSheet.tsx) into [src/hooks/useEditDiaperSheetState.ts](/Users/nikhilmehral/dev/tiny-tummy/src/hooks/useEditDiaperSheetState.ts)
+- [x] Sleep edit persistence moved out of [src/components/sleep/EditSleepSheet.tsx](/Users/nikhilmehral/dev/tiny-tummy/src/components/sleep/EditSleepSheet.tsx) into [src/hooks/useEditSleepSheetState.ts](/Users/nikhilmehral/dev/tiny-tummy/src/hooks/useEditSleepSheetState.ts)
+- [x] Logging, growth, milestone, symptom, meal, episode, child-management, and sleep-preview storage calls were moved behind focused hooks or feature actions
+- [x] Direct `db.*` usage was eliminated from `src/pages`, `src/components`, and `src/contexts`, leaving storage access owned by focused hooks/actions instead of render layers
 
 ---
 

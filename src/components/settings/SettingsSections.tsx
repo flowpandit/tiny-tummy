@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTheme } from "../../contexts/ThemeContext";
 import { useUnits } from "../../contexts/UnitsContext";
+import { useEliminationPreference } from "../../hooks/useEliminationPreference";
 import { Card, CardContent } from "../ui/card";
 import { Button } from "../ui/button";
 import { SegmentedControl } from "../ui/segmented-control";
@@ -20,8 +21,7 @@ import {
   setSmartReminderEnabled,
   syncSmartRemindersForChildren,
 } from "../../lib/notifications";
-import { getEliminationViewSettingKey, type EliminationViewPreference } from "../../lib/diaper";
-import * as db from "../../lib/db";
+import type { EliminationViewPreference } from "../../lib/diaper";
 import type { Child, UnitSystem } from "../../lib/types";
 
 const THEME_OPTIONS: { value: "system" | "light" | "dark"; label: string }[] = [
@@ -339,22 +339,7 @@ export function MeasurementsSection() {
 }
 
 export function EliminationSection({ child }: { child: Child | null }) {
-  const [value, setValue] = useState<EliminationViewPreference>("auto");
-
-  useEffect(() => {
-    if (!child) {
-      setValue("auto");
-      return;
-    }
-
-    db.getSetting(getEliminationViewSettingKey(child.id)).then((stored) => {
-      if (stored === "auto" || stored === "diaper" || stored === "poop") {
-        setValue(stored);
-      } else {
-        setValue("auto");
-      }
-    });
-  }, [child]);
+  const { preference: value, setPreference } = useEliminationPreference(child);
 
   if (!child) return null;
 
@@ -368,8 +353,7 @@ export function EliminationSection({ child }: { child: Child | null }) {
             value={value}
             onChange={(next) => {
               const preference = next as EliminationViewPreference;
-              setValue(preference);
-              void db.setSetting(getEliminationViewSettingKey(child.id), preference);
+              void setPreference(preference);
             }}
             options={ELIMINATION_VIEW_OPTIONS}
             className="rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-bg)] p-0.5"

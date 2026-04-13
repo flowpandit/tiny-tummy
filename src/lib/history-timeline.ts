@@ -22,6 +22,12 @@ export type TimelineEvent =
   | { kind: "episode"; entry: Episode }
   | { kind: "episode_event"; entry: EpisodeEvent };
 
+export const HISTORY_RANGE_OPTIONS = [
+  { label: "7 days", value: 7 },
+  { label: "14 days", value: 14 },
+  { label: "30 days", value: 30 },
+] as const;
+
 export function formatHistoryTime(dateStr: string): string {
   return new Date(dateStr).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
 }
@@ -137,4 +143,44 @@ export function groupTimelineByDay({
   }
 
   return new Map([...grouped.entries()].sort((left, right) => right[0].localeCompare(left[0])));
+}
+
+export function getHistoryRange(today: string, quickRangeDays: number, searchDate: string | null) {
+  const rangeEnd = searchDate ?? today;
+  const rangeStart = searchDate ?? addDaysToDateKey(today, -(quickRangeDays - 1));
+  return { rangeStart, rangeEnd };
+}
+
+export function getHistoryDisplayDays(grouped: Map<string, TimelineEvent[]>, searchDate: string | null) {
+  if (!searchDate) return [...grouped.entries()];
+  const filtered = grouped.get(searchDate);
+  if (filtered) return [[searchDate, filtered]] as [string, TimelineEvent[]][];
+  return [];
+}
+
+export function hasHistoryEntries(input: {
+  diaperLogs: DiaperEntry[];
+  poopLogs: PoopEntry[];
+  feedingLogs: FeedingEntry[];
+  sleepLogs: SleepEntry[];
+  symptomLogs: SymptomEntry[];
+  growthLogs: GrowthEntry[];
+  milestoneLogs: MilestoneEntry[];
+  episodes: Episode[];
+  episodeEvents: EpisodeEvent[];
+}) {
+  return input.diaperLogs.length > 0
+    || input.poopLogs.length > 0
+    || input.feedingLogs.length > 0
+    || input.sleepLogs.length > 0
+    || input.symptomLogs.length > 0
+    || input.growthLogs.length > 0
+    || input.milestoneLogs.length > 0
+    || input.episodes.length > 0
+    || input.episodeEvents.length > 0;
+}
+
+export function getEarliestHistoryDate(grouped: Map<string, TimelineEvent[]>, today: string) {
+  const allDates = [...grouped.keys()];
+  return allDates.length > 0 ? allDates[allDates.length - 1] : today;
 }

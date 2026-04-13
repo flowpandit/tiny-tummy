@@ -1,6 +1,7 @@
-import { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useChildContext } from "../contexts/ChildContext";
 import { useUnits } from "../contexts/UnitsContext";
+import { useHistoryPageState } from "../hooks/useHistoryPageState";
 import { formatLocalDateKey } from "../lib/utils";
 import { DatePicker } from "../components/ui/date-picker";
 import { EditPoopSheet } from "../components/logging/EditPoopSheet";
@@ -9,39 +10,21 @@ import { EditDiaperSheet } from "../components/logging/EditDiaperSheet";
 import { EditSleepSheet } from "../components/sleep/EditSleepSheet";
 import { cn } from "../lib/cn";
 import { HistoryTimeline } from "../components/history/HistoryTimeline";
-import { addDaysToDateKey, getVisiblePoopLogs, groupTimelineByDay, type TimelineEvent } from "../lib/history-timeline";
-import * as db from "../lib/db";
+import {
+  getEarliestHistoryDate,
+  getHistoryDisplayDays,
+  HISTORY_RANGE_OPTIONS,
+} from "../lib/history-timeline";
 import type {
   DiaperEntry,
-  Episode,
-  EpisodeEvent,
   FeedingEntry,
-  GrowthEntry,
-  MilestoneEntry,
   PoopEntry,
   SleepEntry,
-  SymptomEntry,
 } from "../lib/types";
 
 export function History() {
-  const RANGE_OPTIONS = [
-    { label: "7 days", value: 7 },
-    { label: "14 days", value: 14 },
-    { label: "30 days", value: 30 },
-  ] as const;
   const { activeChild } = useChildContext();
   const { unitSystem } = useUnits();
-  const [diaperLogs, setDiaperLogs] = useState<DiaperEntry[]>([]);
-  const [poopLogs, setPoopLogs] = useState<PoopEntry[]>([]);
-  const [feedingLogs, setFeedingLogs] = useState<FeedingEntry[]>([]);
-  const [sleepLogs, setSleepLogs] = useState<SleepEntry[]>([]);
-  const [symptomLogs, setSymptomLogs] = useState<SymptomEntry[]>([]);
-  const [growthLogs, setGrowthLogs] = useState<GrowthEntry[]>([]);
-  const [milestoneLogs, setMilestoneLogs] = useState<MilestoneEntry[]>([]);
-  const [episodes, setEpisodes] = useState<Episode[]>([]);
-  const [episodeEvents, setEpisodeEvents] = useState<EpisodeEvent[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const requestIdRef = useRef(0);
   const [expandedDay, setExpandedDay] = useState<string | null>(null);
   const [searchDate, setSearchDate] = useState<string | null>(null);
   const [quickRangeDays, setQuickRangeDays] = useState<7 | 14 | 30>(7);
@@ -50,123 +33,24 @@ export function History() {
   const [editingMeal, setEditingMeal] = useState<FeedingEntry | null>(null);
   const [editingSleep, setEditingSleep] = useState<SleepEntry | null>(null);
   const today = formatLocalDateKey(new Date());
+  const {
+    grouped,
+    hasAnyLogs,
+    isLoading,
+    refreshHistory,
+    deletePoop,
+    deleteMeal,
+    deleteSleep,
+    deleteDiaper,
+  } = useHistoryPageState(activeChild, today, quickRangeDays, searchDate);
 
-  const refreshHistory = useCallback(async () => {
-    const requestId = ++requestIdRef.current;
-
-    if (!activeChild) {
-      setDiaperLogs([]);
-      setPoopLogs([]);
-      setFeedingLogs([]);
-      setSleepLogs([]);
-      setSymptomLogs([]);
-      setGrowthLogs([]);
-      setMilestoneLogs([]);
-      setEpisodes([]);
-      setEpisodeEvents([]);
-      setIsLoading(false);
-      return;
-    }
-
-    const rangeEnd = searchDate ?? today;
-    const rangeStart = searchDate ?? addDaysToDateKey(today, -(quickRangeDays - 1));
-
-    setIsLoading(true);
-
-    try {
-      const [
-        nextDiapers,
-        nextPoops,
-        nextMeals,
-        nextSleep,
-        nextSymptoms,
-        nextGrowth,
-        nextMilestones,
-        nextEpisodes,
-        nextEpisodeEvents,
-      ] = await Promise.all([
-        db.getDiaperLogsForRange(activeChild.id, rangeStart, rangeEnd),
-        db.getPoopLogsForRange(activeChild.id, rangeStart, rangeEnd),
-        db.getFeedingLogsForRange(activeChild.id, rangeStart, rangeEnd),
-        db.getSleepLogsForRange(activeChild.id, rangeStart, rangeEnd),
-        db.getSymptomsForRange(activeChild.id, rangeStart, rangeEnd),
-        db.getGrowthLogsForRange(activeChild.id, rangeStart, rangeEnd),
-        db.getMilestonesForRange(activeChild.id, rangeStart, rangeEnd),
-        db.getEpisodesForRange(activeChild.id, rangeStart, rangeEnd),
-        db.getEpisodeEventsForRange(activeChild.id, rangeStart, rangeEnd),
-      ]);
-
-      if (requestId !== requestIdRef.current) return;
-
-      setDiaperLogs(nextDiapers);
-      setPoopLogs(nextPoops);
-      setFeedingLogs(nextMeals);
-      setSleepLogs(nextSleep);
-      setSymptomLogs(nextSymptoms);
-      setGrowthLogs(nextGrowth);
-      setMilestoneLogs(nextMilestones);
-      setEpisodes(nextEpisodes);
-      setEpisodeEvents(nextEpisodeEvents);
-    } catch {
-      if (requestId !== requestIdRef.current) return;
-      setDiaperLogs([]);
-      setPoopLogs([]);
-      setFeedingLogs([]);
-      setSleepLogs([]);
-      setSymptomLogs([]);
-      setGrowthLogs([]);
-      setMilestoneLogs([]);
-      setEpisodes([]);
-      setEpisodeEvents([]);
-    }
-
-    if (requestId === requestIdRef.current) {
-      setIsLoading(false);
-    }
-  }, [activeChild, quickRangeDays, searchDate, today]);
-
-  useEffect(() => {
-    void refreshHistory();
-  }, [refreshHistory]);
-
-  const visiblePoopLogs = useMemo(() => {
-    return getVisiblePoopLogs(diaperLogs, poopLogs);
-  }, [diaperLogs, poopLogs]);
-
-  const grouped = useMemo(() => groupTimelineByDay({
-    diaperLogs,
-    poopLogs: visiblePoopLogs,
-    feedingLogs,
-    sleepLogs,
-    symptomLogs,
-    growthLogs,
-    milestoneLogs,
-    episodes,
-    episodeEvents,
-  }), [diaperLogs, visiblePoopLogs, feedingLogs, sleepLogs, symptomLogs, growthLogs, milestoneLogs, episodes, episodeEvents]);
-
-  const displayDays = useMemo(() => {
-    if (!searchDate) return [...grouped.entries()];
-    const filtered = grouped.get(searchDate);
-    if (filtered) return [[searchDate, filtered]] as [string, TimelineEvent[]][];
-    return [];
-  }, [grouped, searchDate]);
+  const displayDays = useMemo(() => getHistoryDisplayDays(grouped, searchDate), [grouped, searchDate]);
 
   useEffect(() => {
     if (searchDate) setExpandedDay(searchDate);
   }, [searchDate]);
 
   if (!activeChild) return null;
-
-  const hasAnyLogs = diaperLogs.length > 0
-    || poopLogs.length > 0
-    || feedingLogs.length > 0
-    || sleepLogs.length > 0
-    || symptomLogs.length > 0
-    || growthLogs.length > 0
-    || milestoneLogs.length > 0
-    || episodes.length > 0
-    || episodeEvents.length > 0;
 
   if (!isLoading && !hasAnyLogs) {
     return (
@@ -184,29 +68,7 @@ export function History() {
     );
   }
 
-  const handleDeletePoop = async (id: string) => {
-    const entry = poopLogs.find((log) => log.id === id);
-    await db.deletePoopLog(entry ?? id);
-    await refreshHistory();
-  };
-
-  const handleDeleteMeal = async (id: string) => {
-    await db.deleteFeedingLog(id);
-    await refreshHistory();
-  };
-
-  const handleDeleteSleep = async (id: string) => {
-    await db.deleteSleepLog(id);
-    await refreshHistory();
-  };
-
-  const handleDeleteDiaper = async (entry: DiaperEntry) => {
-    await db.deleteDiaperLog(entry);
-    await refreshHistory();
-  };
-
-  const allDates = [...grouped.keys()];
-  const earliestDate = allDates.length > 0 ? allDates[allDates.length - 1] : today;
+  const earliestDate = getEarliestHistoryDate(grouped, today);
 
   return (
     <div className="mb-5 px-4 pb-5">
@@ -216,7 +78,7 @@ export function History() {
             History
           </h2>
           <div className="flex rounded-full border border-[var(--color-border)] bg-[var(--color-bg-elevated)] p-1">
-            {RANGE_OPTIONS.map((option) => {
+            {HISTORY_RANGE_OPTIONS.map((option) => {
               const active = !searchDate && quickRangeDays === option.value;
               return (
                 <button
@@ -271,10 +133,10 @@ export function History() {
         <HistoryTimeline
           displayDays={displayDays}
           expandedDay={expandedDay}
-          onDeleteDiaper={handleDeleteDiaper}
-          onDeletePoop={handleDeletePoop}
-          onDeleteMeal={handleDeleteMeal}
-          onDeleteSleep={handleDeleteSleep}
+          onDeleteDiaper={deleteDiaper}
+          onDeletePoop={deletePoop}
+          onDeleteMeal={deleteMeal}
+          onDeleteSleep={deleteSleep}
           onEditDiaper={setEditingDiaper}
           onEditPoop={setEditingPoop}
           onEditMeal={setEditingMeal}

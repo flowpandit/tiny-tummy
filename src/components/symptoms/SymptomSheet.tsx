@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import type { FormEvent } from "react";
 import { Sheet } from "../ui/sheet";
 import { Button } from "../ui/button";
 import { DatePicker } from "../ui/date-picker";
@@ -6,17 +6,16 @@ import { TimePicker } from "../ui/time-picker";
 import { Badge } from "../ui/badge";
 import { useToast } from "../ui/toast";
 import { cn } from "../../lib/cn";
+import { useSymptomSheetState } from "../../hooks/useSymptomSheetState";
 import { getEpisodeTypeLabel } from "../../lib/episode-constants";
 import {
   getSymptomSeverityBadgeVariant,
   getSymptomSeverityLabel,
-  getSymptomTypeLabel,
   SYMPTOM_SEVERITIES,
   SYMPTOM_TYPES,
 } from "../../lib/symptom-constants";
-import { combineLocalDateAndTimeToUtcIso, getCurrentLocalDate, getCurrentLocalTime } from "../../lib/utils";
-import * as db from "../../lib/db";
-import type { Episode, SymptomSeverity, SymptomType } from "../../lib/types";
+import { getCurrentLocalDate } from "../../lib/utils";
+import type { Episode } from "../../lib/types";
 
 interface SymptomSheetProps {
   open: boolean;
@@ -34,66 +33,14 @@ export function SymptomSheet({
   onLogged,
 }: SymptomSheetProps) {
   const { showError, showSuccess } = useToast();
-  const [symptomType, setSymptomType] = useState<SymptomType | null>(null);
-  const [severity, setSeverity] = useState<SymptomSeverity>("moderate");
-  const [logDate, setLogDate] = useState(getCurrentLocalDate());
-  const [logTime, setLogTime] = useState(getCurrentLocalTime());
-  const [notes, setNotes] = useState("");
-  const [linkToEpisode, setLinkToEpisode] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  useEffect(() => {
-    if (!open) return;
-
-    setSymptomType(null);
-    setSeverity("moderate");
-    setLogDate(getCurrentLocalDate());
-    setLogTime(getCurrentLocalTime());
-    setNotes("");
-    setLinkToEpisode(!!activeEpisode);
-  }, [open, activeEpisode]);
-
-  const handleSubmit = async (event: FormEvent) => {
-    event.preventDefault();
-    if (!symptomType || isSubmitting) return;
-
-    setIsSubmitting(true);
-    try {
-      const loggedAt = combineLocalDateAndTimeToUtcIso(logDate, logTime);
-      const episodeId = linkToEpisode && activeEpisode ? activeEpisode.id : null;
-
-      await db.createSymptomLog({
-        child_id: childId,
-        episode_id: episodeId,
-        symptom_type: symptomType,
-        severity,
-        logged_at: loggedAt,
-        notes: notes.trim() || null,
-      });
-
-      if (episodeId) {
-        await db.createEpisodeEvent({
-          episode_id: episodeId,
-          child_id: childId,
-          event_type: "symptom",
-          title: `${getSymptomTypeLabel(symptomType)} · ${getSymptomSeverityLabel(severity)}`,
-          notes: notes.trim() || null,
-          logged_at: loggedAt,
-        });
-      }
-
-      await onLogged();
-      showSuccess("Symptom saved.");
-      onClose();
-    } catch {
-      showError("Could not save the symptom. Please try again.");
-    }
-    setIsSubmitting(false);
-  };
+  const {
+    symptomType, setSymptomType, severity, setSeverity, logDate, setLogDate, logTime, setLogTime,
+    notes, setNotes, linkToEpisode, setLinkToEpisode, isSubmitting, handleSubmit,
+  } = useSymptomSheetState({ open, childId, activeEpisode, onLogged, onClose, onError: showError, onSuccess: showSuccess });
 
   return (
     <Sheet open={open} onClose={onClose}>
-      <form onSubmit={handleSubmit} className="px-5 pb-8">
+      <form onSubmit={(event: FormEvent) => { event.preventDefault(); void handleSubmit(); }} className="px-5 pb-8">
         <h2 className="mb-2 text-center font-[var(--font-display)] text-lg font-semibold text-[var(--color-text)]">
           Log symptom
         </h2>

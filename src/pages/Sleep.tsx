@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useChildContext } from "../contexts/ChildContext";
+import { useSleepTimerPreview } from "../hooks/useSleepTimerPreview";
 import { useSleepLogs } from "../hooks/useSleepLogs";
 import { fillDailyFrequencyDays, formatLocalDateKey } from "../lib/stats";
-import { DAYS_IN_WEEK, addDays, formatWeekLabel, startOfDay } from "../lib/tracker";
+import { DAYS_IN_WEEK, formatWeekLabel, getEarliestLoggedDate, getMaxWeekOffset, getWeekRange } from "../lib/tracker";
 import { timeSince } from "../lib/utils";
-import { formatSleepTimerClock, formatSleepTimerSummary, getSleepTimerElapsedMs, getSleepTimerSettingKey, parseSleepTimerSession, type SleepTimerSession } from "../lib/sleep-timer";
-import * as db from "../lib/db";
+import { formatSleepTimerClock, formatSleepTimerSummary, getSleepTimerElapsedMs } from "../lib/sleep-timer";
 import { Card, CardContent, CardHeader } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { ScenicHero } from "../components/layout/ScenicHero";
@@ -25,8 +25,8 @@ import { SleepStatusCard } from "../components/sleep/SleepStatusCard";
 import { SleepWeeklyPatternCard } from "../components/sleep/SleepWeeklyPatternCard";
 import type { SleepEntry } from "../lib/types";
 import {
+  buildSleepWeekSummary,
   formatDurationRing,
-  formatSleepDuration,
   getDurationMinutes,
   getLastNapDisplay,
   getOverlapMinutesForDay,
@@ -48,9 +48,8 @@ export function Sleep() {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editingSleep, setEditingSleep] = useState<SleepEntry | null>(null);
   const [weekOffset, setWeekOffset] = useState(0);
-  const [timerSession, setTimerSession] = useState<SleepTimerSession | null>(null);
-  const [tick, setTick] = useState(Date.now());
   const [statusExpanded, setStatusExpanded] = useState(false);
+  const { timerSession, tick } = useSleepTimerPreview(activeChild, sheetOpen);
 
   const todayKey = getTodayKey();
   const todayLogs = useMemo(() => {
@@ -78,60 +77,17 @@ export function Sleep() {
     : `Latest logged day · ${new Date(`${patternDayKey}T00:00:00`).toLocaleDateString(undefined, { month: "short", day: "numeric" })}`;
 
   useEffect(() => {
-    if (!activeChild) {
-      setTimerSession(null);
-      return;
-    }
-
-    let cancelled = false;
-    const refreshTimerSession = () => {
-      db.getSetting(getSleepTimerSettingKey(activeChild.id))
-        .then((raw) => {
-          if (!cancelled) {
-            setTimerSession(parseSleepTimerSession(raw));
-            setTick(Date.now());
-          }
-        })
-        .catch(() => {
-          if (!cancelled) {
-            setTimerSession(null);
-            setTick(Date.now());
-          }
-        });
-    };
-
-    refreshTimerSession();
-    window.addEventListener("focus", refreshTimerSession);
-    document.addEventListener("visibilitychange", refreshTimerSession);
-    return () => {
-      cancelled = true;
-      window.removeEventListener("focus", refreshTimerSession);
-      document.removeEventListener("visibilitychange", refreshTimerSession);
-    };
-  }, [activeChild, sheetOpen]);
-
-  useEffect(() => {
     if (searchParams.get("add") === "1") {
       setSheetOpen(true);
     }
   }, [searchParams]);
 
-  useEffect(() => {
-    if (!timerSession) return;
-    const interval = window.setInterval(() => setTick(Date.now()), 1000);
-    return () => window.clearInterval(interval);
-  }, [timerSession]);
-
   const earliestLoggedDate = useMemo(() => {
-    if (logs.length === 0) return null;
-    return startOfDay(new Date(logs[logs.length - 1].started_at));
+    return getEarliestLoggedDate(logs, (log) => log.started_at);
   }, [logs]);
 
   const maxWeekOffset = useMemo(() => {
-    if (!earliestLoggedDate) return 0;
-    const today = startOfDay(new Date());
-    const diffDays = Math.floor((today.getTime() - earliestLoggedDate.getTime()) / 86400000);
-    return Math.max(0, Math.floor(diffDays / DAYS_IN_WEEK));
+    return getMaxWeekOffset(earliestLoggedDate);
   }, [earliestLoggedDate]);
 
   useEffect(() => {
@@ -140,8 +96,7 @@ export function Sleep() {
     }
   }, [maxWeekOffset, weekOffset]);
 
-  const endDate = useMemo(() => addDays(startOfDay(new Date()), -weekOffset * DAYS_IN_WEEK), [weekOffset]);
-  const startDate = useMemo(() => addDays(endDate, -(DAYS_IN_WEEK - 1)), [endDate]);
+  const { startDate, endDate } = useMemo(() => getWeekRange(weekOffset), [weekOffset]);
   const weekStartKey = formatLocalDateKey(startDate);
   const weekEndKey = formatLocalDateKey(endDate);
 
@@ -175,10 +130,7 @@ export function Sleep() {
 
   if (!activeChild) return null;
 
-  const weekSummaryBits = [
-    weekLogs.length === 0 ? "No sleep blocks logged in this week" : `${weekLogs.length} sleep block${weekLogs.length === 1 ? "" : "s"} in this week`,
-    totalTodayMinutes > 0 ? `Today total ${formatSleepDuration(totalTodayMinutes)}` : null,
-  ].filter(Boolean);
+  const weekSummary = buildSleepWeekSummary(weekLogs.length, totalTodayMinutes);
 
   const handleLogged = async () => {
     await refresh();
@@ -262,7 +214,7 @@ export function Sleep() {
         <SleepWeeklyPatternCard
           filledWeek={filledWeek}
           maxWeekOffset={maxWeekOffset}
-          summary={weekSummaryBits.join(" • ")}
+          summary={weekSummary}
           title={weekOffset === 0 ? "Last 7 days" : formatWeekLabel(startDate, endDate)}
           weekOffset={weekOffset}
           onOlder={() => setWeekOffset((current) => Math.min(maxWeekOffset, current + 1))}

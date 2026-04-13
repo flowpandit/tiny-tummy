@@ -7,9 +7,9 @@ import { Button } from "../ui/button";
 import { AvatarUpload } from "../child/AvatarUpload";
 import { AVATAR_COLORS, CHILD_SEX_OPTIONS, FEEDING_TYPES } from "../../lib/constants";
 import { cn } from "../../lib/cn";
+import { useUpdateChildAction } from "../../hooks/useSettingsActions";
 import { getCurrentLocalDate } from "../../lib/utils";
 import { saveAvatar, deleteAvatar } from "../../lib/photos";
-import * as db from "../../lib/db";
 import type { Child, ChildSex, FeedingType } from "../../lib/types";
 
 export function EditChildSheet({
@@ -30,6 +30,7 @@ export function EditChildSheet({
   const [avatarColor, setAvatarColor] = useState(child.avatar_color);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const updateChild = useUpdateChildAction({ child, onSaved, onClose });
 
   useEffect(() => {
     let cancelled = false;
@@ -64,16 +65,8 @@ export function EditChildSheet({
 
   const handleSave = async () => {
     setIsSaving(true);
-    await db.updateChild(child.id, {
-      name: name.trim(),
-      date_of_birth: dob,
-      sex,
-      feeding_type: feedingType,
-      avatar_color: avatarColor,
-    });
+    await updateChild({ name, dob, sex, feedingType, avatarColor });
     setIsSaving(false);
-    onSaved();
-    onClose();
   };
 
   return (

@@ -1,6 +1,5 @@
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import * as db from "../lib/db";
-import { detectDefaultUnitSystem, UNIT_SYSTEM_SETTING_KEY } from "../lib/units";
+import { createContext, useContext, useMemo, type ReactNode } from "react";
+import { useUnitsState } from "../hooks/useUnitsState";
 import type { UnitSystem } from "../lib/types";
 
 interface UnitsContextType {
@@ -11,36 +10,12 @@ interface UnitsContextType {
 const UnitsContext = createContext<UnitsContextType | null>(null);
 
 export function UnitsProvider({ children }: { children: ReactNode }) {
-  const [unitSystem, setUnitSystemState] = useState<UnitSystem>(() => detectDefaultUnitSystem());
-
-  useEffect(() => {
-    let cancelled = false;
-
-    db.getSetting(UNIT_SYSTEM_SETTING_KEY).then((storedValue) => {
-      if (cancelled) return;
-
-      if (storedValue === "metric" || storedValue === "imperial") {
-        setUnitSystemState(storedValue);
-        return;
-      }
-
-      const detectedDefault = detectDefaultUnitSystem();
-      setUnitSystemState(detectedDefault);
-      void db.setSetting(UNIT_SYSTEM_SETTING_KEY, detectedDefault);
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const { unitSystem, setUnitSystem } = useUnitsState();
 
   const value = useMemo<UnitsContextType>(() => ({
     unitSystem,
-    setUnitSystem: (next: UnitSystem) => {
-      setUnitSystemState(next);
-      void db.setSetting(UNIT_SYSTEM_SETTING_KEY, next);
-    },
-  }), [unitSystem]);
+    setUnitSystem,
+  }), [setUnitSystem, unitSystem]);
 
   return (
     <UnitsContext.Provider value={value}>

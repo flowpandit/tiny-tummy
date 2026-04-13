@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type FormEvent } from "react";
+import type { FormEvent } from "react";
 import { Sheet } from "../ui/sheet";
 import { Button } from "../ui/button";
 import { useToast } from "../ui/toast";
@@ -7,12 +7,10 @@ import { ColorPicker } from "./ColorPicker";
 import { SizePicker } from "./SizePicker";
 import { LogSuccess } from "./LogSuccess";
 import { LogDateTimeFields } from "./LogDateTimeFields";
-import * as db from "../../lib/db";
-import { savePhoto } from "../../lib/photos";
 import { cn } from "../../lib/cn";
 import { useTheme } from "../../contexts/ThemeContext";
 import { FieldLabel, Textarea } from "../ui/field";
-import { combineLocalDateAndTimeToUtcIso, getCurrentLocalDate, getCurrentLocalTime } from "../../lib/utils";
+import { useLogFormState } from "../../hooks/useLogFormState";
 import { useLoggingSheetLifecycle } from "../../hooks/useLoggingSheetLifecycle";
 import { usePhotoField } from "../../hooks/usePhotoField";
 import {
@@ -20,14 +18,7 @@ import {
   LoggingPresetNotice,
 } from "./logging-form-primitives";
 import { getLoggingLabelClassName } from "./logging-form-classnames";
-import type { PoopLogDraft, StoolColor, StoolSize } from "../../lib/types";
-
-const EMPTY_DRAFT: PoopLogDraft = {
-  stool_type: null,
-  color: null,
-  size: null,
-  notes: "",
-};
+import type { PoopLogDraft } from "../../lib/types";
 
 interface LogFormProps {
   open: boolean;
@@ -39,79 +30,28 @@ interface LogFormProps {
 
 export function LogForm({ open, onClose, childId, onLogged, initialDraft = null }: LogFormProps) {
   const { showError } = useToast();
-  const [logDate, setLogDate] = useState(getCurrentLocalDate());
-  const [logTime, setLogTime] = useState(getCurrentLocalTime());
-  const [stoolType, setStoolType] = useState<number | null>(null);
-  const [color, setColor] = useState<StoolColor | null>(null);
-  const [size, setSize] = useState<StoolSize | null>(null);
-  const [notes, setNotes] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showSuccess, setShowSuccess] = useState(false);
   const { resolved } = useTheme();
   const nightMode = resolved === "night";
   const { fileInputRef, photoFile, photoPreview, resetPhoto, setPhotoFromChange } = usePhotoField();
 
-  const applyDraft = useCallback((draft?: Partial<PoopLogDraft> | null) => {
-    const nextDraft = { ...EMPTY_DRAFT, ...draft };
-    setLogDate(getCurrentLocalDate());
-    setLogTime(getCurrentLocalTime());
-    setStoolType(nextDraft.stool_type);
-    setColor(nextDraft.color);
-    setSize(nextDraft.size);
-    setNotes(nextDraft.notes);
-    resetPhoto();
-    setShowSuccess(false);
-  }, [resetPhoto]);
-
   const { handleClose, handleLoggedSuccess } = useLoggingSheetLifecycle({
     onClose,
-    onReset: () => applyDraft(null),
+    onReset: resetPhoto,
     onLogged,
   });
-
-  useEffect(() => {
-    if (open) {
-      applyDraft(initialDraft);
-    }
-  }, [applyDraft, initialDraft, open]);
-
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-    if (isSubmitting) return;
-
-    setIsSubmitting(true);
-    try {
-      let photoPath: string | null = null;
-      if (photoFile) {
-        try { photoPath = await savePhoto(photoFile); } catch { /* photo save is non-critical */ }
-      }
-
-      await db.createPoopLog({
-        child_id: childId,
-        logged_at: combineLocalDateAndTimeToUtcIso(logDate, logTime),
-        stool_type: stoolType,
-        color,
-        size,
-        notes: notes.trim() || null,
-        photo_path: photoPath,
-      });
-    } catch {
-      setIsSubmitting(false);
-      showError("Failed to save entry. Please try again.");
-      return;
-    }
-
-    setIsSubmitting(false);
-    setShowSuccess(true);
-    handleLoggedSuccess();
-  };
+  const {
+    logDate, setLogDate, logTime, setLogTime, stoolType, setStoolType, color, setColor, size, setSize,
+    notes, setNotes, isSubmitting, showSuccess, handleSubmit,
+  } = useLogFormState({
+    open, childId, initialDraft, onLoggedSuccess: handleLoggedSuccess, onError: showError, resetPhoto, photoFile,
+  });
 
   return (
     <Sheet open={open} onClose={handleClose} tone={nightMode ? "night" : "default"}>
       {showSuccess ? (
         <LogSuccess />
       ) : (
-        <form onSubmit={handleSubmit} className="px-5 pb-8">
+        <form onSubmit={(e: FormEvent) => { e.preventDefault(); void handleSubmit(); }} className="px-5 pb-8">
           <LoggingFormHeader title="Log a poop" isNight={nightMode} />
 
           {(stoolType || color || size) && (

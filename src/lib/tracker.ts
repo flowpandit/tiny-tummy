@@ -31,3 +31,24 @@ export function formatHoursCompact(hours: number): string {
   const days = Math.round((hours / 24) * 10) / 10;
   return `${days}d`;
 }
+
+export function getEarliestLoggedDate<T>(
+  logs: T[],
+  getTimestamp: (log: T) => string,
+): Date | null {
+  if (logs.length === 0) return null;
+  return startOfDay(new Date(getTimestamp(logs[logs.length - 1])));
+}
+
+export function getMaxWeekOffset(earliestLoggedDate: Date | null, referenceDate: Date = new Date()): number {
+  if (!earliestLoggedDate) return 0;
+  const today = startOfDay(referenceDate);
+  const diffDays = Math.floor((today.getTime() - earliestLoggedDate.getTime()) / 86400000);
+  return Math.max(0, Math.floor(diffDays / DAYS_IN_WEEK));
+}
+
+export function getWeekRange(weekOffset: number, referenceDate: Date = new Date()) {
+  const endDate = addDays(startOfDay(referenceDate), -weekOffset * DAYS_IN_WEEK);
+  const startDate = addDays(endDate, -(DAYS_IN_WEEK - 1));
+  return { startDate, endDate };
+}

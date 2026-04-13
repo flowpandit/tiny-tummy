@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import type { FormEvent } from "react";
 import { Sheet } from "../ui/sheet";
 import { Button } from "../ui/button";
 import { DatePicker } from "../ui/date-picker";
@@ -6,8 +6,8 @@ import { TimePicker } from "../ui/time-picker";
 import { FieldLabel, Textarea } from "../ui/field";
 import { cn } from "../../lib/cn";
 import { useToast } from "../ui/toast";
-import * as db from "../../lib/db";
-import { combineLocalDateAndTimeToUtcIso, getCurrentLocalDate, getLocalDateTimeParts } from "../../lib/utils";
+import { useEditSleepSheetState } from "../../hooks/useEditSleepSheetState";
+import { getCurrentLocalDate } from "../../lib/utils";
 import type { SleepEntry, SleepType } from "../../lib/types";
 
 interface EditSleepSheetProps {
@@ -25,74 +25,37 @@ const SLEEP_TYPES: Array<{ value: SleepType; label: string; description: string 
 
 export function EditSleepSheet({ entry, open, onClose, onSaved, onDeleted }: EditSleepSheetProps) {
   const { showError, showSuccess } = useToast();
-  const startParts = getLocalDateTimeParts(entry.started_at);
-  const endParts = getLocalDateTimeParts(entry.ended_at);
-  const [sleepType, setSleepType] = useState<SleepType>(entry.sleep_type);
-  const [startDate, setStartDate] = useState(startParts.date);
-  const [startTime, setStartTime] = useState(startParts.time);
-  const [endDate, setEndDate] = useState(endParts.date);
-  const [endTime, setEndTime] = useState(endParts.time);
-  const [notes, setNotes] = useState(entry.notes ?? "");
-  const [isSaving, setIsSaving] = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState(false);
-
-  useEffect(() => {
-    if (!open) return;
-    setSleepType(entry.sleep_type);
-    const nextStartParts = getLocalDateTimeParts(entry.started_at);
-    const nextEndParts = getLocalDateTimeParts(entry.ended_at);
-    setStartDate(nextStartParts.date);
-    setStartTime(nextStartParts.time);
-    setEndDate(nextEndParts.date);
-    setEndTime(nextEndParts.time);
-    setNotes(entry.notes ?? "");
-    setIsSaving(false);
-    setConfirmDelete(false);
-  }, [entry, open]);
-
-  const handleSave = async (event: FormEvent) => {
-    event.preventDefault();
-    if (isSaving) return;
-
-    const startedAt = combineLocalDateAndTimeToUtcIso(startDate, startTime);
-    const endedAt = combineLocalDateAndTimeToUtcIso(endDate, endTime);
-
-    if (new Date(endedAt).getTime() <= new Date(startedAt).getTime()) {
-      showError("End time needs to be after the start time.");
-      return;
-    }
-
-    setIsSaving(true);
-    try {
-      await db.updateSleepLog(entry.id, {
-        sleep_type: sleepType,
-        started_at: startedAt,
-        ended_at: endedAt,
-        notes: notes.trim() || null,
-      });
-      showSuccess("Sleep entry updated.");
-      onSaved();
-      onClose();
-    } catch {
-      showError("Could not save the sleep entry. Please try again.");
-    }
-    setIsSaving(false);
-  };
-
-  const handleDelete = async () => {
-    try {
-      await db.deleteSleepLog(entry.id);
-      showSuccess("Sleep entry deleted.");
-      onDeleted();
-      onClose();
-    } catch {
-      showError("Could not delete the sleep entry. Please try again.");
-    }
-  };
+  const {
+    sleepType,
+    setSleepType,
+    startDate,
+    setStartDate,
+    startTime,
+    setStartTime,
+    endDate,
+    setEndDate,
+    endTime,
+    setEndTime,
+    notes,
+    setNotes,
+    isSaving,
+    confirmDelete,
+    setConfirmDelete,
+    handleSave,
+    handleDelete,
+  } = useEditSleepSheetState({
+    entry,
+    open,
+    onClose,
+    onSaved,
+    onDeleted,
+    onError: showError,
+    onSuccess: showSuccess,
+  });
 
   return (
     <Sheet open={open} onClose={onClose}>
-      <form onSubmit={handleSave} className="px-5 pb-8">
+      <form onSubmit={(event: FormEvent) => { event.preventDefault(); void handleSave(); }} className="px-5 pb-8">
         <h2 className="mb-2 text-center font-[var(--font-display)] text-lg font-semibold text-[var(--color-text)]">
           Edit sleep log
         </h2>

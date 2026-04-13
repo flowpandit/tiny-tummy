@@ -16,6 +16,7 @@ import { useHomeBreastfeedingState } from "../hooks/useHomeBreastfeedingState";
 import { useHomeStickyChildBar } from "../hooks/useHomeStickyChildBar";
 import { useHomeEffects } from "../hooks/useHomeEffects";
 import { buildChildDailySummary } from "../lib/child-summary";
+import { buildHomeSleepSummary } from "../lib/home-insights";
 import { HomeTopSection } from "../components/home/HomeTopSection";
 import { RecentActivity } from "../components/home/RecentActivity";
 import { CareToolsSection } from "../components/home/CareToolsSection";
@@ -141,15 +142,7 @@ export function Home() {
   const handleSleepLogged = async () => {
     await refreshSleepLogs();
   };
-  const now = Date.now();
-  const sleepSummaryHours = useMemo(() => sleepLogs
-    .filter((entry) => now - new Date(entry.started_at).getTime() < 24 * 60 * 60 * 1000)
-    .reduce((sum, entry) => {
-      const end = entry.ended_at ? new Date(entry.ended_at).getTime() : now;
-      const start = new Date(entry.started_at).getTime();
-      return sum + Math.max(0, end - start);
-    }, 0), [now, sleepLogs]);
-  const sleepNapCount = useMemo(() => sleepLogs.filter((entry) => entry.sleep_type === "nap").length, [sleepLogs]);
+  const sleepSummary = useMemo(() => buildHomeSleepSummary(sleepLogs), [sleepLogs]);
 
   if (!activeChild) return null;
 
@@ -165,10 +158,6 @@ export function Home() {
   const lastFeed = summary.lastFeed;
   const showBreastfeedAction = activeChild.feeding_type === "breast" || activeChild.feeding_type === "mixed";
   const episodeActionLabel = activeEpisode ? "Add episode update" : "Start episode";
-  const sleepSummaryLabel = sleepSummaryHours > 0
-    ? `${Math.floor(sleepSummaryHours / (1000 * 60 * 60))}h ${Math.round((sleepSummaryHours % (1000 * 60 * 60)) / (1000 * 60))}m`
-    : "0h";
-  const sleepSummaryHoursValue = sleepSummaryHours / (1000 * 60 * 60);
   const otherChildren = children.filter((child) => child.id !== activeChild.id);
   const eliminationActionLabel = experience.mode === "diaper" ? "Log diaper" : "Log poop";
   const handleOpenBreastfeedAction = () => {
@@ -211,9 +200,9 @@ export function Home() {
         <HomeTopSection
           activeChild={activeChild}
           summary={summary}
-          sleepSummaryLabel={sleepSummaryLabel}
-          sleepSummaryHoursValue={sleepSummaryHoursValue}
-          sleepNapCount={sleepNapCount}
+          sleepSummaryLabel={sleepSummary.label}
+          sleepSummaryHoursValue={sleepSummary.hoursValue}
+          sleepNapCount={sleepSummary.napCount}
           avatarAnchorRef={avatarAnchorRef}
           otherChildren={otherChildren}
           onSelectChild={setActiveChildId}

@@ -1,4 +1,5 @@
 import { STOOL_COLORS } from "./constants";
+import { getRelativeDayLabel } from "./date-labels";
 import { formatHoursCompact, formatHoursLong } from "./tracker";
 import type { Alert, FeedingEntry, HealthStatus, PoopEntry, PoopLogDraft, SymptomEntry } from "./types";
 
@@ -81,15 +82,7 @@ export function getPoopColorHex(color: PoopEntry["color"] | Partial<PoopLogDraft
 }
 
 export function getRecentHistoryDayLabel(dateStr: string): string {
-  const entryDate = new Date(dateStr);
-  const day = new Date(entryDate.getFullYear(), entryDate.getMonth(), entryDate.getDate());
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const diffDays = Math.round((today.getTime() - day.getTime()) / 86400000);
-
-  if (diffDays <= 0) return "Today";
-  if (diffDays === 1) return "Yesterday";
-  return `${diffDays} days ago`;
+  return getRelativeDayLabel(dateStr);
 }
 
 export function getAgeBaseline(dateOfBirth: string, feedingType: string): AgeBaseline {

@@ -8,8 +8,7 @@ import { SegmentedControl } from "../components/ui/segmented-control";
 import { AvatarUpload } from "../components/child/AvatarUpload";
 import { FEEDING_TYPES, AVATAR_COLORS, CHILD_SEX_OPTIONS } from "../lib/constants";
 import { cn } from "../lib/cn";
-import * as db from "../lib/db";
-import { saveAvatar } from "../lib/photos";
+import { useCreateChildAction } from "../hooks/useCreateChildAction";
 import { useChildContext } from "../contexts/ChildContext";
 import { useToast } from "../components/ui/toast";
 import { Header } from "../components/layout/Header";
@@ -20,6 +19,7 @@ export function AddChild() {
   const navigate = useNavigate();
   const { refreshChildren, setActiveChildId } = useChildContext();
   const { showError } = useToast();
+  const createChild = useCreateChildAction();
   const [name, setName] = useState("");
   const [dob, setDob] = useState(getCurrentLocalDate());
   const [sex, setSex] = useState<ChildSex | null>(null);
@@ -43,17 +43,7 @@ export function AddChild() {
 
     setIsSubmitting(true);
     try {
-      const child = await db.createChild({
-        name: name.trim(),
-        date_of_birth: dob,
-        sex,
-        feeding_type: feedingType,
-        avatar_color: avatarColor,
-      });
-
-      if (avatarBlob) {
-        try { await saveAvatar(child.id, avatarBlob); } catch { /* avatar save is non-critical */ }
-      }
+      const child = await createChild({ name, dob, sex, feedingType, avatarColor, avatarBlob });
 
       await refreshChildren();
       setActiveChildId(child.id);

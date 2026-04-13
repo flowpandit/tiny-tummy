@@ -1,24 +1,12 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { useChildContext } from "../contexts/ChildContext";
 import { useUnits } from "../contexts/UnitsContext";
+import { useFeedPageState } from "../hooks/useFeedPageState";
 import { useFeedingLogs } from "../hooks/useFeedingLogs";
-import { useVisibilityRefresh } from "../hooks/useVisibilityRefresh";
 import { fillDailyFrequencyDays, formatLocalDateKey } from "../lib/stats";
-import { DAYS_IN_WEEK, addDays, formatWeekLabel, startOfDay } from "../lib/tracker";
-import { getFoodTypeLabel } from "../lib/feeding";
-import {
-  buildFeedPresetRecordInput,
-  describeFeedPresetDraft,
-  ensureEssentialFeedPresets,
-  getDefaultQuickFeedPresets,
-  hydrateFeedPresets,
-  type QuickFeedPreset,
-} from "../lib/quick-presets";
-import { combineLocalDateAndTimeToUtcIso, getCurrentLocalDate, getCurrentLocalTime, isOnLocalDay } from "../lib/utils";
-import { formatVolumeValue } from "../lib/units";
-import { getBreastfeedingSessionSettingKey, parseBreastfeedingSession } from "../lib/breastfeeding";
-import * as db from "../lib/db";
+import { DAYS_IN_WEEK, formatWeekLabel, getEarliestLoggedDate, getMaxWeekOffset, getWeekRange } from "../lib/tracker";
+import { getCurrentLocalDate, isOnLocalDay } from "../lib/utils";
 import { Card, CardContent, CardHeader } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { ScenicHero } from "../components/layout/ScenicHero";
@@ -39,23 +27,19 @@ import { FeedWeeklyPatternCard } from "../components/feed/FeedWeeklyPatternCard"
 import { useToast } from "../components/ui/toast";
 import type { FeedingEntry, FeedingLogDraft } from "../lib/types";
 import {
+  buildFeedWeekSummary,
   buildFeedPatternNarrative,
   getBaselineComparison,
   getDueRisk,
   getFeedBaseline,
   getFeedMixSnapshot,
   getFeedPrediction,
-  getFeedTypeCounts,
   getPredictionRingDisplay,
   getPredictableFeedLogs,
   getTimeSinceStatus,
   getTodayIntakeRingDisplay,
   getTrackedMl,
 } from "../lib/feed-insights";
-
-function getCurrentFeedingTimestamp(): string {
-  return combineLocalDateAndTimeToUtcIso(getCurrentLocalDate(), getCurrentLocalTime());
-}
 
 
 export function Feed() {
@@ -71,76 +55,27 @@ export function Feed() {
   const [feedDraft, setFeedDraft] = useState<Partial<FeedingLogDraft> | null>(null);
   const [editingMeal, setEditingMeal] = useState<FeedingEntry | null>(null);
   const [feedPresetSheetOpen, setFeedPresetSheetOpen] = useState(false);
-  const [quickFeedPresets, setQuickFeedPresets] = useState<QuickFeedPreset[]>([]);
-  const [activeBreastfeedingSide, setActiveBreastfeedingSide] = useState<"left" | "right" | null>(null);
   const [statusExpanded, setStatusExpanded] = useState(false);
   const navigateWithOrigin = (path: string) => navigate(path, { state: { origin: location.pathname } });
+  const {
+    activeBreastfeedingSide,
+    quickFeedPresets,
+    logQuickFeedPreset,
+    repeatLastFeed,
+    saveFeedPresets,
+  } = useFeedPageState({
+    activeChild,
+    unitSystem,
+    onError: showError,
+    onSuccess: showSuccess,
+    refreshLogs: refresh,
+  });
 
   useEffect(() => {
     if (searchParams.get("add") === "1") {
       setFormOpen(true);
     }
   }, [searchParams]);
-
-  useEffect(() => {
-    if (!activeChild) {
-      setQuickFeedPresets([]);
-      return;
-    }
-
-    let cancelled = false;
-
-    setQuickFeedPresets(ensureEssentialFeedPresets(
-      getDefaultQuickFeedPresets(activeChild.feeding_type, unitSystem),
-      activeChild.feeding_type,
-      unitSystem,
-    ));
-
-    db.getQuickPresets(activeChild.id, "feed").then((feedRows) => {
-      if (cancelled) return;
-      const hydratedFeed = hydrateFeedPresets(feedRows, unitSystem);
-      setQuickFeedPresets(
-        ensureEssentialFeedPresets(
-          hydratedFeed.length > 0 ? hydratedFeed : getDefaultQuickFeedPresets(activeChild.feeding_type, unitSystem),
-          activeChild.feeding_type,
-          unitSystem,
-        ),
-      );
-    }).catch(() => {
-      if (!cancelled) {
-        setQuickFeedPresets(ensureEssentialFeedPresets(
-          getDefaultQuickFeedPresets(activeChild.feeding_type, unitSystem),
-          activeChild.feeding_type,
-          unitSystem,
-        ));
-      }
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [activeChild, unitSystem]);
-
-  const refreshBreastfeedingSession = useCallback(async () => {
-    if (!activeChild) {
-      setActiveBreastfeedingSide(null);
-      return;
-    }
-
-    try {
-      const raw = await db.getSetting(getBreastfeedingSessionSettingKey(activeChild.id));
-      const session = parseBreastfeedingSession(raw);
-      setActiveBreastfeedingSide(session?.activeSide ?? null);
-    } catch {
-      setActiveBreastfeedingSide(null);
-    }
-  }, [activeChild]);
-
-  useEffect(() => {
-    void refreshBreastfeedingSession();
-  }, [refreshBreastfeedingSession]);
-
-  useVisibilityRefresh(refreshBreastfeedingSession, Boolean(activeChild));
 
   const predictableLogs = useMemo(() => getPredictableFeedLogs(logs), [logs]);
   const lastFeed = predictableLogs[0] ?? null;
@@ -155,15 +90,11 @@ export function Feed() {
   );
 
   const earliestLoggedDate = useMemo(() => {
-    if (logs.length === 0) return null;
-    return startOfDay(new Date(logs[logs.length - 1].logged_at));
+    return getEarliestLoggedDate(logs, (log) => log.logged_at);
   }, [logs]);
 
   const maxWeekOffset = useMemo(() => {
-    if (!earliestLoggedDate) return 0;
-    const today = startOfDay(new Date());
-    const diffDays = Math.floor((today.getTime() - earliestLoggedDate.getTime()) / 86400000);
-    return Math.max(0, Math.floor(diffDays / DAYS_IN_WEEK));
+    return getMaxWeekOffset(earliestLoggedDate);
   }, [earliestLoggedDate]);
 
   useEffect(() => {
@@ -172,8 +103,7 @@ export function Feed() {
     }
   }, [maxWeekOffset, weekOffset]);
 
-  const endDate = useMemo(() => addDays(startOfDay(new Date()), -weekOffset * DAYS_IN_WEEK), [weekOffset]);
-  const startDate = useMemo(() => addDays(endDate, -(DAYS_IN_WEEK - 1)), [endDate]);
+  const { startDate, endDate } = useMemo(() => getWeekRange(weekOffset), [weekOffset]);
   const weekStartKey = formatLocalDateKey(startDate);
   const weekEndKey = formatLocalDateKey(endDate);
 
@@ -222,89 +152,11 @@ export function Feed() {
 
   if (!activeChild) return null;
 
-  const dominantType = [...getFeedTypeCounts(weeklyPredictableLogs).entries()].sort((left, right) => right[1] - left[1])[0]?.[0] ?? null;
   const showBreastfeedAction = activeChild?.feeding_type === "breast" || activeChild?.feeding_type === "mixed";
-
-  const weekSummaryBits = [
-    weeklyPredictableLogs.length === 0 ? "No feeds logged in this week" : `${weeklyPredictableLogs.length} feed${weeklyPredictableLogs.length === 1 ? "" : "s"} in this week`,
-    dominantType ? `Mostly ${getFoodTypeLabel(dominantType).toLowerCase()}` : null,
-    weekTrackedMl > 0 ? `${formatVolumeValue(weekTrackedMl, unitSystem)} tracked` : null,
-  ].filter(Boolean);
+  const weekSummary = buildFeedWeekSummary(weeklyPredictableLogs, unitSystem, weekTrackedMl);
 
   const handleRefresh = async () => {
     await refresh();
-  };
-
-  const handleRepeatLastFeed = async () => {
-    if (!lastFeed) return;
-
-    try {
-      await db.createFeedingLog({
-        child_id: activeChild.id,
-        logged_at: getCurrentFeedingTimestamp(),
-        food_type: lastFeed.food_type,
-        food_name: lastFeed.food_name,
-        amount_ml: lastFeed.amount_ml,
-        duration_minutes: lastFeed.duration_minutes,
-        breast_side: lastFeed.breast_side,
-        bottle_content: lastFeed.bottle_content,
-        reaction_notes: null,
-        is_constipation_support: lastFeed.is_constipation_support,
-        notes: null,
-      });
-      await handleRefresh();
-      showSuccess("Repeated the last feed.");
-    } catch {
-      showError("Could not repeat the last feed. Please try again.");
-    }
-  };
-
-  const handleQuickFeedPreset = async (preset: QuickFeedPreset) => {
-    if (!preset.draft.food_type) {
-      showError("This feed tile is missing a feed type.");
-      return;
-    }
-
-    try {
-      await db.createFeedingLog({
-        child_id: activeChild.id,
-        logged_at: getCurrentFeedingTimestamp(),
-        food_type: preset.draft.food_type,
-        food_name: preset.draft.food_name?.trim() ? preset.draft.food_name.trim() : null,
-        amount_ml: preset.draft.amount_ml?.trim() ? Number(preset.draft.amount_ml.trim()) : null,
-        duration_minutes: preset.draft.duration_minutes?.trim() ? Number(preset.draft.duration_minutes.trim()) : null,
-        breast_side: preset.draft.breast_side ?? null,
-        bottle_content: preset.draft.bottle_content ?? null,
-        reaction_notes: null,
-        is_constipation_support: preset.draft.is_constipation_support ? 1 : 0,
-        notes: null,
-      });
-      await handleRefresh();
-      showSuccess(`${preset.label} logged.`);
-    } catch {
-      showError("Could not log that feed. Please try again.");
-    }
-  };
-
-  const saveFeedPresets = async (drafts: Array<Partial<FeedingLogDraft>>) => {
-    const nextPresets = drafts.map((draft, index) => {
-      const preview = describeFeedPresetDraft(draft, unitSystem);
-      return {
-        id: `feed-preset-${index}`,
-        label: preview.label,
-        description: preview.description,
-        draft,
-      };
-    });
-
-    try {
-      await db.replaceQuickPresets(activeChild.id, "feed", buildFeedPresetRecordInput(drafts, unitSystem));
-      setQuickFeedPresets(ensureEssentialFeedPresets(nextPresets, activeChild.feeding_type, unitSystem));
-      setFeedPresetSheetOpen(false);
-      showSuccess("Quick feed tiles updated.");
-    } catch {
-      showError("Could not save the quick feed tiles. Please try again.");
-    }
   };
 
   return (
@@ -350,8 +202,8 @@ export function Feed() {
           unitSystem={unitSystem}
           onEditTiles={() => setFeedPresetSheetOpen(true)}
           onNavigateToBreastfeed={() => navigateWithOrigin("/breastfeed")}
-          onQuickPreset={(preset) => { void handleQuickFeedPreset(preset); }}
-          onRepeatLastFeed={() => { void handleRepeatLastFeed(); }}
+          onQuickPreset={(preset) => { void logQuickFeedPreset(preset); }}
+          onRepeatLastFeed={() => { void repeatLastFeed(lastFeed); }}
         />
 
         <FeedStatusCard
@@ -370,7 +222,7 @@ export function Feed() {
         <FeedWeeklyPatternCard
           filledWeek={filledWeek}
           maxWeekOffset={maxWeekOffset}
-          summary={weekSummaryBits.join(" • ")}
+          summary={weekSummary}
           title={weekOffset === 0 ? "Last 7 days" : formatWeekLabel(startDate, endDate)}
           weekOffset={weekOffset}
           onOlder={() => setWeekOffset((current) => Math.min(maxWeekOffset, current + 1))}
@@ -444,7 +296,11 @@ export function Feed() {
           onClose={() => setFeedPresetSheetOpen(false)}
           feedingType={activeChild.feeding_type}
           presets={quickFeedPresets}
-          onSave={(drafts) => { void saveFeedPresets(drafts); }}
+          onSave={(drafts) => {
+            void saveFeedPresets(drafts).then((didSave) => {
+              if (didSave) setFeedPresetSheetOpen(false);
+            });
+          }}
         />
       </div>
     </PageBody>
