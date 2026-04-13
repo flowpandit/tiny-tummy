@@ -107,7 +107,7 @@ export function ScenicHero({
               className={isDarkArtwork
                 ? "pointer-events-none absolute right-[18px] top-[34px] w-[112px] md:right-[74px] md:top-[54px] md:w-[96px] lg:right-[92px] lg:top-[62px] lg:w-[108px]"
                 : "pointer-events-none absolute right-[14px] top-[14px] w-[118px] opacity-95 md:right-[72px] md:top-[46px] md:w-[92px] lg:right-[88px] lg:top-[54px] lg:w-[104px]"}
-              style={{ opacity: isDarkArtwork ? 0.72 : 0.95 }}
+              style={{ opacity: isDarkArtwork ? 0.78 : 0.96 }}
             />
             <img
               src={ridgeArt}

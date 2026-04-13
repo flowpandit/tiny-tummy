@@ -5,13 +5,12 @@ import { ThemeProvider } from "./contexts/ThemeContext";
 import { UnitsProvider } from "./contexts/UnitsContext";
 import { ErrorBoundary } from "./components/ui/error-boundary";
 import { ToastProvider } from "./components/ui/toast";
-import { AppShell } from "./components/layout/AppShell";
 import { TrialProvider, useTrial } from "./contexts/TrialContext";
-import { Paywall } from "./components/billing/Paywall";
-
-
-import { Home } from "./pages/Home";
-import { Onboarding } from "./pages/Onboarding";
+ 
+const AppShell = lazy(() => import("./components/layout/AppShell").then((m) => ({ default: m.AppShell })));
+const Paywall = lazy(() => import("./components/billing/Paywall").then((m) => ({ default: m.Paywall })));
+const Home = lazy(() => import("./pages/Home").then((m) => ({ default: m.Home })));
+const Onboarding = lazy(() => import("./pages/Onboarding").then((m) => ({ default: m.Onboarding })));
 
 // Lazy loaded (non-critical)
 const History = lazy(() => import("./pages/History").then((m) => ({ default: m.History })));
@@ -133,10 +132,12 @@ function AppRoutes() {
 
   if (children.length === 0) {
     return (
-      <Routes>
-        <Route path="/onboarding" element={<Onboarding />} />
-        <Route path="*" element={<Navigate to="/onboarding" replace />} />
-      </Routes>
+      <Suspense fallback={<PageLoader />}>
+        <Routes>
+          <Route path="/onboarding" element={<Onboarding />} />
+          <Route path="*" element={<Navigate to="/onboarding" replace />} />
+        </Routes>
+      </Suspense>
     );
   }
 

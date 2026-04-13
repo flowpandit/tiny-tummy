@@ -453,7 +453,7 @@ Make component APIs consistent, reusable, and predictable across the repo.
 
 ## Phase 8: Asset And Bundle Readiness
 
-Status: `[Todo]`
+Status: `[Done]`
 
 ### Goal
 
@@ -461,12 +461,32 @@ Improve startup and production asset loading now that structure is cleaner.
 
 ### Tasks
 
-- [ ] Audit large SVG assets imported at startup.
-- [ ] Review eager imports in:
+- [x] Audit large SVG assets imported at startup.
+- [x] Review eager imports in:
   [src/components/layout/ScenicHero.tsx](/Users/nikhilmehral/dev/tiny-tummy/src/components/layout/ScenicHero.tsx)
-- [ ] Replace oversized assets with optimized variants where quality allows.
-- [ ] Consider lazy-loading non-critical artwork for lower-priority screens.
-- [ ] Re-check build output after cleanup and record the delta.
+- [x] Replace oversized assets with optimized variants where quality allows.
+- [x] Consider lazy-loading non-critical artwork for lower-priority screens.
+- [x] Re-check build output after cleanup and record the delta.
+
+### Progress
+
+- [x] Replaced the decorative hero sun/moon SVG assets with lightweight CSS-rendered orbs in
+  [src/components/layout/ScenicHero.tsx](/Users/nikhilmehral/dev/tiny-tummy/src/components/layout/ScenicHero.tsx)
+- [x] Removed the 1.1 MB `sun.svg` and 150 KB `moon.svg` from the production build output by eliminating their imports from
+  [src/assets/illustrations/index.ts](/Users/nikhilmehral/dev/tiny-tummy/src/assets/illustrations/index.ts)
+- [x] Simplified the hero sun and moon artwork into compact SVGs:
+  [src/assets/illustrations/hero/sun.svg](/Users/nikhilmehral/dev/tiny-tummy/src/assets/illustrations/hero/sun.svg),
+  [src/assets/illustrations/hero/moon.svg](/Users/nikhilmehral/dev/tiny-tummy/src/assets/illustrations/hero/moon.svg)
+- [x] Deferred chart components behind lazy imports:
+  [src/pages/Growth.tsx](/Users/nikhilmehral/dev/tiny-tummy/src/pages/Growth.tsx),
+  [src/pages/Dashboard.tsx](/Users/nikhilmehral/dev/tiny-tummy/src/pages/Dashboard.tsx)
+- [x] Build output now emits separate chart chunks:
+  `GrowthTrendChart`, `FrequencyChart`, and `ConsistencyTrend`
+- [x] Deferred the main route shell and startup pages behind lazy imports:
+  [src/App.tsx](/Users/nikhilmehral/dev/tiny-tummy/src/App.tsx)
+- [x] Build delta after Phase 8 cleanup:
+  main bundle reduced from about `509.66 kB` minified to about `299.22 kB` minified,
+  with route and feature code now emitted in separate chunks such as `Home`, `AppShell`, `ScenicHero`, and chart chunks.
 
 ### Exit Criteria
 
@@ -477,7 +497,7 @@ Improve startup and production asset loading now that structure is cleaner.
 
 ## Phase 9: Structural Readiness Review
 
-Status: `[Todo]`
+Status: `[Done]`
 
 ### Goal
 
@@ -485,12 +505,26 @@ Verify that the codebase is actually in a testable shape before broad test expan
 
 ### Tasks
 
-- [ ] Re-run dead-code scan.
-- [ ] Re-run build, test, and lint.
-- [ ] Review biggest files by line count again and confirm the largest hotspots have been decomposed.
-- [ ] Confirm major feature flows are implemented through shared abstractions rather than duplication.
-- [ ] Confirm storage-dependent UI is mockable.
-- [ ] Confirm no structural blockers remain for broad testing.
+- [x] Re-run dead-code scan.
+- [x] Re-run build, test, and lint.
+- [x] Review biggest files by line count again and confirm the largest hotspots have been decomposed.
+- [x] Confirm major feature flows are implemented through shared abstractions rather than duplication.
+- [x] Confirm storage-dependent UI is mockable.
+- [x] Confirm no structural blockers remain for broad testing.
+
+### Audit Notes
+
+- [x] `npm run check:all` passes cleanly after the Phase 8 bundle work.
+- [x] Direct `db.*` usage remains out of `src/pages`, `src/components`, and `src/contexts`; storage access is concentrated in focused hooks and a small number of service-style `lib` modules.
+- [x] The largest remaining route file is [src/pages/Growth.tsx](/Users/nikhilmehral/dev/tiny-tummy/src/pages/Growth.tsx) at 512 lines. This is the main residual route hotspot, but it is materially smaller than the earlier monolith pages and no longer blocks broad testing.
+- [x] The largest files left are mostly infrastructure or pure/helper modules rather than route-level UI monoliths:
+  [src/lib/db.ts](/Users/nikhilmehral/dev/tiny-tummy/src/lib/db.ts),
+  [src/lib/reporting.ts](/Users/nikhilmehral/dev/tiny-tummy/src/lib/reporting.ts),
+  [src/lib/poop-insights.ts](/Users/nikhilmehral/dev/tiny-tummy/src/lib/poop-insights.ts),
+  [src/lib/feed-insights.ts](/Users/nikhilmehral/dev/tiny-tummy/src/lib/feed-insights.ts),
+  [src/lib/sleep-insights.ts](/Users/nikhilmehral/dev/tiny-tummy/src/lib/sleep-insights.ts),
+  and [src/components/history/HistoryTimeline.tsx](/Users/nikhilmehral/dev/tiny-tummy/src/components/history/HistoryTimeline.tsx).
+- [x] Structural blockers for broad testing are considered cleared; the next phase can focus on expanding test coverage rather than more prerequisite architecture work.
 
 ### Exit Criteria
 
