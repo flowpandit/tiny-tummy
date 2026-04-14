@@ -10,6 +10,8 @@ import {
 import { purchasePremium, restorePurchases, syncOwnedPurchase } from "../lib/billing-service";
 import { createExternalStore, type ExternalStore } from "../lib/store";
 
+const STARTUP_LOAD_TIMEOUT_MS = 30000;
+
 interface TrialStoreState {
   entitlement: EntitlementState | null;
   isLoading: boolean;
@@ -47,7 +49,9 @@ export function createTrialStore(): TrialStore {
     }));
 
     try {
-      const entitlement = await withTimeout(getEntitlementState(), 8000, "Loading access state");
+      // Tauri desktop startup can be noticeably slower in CI while the WebView,
+      // plugin-sql, and app-data SQLite file initialize for the first time.
+      const entitlement = await withTimeout(getEntitlementState(), STARTUP_LOAD_TIMEOUT_MS, "Loading access state");
       store.setState((state) => ({
         ...state,
         entitlement,
