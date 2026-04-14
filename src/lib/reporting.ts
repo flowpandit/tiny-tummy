@@ -98,6 +98,17 @@ export interface ReportData {
   timeline: ReportTimelineRow[];
 }
 
+export interface ReportSourceData {
+  logs: PoopEntry[];
+  feedingLogs: FeedingEntry[];
+  growthLogs: GrowthEntry[];
+  episodes: Episode[];
+  episodeEvents: EpisodeEvent[];
+  symptomLogs: SymptomEntry[];
+  milestoneLogs: MilestoneEntry[];
+  caregiverNote: string | null;
+}
+
 export const defaultReportOptions: ReportOptions = {
   includeFeeds: true,
   includeEpisodes: true,
@@ -109,6 +120,35 @@ export const defaultReportOptions: ReportOptions = {
   includeCaregiverNote: true,
   includePhotos: true,
 };
+
+export async function fetchReportSourceData(
+  childId: string,
+  startDate: string,
+  endDate: string,
+  options: ReportOptions = defaultReportOptions,
+): Promise<ReportSourceData> {
+  const [logs, feedingLogs, episodes, episodeEvents, symptomLogs, milestoneLogs, caregiverNote, growthLogs] = await Promise.all([
+    db.getPoopLogsForRange(childId, startDate, endDate),
+    db.getFeedingLogsForRange(childId, startDate, endDate),
+    db.getEpisodesForRange(childId, startDate, endDate),
+    db.getEpisodeEventsForRange(childId, startDate, endDate),
+    db.getSymptomsForRange(childId, startDate, endDate),
+    db.getMilestonesForRange(childId, startDate, endDate),
+    db.getSetting(`handoff_note:${childId}`),
+    options.includeGrowth ? db.getGrowthLogsForRange(childId, startDate, endDate) : Promise.resolve([]),
+  ]);
+
+  return {
+    logs,
+    feedingLogs,
+    growthLogs,
+    episodes,
+    episodeEvents,
+    symptomLogs,
+    milestoneLogs,
+    caregiverNote,
+  };
+}
 
 function dateKey(isoString: string): string {
   return isoString.split("T")[0];
@@ -629,6 +669,73 @@ function buildTimeline(input: {
     .map(({ sortAt: _sortAt, ...row }) => row);
 }
 
+export function buildReportData(
+  source: ReportSourceData,
+  startDate: string,
+  endDate: string,
+  options: ReportOptions = defaultReportOptions,
+  unitSystem: UnitSystem = "metric",
+): ReportData {
+  const dayCount = getDateRangeLength(startDate, endDate);
+  const episodeGroups: EpisodeReportGroup[] = source.episodes.map((episode) => ({
+    episode,
+    events: source.episodeEvents.filter((event) => event.episode_id === episode.id),
+  }));
+  const activeEpisodeGroup = episodeGroups.find((group) => group.episode.status === "active") ?? null;
+
+  return {
+    logs: source.logs,
+    feedingLogs: source.feedingLogs,
+    growthLogs: source.growthLogs,
+    episodeGroups,
+    activeEpisodeGroup,
+    symptomLogs: source.symptomLogs,
+    milestoneLogs: source.milestoneLogs,
+    caregiverNote: source.caregiverNote,
+    photoUrls: {},
+    highlights: buildReportHighlights({
+      logs: source.logs,
+      feedingLogs: source.feedingLogs,
+      episodeGroups,
+      symptomLogs: source.symptomLogs,
+      milestoneLogs: source.milestoneLogs,
+    }),
+    stats: buildLegacyStats(source.logs, dayCount),
+    dashboardStats: buildDashboardStats({
+      logs: source.logs,
+      feedingLogs: source.feedingLogs,
+      symptomLogs: source.symptomLogs,
+      growthLogs: source.growthLogs,
+      activeEpisodeGroup,
+      dayCount,
+      unitSystem,
+    }),
+    chartData: buildChartData(endDate, source.logs, source.feedingLogs, unitSystem),
+    contextSections: buildContextSections({
+      feedingLogs: source.feedingLogs,
+      symptomLogs: source.symptomLogs,
+      milestoneLogs: source.milestoneLogs,
+      growthLogs: source.growthLogs,
+      episodeGroups,
+      activeEpisodeGroup,
+      caregiverNote: source.caregiverNote,
+      options,
+      dayCount,
+      unitSystem,
+    }),
+    timeline: buildTimeline({
+      logs: source.logs,
+      feedingLogs: source.feedingLogs,
+      symptomLogs: source.symptomLogs,
+      milestoneLogs: source.milestoneLogs,
+      growthLogs: source.growthLogs,
+      episodeGroups,
+      options,
+      unitSystem,
+    }),
+  };
+}
+
 export async function generateReportData(
   childId: string,
   startDate: string,
@@ -636,68 +743,6 @@ export async function generateReportData(
   options: ReportOptions = defaultReportOptions,
   unitSystem: UnitSystem = "metric",
 ): Promise<ReportData> {
-  const dayCount = getDateRangeLength(startDate, endDate);
-
-  const [logs, feedingLogs, episodes, episodeEvents, symptomLogs, milestoneLogs, caregiverNote, growthLogs] = await Promise.all([
-    db.getPoopLogsForRange(childId, startDate, endDate),
-    db.getFeedingLogsForRange(childId, startDate, endDate),
-    db.getEpisodesForRange(childId, startDate, endDate),
-    db.getEpisodeEventsForRange(childId, startDate, endDate),
-    db.getSymptomsForRange(childId, startDate, endDate),
-    db.getMilestonesForRange(childId, startDate, endDate),
-    db.getSetting(`handoff_note:${childId}`),
-    options.includeGrowth ? db.getGrowthLogsForRange(childId, startDate, endDate) : Promise.resolve([]),
-  ]);
-
-  const episodeGroups: EpisodeReportGroup[] = episodes.map((episode) => ({
-    episode,
-    events: episodeEvents.filter((event) => event.episode_id === episode.id),
-  }));
-  const activeEpisodeGroup = episodeGroups.find((group) => group.episode.status === "active") ?? null;
-
-  return {
-    logs,
-    feedingLogs,
-    growthLogs,
-    episodeGroups,
-    activeEpisodeGroup,
-    symptomLogs,
-    milestoneLogs,
-    caregiverNote,
-    photoUrls: {},
-    highlights: buildReportHighlights({ logs, feedingLogs, episodeGroups, symptomLogs, milestoneLogs }),
-    stats: buildLegacyStats(logs, dayCount),
-    dashboardStats: buildDashboardStats({
-      logs,
-      feedingLogs,
-      symptomLogs,
-      growthLogs,
-      activeEpisodeGroup,
-      dayCount,
-      unitSystem,
-    }),
-    chartData: buildChartData(endDate, logs, feedingLogs, unitSystem),
-    contextSections: buildContextSections({
-      feedingLogs,
-      symptomLogs,
-      milestoneLogs,
-      growthLogs,
-      episodeGroups,
-      activeEpisodeGroup,
-      caregiverNote,
-      options,
-      dayCount,
-      unitSystem,
-    }),
-    timeline: buildTimeline({
-      logs,
-      feedingLogs,
-      symptomLogs,
-      milestoneLogs,
-      growthLogs,
-      episodeGroups,
-      options,
-      unitSystem,
-    }),
-  };
+  const source = await fetchReportSourceData(childId, startDate, endDate, options);
+  return buildReportData(source, startDate, endDate, options, unitSystem);
 }

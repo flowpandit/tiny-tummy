@@ -12,25 +12,32 @@ import type { Child } from "../../lib/types";
 interface NormalRangeIntroProps {
   child: Child;
   onFinish: () => Promise<void>;
+  getChildStatusAction?: typeof getChildStatus;
+  navigateAction?: (to: string, options?: { replace?: boolean }) => void;
 }
 
-export function NormalRangeIntro({ child, onFinish }: NormalRangeIntroProps) {
+export function NormalRangeIntro({
+  child,
+  onFinish,
+  getChildStatusAction = getChildStatus,
+  navigateAction,
+}: NormalRangeIntroProps) {
   const navigate = useNavigate();
   const [normalDesc, setNormalDesc] = useState("");
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    getChildStatus(child.date_of_birth, child.feeding_type, null).then(
+    getChildStatusAction(child.date_of_birth, child.feeding_type, null).then(
       ([_, desc]) => {
         setNormalDesc(desc);
         setIsLoading(false);
       },
     );
-  }, [child]);
+  }, [child, getChildStatusAction]);
 
   const handleFinish = async () => {
     await onFinish();
-    navigate("/", { replace: true });
+    (navigateAction ?? navigate)("/", { replace: true });
   };
 
   const feedingLabel =

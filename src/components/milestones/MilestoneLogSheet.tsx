@@ -1,63 +1,27 @@
-import { useEffect, useState, type FormEvent } from "react";
-import { Sheet } from "../ui/sheet";
+import type { FormEvent } from "react";
+import { Sheet, type SheetVisibilityProps } from "../ui/sheet";
 import { Button } from "../ui/button";
 import { DatePicker } from "../ui/date-picker";
 import { TimePicker } from "../ui/time-picker";
 import { useToast } from "../ui/toast";
 import { cn } from "../../lib/cn";
+import { useMilestoneLogSheetState } from "../../hooks/useMilestoneLogSheetState";
 import { MILESTONE_OPTIONS } from "../../lib/milestone-constants";
-import { combineLocalDateAndTimeToUtcIso, getCurrentLocalDate, getCurrentLocalTime } from "../../lib/utils";
-import * as db from "../../lib/db";
-import type { MilestoneType } from "../../lib/types";
+import { getCurrentLocalDate } from "../../lib/utils";
 
-interface MilestoneLogSheetProps {
-  open: boolean;
-  onClose: () => void;
+interface MilestoneLogSheetProps extends SheetVisibilityProps {
   childId: string;
   onLogged: () => Promise<void> | void;
 }
 
 export function MilestoneLogSheet({ open, onClose, childId, onLogged }: MilestoneLogSheetProps) {
   const { showError, showSuccess } = useToast();
-  const [milestoneType, setMilestoneType] = useState<MilestoneType>("started_solids");
-  const [logDate, setLogDate] = useState(getCurrentLocalDate());
-  const [logTime, setLogTime] = useState(getCurrentLocalTime());
-  const [notes, setNotes] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  useEffect(() => {
-    if (!open) return;
-    setMilestoneType("started_solids");
-    setLogDate(getCurrentLocalDate());
-    setLogTime(getCurrentLocalTime());
-    setNotes("");
-    setIsSubmitting(false);
-  }, [open]);
-
-  const handleSubmit = async (event: FormEvent) => {
-    event.preventDefault();
-    if (isSubmitting) return;
-
-    setIsSubmitting(true);
-    try {
-      await db.createMilestoneLog({
-        child_id: childId,
-        milestone_type: milestoneType,
-        logged_at: combineLocalDateAndTimeToUtcIso(logDate, logTime),
-        notes: notes.trim() || null,
-      });
-      await onLogged();
-      showSuccess("Milestone saved.");
-      onClose();
-    } catch {
-      showError("Could not save the milestone. Please try again.");
-    }
-    setIsSubmitting(false);
-  };
+  const { milestoneType, setMilestoneType, logDate, setLogDate, logTime, setLogTime, notes, setNotes, isSubmitting, handleSubmit } =
+    useMilestoneLogSheetState({ open, childId, onLogged, onClose, onError: showError, onSuccess: showSuccess });
 
   return (
     <Sheet open={open} onClose={onClose}>
-      <form onSubmit={handleSubmit} className="px-5 pb-8">
+      <form onSubmit={(event: FormEvent) => { event.preventDefault(); void handleSubmit(); }} className="px-5 pb-8">
         <h2 className="mb-2 text-center font-[var(--font-display)] text-lg font-semibold text-[var(--color-text)]">
           Add milestone
         </h2>

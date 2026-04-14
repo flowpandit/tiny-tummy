@@ -1,94 +1,37 @@
-import { useState, type FormEvent } from "react";
-import { Sheet } from "../ui/sheet";
+import type { FormEvent } from "react";
+import { Sheet, type SheetVisibilityProps } from "../ui/sheet";
 import { Button } from "../ui/button";
 import { DatePicker } from "../ui/date-picker";
 import { TimePicker } from "../ui/time-picker";
 import { BOTTLE_CONTENTS, BREAST_SIDES, FOOD_TYPES } from "../../lib/diet-constants";
 import { cn } from "../../lib/cn";
 import { useToast } from "../ui/toast";
-import * as db from "../../lib/db";
+import { useEditMealSheetState } from "../../hooks/useEditMealSheetState";
 import { useUnits } from "../../contexts/UnitsContext";
-import { combineLocalDateAndTimeToUtcIso, getCurrentLocalDate, getLocalDateTimeParts } from "../../lib/utils";
-import { formatVolumeValue, getVolumeUnitLabel, parseVolumeInputToMl } from "../../lib/units";
-import type { BottleContent, BreastSide, DietEntry, FoodType } from "../../lib/types";
+import { getCurrentLocalDate } from "../../lib/utils";
+import { getVolumeUnitLabel } from "../../lib/units";
+import type { DietEntry } from "../../lib/types";
 
-interface EditMealSheetProps {
+interface EditMealSheetProps extends SheetVisibilityProps {
   entry: DietEntry;
-  open: boolean;
-  onClose: () => void;
   onSaved: () => void;
   onDeleted: () => void;
-}
-
-function parseInteger(value: string): number | null {
-  if (!value.trim()) return null;
-  const parsed = Number.parseInt(value, 10);
-  return Number.isFinite(parsed) ? parsed : null;
 }
 
 export function EditMealSheet({ entry, open, onClose, onSaved, onDeleted }: EditMealSheetProps) {
   const { showError } = useToast();
   const { unitSystem } = useUnits();
-  const entryLoggedAt = getLocalDateTimeParts(entry.logged_at);
-  const [logDate, setLogDate] = useState(entryLoggedAt.date);
-  const [logTime, setLogTime] = useState(entryLoggedAt.time);
-  const [foodType, setFoodType] = useState<FoodType>(entry.food_type);
-  const [foodName, setFoodName] = useState(entry.food_name ?? "");
-  const [amountMl, setAmountMl] = useState(() => entry.amount_ml !== null ? formatVolumeValue(entry.amount_ml, unitSystem, { includeUnit: false }) : "");
-  const [durationMinutes, setDurationMinutes] = useState(entry.duration_minutes?.toString() ?? "");
-  const [breastSide, setBreastSide] = useState<BreastSide | null>(entry.breast_side);
-  const [bottleContent, setBottleContent] = useState<BottleContent | null>(entry.bottle_content);
-  const [reactionNotes, setReactionNotes] = useState(entry.reaction_notes ?? "");
-  const [isConstipationSupport, setIsConstipationSupport] = useState(Boolean(entry.is_constipation_support));
-  const [notes, setNotes] = useState(entry.notes ?? "");
-  const [isSaving, setIsSaving] = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState(false);
   const volumeUnit = getVolumeUnitLabel(unitSystem);
-
-  const handleSave = async (e: FormEvent) => {
-    e.preventDefault();
-    const showsFoodName = foodType === "solids" || foodType === "other";
-    const showsAmount = foodType === "formula" || foodType === "bottle" || foodType === "pumping" || foodType === "water";
-    const showsDuration = foodType === "breast_milk" || foodType === "pumping";
-    const showsBreastSide = foodType === "breast_milk";
-    const showsBottleContent = foodType === "bottle";
-    const showsConstipationSupport = foodType === "solids" || foodType === "other";
-
-    setIsSaving(true);
-    try {
-      await db.updateDietLog(entry.id, {
-        logged_at: combineLocalDateAndTimeToUtcIso(logDate, logTime),
-        food_type: foodType,
-        food_name: showsFoodName ? foodName.trim() || null : null,
-        amount_ml: showsAmount ? parseVolumeInputToMl(amountMl, unitSystem) : null,
-        duration_minutes: showsDuration ? parseInteger(durationMinutes) : null,
-        breast_side: showsBreastSide ? breastSide : null,
-        bottle_content: showsBottleContent ? bottleContent : null,
-        reaction_notes: reactionNotes.trim() || null,
-        is_constipation_support: showsConstipationSupport && isConstipationSupport ? 1 : 0,
-        notes: notes.trim() || null,
-      });
-      onSaved();
-      onClose();
-    } catch {
-      showError("Failed to save changes. Please try again.");
-    }
-    setIsSaving(false);
-  };
-
-  const handleDelete = async () => {
-    try {
-      await db.deleteDietLog(entry.id);
-      onDeleted();
-      onClose();
-    } catch {
-      showError("Failed to delete. Please try again.");
-    }
-  };
+  const {
+    logDate, setLogDate, logTime, setLogTime, foodType, setFoodType, foodName, setFoodName, amountMl, setAmountMl,
+    durationMinutes, setDurationMinutes, breastSide, setBreastSide, bottleContent, setBottleContent, reactionNotes,
+    setReactionNotes, isConstipationSupport, setIsConstipationSupport, notes, setNotes, isSaving, confirmDelete,
+    setConfirmDelete, handleSave, handleDelete,
+  } = useEditMealSheetState({ entry, unitSystem, onClose, onSaved, onDeleted, onError: showError });
 
   return (
     <Sheet open={open} onClose={onClose}>
-      <form onSubmit={handleSave} className="px-5 pb-8">
+      <form onSubmit={(e: FormEvent) => { e.preventDefault(); void handleSave(); }} className="px-5 pb-8">
         <h2 className="font-[var(--font-display)] text-lg font-semibold text-[var(--color-text)] mb-5 text-center">
           Edit feed
         </h2>

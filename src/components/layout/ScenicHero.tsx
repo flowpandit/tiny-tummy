@@ -1,22 +1,24 @@
 import { useEffect, useState, type ReactNode, type RefObject } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import watercolorClouds from "../../assets/svg-assets/hero-pieces/watercolor-clouds.svg";
-import watercolorCloudsDark from "../../assets/svg-assets/hero-pieces/watercolor-clouds-dark.svg";
-import watercolorMountains from "../../assets/svg-assets/hero-pieces/watercolor-mountains.svg";
-import watercolorMountainsDark from "../../assets/svg-assets/hero-pieces/watercolor-mountains-dark.svg";
-import heroBackgroundArt from "../../assets/svg-assets/hero-background.svg";
-import heroBackgroundArtDark from "../../assets/svg-assets/hero-background-dark.svg";
-import breastfeedingSceneArt from "../../assets/svg-assets/breastfeeding.svg";
-import diaperSceneArt from "../../assets/svg-assets/diaper.svg";
-import feedSceneArt from "../../assets/svg-assets/feed.svg";
-import growthSceneArt from "../../assets/svg-assets/growth.svg";
-import poopSceneArt from "../../assets/svg-assets/poop.svg";
-import sleepSceneArt from "../../assets/svg-assets/sleep.svg";
-import sceneMoon from "../../assets/svg-assets/moon.svg";
-import sceneSun from "../../assets/svg-assets/sun.svg";
+import {
+  breastfeedingSceneArt,
+  diaperSceneArt,
+  feedSceneArt,
+  growthSceneArt,
+  heroBackgroundArt,
+  heroBackgroundArtDark,
+  poopSceneArt,
+  sceneMoon,
+  sceneSun,
+  sleepSceneArt,
+  watercolorClouds,
+  watercolorCloudsDark,
+  watercolorMountains,
+  watercolorMountainsDark,
+} from "../../assets/illustrations";
 import type { Child } from "../../lib/types";
 import { getAgeLabelFromDob } from "../../lib/utils";
-import { useChildContext } from "../../contexts/ChildContext";
+import { useChildActions, useChildren } from "../../contexts/ChildContext";
 import { useTheme } from "../../contexts/ThemeContext";
 import { Avatar } from "../child/Avatar";
 
@@ -45,7 +47,8 @@ export function ScenicHero({
   className,
   scene = "default",
 }: ScenicHeroProps) {
-  const { children, setActiveChildId } = useChildContext();
+  const children = useChildren();
+  const { setActiveChildId } = useChildActions();
   const { resolved } = useTheme();
   const isDarkArtwork = resolved !== "light";
   const skyArt = isDarkArtwork ? watercolorCloudsDark : watercolorClouds;
@@ -105,7 +108,7 @@ export function ScenicHero({
               className={isDarkArtwork
                 ? "pointer-events-none absolute right-[18px] top-[34px] w-[112px] md:right-[74px] md:top-[54px] md:w-[96px] lg:right-[92px] lg:top-[62px] lg:w-[108px]"
                 : "pointer-events-none absolute right-[14px] top-[14px] w-[118px] opacity-95 md:right-[72px] md:top-[46px] md:w-[92px] lg:right-[88px] lg:top-[54px] lg:w-[104px]"}
-              style={{ opacity: isDarkArtwork ? 0.72 : 0.95 }}
+              style={{ opacity: isDarkArtwork ? 0.78 : 0.96 }}
             />
             <img
               src={ridgeArt}

@@ -1,7 +1,7 @@
 import { cn } from "../../lib/cn";
 import { STOOL_SIZES } from "../../lib/constants";
 import { useTheme } from "../../contexts/ThemeContext";
-import { getLoggingChipClassName, getLoggingLabelClassName } from "./logging-form-primitives";
+import { getLoggingChipClassName, getLoggingLabelClassName } from "./logging-form-classnames";
 import type { StoolSize } from "../../lib/types";
 
 interface SizePickerProps {

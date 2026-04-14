@@ -1,5 +1,5 @@
-import { useState, type FormEvent } from "react";
-import { Sheet } from "../ui/sheet";
+import type { FormEvent } from "react";
+import { Sheet, type SheetVisibilityProps } from "../ui/sheet";
 import { Button } from "../ui/button";
 import { DatePicker } from "../ui/date-picker";
 import { TimePicker } from "../ui/time-picker";
@@ -9,17 +9,15 @@ import { StoolTypePicker } from "./StoolTypePicker";
 import { ColorPicker } from "./ColorPicker";
 import { SizePicker } from "./SizePicker";
 import { useToast } from "../ui/toast";
+import { useEditDiaperSheetState } from "../../hooks/useEditDiaperSheetState";
 import { diaperIncludesStool, diaperIncludesWet } from "../../lib/diaper";
-import { combineLocalDateAndTimeToUtcIso, getCurrentLocalDate, getLocalDateTimeParts } from "../../lib/utils";
-import * as db from "../../lib/db";
-import type { DiaperEntry, DiaperType, StoolColor, StoolSize, UrineColor } from "../../lib/types";
+import { getCurrentLocalDate } from "../../lib/utils";
+import type { DiaperEntry } from "../../lib/types";
 
-function hasUrine(type: DiaperType) {
-  return diaperIncludesWet(type);
-}
-
-function hasStool(type: DiaperType) {
-  return diaperIncludesStool(type);
+interface EditDiaperSheetProps extends SheetVisibilityProps {
+  entry: DiaperEntry;
+  onSaved: () => void;
+  onDeleted: () => void;
 }
 
 export function EditDiaperSheet({
@@ -28,60 +26,41 @@ export function EditDiaperSheet({
   onClose,
   onSaved,
   onDeleted,
-}: {
-  entry: DiaperEntry;
-  open: boolean;
-  onClose: () => void;
-  onSaved: () => void;
-  onDeleted: () => void;
-}) {
+}: EditDiaperSheetProps) {
   const { showError } = useToast();
-  const entryLoggedAt = getLocalDateTimeParts(entry.logged_at);
-  const [logDate, setLogDate] = useState(entryLoggedAt.date);
-  const [logTime, setLogTime] = useState(entryLoggedAt.time);
-  const [diaperType, setDiaperType] = useState<DiaperType>(entry.diaper_type);
-  const [urineColor, setUrineColor] = useState<UrineColor | null>(entry.urine_color);
-  const [stoolType, setStoolType] = useState<number | null>(entry.stool_type);
-  const [color, setColor] = useState<StoolColor | null>(entry.color);
-  const [size, setSize] = useState<StoolSize | null>(entry.size);
-  const [notes, setNotes] = useState(entry.notes ?? "");
-  const [isSaving, setIsSaving] = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState(false);
-
-  const handleSave = async (event: FormEvent) => {
-    event.preventDefault();
-    setIsSaving(true);
-    try {
-      await db.updateDiaperLog(entry.id, {
-        logged_at: combineLocalDateAndTimeToUtcIso(logDate, logTime),
-        diaper_type: diaperType,
-        urine_color: hasUrine(diaperType) ? urineColor : null,
-        stool_type: hasStool(diaperType) ? stoolType : null,
-        color: hasStool(diaperType) ? color : null,
-        size: hasStool(diaperType) ? size : null,
-        notes: notes.trim() || null,
-      });
-      onSaved();
-      onClose();
-    } catch {
-      showError("Failed to save changes. Please try again.");
-    }
-    setIsSaving(false);
-  };
-
-  const handleDelete = async () => {
-    try {
-      await db.deleteDiaperLog(entry);
-      onDeleted();
-      onClose();
-    } catch {
-      showError("Failed to delete. Please try again.");
-    }
-  };
+  const {
+    logDate,
+    setLogDate,
+    logTime,
+    setLogTime,
+    diaperType,
+    setDiaperType,
+    urineColor,
+    setUrineColor,
+    stoolType,
+    setStoolType,
+    color,
+    setColor,
+    size,
+    setSize,
+    notes,
+    setNotes,
+    isSaving,
+    confirmDelete,
+    setConfirmDelete,
+    handleSave,
+    handleDelete,
+  } = useEditDiaperSheetState({
+    entry,
+    onClose,
+    onSaved,
+    onDeleted,
+    onError: showError,
+  });
 
   return (
     <Sheet open={open} onClose={onClose}>
-      <form onSubmit={handleSave} className="px-5 pb-8">
+      <form onSubmit={(event: FormEvent) => { event.preventDefault(); void handleSave(); }} className="px-5 pb-8">
         <h2 className="mb-5 text-center font-[var(--font-display)] text-lg font-semibold text-[var(--color-text)]">
           Edit diaper
         </h2>
@@ -97,11 +76,11 @@ export function EditDiaperSheet({
 
           <DiaperTypePicker value={diaperType} onChange={setDiaperType} />
 
-          {hasUrine(diaperType) && (
+          {diaperIncludesWet(diaperType) && (
             <UrineColorPicker value={urineColor} onChange={setUrineColor} />
           )}
 
-          {hasStool(diaperType) && (
+          {diaperIncludesStool(diaperType) && (
             <>
               <StoolTypePicker value={stoolType} onChange={setStoolType} />
               <ColorPicker value={color} onChange={setColor} />

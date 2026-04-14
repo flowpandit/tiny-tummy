@@ -1,16 +1,21 @@
-import { useState } from "react";
-import { useChildContext } from "../contexts/ChildContext";
+import { lazy, Suspense, useState } from "react";
+import { useActiveChild } from "../contexts/ChildContext";
 import { useStats } from "../hooks/useStats";
 import { usePoopLogs } from "../hooks/usePoopLogs";
 import { useFeedingLogs } from "../hooks/useFeedingLogs";
 import { Card, CardHeader, CardTitle, CardContent } from "../components/ui/card";
 import { PageBody, EmptyState } from "../components/ui/page-layout";
 import { DiscoveryLinks } from "../components/discovery/DiscoveryLinks";
-import { FrequencyChart } from "../components/dashboard/FrequencyChart";
-import { ConsistencyTrend } from "../components/dashboard/ConsistencyTrend";
 import { ColorDistribution } from "../components/dashboard/ColorDistribution";
 import { DietCorrelation } from "../components/dashboard/DietCorrelation";
 import { cn } from "../lib/cn";
+
+const FrequencyChart = lazy(() =>
+  import("../components/dashboard/FrequencyChart").then((module) => ({ default: module.FrequencyChart })),
+);
+const ConsistencyTrend = lazy(() =>
+  import("../components/dashboard/ConsistencyTrend").then((module) => ({ default: module.ConsistencyTrend })),
+);
 
 const PERIOD_OPTIONS = [
   { label: "7 days", value: 7 },
@@ -19,7 +24,7 @@ const PERIOD_OPTIONS = [
 ];
 
 export function Dashboard() {
-  const { activeChild } = useChildContext();
+  const activeChild = useActiveChild();
   const [days, setDays] = useState(7);
   const { logs } = usePoopLogs(activeChild?.id ?? null);
   const { logs: feedingLogs } = useFeedingLogs(activeChild?.id ?? null);
@@ -47,6 +52,12 @@ export function Dashboard() {
       </PageBody>
     );
   }
+
+  const chartFallback = (
+    <div className="flex h-52 items-center justify-center rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-strong)] text-sm text-[var(--color-text-secondary)]">
+      Loading chart...
+    </div>
+  );
 
   return (
     <PageBody>
@@ -87,7 +98,9 @@ export function Dashboard() {
           </CardHeader>
           <CardContent>
             {frequency.length > 0 ? (
-              <FrequencyChart data={frequency} days={days} />
+              <Suspense fallback={chartFallback}>
+                <FrequencyChart data={frequency} days={days} />
+              </Suspense>
             ) : (
               <p className="text-sm text-[var(--color-muted)] text-center py-8">
                 No data for this period
@@ -105,7 +118,9 @@ export function Dashboard() {
           </CardHeader>
           <CardContent>
             {consistency.length > 0 ? (
-              <ConsistencyTrend data={consistency} />
+              <Suspense fallback={chartFallback}>
+                <ConsistencyTrend data={consistency} />
+              </Suspense>
             ) : (
               <p className="text-sm text-[var(--color-muted)] text-center py-8">
                 No type data for this period

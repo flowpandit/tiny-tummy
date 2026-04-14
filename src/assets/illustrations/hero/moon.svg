@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160">
+  <defs>
+    <radialGradient id="moon-glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#e6edff" stop-opacity=".32"/>
+      <stop offset="100%" stop-color="#e6edff" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="moon-body" x1="20%" y1="10%" x2="85%" y2="90%">
+      <stop offset="0%" stop-color="#fbfdff"/>
+      <stop offset="52%" stop-color="#dfe8f7"/>
+      <stop offset="100%" stop-color="#b6c3de"/>
+    </linearGradient>
+    <mask id="crescent-cut">
+      <rect width="160" height="160" fill="#fff"/>
+      <circle cx="100" cy="74" r="44" fill="#000"/>
+    </mask>
+  </defs>
+  <circle cx="80" cy="80" r="58" fill="url(#moon-glow)"/>
+  <circle cx="70" cy="82" r="40" fill="url(#moon-body)" mask="url(#crescent-cut)"/>
+  <circle cx="60" cy="67" r="5.5" fill="#c5d0e7" opacity=".28"/>
+  <circle cx="72" cy="97" r="4.5" fill="#b3bfd9" opacity=".24"/>
+  <circle cx="81" cy="83" r="3.2" fill="#d5def0" opacity=".2"/>
+</svg>

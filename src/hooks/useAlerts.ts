@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import type { Alert } from "../lib/types";
-import * as db from "../lib/db";
+import { useDbClient } from "../contexts/DatabaseContext";
 
 export function useAlerts(childId: string | null) {
+  const db = useDbClient();
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const requestIdRef = useRef(0);
 

@@ -1,5 +1,5 @@
-import { useState, type FormEvent } from "react";
-import { Sheet } from "../ui/sheet";
+import type { FormEvent } from "react";
+import { Sheet, type SheetVisibilityProps } from "../ui/sheet";
 import { Button } from "../ui/button";
 import { DatePicker } from "../ui/date-picker";
 import { TimePicker } from "../ui/time-picker";
@@ -7,62 +7,47 @@ import { StoolTypePicker } from "./StoolTypePicker";
 import { ColorPicker } from "./ColorPicker";
 import { SizePicker } from "./SizePicker";
 import { useToast } from "../ui/toast";
-import { combineLocalDateAndTimeToUtcIso, getCurrentLocalDate, getLocalDateTimeParts } from "../../lib/utils";
-import * as db from "../../lib/db";
-import type { PoopEntry, StoolColor, StoolSize } from "../../lib/types";
+import { useEditPoopSheetState } from "../../hooks/useEditPoopSheetState";
+import { getCurrentLocalDate } from "../../lib/utils";
+import type { PoopEntry } from "../../lib/types";
 
-interface EditPoopSheetProps {
+interface EditPoopSheetProps extends SheetVisibilityProps {
   entry: PoopEntry;
-  open: boolean;
-  onClose: () => void;
   onSaved: () => void;
   onDeleted: () => void;
 }
 
 export function EditPoopSheet({ entry, open, onClose, onSaved, onDeleted }: EditPoopSheetProps) {
   const { showError } = useToast();
-  const entryLoggedAt = getLocalDateTimeParts(entry.logged_at);
-  const [logDate, setLogDate] = useState(entryLoggedAt.date);
-  const [logTime, setLogTime] = useState(entryLoggedAt.time);
-  const [stoolType, setStoolType] = useState<number | null>(entry.stool_type);
-  const [color, setColor] = useState<StoolColor | null>(entry.color);
-  const [size, setSize] = useState<StoolSize | null>(entry.size);
-  const [notes, setNotes] = useState(entry.notes ?? "");
-  const [isSaving, setIsSaving] = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState(false);
-
-  const handleSave = async (e: FormEvent) => {
-    e.preventDefault();
-    setIsSaving(true);
-    try {
-      await db.updatePoopLog(entry.id, {
-        logged_at: combineLocalDateAndTimeToUtcIso(logDate, logTime),
-        stool_type: stoolType,
-        color,
-        size,
-        notes: notes.trim() || null,
-      });
-      onSaved();
-      onClose();
-    } catch {
-      showError("Failed to save changes. Please try again.");
-    }
-    setIsSaving(false);
-  };
-
-  const handleDelete = async () => {
-    try {
-      await db.deletePoopLog(entry);
-      onDeleted();
-      onClose();
-    } catch {
-      showError("Failed to delete. Please try again.");
-    }
-  };
+  const {
+    logDate,
+    setLogDate,
+    logTime,
+    setLogTime,
+    stoolType,
+    setStoolType,
+    color,
+    setColor,
+    size,
+    setSize,
+    notes,
+    setNotes,
+    isSaving,
+    confirmDelete,
+    setConfirmDelete,
+    handleSave,
+    handleDelete,
+  } = useEditPoopSheetState({
+    entry,
+    onClose,
+    onSaved,
+    onDeleted,
+    onError: showError,
+  });
 
   return (
     <Sheet open={open} onClose={onClose}>
-      <form onSubmit={handleSave} className="px-5 pb-8">
+      <form onSubmit={(e: FormEvent) => { e.preventDefault(); void handleSave(); }} className="px-5 pb-8">
         <h2 className="font-[var(--font-display)] text-lg font-semibold text-[var(--color-text)] mb-5 text-center">
           Edit entry
         </h2>

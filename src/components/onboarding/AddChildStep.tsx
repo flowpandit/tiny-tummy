@@ -4,15 +4,18 @@ import { Card, CardContent } from "../ui/card";
 import { DatePicker } from "../ui/date-picker";
 import { FEEDING_TYPES, AVATAR_COLORS, CHILD_SEX_OPTIONS } from "../../lib/constants";
 import { cn } from "../../lib/cn";
-import * as db from "../../lib/db";
+import { useCreateChildAction } from "../../hooks/useCreateChildAction";
 import { getCurrentLocalDate } from "../../lib/utils";
 import type { Child, ChildSex, FeedingType } from "../../lib/types";
 
 interface AddChildStepProps {
   onChildCreated: (child: Child) => void;
+  createChildAction?: ReturnType<typeof useCreateChildAction>;
 }
 
-export function AddChildStep({ onChildCreated }: AddChildStepProps) {
+export function AddChildStep({ onChildCreated, createChildAction }: AddChildStepProps) {
+  const defaultCreateChild = useCreateChildAction();
+  const createChild = createChildAction ?? defaultCreateChild;
   const [name, setName] = useState("");
   const [dob, setDob] = useState(getCurrentLocalDate());
   const [sex, setSex] = useState<ChildSex | null>(null);
@@ -27,13 +30,7 @@ export function AddChildStep({ onChildCreated }: AddChildStepProps) {
     if (!isValid || isSubmitting) return;
 
     setIsSubmitting(true);
-    const child = await db.createChild({
-      name: name.trim(),
-      date_of_birth: dob,
-      sex,
-      feeding_type: feedingType,
-      avatar_color: avatarColor,
-    });
+    const child = await createChild({ name, dob, sex, feedingType, avatarColor });
     onChildCreated(child);
   };
 

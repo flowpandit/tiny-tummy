@@ -1,18 +1,16 @@
-import { useEffect, useState, type FormEvent } from "react";
-import { Sheet } from "../ui/sheet";
+import type { FormEvent } from "react";
+import { Sheet, type SheetVisibilityProps } from "../ui/sheet";
 import { Button } from "../ui/button";
 import { DatePicker } from "../ui/date-picker";
 import { TimePicker } from "../ui/time-picker";
 import { useToast } from "../ui/toast";
 import { useUnits } from "../../contexts/UnitsContext";
-import * as db from "../../lib/db";
-import { combineLocalDateAndTimeToUtcIso, getCurrentLocalDate, getCurrentLocalTime, getLocalDateTimeParts } from "../../lib/utils";
-import { formatGrowthValue, getGrowthUnitLabel, parseGrowthInputToMetric } from "../../lib/units";
+import { useGrowthLogSheetState } from "../../hooks/useGrowthLogSheetState";
+import { getCurrentLocalDate } from "../../lib/utils";
+import { getGrowthUnitLabel } from "../../lib/units";
 import type { GrowthEntry } from "../../lib/types";
 
-interface GrowthLogSheetProps {
-  open: boolean;
-  onClose: () => void;
+interface GrowthLogSheetProps extends SheetVisibilityProps {
   childId: string;
   onLogged: () => Promise<void> | void;
   entry?: GrowthEntry | null;
@@ -23,74 +21,11 @@ export function GrowthLogSheet({ open, onClose, childId, onLogged, entry = null,
   const { showError, showSuccess } = useToast();
   const { unitSystem } = useUnits();
   const isEditing = Boolean(entry);
-  const [measureDate, setMeasureDate] = useState(getCurrentLocalDate());
-  const [measureTime, setMeasureTime] = useState(getCurrentLocalTime());
-  const [weightKg, setWeightKg] = useState("");
-  const [heightCm, setHeightCm] = useState("");
-  const [headCircumferenceCm, setHeadCircumferenceCm] = useState("");
-  const [notes, setNotes] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState(false);
-
-  useEffect(() => {
-    if (!open) return;
-    const measureParts = entry?.measured_at ? getLocalDateTimeParts(entry.measured_at) : null;
-    setMeasureDate(measureParts?.date ?? getCurrentLocalDate());
-    setMeasureTime(measureParts?.time ?? getCurrentLocalTime());
-    setWeightKg(entry?.weight_kg !== null && entry?.weight_kg !== undefined ? formatGrowthValue("weight_kg", entry.weight_kg, unitSystem, { includeUnit: false }) : "");
-    setHeightCm(entry?.height_cm !== null && entry?.height_cm !== undefined ? formatGrowthValue("height_cm", entry.height_cm, unitSystem, { includeUnit: false }) : "");
-    setHeadCircumferenceCm(entry?.head_circumference_cm !== null && entry?.head_circumference_cm !== undefined ? formatGrowthValue("head_circumference_cm", entry.head_circumference_cm, unitSystem, { includeUnit: false }) : "");
-    setNotes(entry?.notes ?? "");
-    setIsSubmitting(false);
-    setConfirmDelete(false);
-  }, [entry, open, unitSystem]);
-
-  const hasAnyMeasurement = weightKg.trim() || heightCm.trim() || headCircumferenceCm.trim();
-
-  const handleSubmit = async (event: FormEvent) => {
-    event.preventDefault();
-    if (!hasAnyMeasurement || isSubmitting) return;
-
-    setIsSubmitting(true);
-    try {
-      const payload = {
-        measured_at: combineLocalDateAndTimeToUtcIso(measureDate, measureTime),
-        weight_kg: parseGrowthInputToMetric("weight_kg", weightKg, unitSystem),
-        height_cm: parseGrowthInputToMetric("height_cm", heightCm, unitSystem),
-        head_circumference_cm: parseGrowthInputToMetric("head_circumference_cm", headCircumferenceCm, unitSystem),
-        notes: notes.trim() || null,
-      };
-
-      if (entry) {
-        await db.updateGrowthLog(entry.id, payload);
-      } else {
-        await db.createGrowthLog({
-          child_id: childId,
-          ...payload,
-        });
-      }
-
-      await onLogged();
-      showSuccess(entry ? "Growth measurement updated." : "Growth measurement saved.");
-      onClose();
-    } catch {
-      showError(entry ? "Could not update the growth measurement. Please try again." : "Could not save the growth measurement. Please try again.");
-    }
-    setIsSubmitting(false);
-  };
-
-  const handleDelete = async () => {
-    if (!entry || !onDeleted) return;
-
-    try {
-      await db.deleteGrowthLog(entry.id);
-      await onDeleted();
-      showSuccess("Growth measurement deleted.");
-      onClose();
-    } catch {
-      showError("Could not delete the growth measurement. Please try again.");
-    }
-  };
+  const {
+    measureDate, setMeasureDate, measureTime, setMeasureTime, weightKg, setWeightKg, heightCm, setHeightCm,
+    headCircumferenceCm, setHeadCircumferenceCm, notes, setNotes, isSubmitting, confirmDelete, setConfirmDelete,
+    hasAnyMeasurement, handleSubmit, handleDelete,
+  } = useGrowthLogSheetState({ open, childId, unitSystem, entry, onLogged, onDeleted, onClose, onError: showError, onSuccess: showSuccess });
 
   const inputClassName = "w-full rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-3 text-sm text-[var(--color-text)] outline-none transition-colors focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20";
   const weightUnit = getGrowthUnitLabel("weight_kg", unitSystem);
@@ -99,7 +34,7 @@ export function GrowthLogSheet({ open, onClose, childId, onLogged, entry = null,
 
   return (
     <Sheet open={open} onClose={onClose}>
-      <form onSubmit={handleSubmit} className="px-5 pb-8">
+      <form onSubmit={(event: FormEvent) => { event.preventDefault(); void handleSubmit(); }} className="px-5 pb-8">
         <h2 className="mb-2 text-center font-[var(--font-display)] text-lg font-semibold text-[var(--color-text)]">
           {isEditing ? "Edit growth measurement" : "Add growth measurement"}
         </h2>

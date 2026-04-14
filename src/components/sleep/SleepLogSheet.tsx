@@ -1,27 +1,20 @@
-import { useEffect, useState, type FormEvent } from "react";
-import { Sheet } from "../ui/sheet";
+import type { FormEvent } from "react";
+import { Sheet, type SheetVisibilityProps } from "../ui/sheet";
 import { Button } from "../ui/button";
 import { DatePicker } from "../ui/date-picker";
 import { TimePicker } from "../ui/time-picker";
 import { FieldLabel, Textarea } from "../ui/field";
 import { SegmentedControl } from "../ui/segmented-control";
 import { useToast } from "../ui/toast";
+import { useSleepLogSheetState } from "../../hooks/useSleepLogSheetState";
 import { cn } from "../../lib/cn";
-import * as db from "../../lib/db";
 import type { SleepType } from "../../lib/types";
 import {
   formatSleepTimerClock,
-  getLocalTimestamp,
-  getSleepTimerElapsedMs,
-  getSleepTimerSettingKey,
-  parseSleepTimerSession,
-  type SleepTimerSession,
 } from "../../lib/sleep-timer";
-import { combineLocalDateAndTimeToUtcIso, formatLocalTimeValue, getCurrentLocalDate, getCurrentLocalTime } from "../../lib/utils";
+import { getCurrentLocalDate } from "../../lib/utils";
 
-interface SleepLogSheetProps {
-  open: boolean;
-  onClose: () => void;
+interface SleepLogSheetProps extends SheetVisibilityProps {
   childId: string;
   onLogged: () => Promise<void> | void;
 }
@@ -31,179 +24,48 @@ const SLEEP_TYPES: Array<{ value: SleepType; label: string; description: string 
   { value: "night", label: "Night", description: "Overnight sleep block." },
 ];
 
-function getDefaultEndTime(): string {
-  const date = new Date();
-  date.setHours(date.getHours() + 1);
-  return formatLocalTimeValue(date);
-}
-
 export function SleepLogSheet({ open, onClose, childId, onLogged }: SleepLogSheetProps) {
   const { showError, showSuccess } = useToast();
-  const [mode, setMode] = useState<"manual" | "timer">("manual");
-  const [sleepType, setSleepType] = useState<SleepType>("nap");
-  const [startDate, setStartDate] = useState(getCurrentLocalDate());
-  const [startTime, setStartTime] = useState(getCurrentLocalTime());
-  const [endDate, setEndDate] = useState(getCurrentLocalDate());
-  const [endTime, setEndTime] = useState(getDefaultEndTime());
-  const [notes, setNotes] = useState("");
-  const [timerSession, setTimerSession] = useState<SleepTimerSession | null>(null);
-  const [tick, setTick] = useState(Date.now());
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  useEffect(() => {
-    if (!open) return;
-
-    let cancelled = false;
-
-    db.getSetting(getSleepTimerSettingKey(childId))
-      .then((raw) => {
-        if (cancelled) return;
-        const session = parseSleepTimerSession(raw);
-        setTimerSession(session);
-        setMode(session ? "timer" : "manual");
-        setSleepType(session?.sleepType ?? "nap");
-        setStartDate(getCurrentLocalDate());
-        setStartTime(getCurrentLocalTime());
-        setEndDate(getCurrentLocalDate());
-        setEndTime(getDefaultEndTime());
-        setNotes(session?.notes ?? "");
-        setTick(Date.now());
-        setIsSubmitting(false);
-      })
-      .catch(() => {
-        if (cancelled) return;
-        setTimerSession(null);
-        setMode("manual");
-        setSleepType("nap");
-        setStartDate(getCurrentLocalDate());
-        setStartTime(getCurrentLocalTime());
-        setEndDate(getCurrentLocalDate());
-        setEndTime(getDefaultEndTime());
-        setNotes("");
-        setTick(Date.now());
-        setIsSubmitting(false);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [open]);
-
-  useEffect(() => {
-    if (!open || !timerSession) return;
-    const interval = window.setInterval(() => setTick(Date.now()), 1000);
-    return () => window.clearInterval(interval);
-  }, [open, timerSession]);
-
-  useEffect(() => {
-    if (!open) return;
-
-    const refreshTick = () => setTick(Date.now());
-    window.addEventListener("focus", refreshTick);
-    document.addEventListener("visibilitychange", refreshTick);
-    return () => {
-      window.removeEventListener("focus", refreshTick);
-      document.removeEventListener("visibilitychange", refreshTick);
-    };
-  }, [open]);
-
-  const persistTimerSession = async (session: SleepTimerSession | null) => {
-    await db.setSetting(getSleepTimerSettingKey(childId), session ? JSON.stringify(session) : "");
-  };
-
-  const handleStartTimer = async () => {
-    const nextSession: SleepTimerSession = {
-      sleepType,
-      startedAt: getLocalTimestamp(),
-      notes,
-    };
-
-    setTimerSession(nextSession);
-    setTick(Date.now());
-    await persistTimerSession(nextSession);
-  };
-
-  const handleStopAndSaveTimer = async () => {
-    if (!timerSession || isSubmitting) return;
-
-    const endedAt = getLocalTimestamp();
-    if (new Date(endedAt).getTime() <= new Date(timerSession.startedAt).getTime()) {
-      showError("Sleep timer needs to run for a little longer before saving.");
-      return;
-    }
-
-    setIsSubmitting(true);
-    try {
-      await db.createSleepLog({
-        child_id: childId,
-        sleep_type: timerSession.sleepType,
-        started_at: timerSession.startedAt,
-        ended_at: endedAt,
-        notes: timerSession.notes.trim() || null,
-      });
-      await persistTimerSession(null);
-      setTimerSession(null);
-      setNotes("");
-      await onLogged();
-      showSuccess("Sleep entry saved.");
-      onClose();
-    } catch {
-      showError("Could not save the sleep entry. Please try again.");
-    }
-    setIsSubmitting(false);
-  };
-
-  const handleCancelTimer = async () => {
-    await persistTimerSession(null);
-    setTimerSession(null);
-    setNotes("");
-    setMode("manual");
-  };
+  const {
+    mode,
+    setMode,
+    sleepType,
+    setSleepType,
+    startDate,
+    setStartDate,
+    startTime,
+    setStartTime,
+    endDate,
+    setEndDate,
+    endTime,
+    setEndTime,
+    notes,
+    setNotes,
+    timerSession,
+    timerElapsedMs,
+    isSubmitting,
+    handleStartTimer,
+    handleStopAndSaveTimer,
+    handleCancelTimer,
+    handleSaveManual,
+    handleTimerNotesChange,
+  } = useSleepLogSheetState({
+    open,
+    childId,
+    onLogged,
+    onClose,
+    onError: showError,
+    onSuccess: showSuccess,
+  });
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
-    if (isSubmitting) return;
-
     if (mode === "timer") {
       await handleStopAndSaveTimer();
       return;
     }
-
-    const startedAt = combineLocalDateAndTimeToUtcIso(startDate, startTime);
-    const endedAt = combineLocalDateAndTimeToUtcIso(endDate, endTime);
-
-    if (new Date(endedAt).getTime() <= new Date(startedAt).getTime()) {
-      showError("End time needs to be after the start time.");
-      return;
-    }
-
-    setIsSubmitting(true);
-    try {
-      await db.createSleepLog({
-        child_id: childId,
-        sleep_type: sleepType,
-        started_at: startedAt,
-        ended_at: endedAt,
-        notes: notes.trim() || null,
-      });
-      await onLogged();
-      showSuccess("Sleep entry saved.");
-      onClose();
-    } catch {
-      showError("Could not save the sleep entry. Please try again.");
-    }
-    setIsSubmitting(false);
+    await handleSaveManual();
   };
-
-  const handleTimerNotesChange = async (value: string) => {
-    setNotes(value);
-    if (!timerSession) return;
-    const nextSession = { ...timerSession, notes: value };
-    setTimerSession(nextSession);
-    await persistTimerSession(nextSession);
-  };
-
-  const timerElapsedMs = timerSession ? getSleepTimerElapsedMs(timerSession, tick) : 0;
 
   return (
     <Sheet open={open} onClose={onClose}>

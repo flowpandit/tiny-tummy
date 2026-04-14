@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { useChildContext } from "../../contexts/ChildContext";
+import { useActiveChild } from "../../contexts/ChildContext";
 import { useEliminationPreference } from "../../hooks/useEliminationPreference";
 import { Header } from "./Header";
 import { BottomNav } from "./BottomNav";
@@ -37,7 +37,7 @@ function applyPullResistance(offset: number) {
 export function AppShell() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { activeChild } = useChildContext();
+  const activeChild = useActiveChild();
   const { experience } = useEliminationPreference(activeChild);
   const mainRef = useRef<HTMLElement | null>(null);
   const [isScrollHeaderVisible, setIsScrollHeaderVisible] = useState(false);

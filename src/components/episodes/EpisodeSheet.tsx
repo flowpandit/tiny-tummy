@@ -1,17 +1,17 @@
-import { useEffect, useRef, useState, type FormEvent } from "react";
-import { Sheet } from "../ui/sheet";
+import type { FormEvent } from "react";
+import { Sheet, type SheetVisibilityProps } from "../ui/sheet";
 import { Button } from "../ui/button";
 import { Badge } from "../ui/badge";
 import { DatePicker } from "../ui/date-picker";
 import { TimePicker } from "../ui/time-picker";
 import { Card, CardContent } from "../ui/card";
 import { useToast } from "../ui/toast";
-import { useChildContext } from "../../contexts/ChildContext";
+import { useChildActions, useChildren } from "../../contexts/ChildContext";
+import { useEpisodeSheetState } from "../../hooks/useEpisodeSheetState";
 import { cn } from "../../lib/cn";
 import { EPISODE_EVENT_TYPES, EPISODE_TYPES, getEpisodeEventTypeLabel, getEpisodeTypeLabel } from "../../lib/episode-constants";
-import { combineLocalDateAndTimeToUtcIso, formatDate, getCurrentLocalDate, getCurrentLocalTime, getLocalDateTimeParts } from "../../lib/utils";
-import * as db from "../../lib/db";
-import type { Episode, EpisodeEvent, EpisodeEventType, EpisodeType } from "../../lib/types";
+import { formatDate, getCurrentLocalDate } from "../../lib/utils";
+import type { Episode, EpisodeEvent, EpisodeType } from "../../lib/types";
 
 function getEpisodeBadgeVariant(episodeType: EpisodeType) {
   if (episodeType === "constipation") return "caution";
@@ -19,17 +19,7 @@ function getEpisodeBadgeVariant(episodeType: EpisodeType) {
   return "info";
 }
 
-function getDefaultEventTitle(eventType: EpisodeEventType): string {
-  if (eventType === "symptom") return "Symptom update";
-  if (eventType === "hydration") return "Hydration update";
-  if (eventType === "food") return "Food update";
-  if (eventType === "intervention") return "Intervention update";
-  return "Progress update";
-}
-
-interface EpisodeSheetProps {
-  open: boolean;
-  onClose: () => void;
+interface EpisodeSheetProps extends SheetVisibilityProps {
   childId: string;
   activeEpisode: Episode | null;
   events: EpisodeEvent[];
@@ -47,129 +37,24 @@ export function EpisodeSheet({
   initialMode = "default",
 }: EpisodeSheetProps) {
   const { showError, showSuccess } = useToast();
-  const { children, refreshChildren } = useChildContext();
-  const [episodeType, setEpisodeType] = useState<EpisodeType | null>(null);
-  const [episodeDate, setEpisodeDate] = useState(getCurrentLocalDate());
-  const [episodeTime, setEpisodeTime] = useState(getCurrentLocalTime());
-  const [summary, setSummary] = useState("");
-  const [eventType, setEventType] = useState<EpisodeEventType | null>("progress");
-  const [eventDate, setEventDate] = useState(getCurrentLocalDate());
-  const [eventTime, setEventTime] = useState(getCurrentLocalTime());
-  const [eventTitle, setEventTitle] = useState("");
-  const [eventNotes, setEventNotes] = useState("");
-  const [resolutionDate, setResolutionDate] = useState(getCurrentLocalDate());
-  const [resolutionTime, setResolutionTime] = useState(getCurrentLocalTime());
-  const [outcome, setOutcome] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isAddingEvent, setIsAddingEvent] = useState(false);
-  const [isResolving, setIsResolving] = useState(false);
-  const eventTitleRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-
-    setEpisodeType(null);
-    const episodeParts = activeEpisode?.started_at ? getLocalDateTimeParts(activeEpisode.started_at) : null;
-    setEpisodeDate(episodeParts?.date ?? getCurrentLocalDate());
-    setEpisodeTime(episodeParts?.time ?? getCurrentLocalTime());
-    setSummary("");
-    setEventType("progress");
-    setEventDate(getCurrentLocalDate());
-    setEventTime(getCurrentLocalTime());
-    setEventTitle("");
-    setEventNotes("");
-    setResolutionDate(getCurrentLocalDate());
-    setResolutionTime(getCurrentLocalTime());
-    setOutcome("");
-  }, [open, activeEpisode]);
-
-  useEffect(() => {
-    if (!open || !activeEpisode || initialMode !== "update") return;
-
-    const timer = window.setTimeout(() => {
-      eventTitleRef.current?.focus();
-    }, 120);
-
-    return () => window.clearTimeout(timer);
-  }, [open, activeEpisode, initialMode]);
-
-  const handleCreateEpisode = async (e: FormEvent) => {
-    e.preventDefault();
-    if (!episodeType || isSubmitting) return;
-
-    setIsSubmitting(true);
-    try {
-      await db.createEpisode({
-        child_id: childId,
-        episode_type: episodeType,
-        started_at: combineLocalDateAndTimeToUtcIso(episodeDate, episodeTime),
-        summary: summary.trim() || null,
-      });
-      const child = children.find((entry) => entry.id === childId);
-      if (episodeType === "solids_transition" && child?.feeding_type === "breast") {
-        await db.updateChild(childId, { feeding_type: "mixed" });
-        await refreshChildren();
-      }
-      await onUpdated();
-      showSuccess("Episode started.");
-    } catch {
-      showError("Could not start the episode. Please try again.");
-    }
-    setIsSubmitting(false);
-  };
-
-  const handleAddEvent = async (e: FormEvent) => {
-    e.preventDefault();
-    const trimmedTitle = eventTitle.trim();
-    const trimmedNotes = eventNotes.trim();
-    if (!activeEpisode || !eventType || (!trimmedTitle && !trimmedNotes) || isAddingEvent) return;
-
-    setIsAddingEvent(true);
-    try {
-      await db.createEpisodeEvent({
-        episode_id: activeEpisode.id,
-        child_id: childId,
-        event_type: eventType,
-        title: trimmedTitle || getDefaultEventTitle(eventType),
-        notes: trimmedNotes || null,
-        logged_at: combineLocalDateAndTimeToUtcIso(eventDate, eventTime),
-      });
-      setEventType("progress");
-      setEventDate(getCurrentLocalDate());
-      setEventTime(getCurrentLocalTime());
-      setEventTitle("");
-      setEventNotes("");
-      await onUpdated();
-      showSuccess("Episode update added.");
-    } catch {
-      showError("Could not save the update. Please try again.");
-    }
-    setIsAddingEvent(false);
-  };
-
-  const handleResolveEpisode = async () => {
-    if (!activeEpisode || isResolving) return;
-
-    setIsResolving(true);
-    try {
-      await db.closeEpisode(activeEpisode.id, {
-        ended_at: combineLocalDateAndTimeToUtcIso(resolutionDate, resolutionTime),
-        outcome: outcome.trim() || null,
-      });
-      await onUpdated();
-      showSuccess("Episode resolved.");
-      onClose();
-    } catch {
-      showError("Could not resolve the episode. Please try again.");
-    }
-    setIsResolving(false);
-  };
+  const children = useChildren();
+  const { refreshChildren } = useChildActions();
+  const {
+    episodeType, setEpisodeType, episodeDate, setEpisodeDate, episodeTime, setEpisodeTime, summary, setSummary,
+    eventType, setEventType, eventDate, setEventDate, eventTime, setEventTime, eventTitle, setEventTitle,
+    eventNotes, setEventNotes, resolutionDate, setResolutionDate, resolutionTime, setResolutionTime, outcome,
+    setOutcome, isSubmitting, isAddingEvent, isResolving, eventTitleRef, handleCreateEpisode, handleAddEvent,
+    handleResolveEpisode,
+  } = useEpisodeSheetState({
+    open, childId, activeEpisode, initialMode, children, refreshChildren, onUpdated, onClose,
+    onError: showError, onSuccess: showSuccess,
+  });
 
   return (
     <Sheet open={open} onClose={onClose}>
       <div className="px-5 pb-8">
         {!activeEpisode ? (
-          <form onSubmit={handleCreateEpisode}>
+          <form onSubmit={(e: FormEvent) => { e.preventDefault(); void handleCreateEpisode(); }}>
             <h2 className="mb-2 text-center font-[var(--font-display)] text-lg font-semibold text-[var(--color-text)]">
               Start Episode
             </h2>
@@ -264,7 +149,7 @@ export function EpisodeSheet({
               </CardContent>
             </Card>
 
-            <form onSubmit={handleAddEvent} className="flex flex-col gap-4">
+            <form onSubmit={(e: FormEvent) => { e.preventDefault(); void handleAddEvent(); }} className="flex flex-col gap-4">
               <div>
                 <label className="mb-2 block text-sm font-medium text-[var(--color-text)]">
                   Update type

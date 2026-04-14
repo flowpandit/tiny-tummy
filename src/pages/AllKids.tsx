@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { useChildContext } from "../contexts/ChildContext";
+import { useChildActions, useChildren } from "../contexts/ChildContext";
+import { useDbClient } from "../contexts/DatabaseContext";
 import { getChildStatus } from "../lib/tauri";
-import { getLastRealPoop, getActiveAlerts } from "../lib/db";
 import { getAgeLabelFromDob, timeSince } from "../lib/utils";
 import { Card, CardContent } from "../components/ui/card";
 import { Avatar } from "../components/child/Avatar";
@@ -19,7 +19,9 @@ interface ChildSummary {
 }
 
 export function AllKids() {
-  const { children, setActiveChildId } = useChildContext();
+  const db = useDbClient();
+  const children = useChildren();
+  const { setActiveChildId } = useChildActions();
   const navigate = useNavigate();
   const [summaries, setSummaries] = useState<ChildSummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -33,14 +35,14 @@ export function AllKids() {
 
       const results = await Promise.all(
         children.map(async (child) => {
-          const lastPoop = await getLastRealPoop(child.id);
+          const lastPoop = await db.getLastRealPoop(child.id);
           const lastAt = lastPoop?.logged_at ?? null;
           const [status] = await getChildStatus(
             child.date_of_birth,
             child.feeding_type,
             lastAt,
           );
-          const alerts = await getActiveAlerts(child.id);
+          const alerts = await db.getActiveAlerts(child.id);
           return {
             child,
             status,

@@ -1,7 +1,6 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
-import { getSetting, setSetting } from "../lib/db";
-import { nowISO } from "../lib/utils";
-import { withTimeout } from "../lib/async";
+import { createContext, useContext, useEffect, useMemo, useRef, type ReactNode } from "react";
+import { useStoreSelector } from "../lib/store";
+import { createTrialStore, type TrialStore } from "./trial-store";
 
 interface TrialContextState {
   isLocked: boolean;
@@ -9,88 +8,62 @@ interface TrialContextState {
   isLoading: boolean;
   loadError: string | null;
   unlockPremium: () => Promise<void>;
+  restorePremium: () => Promise<void>;
+  resetTrial: () => Promise<void>;
+  setTrialDaysAgo: (daysAgo: number) => Promise<void>;
+  clearPremium: () => Promise<void>;
   simulateExpiration: () => Promise<void>;
   refreshTrial: () => Promise<void>;
 }
 
-const TrialContext = createContext<TrialContextState | undefined>(undefined);
+const TrialContext = createContext<TrialStore | undefined>(undefined);
 
 export function TrialProvider({ children }: { children: ReactNode }) {
-  const [isLocked, setIsLocked] = useState(false);
-  const [daysRemaining, setDaysRemaining] = useState(14);
-  const [isLoading, setIsLoading] = useState(true);
-  const [loadError, setLoadError] = useState<string | null>(null);
-  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
+  const storeRef = useRef<TrialStore | undefined>(undefined);
 
-  // Expose this as a dev trick so you can easily test the Paywall
-  const simulateExpiration = async () => {
-    // Set first launched date to 15 days ago
-    const past = new Date();
-    past.setDate(past.getDate() - 15);
-    await setSetting("app_first_launched_at", past.toISOString());
-    await setSetting("app_is_premium", "0");
-    setIsLocked(true);
-    setDaysRemaining(0);
-  };
-
-  async function refreshTrial() {
-    setIsLoading(true);
-    if (!hasLoadedOnce) {
-      setLoadError(null);
-    }
-
-    try {
-      const isPremiumStr = await withTimeout(getSetting("app_is_premium"), 8000, "Loading premium status");
-      if (isPremiumStr === "1") {
-        setIsLocked(false);
-        setDaysRemaining(14);
-        return;
-      }
-
-      let firstLaunchedAt = await withTimeout(getSetting("app_first_launched_at"), 8000, "Loading trial state");
-      if (!firstLaunchedAt) {
-        firstLaunchedAt = nowISO();
-        await setSetting("app_first_launched_at", firstLaunchedAt);
-      }
-
-      const launchDate = new Date(firstLaunchedAt);
-      const now = new Date();
-      const diffTime = Math.max(0, now.getTime() - launchDate.getTime());
-      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-      const remaining = Math.max(0, 14 - diffDays);
-
-      setDaysRemaining(remaining);
-      setIsLocked(remaining === 0);
-      setHasLoadedOnce(true);
-      setLoadError(null);
-    } catch (error) {
-      console.error("Trial check failed", error);
-      if (!hasLoadedOnce) {
-        setLoadError("Unable to verify trial access right now.");
-      }
-    } finally {
-      setIsLoading(false);
-    }
+  if (!storeRef.current) {
+    storeRef.current = createTrialStore();
   }
 
   useEffect(() => {
-    void refreshTrial();
+    storeRef.current?.initialize();
   }, []);
 
-  const unlockPremium = async () => {
-    await setSetting("app_is_premium", "1");
-    setIsLocked(false);
-  };
-
-  return (
-    <TrialContext.Provider value={{ isLocked, daysRemaining, isLoading, loadError, unlockPremium, simulateExpiration, refreshTrial }}>
-      {children}
-    </TrialContext.Provider>
-  );
+  return <TrialContext.Provider value={storeRef.current}>{children}</TrialContext.Provider>;
 }
 
-export function useTrial() {
+function useTrialStore() {
   const context = useContext(TrialContext);
   if (!context) throw new Error("useTrial must be used within TrialProvider");
   return context;
+}
+
+export function useTrialAccess() {
+  const store = useTrialStore();
+  const entitlement = useStoreSelector(store, (state) => state.entitlement);
+  const isLoading = useStoreSelector(store, (state) => state.isLoading);
+  const loadError = useStoreSelector(store, (state) => state.loadError);
+  const isLocked = entitlement?.kind === "trial_expired";
+  const daysRemaining = entitlement?.daysRemaining ?? 14;
+
+  return useMemo(() => ({
+    isLocked,
+    daysRemaining,
+    isLoading,
+    loadError,
+  }), [daysRemaining, isLoading, isLocked, loadError]);
+}
+
+export function useTrialActions() {
+  const store = useTrialStore();
+  return store.actions;
+}
+
+export function useTrial() {
+  const access = useTrialAccess();
+  const actions = useTrialActions();
+  return useMemo<TrialContextState>(() => ({
+    ...access,
+    ...actions,
+  }), [access, actions]);
 }

@@ -1,17 +1,17 @@
 import { lazy, Suspense, useEffect, useState } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { ChildProvider, useChildContext } from "./contexts/ChildContext";
+import { ChildProvider, useChildActions, useChildLoadState, useChildren } from "./contexts/ChildContext";
+import { DatabaseProvider } from "./contexts/DatabaseContext";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { UnitsProvider } from "./contexts/UnitsContext";
 import { ErrorBoundary } from "./components/ui/error-boundary";
 import { ToastProvider } from "./components/ui/toast";
-import { AppShell } from "./components/layout/AppShell";
-import { TrialProvider, useTrial } from "./contexts/TrialContext";
-import { Paywall } from "./components/ui/Paywall";
-
-
-import { Home } from "./pages/Home";
-import { Onboarding } from "./pages/Onboarding";
+import { TrialProvider, useTrialAccess, useTrialActions } from "./contexts/TrialContext";
+ 
+const AppShell = lazy(() => import("./components/layout/AppShell").then((m) => ({ default: m.AppShell })));
+const Paywall = lazy(() => import("./components/billing/Paywall").then((m) => ({ default: m.Paywall })));
+const Home = lazy(() => import("./pages/Home").then((m) => ({ default: m.Home })));
+const Onboarding = lazy(() => import("./pages/Onboarding").then((m) => ({ default: m.Onboarding })));
 
 // Lazy loaded (non-critical)
 const History = lazy(() => import("./pages/History").then((m) => ({ default: m.History })));
@@ -40,18 +40,11 @@ function PageLoader() {
 }
 
 function AppRoutes() {
-  const {
-    children,
-    isLoading,
-    loadError: childLoadError,
-    refreshChildren,
-  } = useChildContext();
-  const {
-    isLocked,
-    isLoading: isTrialLoading,
-    loadError: trialLoadError,
-    refreshTrial,
-  } = useTrial();
+  const children = useChildren();
+  const { isLoading, loadError: childLoadError } = useChildLoadState();
+  const { refreshChildren } = useChildActions();
+  const { isLocked, isLoading: isTrialLoading, loadError: trialLoadError } = useTrialAccess();
+  const { refreshTrial } = useTrialActions();
   const [loadingForMs, setLoadingForMs] = useState(0);
 
   useEffect(() => {
@@ -124,6 +117,9 @@ function AppRoutes() {
     return (
       <Suspense fallback={<PageLoader />}>
         <Routes>
+          <Route element={<AppShell />}>
+            <Route path="/settings" element={<Settings />} />
+          </Route>
           <Route path="/privacy" element={<Privacy />} />
           <Route path="*" element={<Paywall />} />
         </Routes>
@@ -133,10 +129,12 @@ function AppRoutes() {
 
   if (children.length === 0) {
     return (
-      <Routes>
-        <Route path="/onboarding" element={<Onboarding />} />
-        <Route path="*" element={<Navigate to="/onboarding" replace />} />
-      </Routes>
+      <Suspense fallback={<PageLoader />}>
+        <Routes>
+          <Route path="/onboarding" element={<Onboarding />} />
+          <Route path="*" element={<Navigate to="/onboarding" replace />} />
+        </Routes>
+      </Suspense>
     );
   }
 
@@ -173,17 +171,19 @@ function App() {
   return (
     <ErrorBoundary>
       <BrowserRouter>
-        <ThemeProvider>
-          <UnitsProvider>
-            <ToastProvider>
-              <ChildProvider>
-                <TrialProvider>
-                  <AppRoutes />
-                </TrialProvider>
-              </ChildProvider>
-            </ToastProvider>
-          </UnitsProvider>
-        </ThemeProvider>
+        <DatabaseProvider>
+          <ThemeProvider>
+            <UnitsProvider>
+              <ToastProvider>
+                <ChildProvider>
+                  <TrialProvider>
+                    <AppRoutes />
+                  </TrialProvider>
+                </ChildProvider>
+              </ToastProvider>
+            </UnitsProvider>
+          </ThemeProvider>
+        </DatabaseProvider>
       </BrowserRouter>
     </ErrorBoundary>
   );

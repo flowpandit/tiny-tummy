@@ -9,17 +9,19 @@ import { timeSince } from "../../lib/utils";
 import { BITSS_TYPES, STOOL_COLORS } from "../../lib/constants";
 import { getFeedingEntryDisplayLabel } from "../../lib/feeding";
 import { getDiaperTypeLabel, getUrineColorLabel } from "../../lib/diaper";
-import diaperWetIcon from "../../assets/svg-assets/icons/diaper-wet.svg";
-import diaperDirtyIcon from "../../assets/svg-assets/icons/diaper-dirty.svg";
-import diaperMixedIcon from "../../assets/svg-assets/icons/diaper-mixed.svg";
-import breastfeedIcon from "../../assets/svg-assets/icons/breastfeed-icon.svg";
-import poop1Icon from "../../assets/svg-assets/icons/poop-1.svg";
-import poop2Icon from "../../assets/svg-assets/icons/poop-2.svg";
-import poop3Icon from "../../assets/svg-assets/icons/poop-3.svg";
-import poop4Icon from "../../assets/svg-assets/icons/poop-4.svg";
-import poop5Icon from "../../assets/svg-assets/icons/poop-5.svg";
-import poop6Icon from "../../assets/svg-assets/icons/poop-6.svg";
-import poop7Icon from "../../assets/svg-assets/icons/poop-7.svg";
+import {
+  breastfeedIcon,
+  diaperDirtyIcon,
+  diaperMixedIcon,
+  diaperWetIcon,
+  poop1Icon,
+  poop2Icon,
+  poop3Icon,
+  poop4Icon,
+  poop5Icon,
+  poop6Icon,
+  poop7Icon,
+} from "../../assets/icons";
 
 type ActivityItem =
   | { kind: "poop"; entry: PoopEntry }

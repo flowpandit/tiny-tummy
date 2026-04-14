@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import { useChildContext } from "../contexts/ChildContext";
+import { lazy, Suspense, useMemo, useState } from "react";
+import { useActiveChild } from "../contexts/ChildContext";
 import { useUnits } from "../contexts/UnitsContext";
 import { useGrowthLogs } from "../hooks/useGrowthLogs";
 import { Card, CardContent, CardHeader } from "../components/ui/card";
@@ -7,7 +7,6 @@ import { Button } from "../components/ui/button";
 import { ScenicHero } from "../components/layout/ScenicHero";
 import { EmptyState, InsetPanel, PageBody, SectionHeading } from "../components/ui/page-layout";
 import { GrowthLogSheet } from "../components/growth/GrowthLogSheet";
-import { GrowthTrendChart } from "../components/growth/GrowthTrendChart";
 import { TrackerEntryRow, TrackerEntryTable, TrackerMetricPanel, TrackerMetricRing } from "../components/tracking/TrackerPrimitives";
 import { cn } from "../lib/cn";
 import { getGrowthPercentile } from "../lib/growth-percentiles";
@@ -15,6 +14,10 @@ import { detectGrowthCountryCode, getGrowthReferenceForAge } from "../lib/growth
 import { formatDate, timeSince } from "../lib/utils";
 import { formatGrowthSummary, formatGrowthValue, getGrowthUnitLabel } from "../lib/units";
 import type { GrowthEntry } from "../lib/types";
+
+const GrowthTrendChart = lazy(() =>
+  import("../components/growth/GrowthTrendChart").then((module) => ({ default: module.GrowthTrendChart })),
+);
 
 const METRIC_OPTIONS = [
   { key: "weight_kg", label: "Weight", color: "var(--color-cta)", tone: "cta" as const },
@@ -71,7 +74,7 @@ function getMeasurementRing(
 }
 
 export function Growth() {
-  const { activeChild } = useChildContext();
+  const activeChild = useActiveChild();
   const { unitSystem } = useUnits();
   const { logs, latest, refresh } = useGrowthLogs(activeChild?.id ?? null);
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -171,6 +174,12 @@ export function Growth() {
     setSheetOpen(false);
     setEditingLog(null);
   };
+
+  const chartFallback = (
+    <div className="flex h-72 items-center justify-center rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-strong)] text-sm text-[var(--color-text-secondary)]">
+      Loading trend chart...
+    </div>
+  );
 
   return (
     <PageBody className="mt-0 space-y-0 px-0 py-0">
@@ -388,15 +397,17 @@ export function Growth() {
                   </button>
                 ))}
               </div>
-              <GrowthTrendChart
-                logs={sortedLogs}
-                metric={activeMetric}
-                unit={getGrowthUnitLabel(activeMetric, unitSystem)}
-                lineColor={metricMeta.color}
-                dateOfBirth={activeChild.date_of_birth}
-                sex={activeChild.sex}
-                countryCode={growthCountryCode}
-              />
+                <Suspense fallback={chartFallback}>
+                  <GrowthTrendChart
+                    logs={sortedLogs}
+                    metric={activeMetric}
+                    unit={getGrowthUnitLabel(activeMetric, unitSystem)}
+                    lineColor={metricMeta.color}
+                    dateOfBirth={activeChild.date_of_birth}
+                    sex={activeChild.sex}
+                    countryCode={growthCountryCode}
+                  />
+                </Suspense>
               <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-3">
                 <InsetPanel className="bg-[var(--color-bg)] p-3">
                   <p className="text-[11px] uppercase tracking-[0.1em] text-[var(--color-text-soft)]">Points logged</p>

@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { useChildContext } from "../../contexts/ChildContext";
+import { useActiveChild, useChildActions } from "../../contexts/ChildContext";
+import { useUpdateChildFeedingTypeAction } from "../../hooks/useSettingsActions";
 import { useEliminationPreference } from "../../hooks/useEliminationPreference";
 import { cn } from "../../lib/cn";
 import { Button } from "../ui/button";
 import { HomeActionBreastfeedIcon } from "../ui/icons";
-import * as db from "../../lib/db";
 import { getAgeInMonthsFromDob } from "../../lib/utils";
 
 const iconClassName = "h-5 w-5";
@@ -99,7 +99,9 @@ const NAV_ITEMS = [
 export function BottomNav() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { activeChild, refreshChildren } = useChildContext();
+  const activeChild = useActiveChild();
+  const { refreshChildren } = useChildActions();
+  const updateChildFeedingType = useUpdateChildFeedingTypeAction(refreshChildren);
   const { experience } = useEliminationPreference(activeChild);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [showFeedingTransitionConfirm, setShowFeedingTransitionConfirm] = useState(false);
@@ -160,8 +162,7 @@ export function BottomNav() {
 
     try {
       setIsUpdatingFeedingType(true);
-      await db.updateChild(activeChild.id, { feeding_type: "mixed" });
-      await refreshChildren();
+      await updateChildFeedingType(activeChild.id, "mixed");
       setShowFeedingTransitionConfirm(false);
       navigate("/feed");
     } finally {

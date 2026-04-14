@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import * as db from "../lib/db";
+import { useDbClient } from "../contexts/DatabaseContext";
 import { getCaregiverNoteSettingKey } from "../lib/caregiver-note";
 
 export function useCaregiverNote(childId: string | null) {
+  const db = useDbClient();
   const [note, setNote] = useState("");
   const [savedNote, setSavedNote] = useState("");
   const [isSaving, setIsSaving] = useState(false);

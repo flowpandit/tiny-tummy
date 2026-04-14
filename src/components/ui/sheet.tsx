@@ -3,9 +3,13 @@ import { motion, AnimatePresence, useMotionValue, useTransform, animate, useIsPr
 import { cn } from "../../lib/cn";
 import { useTheme } from "../../contexts/ThemeContext";
 
-interface SheetProps {
+// Shared visibility contract for sheet-style feature components.
+export interface SheetVisibilityProps {
   open: boolean;
   onClose: () => void;
+}
+
+interface SheetProps extends SheetVisibilityProps {
   children: ReactNode;
   className?: string;
   tone?: "default" | "night";

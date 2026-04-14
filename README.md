@@ -126,6 +126,26 @@ npm run build
 cd src-tauri && cargo check
 ```
 
+## Tauri E2E Smoke Tests
+
+Tiny Tummy includes a Tauri WebDriver smoke test that launches the compiled desktop app, creates a child, reloads the app, and verifies the child still exists after the SQLite-backed refresh.
+
+```bash
+# One-time driver install
+cargo install tauri-driver --locked
+
+# Run the Tauri smoke suite
+npm run test:e2e:tauri
+```
+
+Notes:
+
+- The suite uses WebdriverIO with `tauri-driver`, matching Tauri's documented WebDriver test approach.
+- `npm run test:e2e:tauri` builds the release Tauri binary before launching the spec.
+- Set `TAURI_DRIVER_PATH` if `tauri-driver` is not installed in `~/.cargo/bin`.
+- Set `TAURI_E2E_APP_PATH` if you want to point the suite at a prebuilt binary.
+- Official Tauri desktop WebDriver support currently covers Windows and Linux, not macOS. Run this suite in CI or another non-mac desktop environment.
+
 ## Building for Mobile Testing
 
 ### Android

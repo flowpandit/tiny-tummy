@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { getEliminationViewSettingKey, resolveEliminationExperience, type EliminationExperience, type EliminationViewPreference } from "../lib/diaper";
-import * as db from "../lib/db";
+import { useDbClient } from "../contexts/DatabaseContext";
 import type { Child } from "../lib/types";
 
 export function useEliminationPreference(child: Child | null) {
+  const db = useDbClient();
   const [preference, setPreferenceState] = useState<EliminationViewPreference>("auto");
   const [isLoading, setIsLoading] = useState(false);
 

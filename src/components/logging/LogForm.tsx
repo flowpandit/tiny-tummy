@@ -1,37 +1,26 @@
-import { useState, useRef, useEffect, type FormEvent } from "react";
-import { Sheet } from "../ui/sheet";
+import type { FormEvent } from "react";
+import { Sheet, type SheetVisibilityProps } from "../ui/sheet";
 import { Button } from "../ui/button";
 import { useToast } from "../ui/toast";
-import { DatePicker } from "../ui/date-picker";
-import { TimePicker } from "../ui/time-picker";
 import { StoolTypePicker } from "./StoolTypePicker";
 import { ColorPicker } from "./ColorPicker";
 import { SizePicker } from "./SizePicker";
 import { LogSuccess } from "./LogSuccess";
-import * as db from "../../lib/db";
-import { savePhoto } from "../../lib/photos";
+import { LogDateTimeFields } from "./LogDateTimeFields";
 import { cn } from "../../lib/cn";
 import { useTheme } from "../../contexts/ThemeContext";
 import { FieldLabel, Textarea } from "../ui/field";
-import { combineLocalDateAndTimeToUtcIso, getCurrentLocalDate, getCurrentLocalTime } from "../../lib/utils";
+import { useLogFormState } from "../../hooks/useLogFormState";
+import { useLoggingSheetLifecycle } from "../../hooks/useLoggingSheetLifecycle";
+import { usePhotoField } from "../../hooks/usePhotoField";
 import {
-  getLoggingLabelClassName,
-  LoggingFieldGroup,
   LoggingFormHeader,
   LoggingPresetNotice,
 } from "./logging-form-primitives";
-import type { PoopLogDraft, StoolColor, StoolSize } from "../../lib/types";
+import { getLoggingLabelClassName } from "./logging-form-classnames";
+import type { PoopLogDraft } from "../../lib/types";
 
-const EMPTY_DRAFT: PoopLogDraft = {
-  stool_type: null,
-  color: null,
-  size: null,
-  notes: "",
-};
-
-interface LogFormProps {
-  open: boolean;
-  onClose: () => void;
+interface LogFormProps extends SheetVisibilityProps {
   childId: string;
   onLogged: () => void;
   initialDraft?: Partial<PoopLogDraft> | null;
@@ -39,107 +28,28 @@ interface LogFormProps {
 
 export function LogForm({ open, onClose, childId, onLogged, initialDraft = null }: LogFormProps) {
   const { showError } = useToast();
-  const [logDate, setLogDate] = useState(getCurrentLocalDate());
-  const [logTime, setLogTime] = useState(getCurrentLocalTime());
-  const [stoolType, setStoolType] = useState<number | null>(null);
-  const [color, setColor] = useState<StoolColor | null>(null);
-  const [size, setSize] = useState<StoolSize | null>(null);
-  const [notes, setNotes] = useState("");
-  const [photoFile, setPhotoFile] = useState<File | null>(null);
-  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showSuccess, setShowSuccess] = useState(false);
   const { resolved } = useTheme();
   const nightMode = resolved === "night";
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { fileInputRef, photoFile, photoPreview, resetPhoto, setPhotoFromChange } = usePhotoField();
 
-  const applyDraft = (draft?: Partial<PoopLogDraft> | null) => {
-    const nextDraft = { ...EMPTY_DRAFT, ...draft };
-    setLogDate(getCurrentLocalDate());
-    setLogTime(getCurrentLocalTime());
-    setStoolType(nextDraft.stool_type);
-    setColor(nextDraft.color);
-    setSize(nextDraft.size);
-    setNotes(nextDraft.notes);
-    setPhotoFile(null);
-    if (photoPreview) URL.revokeObjectURL(photoPreview);
-    setPhotoPreview(null);
-    setShowSuccess(false);
-  };
-
-  useEffect(() => {
-    if (open) {
-      applyDraft(initialDraft);
-    }
-  }, [open, initialDraft]);
-
-  const reset = () => {
-    applyDraft(null);
-  };
-
-  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setPhotoFile(file);
-      const url = URL.createObjectURL(file);
-      setPhotoPreview(url);
-    }
-  };
-
-  const removePhoto = () => {
-    setPhotoFile(null);
-    if (photoPreview) URL.revokeObjectURL(photoPreview);
-    setPhotoPreview(null);
-    if (fileInputRef.current) fileInputRef.current.value = "";
-  };
-
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-    if (isSubmitting) return;
-
-    setIsSubmitting(true);
-    try {
-      let photoPath: string | null = null;
-      if (photoFile) {
-        try { photoPath = await savePhoto(photoFile); } catch { /* photo save is non-critical */ }
-      }
-
-      await db.createPoopLog({
-        child_id: childId,
-        logged_at: combineLocalDateAndTimeToUtcIso(logDate, logTime),
-        stool_type: stoolType,
-        color,
-        size,
-        notes: notes.trim() || null,
-        photo_path: photoPath,
-      });
-    } catch {
-      setIsSubmitting(false);
-      showError("Failed to save entry. Please try again.");
-      return;
-    }
-
-    setIsSubmitting(false);
-    setShowSuccess(true);
-
-    setTimeout(() => {
-      onLogged();
-      onClose();
-      setTimeout(reset, 300);
-    }, 1200);
-  };
-
-  const handleClose = () => {
-    onClose();
-    setTimeout(reset, 300);
-  };
+  const { handleClose, handleLoggedSuccess } = useLoggingSheetLifecycle({
+    onClose,
+    onReset: resetPhoto,
+    onLogged,
+  });
+  const {
+    logDate, setLogDate, logTime, setLogTime, stoolType, setStoolType, color, setColor, size, setSize,
+    notes, setNotes, isSubmitting, showSuccess, handleSubmit,
+  } = useLogFormState({
+    open, childId, initialDraft, onLoggedSuccess: handleLoggedSuccess, onError: showError, resetPhoto, photoFile,
+  });
 
   return (
     <Sheet open={open} onClose={handleClose} tone={nightMode ? "night" : "default"}>
       {showSuccess ? (
         <LogSuccess />
       ) : (
-        <form onSubmit={handleSubmit} className="px-5 pb-8">
+        <form onSubmit={(e: FormEvent) => { e.preventDefault(); void handleSubmit(); }} className="px-5 pb-8">
           <LoggingFormHeader title="Log a poop" isNight={nightMode} />
 
           {(stoolType || color || size) && (
@@ -150,12 +60,13 @@ export function LogForm({ open, onClose, childId, onLogged, initialDraft = null 
           )}
 
           <div className="flex flex-col gap-5">
-            <LoggingFieldGroup label="When" isNight={nightMode}>
-              <div className="grid grid-cols-2 gap-2">
-                <DatePicker value={logDate} onChange={setLogDate} max={getCurrentLocalDate()} nightMode={nightMode} />
-                <TimePicker value={logTime} onChange={setLogTime} nightMode={nightMode} />
-              </div>
-            </LoggingFieldGroup>
+            <LogDateTimeFields
+              date={logDate}
+              time={logTime}
+              onDateChange={setLogDate}
+              onTimeChange={setLogTime}
+              nightMode={nightMode}
+            />
 
             <StoolTypePicker value={stoolType} onChange={setStoolType} nightMode={nightMode} />
             <ColorPicker value={color} onChange={setColor} nightMode={nightMode} />
@@ -184,7 +95,7 @@ export function LogForm({ open, onClose, childId, onLogged, initialDraft = null 
                 type="file"
                 accept="image/*"
                 capture="environment"
-                onChange={handlePhotoChange}
+                onChange={setPhotoFromChange}
                 className="hidden"
                 id="photo-input"
               />
@@ -197,7 +108,7 @@ export function LogForm({ open, onClose, childId, onLogged, initialDraft = null 
                   />
                   <button
                     type="button"
-                    onClick={removePhoto}
+                    onClick={resetPhoto}
                     className="absolute -top-3 -right-3 w-8 h-8 min-w-[44px] min-h-[44px] rounded-full bg-[var(--color-alert)] text-white flex items-center justify-center cursor-pointer"
                     aria-label="Remove photo"
                   >

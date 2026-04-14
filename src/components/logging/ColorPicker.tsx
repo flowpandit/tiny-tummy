@@ -2,7 +2,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "../../lib/cn";
 import { STOOL_COLORS } from "../../lib/constants";
 import { useTheme } from "../../contexts/ThemeContext";
-import { getLoggingLabelClassName } from "./logging-form-primitives";
+import { getLoggingLabelClassName } from "./logging-form-classnames";
 import type { StoolColor } from "../../lib/types";
 
 interface ColorPickerProps {

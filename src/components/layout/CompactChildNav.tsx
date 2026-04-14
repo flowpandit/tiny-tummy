@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { Avatar } from "../child/Avatar";
 import { getAgeLabelFromDob } from "../../lib/utils";
 import type { Child } from "../../lib/types";
@@ -9,6 +10,7 @@ type CompactChildNavProps = {
   showBackButton?: boolean;
   onBack?: () => void;
   className?: string;
+  renderAvatar?: (child: Child, options: { size: "sm"; className: string }) => ReactNode;
 };
 
 export function CompactChildNav({
@@ -18,7 +20,22 @@ export function CompactChildNav({
   showBackButton = false,
   onBack,
   className,
+  renderAvatar,
 }: CompactChildNavProps) {
+  const renderChildAvatar = (child: Child, className: string) => (
+    renderAvatar
+      ? renderAvatar(child, { size: "sm", className })
+      : (
+        <Avatar
+          childId={child.id}
+          name={child.name}
+          color={child.avatar_color}
+          size="sm"
+          className={className}
+        />
+      )
+  );
+
   return (
     <div className={className}>
       <div className="flex items-center gap-3">
@@ -35,13 +52,7 @@ export function CompactChildNav({
           </button>
         )}
         <div className="flex items-center gap-3">
-          <Avatar
-            childId={activeChild.id}
-            name={activeChild.name}
-            color={activeChild.avatar_color}
-            size="sm"
-            className="h-9 w-9 border-2 border-white/80"
-          />
+          {renderChildAvatar(activeChild, "h-9 w-9 border-2 border-white/80")}
           <div>
             <p className="text-[0.98rem] font-semibold text-[var(--color-text)]">{activeChild.name}</p>
             <p className="text-[0.76rem] leading-tight text-[var(--color-text-secondary)]">
@@ -60,13 +71,7 @@ export function CompactChildNav({
               onClick={() => onSelectChild(child.id)}
               className="rounded-full transition-transform hover:scale-[1.03]"
             >
-              <Avatar
-                childId={child.id}
-                name={child.name}
-                color={child.avatar_color}
-                size="sm"
-                className="h-8 w-8 border border-white/80 bg-white/40 shadow-[var(--shadow-soft)]"
-              />
+              {renderChildAvatar(child, "h-8 w-8 border border-white/80 bg-white/40 shadow-[var(--shadow-soft)]")}
             </button>
           ))}
         </div>

@@ -1,0 +1,199 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import type {
+  DiaperEntry,
+  Episode,
+  EpisodeEvent,
+  FeedingEntry,
+  GrowthEntry,
+  MilestoneEntry,
+  PoopEntry,
+  SleepEntry,
+  SymptomEntry,
+} from "../src/lib/types.ts";
+import {
+  addDaysToDateKey,
+  formatHistoryDayHeader,
+  formatHistorySleepDuration,
+  getEarliestHistoryDate,
+  getHistoryDisplayDays,
+  getHistoryRange,
+  getVisiblePoopLogs,
+  groupTimelineByDay,
+  hasHistoryEntries,
+} from "../src/lib/history-timeline.ts";
+import { formatLocalDateKey } from "../src/lib/utils.ts";
+
+function createDiaperEntry(id: string, loggedAt: string, linkedPoopLogId: string | null = null): DiaperEntry {
+  return {
+    id,
+    child_id: "child-1",
+    logged_at: loggedAt,
+    diaper_type: "dirty",
+    urine_color: null,
+    stool_type: null,
+    color: null,
+    size: null,
+    notes: null,
+    photo_path: null,
+    linked_poop_log_id: linkedPoopLogId,
+    created_at: loggedAt,
+    updated_at: loggedAt,
+  };
+}
+
+function createPoopEntry(id: string, loggedAt: string): PoopEntry {
+  return {
+    id,
+    child_id: "child-1",
+    logged_at: loggedAt,
+    stool_type: null,
+    color: null,
+    size: null,
+    is_no_poop: 0,
+    notes: null,
+    photo_path: null,
+    created_at: loggedAt,
+    updated_at: loggedAt,
+  };
+}
+
+function createSleepEntry(startedAt: string, endedAt: string): SleepEntry {
+  return {
+    id: "sleep-1",
+    child_id: "child-1",
+    sleep_type: "nap",
+    started_at: startedAt,
+    ended_at: endedAt,
+    notes: null,
+    created_at: startedAt,
+  };
+}
+
+test("filters out poop logs already linked from diaper logs", () => {
+  const diaperLogs = [createDiaperEntry("diaper-1", "2026-04-14T09:00:00", "poop-1")];
+  const poopLogs = [
+    createPoopEntry("poop-1", "2026-04-14T08:00:00"),
+    createPoopEntry("poop-2", "2026-04-14T07:00:00"),
+  ];
+
+  assert.deepEqual(
+    getVisiblePoopLogs(diaperLogs, poopLogs).map((log) => log.id),
+    ["poop-2"],
+  );
+});
+
+test("groups mixed timeline events by day and sorts events within each day chronologically", () => {
+  const diaperLogs = [createDiaperEntry("diaper-1", "2026-04-14T09:00:00")];
+  const poopLogs = [createPoopEntry("poop-1", "2026-04-14T08:00:00")];
+  const feedingLogs: FeedingEntry[] = [{
+    id: "feed-1",
+    child_id: "child-1",
+    logged_at: "2026-04-13T07:00:00",
+    food_type: "formula",
+    food_name: null,
+    amount_ml: 120,
+    duration_minutes: null,
+    breast_side: null,
+    bottle_content: "formula",
+    reaction_notes: null,
+    is_constipation_support: 0,
+    notes: null,
+    created_at: "2026-04-13T07:00:00",
+  }];
+  const sleepLogs = [createSleepEntry("2026-04-14T06:00:00", "2026-04-14T07:30:00")];
+  const symptomLogs: SymptomEntry[] = [];
+  const growthLogs: GrowthEntry[] = [];
+  const milestoneLogs: MilestoneEntry[] = [];
+  const episodes: Episode[] = [];
+  const episodeEvents: EpisodeEvent[] = [];
+
+  const grouped = groupTimelineByDay({
+    diaperLogs,
+    poopLogs,
+    feedingLogs,
+    sleepLogs,
+    symptomLogs,
+    growthLogs,
+    milestoneLogs,
+    episodes,
+    episodeEvents,
+  });
+
+  assert.deepEqual([...grouped.keys()], ["2026-04-14", "2026-04-13"]);
+  assert.deepEqual(
+    grouped.get("2026-04-14")?.map((event) => event.kind),
+    ["sleep", "poop", "diaper"],
+  );
+});
+
+test("formats sleep durations using hours and minutes", () => {
+  assert.equal(
+    formatHistorySleepDuration(createSleepEntry("2026-04-14T06:00:00", "2026-04-14T07:30:00")),
+    "1h 30m",
+  );
+  assert.equal(
+    formatHistorySleepDuration(createSleepEntry("2026-04-14T06:00:00", "2026-04-14T06:45:00")),
+    "45m",
+  );
+});
+
+test("builds history ranges and display slices from grouped data", () => {
+  const range = getHistoryRange("2026-04-14", 7, null);
+  assert.deepEqual(range, {
+    rangeStart: "2026-04-08",
+    rangeEnd: "2026-04-14",
+  });
+
+  const grouped = new Map([
+    ["2026-04-14", [{ kind: "poop", entry: createPoopEntry("poop-1", "2026-04-14T08:00:00") }]],
+    ["2026-04-13", [{ kind: "poop", entry: createPoopEntry("poop-2", "2026-04-13T08:00:00") }]],
+  ]);
+
+  assert.equal(getHistoryDisplayDays(grouped, null).length, 2);
+  assert.deepEqual(getHistoryDisplayDays(grouped, "2026-04-13").map(([day]) => day), ["2026-04-13"]);
+  assert.deepEqual(getHistoryDisplayDays(grouped, "2026-04-10"), []);
+});
+
+test("reports whether history contains any entries and returns the earliest available date", () => {
+  const emptyInput = {
+    diaperLogs: [],
+    poopLogs: [],
+    feedingLogs: [],
+    sleepLogs: [],
+    symptomLogs: [],
+    growthLogs: [],
+    milestoneLogs: [],
+    episodes: [],
+    episodeEvents: [],
+  };
+
+  assert.equal(hasHistoryEntries(emptyInput), false);
+  assert.equal(
+    hasHistoryEntries({
+      ...emptyInput,
+      poopLogs: [createPoopEntry("poop-1", "2026-04-14T08:00:00")],
+    }),
+    true,
+  );
+
+  const grouped = new Map([
+    ["2026-04-14", []],
+    ["2026-04-10", []],
+  ]);
+  assert.equal(getEarliestHistoryDate(grouped, "2026-04-14"), "2026-04-10");
+  assert.equal(getEarliestHistoryDate(new Map(), "2026-04-14"), "2026-04-14");
+});
+
+test("formats relative day headers around the current local day", () => {
+  const today = new Date();
+  const yesterday = new Date(today);
+  yesterday.setDate(today.getDate() - 1);
+
+  assert.equal(formatHistoryDayHeader(formatLocalDateKey(today)), "Today");
+  assert.equal(formatHistoryDayHeader(formatLocalDateKey(yesterday)), "Yesterday");
+});
+
+test("adds day offsets to a date key", () => {
+  assert.equal(addDaysToDateKey("2026-04-14", -6), "2026-04-08");
+});

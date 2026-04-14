@@ -1,9 +1,9 @@
-import { useEffect, useState } from "react";
 import { writeFile } from "@tauri-apps/plugin-fs";
 import { save } from "@tauri-apps/plugin-dialog";
 import { platform } from "@tauri-apps/plugin-os";
-import { useChildContext } from "../contexts/ChildContext";
+import { useActiveChild } from "../contexts/ChildContext";
 import { useUnits } from "../contexts/UnitsContext";
+import { useReportPageState } from "../hooks/useReportPageState";
 import { Button } from "../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { PageIntro } from "../components/ui/page-intro";
@@ -11,52 +11,32 @@ import { PageBody } from "../components/ui/page-layout";
 import { DatePicker } from "../components/ui/date-picker";
 import { buildReportPdfPayload } from "../lib/report-pdf";
 import {
-  defaultReportOptions,
-  generateReportData,
-  type ReportData,
-  type ReportOptions,
-} from "../lib/reporting";
+  buildReportPatientSummary,
+  getReportSaveHelpText,
+  getReportSaveLabel,
+  hasReportableTimeline,
+  REPORT_OPTION_TOGGLES,
+} from "../lib/report-view-model";
 import { useToast } from "../components/ui/toast";
 import { generateReportPdf, savePdfToDownloads } from "../lib/tauri";
-import { formatLocalDateKey, getAgeLabelFromDob } from "../lib/utils";
-import * as db from "../lib/db";
-
-function addDays(dateString: string, delta: number): string {
-  const next = new Date(`${dateString}T00:00:00`);
-  next.setDate(next.getDate() + delta);
-  return formatLocalDateKey(next);
-}
 
 export function Report() {
-  const { activeChild } = useChildContext();
+  const activeChild = useActiveChild();
   const { unitSystem } = useUnits();
   const { showError, showSuccess } = useToast();
-
-  const today = formatLocalDateKey(new Date());
-  const thirtyDaysAgo = formatLocalDateKey(new Date(Date.now() - 30 * 86400000));
-
-  const [startDate, setStartDate] = useState(thirtyDaysAgo);
-  const [endDate, setEndDate] = useState(today);
-  const [reportData, setReportData] = useState<ReportData | null>(null);
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [options, setOptions] = useState<ReportOptions>(defaultReportOptions);
-
-  useEffect(() => {
-    if (!activeChild) return;
-
-    let cancelled = false;
-
-    void db.getLatestReportActivityDate(activeChild.id).then((latestActivity) => {
-      if (cancelled || !latestActivity) return;
-      const latestDay = latestActivity.split("T")[0];
-      setEndDate(latestDay);
-      setStartDate(addDays(latestDay, -29));
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [activeChild]);
+  const isAndroid = platform() === "android";
+  const {
+    today,
+    startDate,
+    endDate,
+    setStartDate,
+    setEndDate,
+    reportData,
+    isGenerating,
+    options,
+    toggleOption,
+    handleGenerate,
+  } = useReportPageState(activeChild, unitSystem);
 
   if (!activeChild) return null;
 
@@ -69,19 +49,9 @@ export function Report() {
     return bytes;
   };
 
-  const handleGenerate = async () => {
-    setIsGenerating(true);
-    try {
-      const data = await generateReportData(activeChild.id, startDate, endDate, options, unitSystem);
-      setReportData(data);
-    } finally {
-      setIsGenerating(false);
-    }
-  };
-
   const handlePrint = async () => {
     if (!reportData) return;
-    if (reportData.timeline.length === 0) {
+    if (!hasReportableTimeline(reportData)) {
       showError("No reportable data exists in the selected date range.");
       return;
     }
@@ -96,8 +66,6 @@ export function Report() {
         data: reportData,
         unitSystem,
       }));
-      const currentPlatform = platform();
-      const isAndroid = currentPlatform === "android";
 
       if (isAndroid) {
         await savePdfToDownloads(fileName, encodedPdf);
@@ -127,6 +95,8 @@ export function Report() {
       showError(`Could not generate the PDF report: ${message}`);
     }
   };
+
+  const patientSummary = buildReportPatientSummary(activeChild, startDate, endDate);
 
   return (
     <PageBody>
@@ -173,27 +143,13 @@ export function Report() {
           <div className="mb-4 flex flex-col gap-2">
             <p className="text-xs font-medium text-[var(--color-text-secondary)]">Include in report</p>
             <div className="flex flex-wrap gap-2">
-              {[
-                { key: "includeFeeds", label: "Feeds" },
-                { key: "includeSymptoms", label: "Symptoms" },
-                { key: "includeMilestones", label: "Milestones" },
-                { key: "includeEpisodes", label: "Episodes" },
-                { key: "includeEpisodeSummary", label: "Active episode" },
-                { key: "includeGrowth", label: "Growth" },
-                { key: "includeNotes", label: "Notes" },
-                { key: "includeCaregiverNote", label: "Caregiver note" },
-              ].map((item) => (
+              {REPORT_OPTION_TOGGLES.map((item) => (
                 <button
                   key={item.key}
                   type="button"
-                  onClick={() =>
-                    setOptions((current) => ({
-                      ...current,
-                      [item.key]: !current[item.key as keyof ReportOptions],
-                    }))
-                  }
+                  onClick={() => toggleOption(item.key)}
                   className={`px-3 py-2 rounded-[var(--radius-full)] text-xs font-semibold border transition-colors ${
-                    options[item.key as keyof ReportOptions]
+                    options[item.key]
                       ? "border-[var(--color-primary)] bg-[var(--color-primary)]/10 text-[var(--color-primary)]"
                       : "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-secondary)]"
                   }`}
@@ -217,7 +173,7 @@ export function Report() {
 
       {reportData && (
         <div>
-          {reportData.timeline.length === 0 && (
+          {!hasReportableTimeline(reportData) && (
             <Card className="mb-4">
               <CardContent className="py-4">
                 <p className="text-sm font-medium text-[var(--color-text)]">No reportable data in this date range.</p>
@@ -230,14 +186,10 @@ export function Report() {
 
           <Card className="mb-4">
             <CardContent className="py-4">
-              <p className="font-[var(--font-display)] text-lg font-semibold text-[var(--color-text)]">
-                {activeChild.name}
-              </p>
-              <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
-                {getAgeLabelFromDob(activeChild.date_of_birth)} · {startDate} to {endDate}
-              </p>
+              <p className="font-[var(--font-display)] text-lg font-semibold text-[var(--color-text)]">{patientSummary.title}</p>
+              <p className="mt-1 text-sm text-[var(--color-text-secondary)]">{patientSummary.subtitle}</p>
               <p className="mt-3 text-xs text-[var(--color-muted)]">
-                The exported PDF uses a 3-part layout: executive summary, clinical context, and a chronological appendix.
+                {patientSummary.detail}
               </p>
             </CardContent>
           </Card>
@@ -329,15 +281,9 @@ export function Report() {
             </CardContent>
           </Card>
 
-          <Button variant="cta" className="w-full mb-4" onClick={handlePrint}>
-            {platform() === "android" ? "Save PDF to Downloads" : "Save PDF"}
-          </Button>
+          <Button variant="cta" className="w-full mb-4" onClick={handlePrint}>{getReportSaveLabel(isAndroid)}</Button>
 
-          <p className="text-xs text-[var(--color-muted)] text-center">
-            {platform() === "android"
-              ? "Generates an ink-friendly PDF and saves it directly to your Downloads folder."
-              : "Generates an ink-friendly PDF and lets you choose where to save it."}
-          </p>
+          <p className="text-xs text-[var(--color-muted)] text-center">{getReportSaveHelpText(isAndroid)}</p>
         </div>
       )}
     </PageBody>

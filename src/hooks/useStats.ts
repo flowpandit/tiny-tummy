@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import type { DailyFrequency, ConsistencyPoint, ColorCount } from "../lib/types";
-import * as db from "../lib/db";
+import { useDbClient } from "../contexts/DatabaseContext";
 
 export function useStats(childId: string | null, days: number) {
+  const db = useDbClient();
   const [frequency, setFrequency] = useState<DailyFrequency[]>([]);
   const [consistency, setConsistency] = useState<ConsistencyPoint[]>([]);
   const [colorDist, setColorDist] = useState<ColorCount[]>([]);

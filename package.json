@@ -6,7 +6,11 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "test": "node --test --experimental-strip-types tests/*.test.ts",
+    "test": "node --import tsx --test tests/*.test.ts",
+    "test:e2e:tauri": "node ./e2e/run-tauri-e2e.mjs",
+    "lint": "eslint .",
+    "check:dead-code": "node ./scripts/check-dead-code.mjs",
+    "check:all": "npm run build && npm test && npm run lint && npm run check:dead-code",
     "preview": "vite preview",
     "tauri": "tauri"
   },
@@ -20,20 +24,35 @@
     "@tauri-apps/plugin-sql": "^2.3.2",
     "clsx": "^2.1.1",
     "framer-motion": "^12.38.0",
-    "react": "^19.1.0",
-    "react-dom": "^19.1.0",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
     "react-router-dom": "^7.13.2",
     "recharts": "^3.8.0",
     "tailwind-merge": "^3.5.0"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.4",
     "@tailwindcss/vite": "^4.2.2",
     "@tauri-apps/cli": "^2",
+    "@testing-library/react": "^16.3.2",
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
     "@vitejs/plugin-react": "^4.6.0",
+    "@wdio/cli": "^9.27.0",
+    "@wdio/local-runner": "^9.27.0",
+    "@wdio/mocha-framework": "^9.27.0",
+    "@wdio/spec-reporter": "^9.27.0",
+    "eslint": "^9.39.4",
+    "eslint-plugin-react-hooks": "^7.0.1",
+    "eslint-plugin-react-refresh": "^0.5.2",
+    "expect-webdriverio": "^5.6.5",
+    "globals": "^17.5.0",
+    "jsdom": "^29.0.2",
     "tailwindcss": "^4.2.2",
+    "tsx": "^4.21.0",
     "typescript": "~5.8.3",
-    "vite": "^7.0.4"
+    "typescript-eslint": "^8.58.1",
+    "vite": "^7.0.4",
+    "webdriverio": "^9.27.0"
   }
 }

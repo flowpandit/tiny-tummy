@@ -1,0 +1,14 @@
+export { default as heroBackgroundArt } from "./hero/background.svg";
+export { default as heroBackgroundArtDark } from "./hero/background-dark.svg";
+export { default as sceneMoon } from "./hero/moon.svg";
+export { default as sceneSun } from "./hero/sun.svg";
+export { default as watercolorClouds } from "./hero/watercolor-clouds.svg";
+export { default as watercolorCloudsDark } from "./hero/watercolor-clouds-dark.svg";
+export { default as watercolorMountains } from "./hero/watercolor-mountains.svg";
+export { default as watercolorMountainsDark } from "./hero/watercolor-mountains-dark.svg";
+export { default as breastfeedingSceneArt } from "./scenes/breastfeeding.svg";
+export { default as diaperSceneArt } from "./scenes/diaper.svg";
+export { default as feedSceneArt } from "./scenes/feed.svg";
+export { default as growthSceneArt } from "./scenes/growth.svg";
+export { default as poopSceneArt } from "./scenes/poop.svg";
+export { default as sleepSceneArt } from "./scenes/sleep.svg";
