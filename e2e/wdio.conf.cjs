@@ -50,6 +50,19 @@ exports.config = {
       );
     }
 
+    // Tauri's `beforeBuildCommand` is only executed by `tauri build` / `tauri dev`.
+    // Bare `cargo build` embeds whatever is in `dist/` at compile time, so we need
+    // to build the frontend first, otherwise the app window opens blank.
+    const frontendBuild = spawnSync("npm", ["run", "build"], {
+      cwd: path.resolve(__dirname, ".."),
+      stdio: "inherit",
+      shell: true,
+    });
+
+    if (frontendBuild.status !== 0) {
+      throw new Error("Failed to build the frontend for E2E tests.");
+    }
+
     const build = spawnSync(
       "cargo",
       ["build", "--release", "--manifest-path", "src-tauri/Cargo.toml"],
