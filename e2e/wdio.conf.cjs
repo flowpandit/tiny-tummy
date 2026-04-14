@@ -89,7 +89,9 @@ exports.config = {
     }
   },
   beforeSession() {
+    process.env.TAURI_E2E_RESET = "1";
     tauriDriver = spawn(resolveTauriDriverPath(), [], {
+      env: process.env,
       stdio: ["ignore", process.stdout, process.stderr],
     });
   },

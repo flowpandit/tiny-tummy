@@ -4,7 +4,33 @@ mod engine;
 mod report_pdf;
 mod statusbar;
 
+use std::{env, fs};
+use tauri::Manager;
 use tauri_plugin_sql::{Migration, MigrationKind};
+
+const E2E_RESET_ENV_KEY: &str = "TAURI_E2E_RESET";
+const APP_DB_FILENAME: &str = "tinytummy.db";
+
+fn reset_e2e_state_if_requested(app: &tauri::App) {
+    if env::var_os(E2E_RESET_ENV_KEY).is_none() {
+        return;
+    }
+
+    let Ok(app_data_dir) = app.path().app_data_dir() else {
+        eprintln!("TAURI_E2E_RESET was set but app_data_dir could not be resolved");
+        return;
+    };
+
+    let db_path = app_data_dir.join(APP_DB_FILENAME);
+    if db_path.exists() {
+        if let Err(error) = fs::remove_file(&db_path) {
+            eprintln!(
+                "TAURI_E2E_RESET failed to remove {}: {error}",
+                db_path.display()
+            );
+        }
+    }
+}
 
 #[tauri::command]
 fn check_frequency_alert(
@@ -128,6 +154,10 @@ pub fn run() {
     ];
 
     tauri::Builder::default()
+        .setup(|app| {
+            reset_e2e_state_if_requested(app);
+            Ok(())
+        })
         .plugin(tauri_plugin_opener::init())
         .plugin(
             tauri_plugin_sql::Builder::default()
