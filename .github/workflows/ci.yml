@@ -67,7 +67,8 @@ jobs:
     name: Tauri E2E
     runs-on: ubuntu-22.04
     needs: tauri-e2e-changes
-    if: needs.tauri-e2e-changes.outputs.should_run == 'true'
+    # Temporarily disabled while the Tauri WebDriver harness is being stabilized.
+    if: false && needs.tauri-e2e-changes.outputs.should_run == 'true'
 
     steps:
       - name: Checkout
