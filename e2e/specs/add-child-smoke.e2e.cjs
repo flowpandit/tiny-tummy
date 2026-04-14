@@ -2,8 +2,6 @@ describe("Tiny Tummy Tauri smoke", () => {
   it("creates a child and reloads it from SQLite", async () => {
     const childName = `E2E ${Date.now()}`;
 
-    await browser.url("/");
-
     const getStartedButton = await $("button=Get Started");
     await getStartedButton.waitForDisplayed({ timeout: 20000 });
     await getStartedButton.click();
@@ -23,20 +21,26 @@ describe("Tiny Tummy Tauri smoke", () => {
     await startTrackingButton.waitForDisplayed({ timeout: 20000 });
     await startTrackingButton.click();
 
-    await browser.waitUntil(
-      async () => (await browser.getUrl()).endsWith("/"),
-      {
-        timeout: 20000,
-        timeoutMsg: "Expected to return to the home route after onboarding.",
-      },
-    );
+    const settingsNavButton = await $("button[aria-label='Setting']");
+    await settingsNavButton.waitForDisplayed({ timeout: 20000 });
+    await settingsNavButton.click();
 
-    await browser.url("/all-kids");
+    const viewAllButton = await $("button=View All");
+    await viewAllButton.waitForDisplayed({ timeout: 20000 });
+    await viewAllButton.click();
 
     const createdChild = await $(`//*[normalize-space(text())='${childName}']`);
     await createdChild.waitForDisplayed({ timeout: 20000 });
 
-    await browser.refresh();
+    await browser.reloadSession();
+
+    const settingsNavButtonAfterReload = await $("button[aria-label='Setting']");
+    await settingsNavButtonAfterReload.waitForDisplayed({ timeout: 20000 });
+    await settingsNavButtonAfterReload.click();
+
+    const viewAllButtonAfterReload = await $("button=View All");
+    await viewAllButtonAfterReload.waitForDisplayed({ timeout: 20000 });
+    await viewAllButtonAfterReload.click();
 
     const createdChildAfterReload = await $(`//*[normalize-space(text())='${childName}']`);
     await createdChildAfterReload.waitForDisplayed({ timeout: 20000 });
