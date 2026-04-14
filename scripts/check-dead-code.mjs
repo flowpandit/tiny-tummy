@@ -3,10 +3,27 @@ import path from "node:path";
 import { execFileSync } from "node:child_process";
 
 const cwd = process.cwd();
-const sourceFiles = execFileSync("rg", ["--files", "src"], { cwd, encoding: "utf8" })
-  .trim()
-  .split("\n")
-  .filter(Boolean);
+
+function listSourceFiles() {
+  try {
+    return execFileSync("rg", ["--files", "src"], { cwd, encoding: "utf8" })
+      .trim()
+      .split("\n")
+      .filter(Boolean);
+  } catch (error) {
+    if (error && typeof error === "object" && "code" in error && error.code !== "ENOENT") {
+      throw error;
+    }
+
+    return execFileSync("find", ["src", "-type", "f"], { cwd, encoding: "utf8" })
+      .trim()
+      .split("\n")
+      .filter(Boolean)
+      .sort();
+  }
+}
+
+const sourceFiles = listSourceFiles();
 
 const codeFiles = sourceFiles.filter((file) => file.endsWith(".ts") || file.endsWith(".tsx"));
 const entryFiles = new Set([
