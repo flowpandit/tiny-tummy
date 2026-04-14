@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import type { Episode, EpisodeEvent } from "../lib/types";
-import * as db from "../lib/db";
+import { useDbClient } from "../contexts/DatabaseContext";
 
 export function useEpisodes(childId: string | null) {
+  const db = useDbClient();
   const [activeEpisode, setActiveEpisode] = useState<Episode | null>(null);
   const [events, setEvents] = useState<EpisodeEvent[]>([]);
   const [recentEpisodes, setRecentEpisodes] = useState<Episode[]>([]);

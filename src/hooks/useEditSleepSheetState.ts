@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import * as db from "../lib/db";
+import { useDbClient } from "../contexts/DatabaseContext";
 import { combineLocalDateAndTimeToUtcIso, getLocalDateTimeParts } from "../lib/utils";
 import type { SleepEntry, SleepType } from "../lib/types";
 
@@ -20,6 +20,7 @@ export function useEditSleepSheetState({
   onError: (message: string) => void;
   onSuccess: (message: string) => void;
 }) {
+  const db = useDbClient();
   const startParts = getLocalDateTimeParts(entry.started_at);
   const endParts = getLocalDateTimeParts(entry.ended_at);
   const [sleepType, setSleepType] = useState<SleepType>(entry.sleep_type);

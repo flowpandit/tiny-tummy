@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { useChildContext } from "../contexts/ChildContext";
+import { useActiveChild } from "../contexts/ChildContext";
 import { useSleepTimerPreview } from "../hooks/useSleepTimerPreview";
 import { useSleepLogs } from "../hooks/useSleepLogs";
 import { fillDailyFrequencyDays, formatLocalDateKey } from "../lib/stats";
@@ -43,7 +43,7 @@ import {
 export function Sleep() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { activeChild } = useChildContext();
+  const activeChild = useActiveChild();
   const { logs, refresh } = useSleepLogs(activeChild?.id ?? null, 200);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editingSleep, setEditingSleep] = useState<SleepEntry | null>(null);

@@ -6,7 +6,7 @@ import { DatePicker } from "../ui/date-picker";
 import { TimePicker } from "../ui/time-picker";
 import { Card, CardContent } from "../ui/card";
 import { useToast } from "../ui/toast";
-import { useChildContext } from "../../contexts/ChildContext";
+import { useChildActions, useChildren } from "../../contexts/ChildContext";
 import { useEpisodeSheetState } from "../../hooks/useEpisodeSheetState";
 import { cn } from "../../lib/cn";
 import { EPISODE_EVENT_TYPES, EPISODE_TYPES, getEpisodeEventTypeLabel, getEpisodeTypeLabel } from "../../lib/episode-constants";
@@ -37,7 +37,8 @@ export function EpisodeSheet({
   initialMode = "default",
 }: EpisodeSheetProps) {
   const { showError, showSuccess } = useToast();
-  const { children, refreshChildren } = useChildContext();
+  const children = useChildren();
+  const { refreshChildren } = useChildActions();
   const {
     episodeType, setEpisodeType, episodeDate, setEpisodeDate, episodeTime, setEpisodeTime, summary, setSummary,
     eventType, setEventType, eventDate, setEventDate, eventTime, setEventTime, eventTitle, setEventTitle,

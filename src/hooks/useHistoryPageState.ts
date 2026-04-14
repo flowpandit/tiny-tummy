@@ -6,7 +6,7 @@ import {
   hasHistoryEntries,
   type TimelineEvent,
 } from "../lib/history-timeline";
-import * as db from "../lib/db";
+import { useDbClient } from "../contexts/DatabaseContext";
 import type {
   Child,
   DiaperEntry,
@@ -52,6 +52,7 @@ export function useHistoryPageState(
   quickRangeDays: 7 | 14 | 30,
   searchDate: string | null,
 ) {
+  const db = useDbClient();
   const [data, setData] = useState<HistoryPageData>(getEmptyHistoryPageData);
   const [isLoading, setIsLoading] = useState(false);
   const requestIdRef = useRef(0);

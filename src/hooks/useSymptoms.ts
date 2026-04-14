@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import type { SymptomEntry } from "../lib/types";
-import * as db from "../lib/db";
+import { useDbClient } from "../contexts/DatabaseContext";
 
 export function useSymptoms(childId: string | null) {
+  const db = useDbClient();
   const [logs, setLogs] = useState<SymptomEntry[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const requestIdRef = useRef(0);

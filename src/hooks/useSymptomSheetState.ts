@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import * as db from "../lib/db";
+import { useDbClient } from "../contexts/DatabaseContext";
 import { getSymptomSeverityLabel, getSymptomTypeLabel } from "../lib/symptom-constants";
 import { combineLocalDateAndTimeToUtcIso, getCurrentLocalDate, getCurrentLocalTime } from "../lib/utils";
 import type { Episode, SymptomSeverity, SymptomType } from "../lib/types";
@@ -15,6 +15,7 @@ export function useSymptomSheetState({
   onError: (message: string) => void;
   onSuccess: (message: string) => void;
 }) {
+  const db = useDbClient();
   const [symptomType, setSymptomType] = useState<SymptomType | null>(null);
   const [severity, setSeverity] = useState<SymptomSeverity>("moderate");
   const [logDate, setLogDate] = useState(getCurrentLocalDate());

@@ -18,7 +18,7 @@ import {
 } from "../../assets/illustrations";
 import type { Child } from "../../lib/types";
 import { getAgeLabelFromDob } from "../../lib/utils";
-import { useChildContext } from "../../contexts/ChildContext";
+import { useChildActions, useChildren } from "../../contexts/ChildContext";
 import { useTheme } from "../../contexts/ThemeContext";
 import { Avatar } from "../child/Avatar";
 
@@ -47,7 +47,8 @@ export function ScenicHero({
   className,
   scene = "default",
 }: ScenicHeroProps) {
-  const { children, setActiveChildId } = useChildContext();
+  const children = useChildren();
+  const { setActiveChildId } = useChildActions();
   const { resolved } = useTheme();
   const isDarkArtwork = resolved !== "light";
   const skyArt = isDarkArtwork ? watercolorCloudsDark : watercolorClouds;

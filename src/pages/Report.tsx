@@ -1,7 +1,7 @@
 import { writeFile } from "@tauri-apps/plugin-fs";
 import { save } from "@tauri-apps/plugin-dialog";
 import { platform } from "@tauri-apps/plugin-os";
-import { useChildContext } from "../contexts/ChildContext";
+import { useActiveChild } from "../contexts/ChildContext";
 import { useUnits } from "../contexts/UnitsContext";
 import { useReportPageState } from "../hooks/useReportPageState";
 import { Button } from "../components/ui/button";
@@ -21,7 +21,7 @@ import { useToast } from "../components/ui/toast";
 import { generateReportPdf, savePdfToDownloads } from "../lib/tauri";
 
 export function Report() {
-  const { activeChild } = useChildContext();
+  const activeChild = useActiveChild();
   const { unitSystem } = useUnits();
   const { showError, showSuccess } = useToast();
   const isAndroid = platform() === "android";

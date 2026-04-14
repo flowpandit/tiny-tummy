@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import type { GrowthEntry } from "../lib/types";
-import * as db from "../lib/db";
+import { useDbClient } from "../contexts/DatabaseContext";
 
 export function useGrowthLogs(childId: string | null) {
+  const db = useDbClient();
   const [logs, setLogs] = useState<GrowthEntry[]>([]);
   const [latest, setLatest] = useState<GrowthEntry | null>(null);
   const [isLoading, setIsLoading] = useState(false);

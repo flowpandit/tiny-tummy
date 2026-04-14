@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
-import * as db from "../lib/db";
+import { useDbClient } from "../contexts/DatabaseContext";
 import { getSleepTimerSettingKey, parseSleepTimerSession, type SleepTimerSession } from "../lib/sleep-timer";
 import type { Child } from "../lib/types";
 
 export function useSleepTimerPreview(activeChild: Child | null, refreshKey: unknown) {
+  const db = useDbClient();
   const [timerSession, setTimerSession] = useState<SleepTimerSession | null>(null);
   const [tick, setTick] = useState(Date.now());
 

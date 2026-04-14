@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import type { SleepEntry } from "../lib/types";
-import * as db from "../lib/db";
+import { useDbClient } from "../contexts/DatabaseContext";
 
 export function useSleepLogs(childId: string | null, limit = 50) {
+  const db = useDbClient();
   const [logs, setLogs] = useState<SleepEntry[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const requestIdRef = useRef(0);

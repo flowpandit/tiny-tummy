@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
-import { useChildContext } from "../contexts/ChildContext";
+import { useActiveChild } from "../contexts/ChildContext";
 import { useUnits } from "../contexts/UnitsContext";
 import { useFeedPageState } from "../hooks/useFeedPageState";
 import { useFeedingLogs } from "../hooks/useFeedingLogs";
@@ -45,7 +45,7 @@ import {
 export function Feed() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { activeChild } = useChildContext();
+  const activeChild = useActiveChild();
   const { unitSystem } = useUnits();
   const location = useLocation();
   const { showError, showSuccess } = useToast();

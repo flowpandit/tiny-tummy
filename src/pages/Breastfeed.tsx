@@ -10,7 +10,7 @@ import { InsetPanel, PageBody } from "../components/ui/page-layout";
 import { TrackerMetricRing } from "../components/tracking/TrackerPrimitives";
 import { DietLogForm } from "../components/logging/DietLogForm";
 import { useToast } from "../components/ui/toast";
-import { useChildContext } from "../contexts/ChildContext";
+import { useActiveChild, useChildActions } from "../contexts/ChildContext";
 import { useBreastfeedingTimerState } from "../hooks/useBreastfeedingTimerState";
 import { useChildWorkflowActions } from "../hooks/useChildWorkflowActions";
 import { getDurationRingDisplay } from "../lib/breastfeed-insights";
@@ -18,7 +18,8 @@ import type { FeedingLogDraft } from "../lib/types";
 
 export function Breastfeed() {
   const navigate = useNavigate();
-  const { activeChild, refreshChildren } = useChildContext();
+  const activeChild = useActiveChild();
+  const { refreshChildren } = useChildActions();
   const { showError, showSuccess } = useToast();
   const { runPostLogActions } = useChildWorkflowActions(activeChild);
   const [selectedPatternLogId, setSelectedPatternLogId] = useState<string | null>(null);

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useChildContext } from "../contexts/ChildContext";
-import { useTrial } from "../contexts/TrialContext";
+import { useActiveChild, useChildActions, useChildren } from "../contexts/ChildContext";
+import { useTrialActions } from "../contexts/TrialContext";
 import { ScenicHero } from "../components/layout/ScenicHero";
 import { EditChildSheet } from "../components/settings/EditChildSheet";
 import {
@@ -20,8 +20,10 @@ import { useDeleteChildAction } from "../hooks/useSettingsActions";
 import type { Child } from "../lib/types";
 
 export function Settings() {
-  const { children, activeChild, refreshChildren } = useChildContext();
-  const { clearPremium, resetTrial, setTrialDaysAgo, simulateExpiration, unlockPremium } = useTrial();
+  const children = useChildren();
+  const activeChild = useActiveChild();
+  const { refreshChildren } = useChildActions();
+  const { clearPremium, resetTrial, setTrialDaysAgo, simulateExpiration, unlockPremium } = useTrialActions();
   const navigate = useNavigate();
   const deleteChild = useDeleteChildAction(refreshChildren);
   const [editingChild, setEditingChild] = useState<Child | null>(null);

@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import * as db from "../lib/db";
+import { useDbClient } from "../contexts/DatabaseContext";
 import { syncSmartRemindersForChildren } from "../lib/notifications";
 import type { Child, Episode, EpisodeEvent, FeedingEntry, PoopEntry, SymptomEntry } from "../lib/types";
 
@@ -32,6 +32,7 @@ export function useHomeEffects({
   syncChildReminders,
   symptomLogs,
 }: UseHomeEffectsInput) {
+  const db = useDbClient();
   const latestFeedingLogId = feedingLogs[0]?.id;
   const latestFeedingLoggedAt = feedingLogs[0]?.logged_at;
   const latestRecentEpisodeId = recentEpisodes[0]?.id;

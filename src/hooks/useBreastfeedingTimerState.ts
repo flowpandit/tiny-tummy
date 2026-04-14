@@ -11,7 +11,7 @@ import {
   parseBreastfeedingSession,
 } from "../lib/breastfeeding";
 import { combineLocalDateAndTimeToUtcIso, getCurrentLocalDate, getCurrentLocalTime } from "../lib/utils";
-import * as db from "../lib/db";
+import { useDbClient } from "../contexts/DatabaseContext";
 import type { BreastSide, Child, FeedingEntry } from "../lib/types";
 
 type SessionDurations = Record<"left" | "right", number>;
@@ -35,6 +35,7 @@ export function useBreastfeedingTimerState({
   onError: (message: string) => void;
   onSuccess: (message: string) => void;
 }) {
+  const db = useDbClient();
   const [durations, setDurations] = useState<SessionDurations>({ left: 0, right: 0 });
   const [activeSide, setActiveSide] = useState<"left" | "right" | null>(null);
   const [activeStartedAt, setActiveStartedAt] = useState<number | null>(null);

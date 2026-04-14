@@ -2,12 +2,13 @@ import { useCallback, useEffect, useState } from "react";
 import { getDefaultReportDateRange, getReportDateRangeFromLatestActivity } from "../lib/report-view-model";
 import { defaultReportOptions, generateReportData, type ReportData, type ReportOptions } from "../lib/reporting";
 import type { Child, UnitSystem } from "../lib/types";
-import * as db from "../lib/db";
+import { useDbClient } from "../contexts/DatabaseContext";
 
 export function useReportPageState(
   activeChild: Child | null,
   unitSystem: UnitSystem,
 ) {
+  const db = useDbClient();
   const { today, thirtyDaysAgo } = getDefaultReportDateRange();
   const [startDate, setStartDate] = useState(thirtyDaysAgo);
   const [endDate, setEndDate] = useState(today);

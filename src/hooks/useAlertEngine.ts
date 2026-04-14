@@ -1,10 +1,11 @@
 import { useCallback } from "react";
 import { checkFrequencyAlert, checkColorAlert } from "../lib/tauri";
 import { diaperIncludesWet, getChildAgeDays } from "../lib/diaper";
-import * as db from "../lib/db";
+import { useDbClient } from "../contexts/DatabaseContext";
 import type { Child } from "../lib/types";
 
 export function useAlertEngine() {
+  const db = useDbClient();
   const runChecks = useCallback(async (child: Child) => {
     try {
       const lastPoop = await db.getLastRealPoop(child.id);

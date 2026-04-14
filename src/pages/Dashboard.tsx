@@ -1,5 +1,5 @@
 import { lazy, Suspense, useState } from "react";
-import { useChildContext } from "../contexts/ChildContext";
+import { useActiveChild } from "../contexts/ChildContext";
 import { useStats } from "../hooks/useStats";
 import { usePoopLogs } from "../hooks/usePoopLogs";
 import { useFeedingLogs } from "../hooks/useFeedingLogs";
@@ -24,7 +24,7 @@ const PERIOD_OPTIONS = [
 ];
 
 export function Dashboard() {
-  const { activeChild } = useChildContext();
+  const activeChild = useActiveChild();
   const [days, setDays] = useState(7);
   const { logs } = usePoopLogs(activeChild?.id ?? null);
   const { logs: feedingLogs } = useFeedingLogs(activeChild?.id ?? null);

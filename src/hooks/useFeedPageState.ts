@@ -9,7 +9,7 @@ import {
 } from "../lib/quick-presets";
 import { getBreastfeedingSessionSettingKey, parseBreastfeedingSession } from "../lib/breastfeeding";
 import { combineLocalDateAndTimeToUtcIso, getCurrentLocalDate, getCurrentLocalTime } from "../lib/utils";
-import * as db from "../lib/db";
+import { useDbClient } from "../contexts/DatabaseContext";
 import type { Child, FeedingEntry, FeedingLogDraft, UnitSystem } from "../lib/types";
 import { useVisibilityRefresh } from "./useVisibilityRefresh";
 
@@ -30,6 +30,7 @@ export function useFeedPageState({
   onSuccess: (message: string) => void;
   refreshLogs: () => Promise<void>;
 }) {
+  const db = useDbClient();
   const [quickFeedPresets, setQuickFeedPresets] = useState<QuickFeedPreset[]>([]);
   const [activeBreastfeedingSide, setActiveBreastfeedingSide] = useState<"left" | "right" | null>(null);
 

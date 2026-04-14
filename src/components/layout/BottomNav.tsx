@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { useChildContext } from "../../contexts/ChildContext";
+import { useActiveChild, useChildActions } from "../../contexts/ChildContext";
 import { useUpdateChildFeedingTypeAction } from "../../hooks/useSettingsActions";
 import { useEliminationPreference } from "../../hooks/useEliminationPreference";
 import { cn } from "../../lib/cn";
@@ -99,7 +99,8 @@ const NAV_ITEMS = [
 export function BottomNav() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { activeChild, refreshChildren } = useChildContext();
+  const activeChild = useActiveChild();
+  const { refreshChildren } = useChildActions();
   const updateChildFeedingType = useUpdateChildFeedingTypeAction(refreshChildren);
   const { experience } = useEliminationPreference(activeChild);
   const [isSheetOpen, setIsSheetOpen] = useState(false);

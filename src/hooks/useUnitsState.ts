@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
-import * as db from "../lib/db";
+import { useDbClient } from "../contexts/DatabaseContext";
 import { detectDefaultUnitSystem, UNIT_SYSTEM_SETTING_KEY } from "../lib/units";
 import type { UnitSystem } from "../lib/types";
 
 export function useUnitsState() {
+  const db = useDbClient();
   const [unitSystem, setUnitSystemState] = useState<UnitSystem>(() => detectDefaultUnitSystem());
 
   useEffect(() => {

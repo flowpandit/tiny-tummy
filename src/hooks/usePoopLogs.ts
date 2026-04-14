@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import type { PoopEntry } from "../lib/types";
-import * as db from "../lib/db";
+import { useDbClient } from "../contexts/DatabaseContext";
 
 export function usePoopLogs(childId: string | null, limit = 100) {
+  const db = useDbClient();
   const [logs, setLogs] = useState<PoopEntry[]>([]);
   const [lastRealPoop, setLastRealPoop] = useState<PoopEntry | null>(null);
   const [isLoading, setIsLoading] = useState(false);

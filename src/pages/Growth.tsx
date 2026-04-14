@@ -1,5 +1,5 @@
 import { lazy, Suspense, useMemo, useState } from "react";
-import { useChildContext } from "../contexts/ChildContext";
+import { useActiveChild } from "../contexts/ChildContext";
 import { useUnits } from "../contexts/UnitsContext";
 import { useGrowthLogs } from "../hooks/useGrowthLogs";
 import { Card, CardContent, CardHeader } from "../components/ui/card";
@@ -74,7 +74,7 @@ function getMeasurementRing(
 }
 
 export function Growth() {
-  const { activeChild } = useChildContext();
+  const activeChild = useActiveChild();
   const { unitSystem } = useUnits();
   const { logs, latest, refresh } = useGrowthLogs(activeChild?.id ?? null);
   const [sheetOpen, setSheetOpen] = useState(false);

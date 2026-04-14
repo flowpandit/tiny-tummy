@@ -1,5 +1,6 @@
-import { createContext, useContext, type ReactNode } from "react";
-import { useEntitlement } from "../hooks/useEntitlement";
+import { createContext, useContext, useEffect, useMemo, useRef, type ReactNode } from "react";
+import { useStoreSelector } from "../lib/store";
+import { createTrialStore, type TrialStore } from "./trial-store";
 
 interface TrialContextState {
   isLocked: boolean;
@@ -15,48 +16,54 @@ interface TrialContextState {
   refreshTrial: () => Promise<void>;
 }
 
-const TrialContext = createContext<TrialContextState | undefined>(undefined);
+const TrialContext = createContext<TrialStore | undefined>(undefined);
 
 export function TrialProvider({ children }: { children: ReactNode }) {
-  const {
-    entitlement,
-    isLoading,
-    loadError,
-    refreshEntitlement,
-    unlockPremium,
-    restorePremium,
-    resetTrial,
-    setTrialDaysAgo,
-    clearPremium,
-    simulateExpiration,
-  } = useEntitlement();
+  const storeRef = useRef<TrialStore | undefined>(undefined);
 
-  const isLocked = entitlement?.kind === "trial_expired";
-  const daysRemaining = entitlement?.daysRemaining ?? 14;
+  if (!storeRef.current) {
+    storeRef.current = createTrialStore();
+  }
 
-  return (
-    <TrialContext.Provider
-      value={{
-        isLocked,
-        daysRemaining,
-        isLoading,
-        loadError,
-        unlockPremium,
-        restorePremium,
-        resetTrial,
-        setTrialDaysAgo,
-        clearPremium,
-        simulateExpiration,
-        refreshTrial: refreshEntitlement,
-      }}
-    >
-      {children}
-    </TrialContext.Provider>
-  );
+  useEffect(() => {
+    storeRef.current?.initialize();
+  }, []);
+
+  return <TrialContext.Provider value={storeRef.current}>{children}</TrialContext.Provider>;
 }
 
-export function useTrial() {
+function useTrialStore() {
   const context = useContext(TrialContext);
   if (!context) throw new Error("useTrial must be used within TrialProvider");
   return context;
+}
+
+export function useTrialAccess() {
+  const store = useTrialStore();
+  const entitlement = useStoreSelector(store, (state) => state.entitlement);
+  const isLoading = useStoreSelector(store, (state) => state.isLoading);
+  const loadError = useStoreSelector(store, (state) => state.loadError);
+  const isLocked = entitlement?.kind === "trial_expired";
+  const daysRemaining = entitlement?.daysRemaining ?? 14;
+
+  return useMemo(() => ({
+    isLocked,
+    daysRemaining,
+    isLoading,
+    loadError,
+  }), [daysRemaining, isLoading, isLocked, loadError]);
+}
+
+export function useTrialActions() {
+  const store = useTrialStore();
+  return store.actions;
+}
+
+export function useTrial() {
+  const access = useTrialAccess();
+  const actions = useTrialActions();
+  return useMemo<TrialContextState>(() => ({
+    ...access,
+    ...actions,
+  }), [access, actions]);
 }

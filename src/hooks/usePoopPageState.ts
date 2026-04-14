@@ -7,7 +7,7 @@ import {
   type QuickPoopPreset,
 } from "../lib/quick-presets";
 import { combineLocalDateAndTimeToUtcIso, getCurrentLocalDate, getCurrentLocalTime } from "../lib/utils";
-import * as db from "../lib/db";
+import { useDbClient } from "../contexts/DatabaseContext";
 import type { Child, PoopEntry, PoopLogDraft } from "../lib/types";
 
 function getCurrentPoopTimestamp(): string {
@@ -25,6 +25,7 @@ export function usePoopPageState({
   onSuccess: (message: string) => void;
   refreshLogs: () => Promise<void>;
 }) {
+  const db = useDbClient();
   const [quickPoopPresets, setQuickPoopPresets] = useState<QuickPoopPreset[]>([]);
 
   useEffect(() => {

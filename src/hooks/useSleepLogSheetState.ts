@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useVisibilityRefresh } from "./useVisibilityRefresh";
-import * as db from "../lib/db";
+import { useDbClient } from "../contexts/DatabaseContext";
 import type { SleepType } from "../lib/types";
 import {
   getLocalTimestamp,
@@ -34,6 +34,7 @@ export function useSleepLogSheetState({
   onError: (message: string) => void;
   onSuccess: (message: string) => void;
 }) {
+  const db = useDbClient();
   const [mode, setModeState] = useState<Mode>("manual");
   const [sleepType, setSleepType] = useState<SleepType>("nap");
   const [startDate, setStartDate] = useState(getCurrentLocalDate());

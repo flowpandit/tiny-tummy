@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import * as db from "../lib/db";
+import { useDbClient } from "../contexts/DatabaseContext";
 
 export type ThemeMode = "system" | "light" | "dark";
 
@@ -11,6 +11,7 @@ function isValidTimeValue(value: string | null): value is string {
 }
 
 export function useThemePreferences() {
+  const db = useDbClient();
   const [mode, setModeState] = useState<ThemeMode>("system");
   const [nightModeEnabled, setNightModeEnabledState] = useState(false);
   const [nightModeStart, setNightModeStartState] = useState(DEFAULT_NIGHT_START);

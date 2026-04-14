@@ -1,5 +1,5 @@
 import { useLocation, useNavigate } from "react-router-dom";
-import { useChildContext } from "../../contexts/ChildContext";
+import { useActiveChild, useChildActions, useChildren } from "../../contexts/ChildContext";
 import { CompactChildNav } from "./CompactChildNav";
 
 type HeaderProps = {
@@ -9,7 +9,9 @@ type HeaderProps = {
 };
 
 export function Header({ showBackButton = false, fallbackTo = "/", visible = true }: HeaderProps) {
-  const { activeChild, children, setActiveChildId } = useChildContext();
+  const activeChild = useActiveChild();
+  const children = useChildren();
+  const { setActiveChildId } = useChildActions();
   const navigate = useNavigate();
   const location = useLocation();
 

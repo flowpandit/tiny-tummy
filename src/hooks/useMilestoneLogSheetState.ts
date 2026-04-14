@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import * as db from "../lib/db";
+import { useDbClient } from "../contexts/DatabaseContext";
 import { combineLocalDateAndTimeToUtcIso, getCurrentLocalDate, getCurrentLocalTime } from "../lib/utils";
 import type { MilestoneType } from "../lib/types";
 
@@ -13,6 +13,7 @@ export function useMilestoneLogSheetState({
   onError: (message: string) => void;
   onSuccess: (message: string) => void;
 }) {
+  const db = useDbClient();
   const [milestoneType, setMilestoneType] = useState<MilestoneType>("started_solids");
   const [logDate, setLogDate] = useState(getCurrentLocalDate());
   const [logTime, setLogTime] = useState(getCurrentLocalTime());

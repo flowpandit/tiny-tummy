@@ -1,5 +1,7 @@
-import { createContext, useContext, type ReactNode } from "react";
-import { useChildrenState } from "../hooks/useChildrenState";
+import { createContext, useContext, useEffect, useMemo, useRef, type ReactNode } from "react";
+import { useDbClient } from "./DatabaseContext";
+import { createChildStore, type ChildStore } from "./child-store";
+import { useStoreSelector } from "../lib/store";
 import type { Child } from "../lib/types";
 
 interface ChildContextType {
@@ -11,36 +13,65 @@ interface ChildContextType {
   loadError: string | null;
 }
 
-const ChildContext = createContext<ChildContextType | null>(null);
+const ChildContext = createContext<ChildStore | null>(null);
 
 export function ChildProvider({ children: childrenProp }: { children: ReactNode }) {
-  const {
+  const db = useDbClient();
+  const storeRef = useRef<ChildStore | null>(null);
+
+  if (!storeRef.current) {
+    storeRef.current = createChildStore(db);
+  }
+
+  useEffect(() => {
+    storeRef.current?.initialize();
+  }, []);
+
+  return <ChildContext.Provider value={storeRef.current}>{childrenProp}</ChildContext.Provider>;
+}
+
+function useChildStore() {
+  const store = useContext(ChildContext);
+  if (!store) throw new Error("Child hooks must be used within ChildProvider");
+  return store;
+}
+
+export function useChildren() {
+  const store = useChildStore();
+  return useStoreSelector(store, (state) => state.children);
+}
+
+export function useActiveChild() {
+  const store = useChildStore();
+  return useStoreSelector(store, (state) => (
+    state.children.find((child) => child.id === state.activeChildId) ?? null
+  ));
+}
+
+export function useChildLoadState() {
+  const store = useChildStore();
+  const isLoading = useStoreSelector(store, (state) => state.isLoading);
+  const loadError = useStoreSelector(store, (state) => state.loadError);
+  return useMemo(() => ({ isLoading, loadError }), [isLoading, loadError]);
+}
+
+export function useChildActions() {
+  const store = useChildStore();
+  return store.actions;
+}
+
+export function useChildContext() {
+  const children = useChildren();
+  const activeChild = useActiveChild();
+  const { isLoading, loadError } = useChildLoadState();
+  const { setActiveChildId, refreshChildren } = useChildActions();
+
+  return useMemo<ChildContextType>(() => ({
     children,
     activeChild,
     setActiveChildId,
     refreshChildren,
     isLoading,
     loadError,
-  } = useChildrenState();
-
-  return (
-    <ChildContext.Provider
-      value={{
-        children,
-        activeChild,
-        setActiveChildId,
-        refreshChildren,
-        isLoading,
-        loadError,
-      }}
-    >
-      {childrenProp}
-    </ChildContext.Provider>
-  );
-}
-
-export function useChildContext() {
-  const ctx = useContext(ChildContext);
-  if (!ctx) throw new Error("useChildContext must be used within ChildProvider");
-  return ctx;
+  }), [activeChild, children, isLoading, loadError, refreshChildren, setActiveChildId]);
 }

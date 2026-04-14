@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { getBreastfeedingSessionSettingKey, parseBreastfeedingSession } from "../lib/breastfeeding";
-import * as db from "../lib/db";
+import { useDbClient } from "../contexts/DatabaseContext";
 import { useVisibilityRefresh } from "./useVisibilityRefresh";
 import type { Child } from "../lib/types";
 
@@ -8,6 +8,7 @@ export function useHomeBreastfeedingState(
   activeChild: Child | null,
   refreshFeedingLogs: () => Promise<void>,
 ) {
+  const db = useDbClient();
   const [activeBreastfeedingSide, setActiveBreastfeedingSide] = useState<"left" | "right" | null>(null);
 
   const refreshBreastfeedingSession = useCallback(async () => {

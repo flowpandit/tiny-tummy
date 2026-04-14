@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { useChildContext } from "../contexts/ChildContext";
+import { useActiveChild } from "../contexts/ChildContext";
 import { useUnits } from "../contexts/UnitsContext";
 import { useHistoryPageState } from "../hooks/useHistoryPageState";
 import { formatLocalDateKey } from "../lib/utils";
@@ -23,7 +23,7 @@ import type {
 } from "../lib/types";
 
 export function History() {
-  const { activeChild } = useChildContext();
+  const activeChild = useActiveChild();
   const { unitSystem } = useUnits();
   const [expandedDay, setExpandedDay] = useState<string | null>(null);
   const [searchDate, setSearchDate] = useState<string | null>(null);

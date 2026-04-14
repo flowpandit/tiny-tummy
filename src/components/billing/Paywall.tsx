@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { useTrial } from "../../contexts/TrialContext";
+import { useTrialAccess, useTrialActions } from "../../contexts/TrialContext";
 import { Button } from "../ui/button";
 import { Logo } from "../ui/Logo";
 import { useToast } from "../ui/toast";
@@ -32,7 +32,8 @@ const featureRows = [
 
 export function Paywall() {
   const navigate = useNavigate();
-  const { daysRemaining, restorePremium, unlockPremium } = useTrial();
+  const { daysRemaining } = useTrialAccess();
+  const { restorePremium, unlockPremium } = useTrialActions();
   const { showError, showSuccess } = useToast();
   const [isProcessing, setIsProcessing] = useState(false);
   const checkoutTimerRef = useRef<number | null>(null);

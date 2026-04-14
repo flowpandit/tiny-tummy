@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTheme } from "../../contexts/ThemeContext";
 import { useUnits } from "../../contexts/UnitsContext";
-import { useTrial } from "../../contexts/TrialContext";
+import { useTrialAccess, useTrialActions } from "../../contexts/TrialContext";
 import { useEliminationPreference } from "../../hooks/useEliminationPreference";
 import { Card, CardContent } from "../ui/card";
 import { Button } from "../ui/button";
@@ -399,7 +399,8 @@ export function SupportSection() {
 }
 
 export function AccessSection() {
-  const { daysRemaining, isLocked, restorePremium } = useTrial();
+  const { daysRemaining, isLocked } = useTrialAccess();
+  const { restorePremium } = useTrialActions();
   const { showError, showSuccess } = useToast();
 
   const handleRestore = async () => {
@@ -465,7 +466,7 @@ export function DeveloperToolsSection({
   onClearPremium: () => Promise<void> | void;
   onSimulatePremiumUnlock: () => Promise<void> | void;
 }) {
-  const { daysRemaining, isLocked } = useTrial();
+  const { daysRemaining, isLocked } = useTrialAccess();
   const { showError, showSuccess } = useToast();
 
   if (!import.meta.env.DEV) {

@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import * as db from "../lib/db";
+import { useDbClient } from "../contexts/DatabaseContext";
 import { combineLocalDateAndTimeToUtcIso, getLocalDateTimeParts } from "../lib/utils";
 import { formatVolumeValue, parseVolumeInputToMl } from "../lib/units";
 import type { BottleContent, BreastSide, DietEntry, FoodType, UnitSystem } from "../lib/types";
@@ -20,6 +20,7 @@ export function useEditMealSheetState({
   onDeleted: () => void;
   onError: (message: string) => void;
 }) {
+  const db = useDbClient();
   const entryLoggedAt = getLocalDateTimeParts(entry.logged_at);
   const [logDate, setLogDate] = useState(entryLoggedAt.date);
   const [logTime, setLogTime] = useState(entryLoggedAt.time);

@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import type { FeedingEntry } from "../lib/types";
-import * as db from "../lib/db";
+import { useDbClient } from "../contexts/DatabaseContext";
 
 export function useFeedingLogs(childId: string | null, limit = 100) {
+  const db = useDbClient();
   const [logs, setLogs] = useState<FeedingEntry[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const requestIdRef = useRef(0);

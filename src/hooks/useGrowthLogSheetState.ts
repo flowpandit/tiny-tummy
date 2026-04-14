@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import * as db from "../lib/db";
+import { useDbClient } from "../contexts/DatabaseContext";
 import { combineLocalDateAndTimeToUtcIso, getCurrentLocalDate, getCurrentLocalTime, getLocalDateTimeParts } from "../lib/utils";
 import { formatGrowthValue, parseGrowthInputToMetric } from "../lib/units";
 import type { GrowthEntry, UnitSystem } from "../lib/types";
@@ -17,6 +17,7 @@ export function useGrowthLogSheetState({
   onError: (message: string) => void;
   onSuccess: (message: string) => void;
 }) {
+  const db = useDbClient();
   const [measureDate, setMeasureDate] = useState(getCurrentLocalDate());
   const [measureTime, setMeasureTime] = useState(getCurrentLocalTime());
   const [weightKg, setWeightKg] = useState("");

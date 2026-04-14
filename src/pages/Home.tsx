@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { useChildContext } from "../contexts/ChildContext";
+import { useActiveChild, useChildActions, useChildren } from "../contexts/ChildContext";
 import { usePoopLogs } from "../hooks/usePoopLogs";
 import { useDiaperLogs } from "../hooks/useDiaperLogs";
 import { useFeedingLogs } from "../hooks/useFeedingLogs";
@@ -32,7 +32,9 @@ export function Home() {
   const navigate = useNavigate();
   const location = useLocation();
   const navigateWithOrigin = (path: string) => navigate(path, { state: { origin: location.pathname } });
-  const { activeChild, children, setActiveChildId } = useChildContext();
+  const activeChild = useActiveChild();
+  const children = useChildren();
+  const { setActiveChildId } = useChildActions();
   const { experience } = useEliminationPreference(activeChild);
   const { showError, showSuccess } = useToast();
   const { logs, lastRealPoop, refresh: refreshLogs } = usePoopLogs(activeChild?.id ?? null);

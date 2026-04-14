@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useChildContext } from "../contexts/ChildContext";
+import { useActiveChild } from "../contexts/ChildContext";
 import { usePoopLogs } from "../hooks/usePoopLogs";
 import { useFeedingLogs } from "../hooks/useFeedingLogs";
 import { useAlerts } from "../hooks/useAlerts";
@@ -47,7 +47,7 @@ import {
 
 export function Poop() {
   const navigate = useNavigate();
-  const { activeChild } = useChildContext();
+  const activeChild = useActiveChild();
   const { experience } = useEliminationPreference(activeChild);
   const { showError, showSuccess } = useToast();
   const { logs, lastRealPoop, refresh } = usePoopLogs(activeChild?.id ?? null, 500);

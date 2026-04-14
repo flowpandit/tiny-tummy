@@ -1,9 +1,10 @@
 import { useCallback } from "react";
-import * as db from "../lib/db";
+import { useDbClient } from "../contexts/DatabaseContext";
 import { saveAvatar } from "../lib/photos";
 import type { Child, ChildSex, FeedingType } from "../lib/types";
 
 export function useCreateChildAction() {
+  const db = useDbClient();
   return useCallback(async ({
     name,
     dob,

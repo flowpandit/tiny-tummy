@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useChildContext } from "../contexts/ChildContext";
+import { useActiveChild } from "../contexts/ChildContext";
 import { useDiaperLogs } from "../hooks/useDiaperLogs";
 import { useSymptoms } from "../hooks/useSymptoms";
 import { useAlerts } from "../hooks/useAlerts";
@@ -34,7 +34,7 @@ import {
 
 export function Diaper() {
   const navigate = useNavigate();
-  const { activeChild } = useChildContext();
+  const activeChild = useActiveChild();
   const { experience } = useEliminationPreference(activeChild);
   const { logs, lastDiaper, lastWetDiaper, lastDirtyDiaper, refresh } = useDiaperLogs(activeChild?.id ?? null);
   const { logs: symptomLogs } = useSymptoms(activeChild?.id ?? null);

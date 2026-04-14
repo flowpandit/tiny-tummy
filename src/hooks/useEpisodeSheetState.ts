@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from "react";
-import * as db from "../lib/db";
+import { useDbClient } from "../contexts/DatabaseContext";
 import { combineLocalDateAndTimeToUtcIso, getCurrentLocalDate, getCurrentLocalTime, getLocalDateTimeParts } from "../lib/utils";
 import type { Child, Episode, EpisodeEventType, EpisodeType } from "../lib/types";
 
@@ -25,6 +25,7 @@ export function useEpisodeSheetState({
   onError: (message: string) => void;
   onSuccess: (message: string) => void;
 }) {
+  const db = useDbClient();
   const [episodeType, setEpisodeType] = useState<EpisodeType | null>(null);
   const [episodeDate, setEpisodeDate] = useState(getCurrentLocalDate());
   const [episodeTime, setEpisodeTime] = useState(getCurrentLocalTime());

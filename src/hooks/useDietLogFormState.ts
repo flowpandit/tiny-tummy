@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import * as db from "../lib/db";
+import { useDbClient } from "../contexts/DatabaseContext";
 import { combineLocalDateAndTimeToUtcIso, getCurrentLocalDate, getCurrentLocalTime } from "../lib/utils";
 import { parseVolumeInputToMl } from "../lib/units";
 import type { BottleContent, BreastSide, FeedingLogDraft, FoodType, UnitSystem } from "../lib/types";
@@ -39,6 +39,7 @@ export function useDietLogFormState({
   onClose: () => void;
   onError: (message: string) => void;
 }) {
+  const db = useDbClient();
   const [logDate, setLogDate] = useState(getCurrentLocalDate());
   const [logTime, setLogTime] = useState(getCurrentLocalTime());
   const [foodType, setFoodType] = useState<FoodType | null>(null);

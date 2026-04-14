@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import * as db from "../lib/db";
+import { useDbClient } from "../contexts/DatabaseContext";
 import { diaperIncludesStool, diaperIncludesWet } from "../lib/diaper";
 import { savePhoto } from "../lib/photos";
 import { combineLocalDateAndTimeToUtcIso, getCurrentLocalDate, getCurrentLocalTime } from "../lib/utils";
@@ -31,6 +31,7 @@ export function useDiaperLogFormState({
   resetPhoto: () => void;
   photoFile: File | null;
 }) {
+  const db = useDbClient();
   const [logDate, setLogDate] = useState(getCurrentLocalDate());
   const [logTime, setLogTime] = useState(getCurrentLocalTime());
   const [diaperType, setDiaperType] = useState<DiaperType | null>(null);

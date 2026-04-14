@@ -1,11 +1,12 @@
 import { lazy, Suspense, useEffect, useState } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { ChildProvider, useChildContext } from "./contexts/ChildContext";
+import { ChildProvider, useChildActions, useChildLoadState, useChildren } from "./contexts/ChildContext";
+import { DatabaseProvider } from "./contexts/DatabaseContext";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { UnitsProvider } from "./contexts/UnitsContext";
 import { ErrorBoundary } from "./components/ui/error-boundary";
 import { ToastProvider } from "./components/ui/toast";
-import { TrialProvider, useTrial } from "./contexts/TrialContext";
+import { TrialProvider, useTrialAccess, useTrialActions } from "./contexts/TrialContext";
  
 const AppShell = lazy(() => import("./components/layout/AppShell").then((m) => ({ default: m.AppShell })));
 const Paywall = lazy(() => import("./components/billing/Paywall").then((m) => ({ default: m.Paywall })));
@@ -39,18 +40,11 @@ function PageLoader() {
 }
 
 function AppRoutes() {
-  const {
-    children,
-    isLoading,
-    loadError: childLoadError,
-    refreshChildren,
-  } = useChildContext();
-  const {
-    isLocked,
-    isLoading: isTrialLoading,
-    loadError: trialLoadError,
-    refreshTrial,
-  } = useTrial();
+  const children = useChildren();
+  const { isLoading, loadError: childLoadError } = useChildLoadState();
+  const { refreshChildren } = useChildActions();
+  const { isLocked, isLoading: isTrialLoading, loadError: trialLoadError } = useTrialAccess();
+  const { refreshTrial } = useTrialActions();
   const [loadingForMs, setLoadingForMs] = useState(0);
 
   useEffect(() => {
@@ -177,17 +171,19 @@ function App() {
   return (
     <ErrorBoundary>
       <BrowserRouter>
-        <ThemeProvider>
-          <UnitsProvider>
-            <ToastProvider>
-              <ChildProvider>
-                <TrialProvider>
-                  <AppRoutes />
-                </TrialProvider>
-              </ChildProvider>
-            </ToastProvider>
-          </UnitsProvider>
-        </ThemeProvider>
+        <DatabaseProvider>
+          <ThemeProvider>
+            <UnitsProvider>
+              <ToastProvider>
+                <ChildProvider>
+                  <TrialProvider>
+                    <AppRoutes />
+                  </TrialProvider>
+                </ChildProvider>
+              </ToastProvider>
+            </UnitsProvider>
+          </ThemeProvider>
+        </DatabaseProvider>
       </BrowserRouter>
     </ErrorBoundary>
   );

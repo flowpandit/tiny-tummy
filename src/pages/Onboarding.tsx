@@ -3,13 +3,13 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Welcome } from "../components/onboarding/Welcome";
 import { AddChildStep } from "../components/onboarding/AddChildStep";
 import { NormalRangeIntro } from "../components/onboarding/NormalRangeIntro";
-import { useChildContext } from "../contexts/ChildContext";
+import { useChildActions } from "../contexts/ChildContext";
 import type { Child } from "../lib/types";
 
 export function Onboarding() {
   const [step, setStep] = useState(0);
   const [newChild, setNewChild] = useState<Child | null>(null);
-  const { refreshChildren } = useChildContext();
+  const { refreshChildren } = useChildActions();
 
   const handleChildCreated = (child: Child) => {
     setNewChild(child);

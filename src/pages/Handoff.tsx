@@ -6,7 +6,7 @@ import { Textarea } from "../components/ui/field";
 import { PageIntro } from "../components/ui/page-intro";
 import { InsetPanel, PageBody, SectionHeading, StatGrid, StatTile } from "../components/ui/page-layout";
 import { useToast } from "../components/ui/toast";
-import { useChildContext } from "../contexts/ChildContext";
+import { useActiveChild } from "../contexts/ChildContext";
 import { useUnits } from "../contexts/UnitsContext";
 import { usePoopLogs } from "../hooks/usePoopLogs";
 import { useDiaperLogs } from "../hooks/useDiaperLogs";
@@ -25,7 +25,7 @@ import { formatDate } from "../lib/utils";
 import type { HealthStatus } from "../lib/types";
 
 export function Handoff() {
-  const { activeChild } = useChildContext();
+  const activeChild = useActiveChild();
   const { unitSystem } = useUnits();
   const { logs, lastRealPoop } = usePoopLogs(activeChild?.id ?? null);
   const { logs: diaperLogs } = useDiaperLogs(activeChild?.id ?? null);

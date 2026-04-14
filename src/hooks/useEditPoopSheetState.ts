@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import * as db from "../lib/db";
+import { useDbClient } from "../contexts/DatabaseContext";
 import { combineLocalDateAndTimeToUtcIso, getLocalDateTimeParts } from "../lib/utils";
 import type { PoopEntry, StoolColor, StoolSize } from "../lib/types";
 
@@ -16,6 +16,7 @@ export function useEditPoopSheetState({
   onDeleted: () => void;
   onError: (message: string) => void;
 }) {
+  const db = useDbClient();
   const entryLoggedAt = getLocalDateTimeParts(entry.logged_at);
   const [logDate, setLogDate] = useState(entryLoggedAt.date);
   const [logTime, setLogTime] = useState(entryLoggedAt.time);

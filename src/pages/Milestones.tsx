@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useChildContext } from "../contexts/ChildContext";
+import { useActiveChild } from "../contexts/ChildContext";
 import { useMilestoneLogs } from "../hooks/useMilestoneLogs";
 import { Card, CardContent, CardHeader } from "../components/ui/card";
 import { Button } from "../components/ui/button";
@@ -15,7 +15,7 @@ function getThirtyDaysAgo(): Date {
 }
 
 export function Milestones() {
-  const { activeChild } = useChildContext();
+  const activeChild = useActiveChild();
   const { logs, refresh } = useMilestoneLogs(activeChild?.id ?? null);
   const [sheetOpen, setSheetOpen] = useState(false);
 

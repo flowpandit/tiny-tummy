@@ -9,7 +9,7 @@ import { AvatarUpload } from "../components/child/AvatarUpload";
 import { FEEDING_TYPES, AVATAR_COLORS, CHILD_SEX_OPTIONS } from "../lib/constants";
 import { cn } from "../lib/cn";
 import { useCreateChildAction } from "../hooks/useCreateChildAction";
-import { useChildContext } from "../contexts/ChildContext";
+import { useChildActions } from "../contexts/ChildContext";
 import { useToast } from "../components/ui/toast";
 import { Header } from "../components/layout/Header";
 import { getCurrentLocalDate } from "../lib/utils";
@@ -17,7 +17,7 @@ import type { ChildSex, FeedingType } from "../lib/types";
 
 export function AddChild() {
   const navigate = useNavigate();
-  const { refreshChildren, setActiveChildId } = useChildContext();
+  const { refreshChildren, setActiveChildId } = useChildActions();
   const { showError } = useToast();
   const createChild = useCreateChildAction();
   const [name, setName] = useState("");
@@ -175,6 +175,7 @@ export function AddChild() {
             size="lg"
             className="w-full"
             disabled={!isValid || isSubmitting}
+            data-testid="add-child-submit"
           >
             {isSubmitting ? "Adding..." : "Add Child"}
           </Button>
