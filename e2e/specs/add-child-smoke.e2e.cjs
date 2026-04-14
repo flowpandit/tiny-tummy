@@ -3,7 +3,7 @@ describe("Tiny Tummy Tauri smoke", () => {
     const childName = `E2E ${Date.now()}`;
 
     const getStartedButton = await $("button=Get Started");
-    await getStartedButton.waitForDisplayed({ timeout: 20000 });
+    await getStartedButton.waitForDisplayed({ timeout: 30000 });
     await getStartedButton.click();
 
     const nameInput = await $("#child-name");

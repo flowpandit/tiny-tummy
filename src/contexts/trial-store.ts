@@ -110,8 +110,9 @@ export function createTrialStore(): TrialStore {
     initialize() {
       if (initialized) return;
       initialized = true;
-      void refreshTrial();
-      void syncOwnedPurchase().then(refreshTrial).catch(() => undefined);
+      void refreshTrial().then(() =>
+        syncOwnedPurchase().then(refreshTrial).catch(() => undefined),
+      );
     },
     actions: {
       refreshTrial,
