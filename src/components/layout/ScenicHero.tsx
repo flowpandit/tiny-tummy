@@ -404,6 +404,19 @@ export function ScenicHero({
         <div className="pointer-events-none absolute left-[42px] top-[112px] h-8 w-8 rounded-full blur-[6px]" style={{ background: "var(--color-hero-cloud-strong)" }} />
         <div className="pointer-events-none absolute left-[72px] top-[108px] h-9 w-9 rounded-full blur-[8px]" style={{ background: "var(--color-hero-cloud-soft)" }} />
         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-28" style={{ background: "var(--gradient-hero-floor)" }} />
+        <div
+          className="pointer-events-none absolute inset-x-0 bottom-[-1px] h-[44%]"
+          style={{
+            background: "linear-gradient(180deg, rgba(255, 255, 255, 0) 0%, color-mix(in srgb, var(--color-bg) 22%, transparent) 28%, color-mix(in srgb, var(--color-bg) 58%, transparent) 56%, color-mix(in srgb, var(--color-bg) 88%, transparent) 82%, var(--color-bg) 100%)",
+          }}
+        />
+        <div
+          className="pointer-events-none absolute inset-x-[-6%] bottom-[10%] h-[24%] blur-[26px]"
+          style={{
+            background: "linear-gradient(180deg, color-mix(in srgb, var(--color-bg) 0%, transparent) 0%, color-mix(in srgb, var(--color-bg) 36%, transparent) 42%, color-mix(in srgb, var(--color-bg) 72%, transparent) 100%)",
+            opacity: 0.9,
+          }}
+        />
         <div className="relative flex h-full items-start pt-8">
           <div className="w-full px-4 md:px-6 lg:px-8">
             <div className="flex items-start justify-between gap-4">
