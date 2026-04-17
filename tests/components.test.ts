@@ -7,6 +7,8 @@ import { MemoryRouter } from "react-router-dom";
 import { CompactChildNav } from "../src/components/layout/CompactChildNav.tsx";
 import { LoggingFieldGroup, LoggingFormHeader, LoggingPresetNotice } from "../src/components/logging/logging-form-primitives.tsx";
 import { NormalRangeIntro } from "../src/components/onboarding/NormalRangeIntro.tsx";
+import { SleepRecentHistorySection } from "../src/components/sleep/SleepRecentHistorySection.tsx";
+import { MilestoneRecentActivitySection } from "../src/components/milestones/MilestoneRecentActivitySection.tsx";
 import type { Child } from "../src/lib/types.ts";
 
 afterEach(() => {
@@ -29,6 +31,25 @@ const otherChild: Child = {
   ...activeChild,
   id: "child-2",
   name: "Noah",
+};
+
+const recentSleepLog = {
+  id: "sleep-1",
+  child_id: "child-1",
+  sleep_type: "nap" as const,
+  started_at: "2026-04-17T09:15:00",
+  ended_at: "2026-04-17T10:00:00",
+  notes: null,
+  created_at: "2026-04-17T10:00:00",
+};
+
+const recentMilestone = {
+  id: "milestone-1",
+  child_id: "child-1",
+  milestone_type: "started_solids" as const,
+  logged_at: "2026-04-17T11:30:00",
+  notes: "Tried mashed avocado for the first time.",
+  created_at: "2026-04-17T11:30:00",
 };
 
 function renderAvatar(child: Child) {
@@ -108,4 +129,59 @@ test("NormalRangeIntro loads the normal-range copy and finishes onboarding", asy
   await waitFor(() => {
     assert.deepEqual(calls, ["finish", "navigate:/"]);
   });
+});
+
+test("SleepRecentHistorySection renders recent logs and forwards edit clicks", () => {
+  const edited: string[] = [];
+
+  render(
+    React.createElement(MemoryRouter, {},
+      React.createElement(SleepRecentHistorySection, {
+        logs: [recentSleepLog],
+        onEdit: (entry) => {
+          edited.push(entry.id);
+        },
+      }),
+    ),
+  );
+
+  assert.ok(screen.getByText("Recent history"));
+  assert.ok(screen.getByText(/Nap, 45m/));
+  fireEvent.click(screen.getByRole("button", { name: /Today:/i }));
+  assert.deepEqual(edited, ["sleep-1"]);
+});
+
+test("MilestoneRecentActivitySection renders activity cards and empty add action", () => {
+  const addCalls: string[] = [];
+
+  const { rerender } = render(
+    React.createElement(MemoryRouter, {},
+      React.createElement(MilestoneRecentActivitySection, {
+        logs: [recentMilestone],
+        isLoading: false,
+        onAddMilestone: () => {
+          addCalls.push("add");
+        },
+      }),
+    ),
+  );
+
+  assert.ok(screen.getByText("Recent activity"));
+  assert.ok(screen.getByText("Started solids"));
+  assert.ok(screen.getByText("Tried mashed avocado for the first time."));
+
+  rerender(
+    React.createElement(MemoryRouter, {},
+      React.createElement(MilestoneRecentActivitySection, {
+        logs: [],
+        isLoading: false,
+        onAddMilestone: () => {
+          addCalls.push("add");
+        },
+      }),
+    ),
+  );
+
+  fireEvent.click(screen.getByRole("button", { name: "Add first milestone" }));
+  assert.deepEqual(addCalls, ["add"]);
 });

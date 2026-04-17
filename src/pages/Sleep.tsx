@@ -7,26 +7,19 @@ import { fillDailyFrequencyDays, formatLocalDateKey } from "../lib/stats";
 import { DAYS_IN_WEEK, formatWeekLabel, getEarliestLoggedDate, getMaxWeekOffset, getWeekRange } from "../lib/tracker";
 import { timeSince } from "../lib/utils";
 import { formatSleepTimerClock, formatSleepTimerSummary, getSleepTimerElapsedMs } from "../lib/sleep-timer";
-import { Card, CardContent, CardHeader } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { ScenicHero } from "../components/layout/ScenicHero";
-import { EmptyState, InsetPanel, PageBody, SectionHeading } from "../components/ui/page-layout";
-import {
-  TrackerMetricRing,
-  TrackerWeekRangePill,
-} from "../components/tracking/TrackerPrimitives";
-import { TimeSinceIndicator } from "../components/tracking/TimeSinceIndicator";
+import { EmptyState, PageBody } from "../components/ui/page-layout";
 import { CareToolsSection } from "../components/care/CareToolsSection";
 import { EditSleepSheet } from "../components/sleep/EditSleepSheet";
 import { SleepLogSheet } from "../components/sleep/SleepLogSheet";
-import { SleepLogList } from "../components/sleep/SleepLogList";
-import { SleepPatternTimeline } from "../components/sleep/SleepPatternTimeline";
-import { SleepStatusCard } from "../components/sleep/SleepStatusCard";
-import { SleepWeeklyPatternCard } from "../components/sleep/SleepWeeklyPatternCard";
+import { SleepOverviewBoard } from "../components/sleep/SleepOverviewBoard";
+import { SleepRecentHistorySection } from "../components/sleep/SleepRecentHistorySection";
 import type { SleepEntry } from "../lib/types";
 import {
   buildSleepWeekSummary,
   formatDurationRing,
+  formatWakeBaselineRange,
   getDurationMinutes,
   getLastNapDisplay,
   getOverlapMinutesForDay,
@@ -48,7 +41,7 @@ export function Sleep() {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editingSleep, setEditingSleep] = useState<SleepEntry | null>(null);
   const [weekOffset, setWeekOffset] = useState(0);
-  const [statusExpanded, setStatusExpanded] = useState(false);
+  const [activePanel, setActivePanel] = useState<"rhythm" | "patterns">("rhythm");
   const { timerSession, tick } = useSleepTimerPreview(activeChild, sheetOpen);
 
   const todayKey = getTodayKey();
@@ -127,10 +120,10 @@ export function Sleep() {
   const predictionRing = useMemo(() => getPredictionRingDisplay(prediction), [prediction]);
   const todayDurationRing = useMemo(() => formatDurationRing(totalTodayMinutes), [totalTodayMinutes]);
   const statusTone = useMemo(() => getWakeStatusTone(wakeRisk, prediction), [wakeRisk, prediction]);
-
   if (!activeChild) return null;
 
   const weekSummary = buildSleepWeekSummary(weekLogs.length, totalTodayMinutes);
+  const recentHistory = logs.slice(0, 3);
 
   const handleLogged = async () => {
     await refresh();
@@ -148,80 +141,29 @@ export function Sleep() {
       />
 
       <div className="space-y-4 px-4 py-5 md:px-6 lg:px-8">
-        <Card className="-mt-32 mb-0 relative z-10 border-transparent bg-transparent shadow-none backdrop-blur-0">
-          <CardContent className="p-4 pt-4">
-            <div className="grid grid-cols-3 gap-3">
-              <div className="flex flex-col items-center gap-2 text-center">
-                <TimeSinceIndicator timestamp={lastNapDisplay.timestamp} status={statusTone} />
-                <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-[var(--color-text-soft)]">{lastNapDisplay.label}</p>
-              </div>
-              <TrackerMetricRing
-                value={predictionRing.value}
-                unit={predictionRing.unit}
-                label="Next predicted"
-                gradient={predictionRing.gradient}
-              />
-              <TrackerMetricRing
-                value={todayDurationRing.value}
-                unit={todayDurationRing.unit}
-                label="Total sleep"
-                gradient={totalTodayMinutes > 0 ? "var(--gradient-status-healthy)" : "var(--gradient-status-unknown)"}
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        {timerSession && (
-          <InsetPanel className="flex items-center justify-between gap-4">
-            <div>
-              <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--color-text-soft)]">
-                {timerSession.sleepType === "night" ? "Night timer running" : "Nap timer running"}
-              </p>
-              <p className="mt-2 text-2xl font-semibold tracking-[-0.03em] text-[var(--color-text)]">
-                {formatSleepTimerClock(getSleepTimerElapsedMs(timerSession, tick))}
-              </p>
-              <p className="mt-2 text-sm text-[var(--color-text-secondary)]">
-                Started {timeSince(timerSession.startedAt)} · {formatSleepTimerSummary(getSleepTimerElapsedMs(timerSession, tick))}
-              </p>
-            </div>
-            <Button variant="secondary" size="sm" onClick={() => setSheetOpen(true)}>
-              Open timer
-            </Button>
-          </InsetPanel>
-        )}
-
-        <SleepStatusCard
-          baseline={baseline}
-          prediction={prediction}
-          statusExpanded={statusExpanded}
+        <SleepOverviewBoard
+          lastNapTimestamp={lastNapDisplay.timestamp}
+          lastNapLabel={lastNapDisplay.label}
+          statusTone={statusTone}
+          predictionRing={predictionRing}
+          todayDurationRing={todayDurationRing}
+          timerSessionSummary={timerSession ? {
+            label: timerSession.sleepType === "night" ? "Night timer running" : "Nap timer running",
+            clock: formatSleepTimerClock(getSleepTimerElapsedMs(timerSession, tick)),
+            summary: `Started ${timeSince(timerSession.startedAt)} · ${formatSleepTimerSummary(getSleepTimerElapsedMs(timerSession, tick))}`,
+          } : null}
+          activePanel={activePanel}
+          onChangePanel={setActivePanel}
+          wakeBaseline={formatWakeBaselineRange(baseline)}
           wakeComparison={wakeComparison}
           wakeRisk={wakeRisk}
-          onToggleExpanded={() => setStatusExpanded((current) => !current)}
-        />
-
-        <Card>
-          <CardHeader>
-            <SectionHeading
-              title="Daily pattern"
-              description="A simple timeline of the latest logged day so the day shape stays visible."
-            />
-          </CardHeader>
-          <CardContent>
-            <SleepPatternTimeline logs={patternLogs} dayLabel={patternLabel} />
-          </CardContent>
-        </Card>
-
-        <SleepWeeklyPatternCard
+          patternLogs={patternLogs}
+          patternLabel={patternLabel}
           filledWeek={filledWeek}
-          maxWeekOffset={maxWeekOffset}
-          summary={weekSummary}
-          title={weekOffset === 0 ? "Last 7 days" : formatWeekLabel(startDate, endDate)}
-          weekOffset={weekOffset}
-          onOlder={() => setWeekOffset((current) => Math.min(maxWeekOffset, current + 1))}
-          onNewer={() => setWeekOffset((current) => Math.max(0, current - 1))}
+          weekTitle={weekOffset === 0 ? "Last 7 days" : formatWeekLabel(startDate, endDate)}
+          weekSummary={weekSummary}
+          onOpenSleepSheet={() => setSheetOpen(true)}
         />
-
-        <CareToolsSection className="px-1" />
 
         {logs.length === 0 ? (
           <EmptyState
@@ -235,25 +177,10 @@ export function Sleep() {
             action={<Button variant="primary" onClick={() => setSheetOpen(true)}>Add first sleep log</Button>}
           />
         ) : (
-          <Card>
-            <CardHeader>
-              <div>
-                <div className="flex items-center gap-3">
-                  <h3 className="font-[var(--font-display)] text-2xl font-semibold tracking-[-0.02em] text-[var(--color-text)]">
-                    Week entries
-                  </h3>
-                  <TrackerWeekRangePill label={formatWeekLabel(startDate, endDate)} animateKey={weekOffset} />
-                </div>
-                <p className="mt-2 max-w-[40ch] text-sm leading-relaxed text-[var(--color-text-secondary)]">
-                  Every sleep block for the selected week, with tap-to-edit when the timing needs correcting.
-                </p>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <SleepLogList logs={weekLogs} onEdit={setEditingSleep} />
-            </CardContent>
-          </Card>
+          <SleepRecentHistorySection logs={recentHistory} onEdit={setEditingSleep} />
         )}
+
+        <CareToolsSection className="px-1" />
 
         <SleepLogSheet
           open={sheetOpen}
