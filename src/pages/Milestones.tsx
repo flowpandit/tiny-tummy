@@ -1,127 +1,306 @@
 import { useMemo, useState } from "react";
 import { useActiveChild } from "../contexts/ChildContext";
 import { useMilestoneLogs } from "../hooks/useMilestoneLogs";
-import { Card, CardContent, CardHeader } from "../components/ui/card";
-import { Button } from "../components/ui/button";
-import { Badge } from "../components/ui/badge";
-import { PageIntro } from "../components/ui/page-intro";
-import { EmptyState, InsetPanel, PageBody, SectionHeading, StatGrid, StatTile } from "../components/ui/page-layout";
+import {
+  getMilestoneTypeDescription,
+  getMilestoneTypeLabel,
+} from "../lib/milestone-constants";
+import { cn } from "../lib/cn";
+import { formatDate, timeSince } from "../lib/utils";
+import type { MilestoneEntry } from "../lib/types";
+import { Avatar } from "../components/child/Avatar";
 import { MilestoneLogSheet } from "../components/milestones/MilestoneLogSheet";
-import { getMilestoneTypeDescription, getMilestoneTypeLabel } from "../lib/milestone-constants";
-import { formatDate, getAgeLabelFromDob, timeSince } from "../lib/utils";
+import { Badge } from "../components/ui/badge";
+import { Button } from "../components/ui/button";
+import { EmptyState, PageBody } from "../components/ui/page-layout";
 
-function getThirtyDaysAgo(): Date {
-  return new Date(Date.now() - 30 * 86400000);
+function PlusGlyph() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4" aria-hidden="true">
+      <path strokeLinecap="round" d="M12 5v14M5 12h14" />
+    </svg>
+  );
+}
+
+function MilestoneGlyph({ className = "h-7 w-7" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={className} aria-hidden="true">
+      <path strokeLinecap="round" strokeLinejoin="round" d="m6.75 14.75 3.1-3.1 2.45 2.45 5.2-6.1" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 18h15" />
+    </svg>
+  );
+}
+
+function getMilestoneBadge(entry: MilestoneEntry): {
+  label: string;
+  variant: "healthy" | "caution" | "alert" | "info" | "default";
+  dotColor: string;
+} {
+  switch (entry.milestone_type) {
+    case "started_solids":
+      return { label: "Nutrition", variant: "healthy", dotColor: "var(--color-healthy)" };
+    case "medication_started":
+      return { label: "Health", variant: "caution", dotColor: "var(--color-caution)" };
+    case "allergy_concern":
+      return { label: "Concern", variant: "alert", dotColor: "var(--color-alert)" };
+    case "illness":
+      return { label: "Health", variant: "alert", dotColor: "var(--color-alert)" };
+    case "travel_or_daycare_change":
+      return { label: "Routine", variant: "info", dotColor: "var(--color-info)" };
+    case "toilet_training_interest":
+      return { label: "Development", variant: "info", dotColor: "var(--color-info)" };
+    case "teething":
+      return { label: "Development", variant: "default", dotColor: "var(--color-cta)" };
+    default:
+      return { label: "Context", variant: "default", dotColor: "var(--color-cta)" };
+  }
+}
+
+function formatMilestoneStamp(value: string): string {
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return formatDate(value);
+  return parsed.toLocaleString(undefined, {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+function formatJourneyCopy(logs: MilestoneEntry[]): string {
+  if (logs.length === 0) {
+    return "A calm record of the changes that help feeding, sleep, and bowel patterns make more sense later.";
+  }
+
+  const latest = logs[0];
+  const latestLabel = getMilestoneTypeLabel(latest.milestone_type).toLowerCase();
+  return `Keeping track of moments like ${latestLabel} helps later changes feel less confusing.`;
+}
+
+function getEmptyExamples(): string[] {
+  return [
+    "Started solids and poops began changing",
+    "Medication was introduced after a pediatric visit",
+    "Illness or travel shifted sleep and feeding",
+  ];
+}
+
+function MetricCard({
+  value,
+  label,
+  accent,
+}: {
+  value: string;
+  label: string;
+  accent: string;
+}) {
+  return (
+    <div
+      className="relative overflow-hidden rounded-[28px] border border-[var(--color-border)] bg-[var(--color-surface-strong)] px-5 py-4 shadow-[var(--shadow-card)]"
+      style={{
+        backgroundImage: `radial-gradient(circle at 68% 22%, color-mix(in srgb, ${accent} 18%, transparent) 0%, transparent 48%)`,
+      }}
+    >
+      <div className="flex items-center justify-between">
+        <div
+          className="flex h-16 w-16 items-center justify-center rounded-full"
+          style={{
+            background: `conic-gradient(from 180deg, ${accent} 0 138deg, color-mix(in srgb, ${accent} 12%, transparent) 138deg 360deg)`,
+          }}
+        >
+          <div className="flex h-[52px] w-[52px] items-center justify-center rounded-full bg-[var(--color-surface-strong)] text-2xl font-semibold tracking-[-0.03em] text-[var(--color-text)]">
+            {value}
+          </div>
+        </div>
+      </div>
+      <p className="mt-4 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--color-text-soft)]">
+        {label}
+      </p>
+    </div>
+  );
+}
+
+function ActivityItem({
+  entry,
+  isLast,
+}: {
+  entry: MilestoneEntry;
+  isLast: boolean;
+}) {
+  const badge = getMilestoneBadge(entry);
+  const note = entry.notes?.trim() || getMilestoneTypeDescription(entry.milestone_type);
+
+  return (
+    <div className="grid grid-cols-[18px_minmax(0,1fr)] gap-4">
+      <div className="flex flex-col items-center">
+        <span
+          className="mt-5 h-3 w-3 rounded-full"
+          style={{
+            backgroundColor: badge.dotColor,
+            boxShadow: `0 0 0 4px color-mix(in srgb, ${badge.dotColor} 14%, transparent)`,
+          }}
+        />
+        {!isLast && (
+          <span
+            className="mt-2 h-full min-h-12 w-px"
+            style={{ backgroundColor: "color-mix(in srgb, var(--color-border-strong) 72%, transparent)" }}
+          />
+        )}
+      </div>
+
+      <article className="rounded-[26px] border border-[var(--color-border)] bg-[var(--color-surface-strong)] px-4 py-4 shadow-[var(--shadow-card)]">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h3 className="text-[1.02rem] font-semibold tracking-[-0.02em] text-[var(--color-text)]">
+              {getMilestoneTypeLabel(entry.milestone_type)}
+            </h3>
+            <p className="mt-1 text-xs font-medium text-[var(--color-text-secondary)]">
+              {formatMilestoneStamp(entry.logged_at)}
+            </p>
+          </div>
+          <Badge variant={badge.variant} className="shrink-0">
+            {badge.label}
+          </Badge>
+        </div>
+        <p className="mt-3 text-sm leading-relaxed text-[var(--color-text-secondary)]">
+          {note}
+        </p>
+      </article>
+    </div>
+  );
 }
 
 export function Milestones() {
   const activeChild = useActiveChild();
-  const { logs, refresh } = useMilestoneLogs(activeChild?.id ?? null);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const { logs, isLoading, refresh } = useMilestoneLogs(activeChild?.id ?? null);
 
-  const sortedLogs = useMemo(
-    () => [...logs].sort((left, right) => new Date(right.logged_at).getTime() - new Date(left.logged_at).getTime()),
-    [logs],
-  );
-  const recentCount = useMemo(
-    () => sortedLogs.filter((log) => new Date(log.logged_at).getTime() >= getThirtyDaysAgo().getTime()).length,
-    [sortedLogs],
-  );
+  const totalMilestones = logs.length;
+  const lastThirtyDays = useMemo(() => {
+    const threshold = new Date();
+    threshold.setDate(threshold.getDate() - 30);
+    return logs.filter((entry) => new Date(entry.logged_at).getTime() >= threshold.getTime()).length;
+  }, [logs]);
+  const latestMilestone = logs[0] ?? null;
 
   if (!activeChild) return null;
 
-  const latest = sortedLogs[0] ?? null;
-
   return (
-    <PageBody>
-      <PageIntro
-        eyebrow="Tracking"
-        title="Milestones"
-        description="Capture only the changes that help explain bowel, feeding, or routine shifts. This is context, not a baby memory book."
-        meta={`${activeChild.name} · ${getAgeLabelFromDob(activeChild.date_of_birth)}${latest ? ` · last logged ${timeSince(latest.logged_at)}` : ""}`}
-        action={<Button variant="cta" size="sm" onClick={() => setSheetOpen(true)}>Add</Button>}
-      />
-
-      {sortedLogs.length === 0 ? (
-        <EmptyState
-          icon={(
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" strokeWidth="1.75" className="h-8 w-8">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 6.75h7.5M8.25 12h7.5M8.25 17.25h4.5M6 3.75h12A2.25 2.25 0 0 1 20.25 6v12A2.25 2.25 0 0 1 18 20.25H6A2.25 2.25 0 0 1 3.75 18V6A2.25 2.25 0 0 1 6 3.75Z" />
-            </svg>
+    <PageBody className="mt-0 space-y-5 px-4 py-5 md:px-6 lg:px-8">
+      <section className="space-y-5">
+        <div
+          className={cn(
+            "relative overflow-hidden rounded-[34px] border border-[var(--color-border)] px-6 pb-7 pt-6 text-center shadow-[var(--shadow-lg)]",
+            "bg-[linear-gradient(180deg,color-mix(in_srgb,var(--color-surface-strong)_96%,transparent)_0%,color-mix(in_srgb,var(--color-bg-elevated)_76%,transparent)_100%)]",
           )}
-          title="Add the first useful context point"
-          description="Good milestones are things like starting solids, illness, medication, or a routine change that might explain patterns later."
-          action={(
-            <Button variant="primary" onClick={() => setSheetOpen(true)}>
-              Add first milestone
-            </Button>
-          )}
-        />
-      ) : (
-        <>
-          <StatGrid>
-            <StatTile
-              eyebrow="Total milestones"
-              value={sortedLogs.length}
-              description="Health-linked context points recorded so far."
-              tone="info"
-            />
-            <StatTile
-              eyebrow="Last 30 days"
-              value={recentCount}
-              description="Recent context changes that may matter in reports."
-              tone="cta"
-            />
-            <StatTile
-              eyebrow="Latest milestone"
-              value={latest ? getMilestoneTypeLabel(latest.milestone_type) : "—"}
-              description={latest ? formatDate(latest.logged_at) : "Add a milestone to start building context."}
-              tone="healthy"
-            />
-          </StatGrid>
-
-          <Card>
-            <CardHeader>
-              <SectionHeading
-                title="Recent milestones"
-                description="Use this to explain why feeding, bowel, or sleep patterns may have changed."
-                action={(
-                  <Button variant="secondary" size="sm" onClick={() => setSheetOpen(true)}>
-                    Add milestone
-                  </Button>
-                )}
+        >
+          <div
+            className="pointer-events-none absolute inset-x-0 top-0 h-24"
+            style={{
+              background:
+                "radial-gradient(circle at 50% 0%, color-mix(in srgb, var(--color-cta) 20%, transparent) 0%, transparent 58%)",
+            }}
+          />
+          <div className="relative mx-auto flex w-fit flex-col items-center">
+            <div className="rounded-full bg-[linear-gradient(180deg,color-mix(in_srgb,var(--color-primary)_68%,white)_0%,color-mix(in_srgb,var(--color-cta)_62%,white)_100%)] p-[3px] shadow-[0_10px_30px_rgba(0,0,0,0.12)]">
+              <Avatar
+                childId={activeChild.id}
+                name={activeChild.name}
+                color={activeChild.avatar_color}
+                size="lg"
+                className="h-20 w-20 border-2 border-white/70"
               />
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-col gap-3">
-                {sortedLogs.map((log) => (
-                  <InsetPanel key={log.id}>
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="text-sm font-medium text-[var(--color-text)]">
-                          {getMilestoneTypeLabel(log.milestone_type)}
-                        </p>
-                        <p className="mt-1 text-xs text-[var(--color-text-soft)]">
-                          {formatDate(log.logged_at)} · {timeSince(log.logged_at)}
-                        </p>
-                      </div>
-                      <Badge variant="info">Context</Badge>
-                    </div>
-                    <p className="mt-3 text-sm leading-relaxed text-[var(--color-text-secondary)]">
-                      {getMilestoneTypeDescription(log.milestone_type)}
-                    </p>
-                    {log.notes && (
-                      <p className="mt-3 text-sm leading-relaxed text-[var(--color-text-secondary)]">
-                        {log.notes}
-                      </p>
-                    )}
-                  </InsetPanel>
-                ))}
+            </div>
+            <h1 className="mt-5 font-[var(--font-display)] text-[2.2rem] font-semibold tracking-[-0.04em] text-[var(--color-text)]">
+              {activeChild.name}&apos;s Journey
+            </h1>
+            <p className="mx-auto mt-2 max-w-[28ch] text-sm leading-relaxed text-[var(--color-text-secondary)]">
+              {formatJourneyCopy(logs)}
+            </p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <MetricCard value={String(totalMilestones)} label="Total milestones" accent="var(--color-cta)" />
+          <MetricCard value={String(lastThirtyDays)} label="Last 30 days" accent="var(--color-info)" />
+        </div>
+
+        <Button
+          type="button"
+          variant="cta"
+          size="lg"
+          className="w-full gap-2 text-[1.02rem] shadow-[var(--shadow-medium)]"
+          onClick={() => setSheetOpen(true)}
+        >
+          <PlusGlyph />
+          Add milestone
+        </Button>
+      </section>
+
+      <section className="space-y-4">
+        <div className="flex items-end justify-between gap-3">
+          <div>
+            <h2 className="text-xl font-semibold tracking-[-0.02em] text-[var(--color-text)]">
+              Recent activity
+            </h2>
+            <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
+              Changes worth remembering when a pattern shifts later.
+            </p>
+          </div>
+          {latestMilestone && (
+            <p className="shrink-0 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--color-text-soft)]">
+              {timeSince(latestMilestone.logged_at)}
+            </p>
+          )}
+        </div>
+
+        {isLoading ? (
+          <div className="space-y-3">
+            {Array.from({ length: 3 }).map((_, index) => (
+              <div key={index} className="grid grid-cols-[18px_minmax(0,1fr)] gap-4">
+                <div className="flex flex-col items-center">
+                  <span className="mt-5 h-3 w-3 animate-pulse rounded-full bg-[var(--color-border-strong)]" />
+                  {index < 2 && <span className="mt-2 h-20 w-px bg-[var(--color-border)]" />}
+                </div>
+                <div className="h-32 animate-pulse rounded-[26px] border border-[var(--color-border)] bg-[var(--color-surface-strong)]" />
               </div>
-            </CardContent>
-          </Card>
-        </>
-      )}
+            ))}
+          </div>
+        ) : logs.length === 0 ? (
+          <EmptyState
+            icon={<MilestoneGlyph className="text-[var(--color-primary)]" />}
+            title="No milestones yet"
+            description="Use milestones for the bigger context changes that help explain what comes next."
+            action={(
+              <div className="space-y-4">
+                <Button type="button" variant="secondary" size="md" className="gap-2" onClick={() => setSheetOpen(true)}>
+                  <PlusGlyph />
+                  Add first milestone
+                </Button>
+                <div className="mx-auto max-w-[32ch] rounded-[24px] border border-[var(--color-border)] bg-[var(--color-surface-strong)] px-4 py-4 text-left">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--color-text-soft)]">
+                    Useful examples
+                  </p>
+                  <div className="mt-3 space-y-2">
+                    {getEmptyExamples().map((example) => (
+                      <p key={example} className="text-sm leading-relaxed text-[var(--color-text-secondary)]">
+                        {example}
+                      </p>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+            className="rounded-[30px] border border-[var(--color-border)] bg-[var(--color-bg-elevated)]/42 px-5 py-8"
+          />
+        ) : (
+          <div className="space-y-1">
+            {logs.map((entry, index) => (
+              <ActivityItem key={entry.id} entry={entry} isLast={index === logs.length - 1} />
+            ))}
+          </div>
+        )}
+      </section>
 
       <MilestoneLogSheet
         open={sheetOpen}
