@@ -15,11 +15,6 @@ export const EPISODE_TYPES: {
     label: "Diarrhoea",
     description: "Track loose stools, fluids, symptoms, and recovery.",
   },
-  {
-    value: "solids_transition",
-    label: "Solids transition",
-    description: "Track new foods, water, and bowel changes after starting solids.",
-  },
 ];
 
 export const EPISODE_EVENT_TYPES: {

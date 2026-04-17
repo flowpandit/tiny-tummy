@@ -3,10 +3,11 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { useActiveChild, useChildActions } from "../../contexts/ChildContext";
 import { useUpdateChildFeedingTypeAction } from "../../hooks/useSettingsActions";
 import { useEliminationPreference } from "../../hooks/useEliminationPreference";
+import { useDbClient } from "../../contexts/DatabaseContext";
 import { cn } from "../../lib/cn";
 import { Button } from "../ui/button";
 import { HomeActionBreastfeedIcon } from "../ui/icons";
-import { getAgeInMonthsFromDob } from "../../lib/utils";
+import { combineLocalDateAndTimeToUtcIso, getAgeInMonthsFromDob, getCurrentLocalDate, getCurrentLocalTime } from "../../lib/utils";
 
 const iconClassName = "h-5 w-5";
 
@@ -97,6 +98,7 @@ const NAV_ITEMS = [
 ];
 
 export function BottomNav() {
+  const db = useDbClient();
   const location = useLocation();
   const navigate = useNavigate();
   const activeChild = useActiveChild();
@@ -162,6 +164,12 @@ export function BottomNav() {
 
     try {
       setIsUpdatingFeedingType(true);
+      await db.createMilestoneLog({
+        child_id: activeChild.id,
+        milestone_type: "started_solids",
+        logged_at: combineLocalDateAndTimeToUtcIso(getCurrentLocalDate(), getCurrentLocalTime()),
+        notes: null,
+      });
       await updateChildFeedingType(activeChild.id, "mixed");
       setShowFeedingTransitionConfirm(false);
       navigate("/feed");

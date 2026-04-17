@@ -234,7 +234,7 @@ export interface Episode {
   updated_at: string;
 }
 
-export type EpisodeType = "constipation" | "diarrhoea" | "solids_transition";
+export type EpisodeType = "constipation" | "diarrhoea";
 
 export type EpisodeStatus = "active" | "resolved";
 

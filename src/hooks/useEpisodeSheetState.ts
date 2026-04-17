@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useDbClient } from "../contexts/DatabaseContext";
 import { combineLocalDateAndTimeToUtcIso, getCurrentLocalDate, getCurrentLocalTime, getLocalDateTimeParts } from "../lib/utils";
-import type { Child, Episode, EpisodeEventType, EpisodeType } from "../lib/types";
+import type { Episode, EpisodeEventType, EpisodeType } from "../lib/types";
 
 function getDefaultEventTitle(eventType: EpisodeEventType): string {
   if (eventType === "symptom") return "Symptom update";
@@ -12,14 +12,12 @@ function getDefaultEventTitle(eventType: EpisodeEventType): string {
 }
 
 export function useEpisodeSheetState({
-  open, childId, activeEpisode, initialMode, children, refreshChildren, onUpdated, onClose, onError, onSuccess,
+  open, childId, activeEpisode, initialMode, onUpdated, onClose, onError, onSuccess,
 }: {
   open: boolean;
   childId: string;
   activeEpisode: Episode | null;
   initialMode: "default" | "start" | "update";
-  children: Child[];
-  refreshChildren: () => Promise<void>;
   onUpdated: () => Promise<void> | void;
   onClose: () => void;
   onError: (message: string) => void;
@@ -76,11 +74,6 @@ export function useEpisodeSheetState({
         started_at: combineLocalDateAndTimeToUtcIso(episodeDate, episodeTime),
         summary: summary.trim() || null,
       });
-      const child = children.find((entry) => entry.id === childId);
-      if (episodeType === "solids_transition" && child?.feeding_type === "breast") {
-        await db.updateChild(childId, { feeding_type: "mixed" });
-        await refreshChildren();
-      }
       await onUpdated();
       onSuccess("Episode started.");
       return true;
@@ -90,7 +83,7 @@ export function useEpisodeSheetState({
     } finally {
       setIsSubmitting(false);
     }
-  }, [childId, children, episodeDate, episodeTime, episodeType, isSubmitting, onError, onSuccess, onUpdated, refreshChildren, summary]);
+  }, [childId, episodeDate, episodeTime, episodeType, isSubmitting, onError, onSuccess, onUpdated, summary]);
 
   const handleAddEvent = useCallback(async () => {
     const trimmedTitle = eventTitle.trim();

@@ -18,21 +18,18 @@ const SMART_REMINDER_KEYS = {
   noPoop: "smart_reminder_no_poop",
   redFlagFollowUp: "smart_reminder_red_flag_follow_up",
   episodeCheckIn: "smart_reminder_episode_check_in",
-  solidsHydration: "smart_reminder_solids_hydration",
 } as const;
 
 const RULE_BASE_IDS = {
   noPoop: 100000,
   redFlagFollowUp: 200000,
   episodeCheckIn: 300000,
-  solidsHydration: 400000,
 } as const;
 
 export interface SmartReminderSettings {
   noPoop: boolean;
   redFlagFollowUp: boolean;
   episodeCheckIn: boolean;
-  solidsHydration: boolean;
 }
 
 type SmartReminderKey = keyof SmartReminderSettings;
@@ -109,18 +106,16 @@ function getEpisodeAnchorDate(episode: Episode, eventDates: string[], fallbackDa
 }
 
 export async function getSmartReminderSettings(): Promise<SmartReminderSettings> {
-  const [noPoop, redFlagFollowUp, episodeCheckIn, solidsHydration] = await Promise.all([
+  const [noPoop, redFlagFollowUp, episodeCheckIn] = await Promise.all([
     db.getSetting(SMART_REMINDER_KEYS.noPoop),
     db.getSetting(SMART_REMINDER_KEYS.redFlagFollowUp),
     db.getSetting(SMART_REMINDER_KEYS.episodeCheckIn),
-    db.getSetting(SMART_REMINDER_KEYS.solidsHydration),
   ]);
 
   return {
     noPoop: noPoop === "true",
     redFlagFollowUp: redFlagFollowUp === "true",
     episodeCheckIn: episodeCheckIn === "true",
-    solidsHydration: solidsHydration === "true",
   };
 }
 
@@ -172,14 +167,12 @@ export async function syncSmartRemindersForChild(child: Child): Promise<void> {
     noPoop: reminderId(child.id, "noPoop"),
     redFlagFollowUp: reminderId(child.id, "redFlagFollowUp"),
     episodeCheckIn: reminderId(child.id, "episodeCheckIn"),
-    solidsHydration: reminderId(child.id, "solidsHydration"),
   };
 
   await Promise.all([
     cancelIfPending(ids.noPoop),
     cancelIfPending(ids.redFlagFollowUp),
     cancelIfPending(ids.episodeCheckIn),
-    cancelIfPending(ids.solidsHydration),
   ]);
 
   const permissionGranted = await isPermissionGranted();
@@ -238,22 +231,6 @@ export async function syncSmartRemindersForChild(child: Child): Promise<void> {
       id: ids.episodeCheckIn,
       title: `Check in on ${child.name}'s ${activeEpisode.episode_type.replace("_", " ")}`,
       body: "Add a quick episode update so the story stays clear.",
-      date: reminderAt,
-    });
-  }
-
-  if (activeEpisode?.episode_type === "solids_transition" && settings.solidsHydration) {
-    const anchor = getEpisodeAnchorDate(
-      activeEpisode,
-      episodeEventsDates,
-      latestFeedDates,
-    );
-    const reminderAt = new Date(anchor.getTime() + 6 * 60 * 60 * 1000);
-
-    await scheduleOneOffNotification({
-      id: ids.solidsHydration,
-      title: `Hydration check for ${child.name}`,
-      body: "During solids transitions, a quick water and tummy check can help.",
       date: reminderAt,
     });
   }

@@ -188,7 +188,6 @@ export function NotificationSection({ children }: { children: Child[] }) {
     noPoop: false,
     redFlagFollowUp: false,
     episodeCheckIn: false,
-    solidsHydration: false,
   });
   const [loading, setLoading] = useState(true);
 
@@ -233,7 +232,6 @@ export function NotificationSection({ children }: { children: Child[] }) {
     { key: "noPoop", title: "No-poop threshold", description: "Age-aware reminder when it's time to review a long gap since the last poop." },
     { key: "redFlagFollowUp", title: "Red-flag stool follow-up", description: "Follow up after white, red, or post-newborn black stool entries." },
     { key: "episodeCheckIn", title: "Active episode check-in", description: "Nudge you to add another update when an episode is still active." },
-    { key: "solidsHydration", title: "Solids hydration check", description: "Extra hydration reminder while a solids transition episode is active." },
   ];
 
   return (

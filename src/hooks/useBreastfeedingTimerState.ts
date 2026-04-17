@@ -238,16 +238,23 @@ export function useBreastfeedingTimerState({
 
     try {
       setIsTransitioningToMixed(true);
+      await db.createMilestoneLog({
+        child_id: activeChild.id,
+        milestone_type: "started_solids",
+        logged_at: combineLocalDateAndTimeToUtcIso(getCurrentLocalDate(), getCurrentLocalTime()),
+        notes: null,
+      });
       await db.updateChild(activeChild.id, { feeding_type: "mixed" });
       await refreshChildren();
+      onSuccess("Started solids saved to milestones.");
       return true;
     } catch {
-      onError("Could not switch this child to mixed feeding.");
+      onError("Could not save the solids milestone and switch feeding type.");
       return false;
     } finally {
       setIsTransitioningToMixed(false);
     }
-  }, [activeChild, onError, refreshChildren]);
+  }, [activeChild, db, onError, onSuccess, refreshChildren]);
 
   const handleFeedLogged = useCallback(async () => {
     await runPostLogActions({

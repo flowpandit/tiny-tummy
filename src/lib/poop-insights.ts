@@ -236,11 +236,6 @@ export function getPrediction(
     adjustments.push({ label: "Loose-stool episode can speed the next poop up", direction: "earlier" });
   }
 
-  if (activeEpisodeType === "solids_transition") {
-    intervalFactor *= 1.06;
-    adjustments.push({ label: "Solids transition can make timing less regular", direction: "later" });
-  }
-
   if (relevantSymptoms.some((symptom) => symptom.symptom_type === "dehydration_concern" && symptom.severity !== "mild")) {
     intervalFactor *= 1.1;
     adjustments.push({ label: "Dehydration concern can lengthen the gap", direction: "later" });
@@ -561,8 +556,6 @@ export function getDueRisk(
 
   if (activeEpisodeType === "constipation") score += 14;
   if (activeEpisodeType === "diarrhoea") score += 10;
-  if (activeEpisodeType === "solids_transition") score += 6;
-
   const relevantSymptoms = getRelevantSymptoms(symptomLogs, lastRealPoopAt ? new Date(lastRealPoopAt) : null);
   relevantSymptoms.forEach((symptom) => {
     if (symptom.severity === "severe") score += 12;

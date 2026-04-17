@@ -98,13 +98,13 @@ export function Breastfeed() {
             aria-labelledby="solid-transition-title"
           >
             <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[var(--color-text-secondary)]">
-              Solids transition
+              Started solids
             </p>
             <h2 id="solid-transition-title" className="mt-2 text-xl font-semibold text-[var(--color-text)]">
-              Switch to mixed feeding?
+              Mark started solids?
             </h2>
             <p className="mt-2 text-sm leading-relaxed text-[var(--color-text-secondary)]">
-              Switch this child to mixed feeding once they are having both breastfeeds and other foods. The Feed page will let you log
+              This saves a Started solids milestone and switches this child to mixed feeding so the Feed page can log
               breastfeeding alongside solids, bottles, and other feeds.
             </p>
             <div className="mt-5 flex gap-3">
@@ -130,7 +130,7 @@ export function Breastfeed() {
                 }}
                 disabled={isTransitioningToMixed}
               >
-                {isTransitioningToMixed ? "Switching..." : "Confirm"}
+                {isTransitioningToMixed ? "Saving..." : "Save and switch"}
               </Button>
             </div>
           </div>
@@ -243,7 +243,7 @@ export function Breastfeed() {
                   className="w-full"
                   onClick={() => setShowTransitionConfirm(true)}
                 >
-                  Start solids transition
+                  Mark started solids
                 </Button>
               </section>
             )}
