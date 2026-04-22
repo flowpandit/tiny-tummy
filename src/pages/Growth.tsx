@@ -308,7 +308,7 @@ export function Growth() {
                   description={latest ? `Latest session on ${formatDate(latest.measured_at)}` : "Add a first growth check-in."}
                   tone={latestMetricCount === 3 ? "healthy" : "info"}
                 />
-                <InsetPanel className="col-span-2 border-[var(--color-border)] bg-[linear-gradient(180deg,rgba(240,246,255,0.88)_0%,rgba(255,251,244,0.88)_100%)] p-4">
+                <InsetPanel className="col-span-2 border-[var(--color-border)] bg-[linear-gradient(180deg,var(--color-surface-tint)_0%,var(--color-surface-strong)_100%)] p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--color-text-soft)]">Latest growth read</p>
@@ -333,20 +333,20 @@ export function Growth() {
                     )}
                   </div>
                   <div className="mt-3 flex flex-wrap gap-2">
-                    <span className="rounded-full border border-[var(--color-border)] bg-white/70 px-2.5 py-1 text-[11px] font-medium text-[var(--color-text-secondary)]">
+                    <span className="rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] px-2.5 py-1 text-[11px] font-medium text-[var(--color-text-secondary)]">
                       Reference: {growthReference}
                     </span>
-                    <span className="rounded-full border border-[var(--color-border)] bg-white/70 px-2.5 py-1 text-[11px] font-medium text-[var(--color-text-secondary)]">
+                    <span className="rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] px-2.5 py-1 text-[11px] font-medium text-[var(--color-text-secondary)]">
                       Baseline: {oldestLog ? formatDate(oldestLog.measured_at) : "No baseline"}
                     </span>
-                    <span className="rounded-full border border-[var(--color-border)] bg-white/70 px-2.5 py-1 text-[11px] font-medium text-[var(--color-text-secondary)]">
+                    <span className="rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] px-2.5 py-1 text-[11px] font-medium text-[var(--color-text-secondary)]">
                       Total measures: {totalMeasurementsLogged}
                     </span>
-                    <span className="rounded-full border border-[var(--color-border)] bg-white/70 px-2.5 py-1 text-[11px] font-medium text-[var(--color-text-secondary)]">
+                    <span className="rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] px-2.5 py-1 text-[11px] font-medium text-[var(--color-text-secondary)]">
                       Trend focus: {metricMeta.label}
                     </span>
                     {activeMetricPercentile && (
-                      <span className="rounded-full border border-[var(--color-border)] bg-white/70 px-2.5 py-1 text-[11px] font-medium text-[var(--color-text-secondary)]">
+                      <span className="rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] px-2.5 py-1 text-[11px] font-medium text-[var(--color-text-secondary)]">
                         Current {metricMeta.label.toLowerCase()}: {activeMetricPercentile.percentileLabel}
                       </span>
                     )}

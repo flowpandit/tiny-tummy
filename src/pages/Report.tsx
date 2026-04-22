@@ -5,10 +5,11 @@ import { useActiveChild } from "../contexts/ChildContext";
 import { useUnits } from "../contexts/UnitsContext";
 import { useReportPageState } from "../hooks/useReportPageState";
 import { Button } from "../components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
+import { Card, CardContent } from "../components/ui/card";
 import { PageIntro } from "../components/ui/page-intro";
 import { PageBody } from "../components/ui/page-layout";
 import { DatePicker } from "../components/ui/date-picker";
+import { ReportPreview } from "../components/report/ReportPreview";
 import { buildReportPdfPayload } from "../lib/report-pdf";
 import {
   buildReportPatientSummary,
@@ -97,6 +98,15 @@ export function Report() {
   };
 
   const patientSummary = buildReportPatientSummary(activeChild, startDate, endDate);
+  const reportPreviewPayload = reportData
+    ? buildReportPdfPayload({
+      child: activeChild,
+      startDate,
+      endDate,
+      data: reportData,
+      unitSystem,
+    })
+    : null;
 
   return (
     <PageBody>
@@ -194,92 +204,7 @@ export function Report() {
             </CardContent>
           </Card>
 
-          <Card className="mb-4">
-            <CardHeader>
-              <CardTitle>Executive Summary Preview</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 gap-3">
-                {reportData.dashboardStats.map((stat) => (
-                  <div key={stat.label} className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg)] p-3">
-                    <p className="text-[11px] uppercase tracking-[0.08em] text-[var(--color-text-soft)]">{stat.label}</p>
-                    <p className="mt-2 text-lg font-semibold text-[var(--color-text)]">{stat.value}</p>
-                    {stat.detail && (
-                      <p className="mt-1 text-xs text-[var(--color-text-secondary)]">{stat.detail}</p>
-                    )}
-                  </div>
-                ))}
-              </div>
-
-              <div className="mt-4 flex flex-col gap-2">
-                {reportData.highlights.map((highlight, index) => (
-                  <div
-                    key={`${highlight.title}-${index}`}
-                    className={`rounded-[var(--radius-md)] border px-3 py-3 ${
-                      highlight.tone === "alert"
-                        ? "border-[var(--color-alert)]/20 bg-[var(--color-alert-bg)]"
-                        : highlight.tone === "caution"
-                          ? "border-[var(--color-caution)]/20 bg-[var(--color-caution-bg)]"
-                          : "border-[var(--color-info)]/20 bg-[var(--color-info-bg)]"
-                    }`}
-                  >
-                    <p className="text-sm font-medium text-[var(--color-text)]">{highlight.title}</p>
-                    <p className="mt-1 text-xs leading-relaxed text-[var(--color-text-secondary)]">{highlight.detail}</p>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="mb-4">
-            <CardHeader>
-              <CardTitle>Clinical Context Preview</CardTitle>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-3">
-              {reportData.contextSections.length === 0 ? (
-                <p className="text-sm text-[var(--color-text-secondary)]">No extra clinical context is included for this date range.</p>
-              ) : (
-                reportData.contextSections.map((section) => (
-                  <div key={section.title} className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg)] p-3">
-                    <p className="text-sm font-semibold text-[var(--color-text)]">{section.title}</p>
-                    <div className="mt-2 flex flex-col gap-2">
-                      {section.rows.slice(0, 3).map((row) => (
-                        <div key={`${section.title}-${row.title}-${row.meta ?? ""}`} className="border-b border-[var(--color-border)] pb-2 last:border-b-0 last:pb-0">
-                          <p className="text-sm font-medium text-[var(--color-text)]">{row.title}</p>
-                          {row.meta && <p className="mt-1 text-xs text-[var(--color-text-soft)]">{row.meta}</p>}
-                          {row.detail && <p className="mt-1 text-xs leading-relaxed text-[var(--color-text-secondary)]">{row.detail}</p>}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))
-              )}
-            </CardContent>
-          </Card>
-
-          <Card className="mb-4">
-            <CardHeader>
-              <CardTitle>Appendix Preview</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-col gap-2">
-                {reportData.timeline.slice(0, 6).map((row) => (
-                  <div key={`${row.dateTime}-${row.eventType}-${row.details}`} className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg)] p-3">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="text-sm font-medium text-[var(--color-text)]">{row.eventType}</p>
-                        <p className="mt-1 text-xs text-[var(--color-text-soft)]">{row.dateTime}</p>
-                      </div>
-                    </div>
-                    <p className="mt-2 text-sm text-[var(--color-text-secondary)]">{row.details}</p>
-                    {row.note && (
-                      <p className="mt-1 text-xs leading-relaxed text-[var(--color-text-secondary)]">{row.note}</p>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+          {reportPreviewPayload && <ReportPreview payload={reportPreviewPayload} />}
 
           <Button variant="cta" className="w-full mb-4" onClick={handlePrint}>{getReportSaveLabel(isAndroid)}</Button>
 

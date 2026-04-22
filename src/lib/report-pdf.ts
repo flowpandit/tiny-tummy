@@ -1,5 +1,4 @@
-import type { Child } from "./types";
-import type { UnitSystem } from "./types";
+import type { Child, UnitSystem } from "./types";
 import type {
   ReportChartPoint,
   ReportContextSection,
@@ -8,59 +7,68 @@ import type {
   ReportHighlight,
   ReportTimelineRow,
 } from "./reporting";
+import { getEpisodeTypeLabel } from "./episode-constants";
+import { getMilestoneTypeLabel } from "./milestone-constants";
 import { getAgeLabelFromDob } from "./utils";
-import { getVolumeUnitLabel } from "./units";
 
 export interface ReportPdfPayload {
   title: string;
   subtitle: string;
   generatedAtLabel: string;
   patientSummary: string;
+  attentionChips: ReportPdfChip[];
   dashboardStats: ReportPdfStat[];
-  highlights: ReportPdfHighlight[];
+  summaryCards: ReportPdfSummaryCard[];
   charts: ReportPdfChart[];
   contextSections: ReportPdfSection[];
   timeline: ReportPdfTimelineRow[];
 }
 
-interface ReportPdfStat {
+export interface ReportPdfChip {
+  tone: "alert" | "caution" | "info";
+  text: string;
+}
+
+export interface ReportPdfStat {
   label: string;
   value: string;
   detail?: string;
 }
 
-interface ReportPdfHighlight {
-  tone: "alert" | "caution" | "info";
+export interface ReportPdfSummaryCard {
   title: string;
+  value: string;
   detail: string;
+  tone: "default" | "alert" | "caution" | "info" | "healthy";
 }
 
-interface ReportPdfChart {
+export interface ReportPdfChart {
   title: string;
+  kind: "bar" | "line";
   primaryLabel: string;
   secondaryLabel?: string;
   points: ReportPdfChartPoint[];
 }
 
-interface ReportPdfChartPoint {
+export interface ReportPdfChartPoint {
   label: string;
   primaryValue: number;
   secondaryValue?: number;
 }
 
-interface ReportPdfSection {
+export interface ReportPdfSection {
   title: string;
   emptyText: string;
   rows: ReportPdfSectionRow[];
 }
 
-interface ReportPdfSectionRow {
+export interface ReportPdfSectionRow {
   title: string;
   meta?: string;
   detail?: string;
 }
 
-interface ReportPdfTimelineRow {
+export interface ReportPdfTimelineRow {
   dateTime: string;
   eventType: string;
   details: string;
@@ -68,18 +76,10 @@ interface ReportPdfTimelineRow {
 }
 
 function mapStats(stats: ReportDashboardStat[]): ReportPdfStat[] {
-  return stats.map((stat) => ({
+  return stats.slice(0, 4).map((stat) => ({
     label: stat.label,
     value: stat.value,
     detail: stat.detail,
-  }));
-}
-
-function mapHighlights(highlights: ReportHighlight[]): ReportPdfHighlight[] {
-  return highlights.map((highlight) => ({
-    tone: highlight.tone,
-    title: highlight.title,
-    detail: highlight.detail,
   }));
 }
 
@@ -112,6 +112,103 @@ function mapTimeline(rows: ReportTimelineRow[]): ReportPdfTimelineRow[] {
   }));
 }
 
+function buildAttentionChips(highlights: ReportHighlight[]): ReportPdfChip[] {
+  return highlights.slice(0, 4).map((highlight) => ({
+    tone: highlight.tone,
+    text: highlight.title,
+  }));
+}
+
+function buildSummaryCards(data: ReportData): ReportPdfSummaryCard[] {
+  const actualPoops = data.logs.filter((log) => log.is_no_poop === 0);
+  const stoolDetailParts = [
+    data.stats.mostCommonType ? `Most common type ${data.stats.mostCommonType}` : null,
+    data.stats.mostCommonColor ? `Most common color ${data.stats.mostCommonColor}` : null,
+  ].filter(Boolean);
+
+  const latestMilestone = data.milestoneLogs[0] ?? null;
+  const symptomTone = data.symptomLogs.some((log) => log.severity === "severe")
+    ? "alert"
+    : data.activeEpisodeGroup
+      ? "caution"
+      : "info";
+
+  return [
+    {
+      title: "Stool pattern",
+      value: `${actualPoops.length} stool${actualPoops.length === 1 ? "" : "s"}`,
+      detail: stoolDetailParts.length > 0 ? stoolDetailParts.join(" · ") : "No stool type or color trend recorded",
+      tone: data.highlights.some((item) => item.tone === "alert") ? "caution" : "healthy",
+    },
+    {
+      title: "Feed rhythm",
+      value: `${data.feedingLogs.length} feed${data.feedingLogs.length === 1 ? "" : "s"}`,
+      detail: data.dashboardStats.find((stat) => stat.label === "Feed sessions / day")?.detail ?? "No feed logs in range",
+      tone: data.feedingLogs.length > 0 ? "info" : "default",
+    },
+    {
+      title: "Symptoms & episodes",
+      value: data.activeEpisodeGroup
+        ? getEpisodeTypeLabel(data.activeEpisodeGroup.episode.episode_type)
+        : `${data.symptomLogs.length} symptom${data.symptomLogs.length === 1 ? "" : "s"}`,
+      detail: data.activeEpisodeGroup
+        ? `${data.activeEpisodeGroup.events.length} episode update${data.activeEpisodeGroup.events.length === 1 ? "" : "s"} in range`
+        : data.symptomLogs.length > 0
+          ? "Review symptom details on the next page"
+          : "No symptom or episode activity logged",
+      tone: symptomTone,
+    },
+    {
+      title: "Growth & milestones",
+      value: `${data.growthLogs.length} growth · ${data.milestoneLogs.length} milestone${data.milestoneLogs.length === 1 ? "" : "s"}`,
+      detail: latestMilestone
+        ? `Latest milestone: ${getMilestoneTypeLabel(latestMilestone.milestone_type)}`
+        : "No milestone context recorded in range",
+      tone: latestMilestone || data.growthLogs.length > 0 ? "info" : "default",
+    },
+  ];
+}
+
+function buildCharts(data: ReportData, unitSystem: UnitSystem): ReportPdfChart[] {
+  const charts: ReportPdfChart[] = [
+    {
+      title: "Daily stool output",
+      kind: "bar",
+      primaryLabel: "Stools",
+      secondaryLabel: "No-poop days",
+      points: mapPoints(data.chartData.stoolOutput),
+    },
+  ];
+
+  if (data.chartData.stoolConsistency.length >= 2) {
+    charts.push({
+      title: "Stool type trend",
+      kind: "line",
+      primaryLabel: "Type",
+      points: mapPoints(data.chartData.stoolConsistency),
+    });
+  }
+
+  charts.push({
+    title: "Daily feed activity",
+    kind: "bar",
+    primaryLabel: "Feeds",
+    secondaryLabel: unitSystem === "imperial" ? "Logged oz" : "Logged ml",
+    points: mapPoints(data.chartData.feedActivity),
+  });
+
+  if (data.chartData.symptomActivity.some((point) => point.primaryValue > 0)) {
+    charts.push({
+      title: "Symptom activity",
+      kind: "bar",
+      primaryLabel: "Entries",
+      points: mapPoints(data.chartData.symptomActivity),
+    });
+  }
+
+  return charts.slice(0, 4);
+}
+
 export function buildReportPdfPayload(input: {
   child: Child;
   startDate: string;
@@ -122,26 +219,14 @@ export function buildReportPdfPayload(input: {
   const { child, startDate, endDate, data, unitSystem } = input;
 
   return {
-    title: `${child.name}'s Health Log`,
+    title: "Pediatrician Summary",
     subtitle: `${startDate} to ${endDate}`,
     generatedAtLabel: `Generated by Tiny Tummy · ${new Date().toLocaleDateString()}`,
-    patientSummary: `${child.name} · DOB ${child.date_of_birth} · ${getAgeLabelFromDob(child.date_of_birth)} · Diet ${child.feeding_type}`,
+    patientSummary: `${child.name} · DOB ${child.date_of_birth} · ${getAgeLabelFromDob(child.date_of_birth)} · Feeding ${child.feeding_type}`,
+    attentionChips: buildAttentionChips(data.highlights),
     dashboardStats: mapStats(data.dashboardStats),
-    highlights: mapHighlights(data.highlights),
-    charts: [
-      {
-        title: "Stool Output (Last 7 Days)",
-        primaryLabel: "Stools",
-        secondaryLabel: "No-poop days",
-        points: mapPoints(data.chartData.stoolOutput),
-      },
-      {
-        title: "Feed Activity (Last 7 Days)",
-        primaryLabel: "Sessions",
-        secondaryLabel: `Logged ${getVolumeUnitLabel(unitSystem)}`,
-        points: mapPoints(data.chartData.feedActivity),
-      },
-    ],
+    summaryCards: buildSummaryCards(data),
+    charts: buildCharts(data, unitSystem),
     contextSections: mapSections(data.contextSections),
     timeline: mapTimeline(data.timeline),
   };

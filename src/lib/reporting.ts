@@ -93,6 +93,8 @@ export interface ReportData {
   chartData: {
     stoolOutput: ReportChartPoint[];
     feedActivity: ReportChartPoint[];
+    stoolConsistency: ReportChartPoint[];
+    symptomActivity: ReportChartPoint[];
   };
   contextSections: ReportContextSection[];
   timeline: ReportTimelineRow[];
@@ -174,6 +176,13 @@ function getDateRangeLength(startDate: string, endDate: string): number {
 function formatShortDayLabel(dateString: string): string {
   return new Date(`${dateString}T00:00:00`).toLocaleDateString(undefined, {
     weekday: "short",
+  });
+}
+
+function formatShortChartDateLabel(dateString: string): string {
+  return new Date(dateString).toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
   });
 }
 
@@ -405,8 +414,18 @@ function buildLegacyStats(logs: PoopEntry[], dayCount: number) {
   };
 }
 
-function buildChartData(endDate: string, logs: PoopEntry[], feedingLogs: FeedingEntry[], unitSystem: UnitSystem) {
+function buildChartData(
+  endDate: string,
+  logs: PoopEntry[],
+  feedingLogs: FeedingEntry[],
+  symptomLogs: SymptomEntry[],
+  unitSystem: UnitSystem,
+) {
   const dates = buildLastNDates(endDate, 7);
+  const actualPoopsWithType = logs
+    .filter((log) => log.is_no_poop === 0 && log.stool_type !== null)
+    .sort((left, right) => (left.logged_at < right.logged_at ? -1 : 1))
+    .slice(-7);
 
   return {
     stoolOutput: dates.map((day) => ({
@@ -422,6 +441,14 @@ function buildChartData(endDate: string, logs: PoopEntry[], feedingLogs: Feeding
         secondaryValue: volumeMlToDisplay(dayFeeds.reduce((sum, log) => sum + (log.amount_ml ?? 0), 0), unitSystem),
       };
     }),
+    stoolConsistency: actualPoopsWithType.map((log) => ({
+      label: formatShortChartDateLabel(log.logged_at),
+      primaryValue: log.stool_type ?? 0,
+    })),
+    symptomActivity: dates.map((day) => ({
+      label: formatShortDayLabel(day),
+      primaryValue: symptomLogs.filter((log) => dateKey(log.logged_at) === day).length,
+    })),
   };
 }
 
@@ -710,7 +737,7 @@ export function buildReportData(
       dayCount,
       unitSystem,
     }),
-    chartData: buildChartData(endDate, source.logs, source.feedingLogs, unitSystem),
+    chartData: buildChartData(endDate, source.logs, source.feedingLogs, source.symptomLogs, unitSystem),
     contextSections: buildContextSections({
       feedingLogs: source.feedingLogs,
       symptomLogs: source.symptomLogs,
