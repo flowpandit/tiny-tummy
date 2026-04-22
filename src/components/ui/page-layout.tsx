@@ -54,7 +54,7 @@ export function CompactPageHeader<TValue extends string | number>({
   eyebrow?: string;
   title: string;
   value: TValue;
-  options: Array<{ label: string; value: TValue }>;
+  options: ReadonlyArray<{ label: string; value: TValue }>;
   onChange: (value: TValue) => void;
   className?: string;
 }) {
