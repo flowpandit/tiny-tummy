@@ -8,8 +8,6 @@ import {
   AboutSection,
   ChildrenSection,
   DeveloperToolsSection,
-  EliminationSection,
-  MeasurementsSection,
   NotificationSection,
   RecordsSection,
   SupportSection,
@@ -56,11 +54,7 @@ export function Settings() {
       />
 
       {/* Appearance */}
-      <ThemeSection />
-
-      <MeasurementsSection />
-
-      <EliminationSection child={activeChild} />
+      <ThemeSection child={activeChild} />
 
       {/* Notifications */}
       <NotificationSection children={children} />

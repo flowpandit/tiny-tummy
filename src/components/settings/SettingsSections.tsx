@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTheme } from "../../contexts/ThemeContext";
 import { useUnits } from "../../contexts/UnitsContext";
@@ -264,46 +264,100 @@ export function NotificationSection({ children }: { children: Child[] }) {
   );
 }
 
-export function ThemeSection() {
+export function ThemeSection({ child }: { child: Child | null }) {
   const { mode, setMode, nightModeEnabled, setNightModeEnabled, nightModeStart, nightModeEnd, setNightModeSchedule } = useTheme();
+  const { unitSystem, setUnitSystem } = useUnits();
+  const { preference: eliminationPreference, setPreference } = useEliminationPreference(child);
 
   return (
     <div className="mb-6">
-      <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]">Appearance</h3>
-      <Card>
-        <CardContent className="py-3">
-          <p className="mb-2 text-sm font-medium text-[var(--color-text)]">Theme</p>
-          <SegmentedControl value={mode} onChange={setMode} options={THEME_OPTIONS} className="rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-bg)] p-0.5" gridClassName="grid-cols-3" size="sm" />
-          <p className="mt-2 text-xs text-[var(--color-text-secondary)]">Choose how Tiny Tummy looks during the day.</p>
-
-          <div className="mt-4 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg)]/70 p-3">
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <p className="text-sm font-medium text-[var(--color-text)]">Night mode schedule</p>
-                <p className="mt-1 text-xs leading-relaxed text-[var(--color-text-secondary)]">
-                  Automatically switch to the softer low-glare palette during overnight care.
-                </p>
-              </div>
-              <Switch checked={nightModeEnabled} onCheckedChange={setNightModeEnabled} ariaLabel="Toggle scheduled night mode" />
-            </div>
-
-            {nightModeEnabled && (
-              <div className="mt-4">
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <FieldLabel>Starts</FieldLabel>
-                    <TimePicker value={nightModeStart} onChange={(value) => setNightModeSchedule(value, nightModeEnd)} label="Night mode starts" />
-                  </div>
-                  <div>
-                    <FieldLabel>Ends</FieldLabel>
-                    <TimePicker value={nightModeEnd} onChange={(value) => setNightModeSchedule(nightModeStart, value)} label="Night mode ends" />
-                  </div>
-                </div>
-                <p className="mt-3 text-xs text-[var(--color-text-secondary)]">
-                  Active from {formatScheduleTime(nightModeStart)} to {formatScheduleTime(nightModeEnd)}.
-                </p>
-              </div>
+      <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]">App preferences</h3>
+      <Card className="border-[rgba(145,164,204,0.14)] bg-[rgba(32,43,61,0.94)] shadow-[0_18px_44px_rgba(8,12,22,0.24)]">
+        <CardContent className="space-y-0 py-2">
+          <CompactPreferenceRow
+            label="Theme"
+            control={(
+              <SegmentedControl
+                value={mode}
+                onChange={setMode}
+                options={THEME_OPTIONS}
+                className="w-full"
+                gridClassName="grid-cols-3"
+                size="sm"
+                variant="settings"
+              />
             )}
+          />
+
+          <div className="border-t border-[rgba(145,164,204,0.12)] pt-3">
+            <CompactPreferenceRow
+              label="Unit system"
+              control={(
+                <SegmentedControl
+                  value={unitSystem}
+                  onChange={(value) => setUnitSystem(value as UnitSystem)}
+                  options={UNIT_SYSTEM_OPTIONS}
+                  className="w-full"
+                  gridClassName="grid-cols-2"
+                  size="sm"
+                  variant="settings"
+                />
+              )}
+            />
+          </div>
+
+          {eliminationPreference && (
+            <div className="border-t border-[rgba(145,164,204,0.12)] pt-3">
+              <CompactPreferenceRow
+                label="Main tracking page"
+                control={(
+                  <SegmentedControl
+                    value={eliminationPreference}
+                    onChange={(next) => {
+                      const preference = next as EliminationViewPreference;
+                      void setPreference(preference);
+                    }}
+                    options={ELIMINATION_VIEW_OPTIONS}
+                    className="w-full"
+                    gridClassName="grid-cols-3"
+                    size="sm"
+                    variant="settings"
+                  />
+                )}
+              />
+            </div>
+          )}
+
+          <div className="border-t border-[rgba(145,164,204,0.12)] pt-3">
+            <div className="rounded-[22px] bg-[rgba(28,37,55,0.86)] p-3.5">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-[var(--color-text)]">Night mode schedule</p>
+                  <p className="mt-1 text-xs leading-relaxed text-[var(--color-text-secondary)]">
+                    Automatically switch to the softer low-glare palette overnight.
+                  </p>
+                </div>
+                <Switch checked={nightModeEnabled} onCheckedChange={setNightModeEnabled} ariaLabel="Toggle scheduled night mode" />
+              </div>
+
+              {nightModeEnabled && (
+                <div className="mt-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <FieldLabel>Starts</FieldLabel>
+                      <TimePicker value={nightModeStart} onChange={(value) => setNightModeSchedule(value, nightModeEnd)} label="Night mode starts" />
+                    </div>
+                    <div>
+                      <FieldLabel>Ends</FieldLabel>
+                      <TimePicker value={nightModeEnd} onChange={(value) => setNightModeSchedule(nightModeStart, value)} label="Night mode ends" />
+                    </div>
+                  </div>
+                  <p className="mt-3 text-xs text-[var(--color-text-secondary)]">
+                    Active from {formatScheduleTime(nightModeStart)} to {formatScheduleTime(nightModeEnd)}.
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -312,58 +366,26 @@ export function ThemeSection() {
 }
 
 export function MeasurementsSection() {
-  const { unitSystem, setUnitSystem } = useUnits();
-
-  return (
-    <div className="mb-6">
-      <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]">Measurements</h3>
-      <Card>
-        <CardContent className="py-3">
-          <p className="mb-2 text-sm font-medium text-[var(--color-text)]">Unit system</p>
-          <SegmentedControl
-            value={unitSystem}
-            onChange={(value) => setUnitSystem(value as UnitSystem)}
-            options={UNIT_SYSTEM_OPTIONS}
-            className="rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-bg)] p-0.5"
-            gridClassName="grid-cols-2"
-            size="sm"
-          />
-          <p className="mt-2 text-xs text-[var(--color-text-secondary)]">
-            Feed amounts, growth measurements, quick presets, and reports will use this system.
-          </p>
-        </CardContent>
-      </Card>
-    </div>
-  );
+  return null;
 }
 
-export function EliminationSection({ child }: { child: Child | null }) {
-  const { preference: value, setPreference } = useEliminationPreference(child);
+export function EliminationSection() {
+  return null;
+}
 
-  if (!child) return null;
-
+function CompactPreferenceRow({
+  label,
+  control,
+}: {
+  label: string;
+  control: ReactNode;
+}) {
   return (
-    <div className="mb-6">
-      <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]">Elimination</h3>
-      <Card>
-        <CardContent className="py-3">
-          <p className="mb-2 text-sm font-medium text-[var(--color-text)]">Main tracking page</p>
-          <SegmentedControl
-            value={value}
-            onChange={(next) => {
-              const preference = next as EliminationViewPreference;
-              void setPreference(preference);
-            }}
-            options={ELIMINATION_VIEW_OPTIONS}
-            className="rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-bg)] p-0.5"
-            gridClassName="grid-cols-3"
-            size="sm"
-          />
-          <p className="mt-2 text-xs text-[var(--color-text-secondary)]">
-            Auto uses the diaper view through the first year, then switches back to the poop page.
-          </p>
-        </CardContent>
-      </Card>
+    <div className="grid grid-cols-[110px_minmax(0,1fr)] items-center gap-3 py-2">
+      <div className="min-w-0 pr-2">
+        <p className="text-[0.92rem] font-medium leading-[1.15] text-[rgba(246,240,236,0.98)]">{label}</p>
+      </div>
+      <div className="min-w-0">{control}</div>
     </div>
   );
 }
