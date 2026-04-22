@@ -9,33 +9,53 @@ export function TrackerMetricRing({
   label,
   gradient,
   detail,
+  size = "default",
+  className,
 }: {
   value: string;
   unit: string;
   label: string;
   gradient: string;
   detail?: string;
+  size?: "default" | "sm";
+  className?: string;
 }) {
+  const isSmall = size === "sm";
+
   return (
-    <div className="flex flex-col items-center gap-2 text-center">
+    <div className={cn("flex flex-col items-center text-center", isSmall ? "gap-1.5" : "gap-2", className)}>
       <div
-        className="relative flex h-[96px] w-[96px] items-center justify-center rounded-full shadow-[var(--shadow-soft)]"
+        className={cn(
+          "relative flex items-center justify-center rounded-full shadow-[var(--shadow-soft)]",
+          isSmall ? "h-[72px] w-[72px]" : "h-[96px] w-[96px]",
+        )}
         style={{ background: gradient }}
       >
-        <div className="absolute inset-[10px] rounded-full bg-[var(--color-surface-strong)] shadow-[var(--shadow-inner)]" />
+        <div
+          className={cn(
+            "absolute rounded-full bg-[var(--color-surface-strong)] shadow-[var(--shadow-inner)]",
+            isSmall ? "inset-[8px]" : "inset-[10px]",
+          )}
+        />
         <div className="relative z-10 flex flex-col items-center justify-center">
-          <span className="text-[1.45rem] font-bold text-[var(--color-text)]" style={{ fontFamily: "var(--font-display)" }}>
+          <span
+            className={cn(
+              "font-bold text-[var(--color-text)]",
+              isSmall ? "text-[1.05rem]" : "text-[1.45rem]",
+            )}
+            style={{ fontFamily: "var(--font-display)" }}
+          >
             {value}
           </span>
-          <span className="text-[11px] text-[var(--color-text-secondary)]">{unit}</span>
+          <span className={cn("text-[var(--color-text-secondary)]", isSmall ? "text-[10px]" : "text-[11px]")}>{unit}</span>
         </div>
       </div>
       {detail && (
-        <p className="max-w-[9ch] text-[11px] leading-tight text-[var(--color-text-secondary)]">
+        <p className={cn("leading-tight text-[var(--color-text-secondary)]", isSmall ? "max-w-[10ch] text-[10px]" : "max-w-[9ch] text-[11px]")}>
           {detail}
         </p>
       )}
-      <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-[var(--color-text-soft)]">{label}</p>
+      <p className={cn("font-medium uppercase tracking-[0.12em] text-[var(--color-text-soft)]", isSmall ? "text-[10px]" : "text-[11px]")}>{label}</p>
     </div>
   );
 }

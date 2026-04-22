@@ -101,7 +101,7 @@ export function AppShell() {
       "/dashboard": {
         label: "Trend",
         eyebrow: "Patterns",
-        description: "Review frequency, consistency, and correlation trends.",
+        description: "Review feeding, sleep, diaper, and stool patterns together.",
       },
       [feedNavPath]: {
         label: feedNavLabel,

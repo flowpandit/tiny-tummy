@@ -43,6 +43,54 @@ export function SectionHeading({
   );
 }
 
+export function CompactPageHeader<TValue extends string | number>({
+  eyebrow,
+  title,
+  value,
+  options,
+  onChange,
+  className,
+}: {
+  eyebrow?: string;
+  title: string;
+  value: TValue;
+  options: Array<{ label: string; value: TValue }>;
+  onChange: (value: TValue) => void;
+  className?: string;
+}) {
+  return (
+    <div className={cn("flex items-end justify-between gap-4", className)}>
+      <div className="min-w-0">
+        {eyebrow && (
+          <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--color-text-soft)]">
+            {eyebrow}
+          </p>
+        )}
+        <h2 className="mt-2 font-[var(--font-display)] text-2xl text-[var(--color-text)] sm:text-3xl">
+          {title}
+        </h2>
+      </div>
+      <div className="flex shrink-0 rounded-full border border-[var(--color-border)] bg-[var(--color-bg-elevated)] p-1">
+        {options.map((option) => (
+          <button
+            key={String(option.value)}
+            type="button"
+            onClick={() => onChange(option.value)}
+            className={cn(
+              "rounded-full px-3 py-1.5 text-[11px] font-semibold transition-colors duration-200",
+              value === option.value
+                ? "bg-[var(--color-primary)] text-[var(--color-on-primary)]"
+                : "text-[var(--color-text-secondary)] hover:bg-[var(--color-surface)]",
+            )}
+          >
+            {option.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function InsetPanel({
   className,
   ...props

@@ -147,7 +147,7 @@ test("SleepRecentHistorySection renders recent logs and forwards edit clicks", (
 
   assert.ok(screen.getByText("Recent history"));
   assert.ok(screen.getByText(/Nap, 45m/));
-  fireEvent.click(screen.getByRole("button", { name: /Today:/i }));
+  fireEvent.click(screen.getByRole("button", { name: /Nap, 45m/i }));
   assert.deepEqual(edited, ["sleep-1"]);
 });
 

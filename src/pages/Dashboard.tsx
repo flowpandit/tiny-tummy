@@ -1,20 +1,30 @@
 import { lazy, Suspense, useState } from "react";
+import { CareToolGrid } from "../components/care/CareToolGrid";
+import { OverviewRhythmChart } from "../components/trends/OverviewRhythmChart";
+import { TrendBarChart } from "../components/trends/TrendBarChart";
+import { TrendNarrativeCard } from "../components/trends/TrendNarrativeCard";
+import { TrendSegmentedControl } from "../components/trends/TrendSegmentedControl";
+import { TrendSummaryTile } from "../components/trends/TrendSummaryTile";
+import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
+import {
+  HomeActionBottleIcon,
+  HomeActionSleepIcon,
+  HomeToolHandoffIcon,
+  HomeToolHistoryIcon,
+} from "../components/ui/icons";
+import { CompactPageHeader, EmptyState, PageBody } from "../components/ui/page-layout";
 import { useActiveChild } from "../contexts/ChildContext";
-import { useStats } from "../hooks/useStats";
-import { usePoopLogs } from "../hooks/usePoopLogs";
-import { useFeedingLogs } from "../hooks/useFeedingLogs";
-import { Card, CardHeader, CardTitle, CardContent } from "../components/ui/card";
-import { PageBody, EmptyState } from "../components/ui/page-layout";
-import { DiscoveryLinks } from "../components/discovery/DiscoveryLinks";
-import { ColorDistribution } from "../components/dashboard/ColorDistribution";
-import { DietCorrelation } from "../components/dashboard/DietCorrelation";
-import { cn } from "../lib/cn";
+import { useTrendsOverview } from "../hooks/useTrendsOverview";
+import type { TrendsTab } from "../lib/trends";
 
 const FrequencyChart = lazy(() =>
   import("../components/dashboard/FrequencyChart").then((module) => ({ default: module.FrequencyChart })),
 );
 const ConsistencyTrend = lazy(() =>
   import("../components/dashboard/ConsistencyTrend").then((module) => ({ default: module.ConsistencyTrend })),
+);
+const ColorDistribution = lazy(() =>
+  import("../components/dashboard/ColorDistribution").then((module) => ({ default: module.ColorDistribution })),
 );
 
 const PERIOD_OPTIONS = [
@@ -23,31 +33,52 @@ const PERIOD_OPTIONS = [
   { label: "30 days", value: 30 },
 ];
 
+const TREND_TOOL_ITEMS = [
+  {
+    label: "Feed",
+    icon: <HomeActionBottleIcon className="h-5 w-5" />,
+    background: "var(--color-home-tool-growth)",
+    to: "/feed",
+  },
+  {
+    label: "Sleep",
+    icon: <HomeActionSleepIcon className="h-5 w-5" />,
+    background: "var(--color-home-tool-milestone)",
+    to: "/sleep",
+  },
+  {
+    label: "History",
+    icon: <HomeToolHistoryIcon className="h-5 w-5" />,
+    background: "var(--color-home-tool-history)",
+    to: "/history",
+  },
+  {
+    label: "Report",
+    icon: <HomeToolHandoffIcon className="h-5 w-5" />,
+    background: "var(--color-home-tool-handoff)",
+    to: "/report",
+  },
+] as const;
+
 export function Dashboard() {
   const activeChild = useActiveChild();
   const [days, setDays] = useState(7);
-  const { logs } = usePoopLogs(activeChild?.id ?? null);
-  const { logs: feedingLogs } = useFeedingLogs(activeChild?.id ?? null);
-  const { frequency, consistency, colorDist } = useStats(
-    activeChild?.id ?? null,
-    days,
-  );
+  const [activeTab, setActiveTab] = useState<TrendsTab>("overview");
+  const { overview, poopStats } = useTrendsOverview(activeChild, days);
 
   if (!activeChild) return null;
 
-  const realLogCount = logs.filter((l) => l.is_no_poop === 0).length;
-
-  if (realLogCount < 3) {
+  if (!overview?.hasAnyData) {
     return (
       <PageBody className="py-8">
         <EmptyState
           icon={(
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="var(--color-primary)" className="w-8 h-8">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="var(--color-primary)" className="h-8 w-8">
               <path fillRule="evenodd" d="M3 6a3 3 0 0 1 3-3h12a3 3 0 0 1 3 3v12a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3V6Zm4.5 7.5a.75.75 0 0 1 .75.75v2.25a.75.75 0 0 1-1.5 0v-2.25a.75.75 0 0 1 .75-.75Zm3.75-1.5a.75.75 0 0 0-1.5 0v4.5a.75.75 0 0 0 1.5 0V12Zm2.25-3a.75.75 0 0 1 .75.75v6.75a.75.75 0 0 1-1.5 0V9.75a.75.75 0 0 1 .75-.75Zm3.75 1.5a.75.75 0 0 0-1.5 0v5.25a.75.75 0 0 0 1.5 0v-5.25Z" clipRule="evenodd" />
             </svg>
           )}
-          title="A few more logs and trends will start to settle in"
-          description="Log at least three poop entries to unlock the calmer trend views."
+          title="A few logs will make the patterns page useful"
+          description="Start with feeds, sleep, diapers, or poop logs. This page will turn them into one weekly rhythm once the data starts coming in."
         />
       </PageBody>
     );
@@ -59,134 +90,152 @@ export function Dashboard() {
     </div>
   );
 
-  return (
-    <PageBody>
-      <section className="space-y-4 border-b border-[var(--color-border)] pb-5">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--color-text-soft)]">Patterns</p>
-            <h2 className="mt-2 font-[var(--font-display)] text-3xl font-semibold text-[var(--color-text)]">
-              Trends
-            </h2>
-            <p className="mt-3 max-w-[42ch] text-base leading-relaxed text-[var(--color-text-secondary)]">
-              Frequency, consistency, color, and feed timing in one place so patterns are easier to spot.
+  const renderActivePanel = () => {
+    if (activeTab === "overview") {
+      return (
+        <>
+          <OverviewRhythmChart rows={overview.overviewRows} />
+          <TrendNarrativeCard lines={overview.overviewNarrative} />
+        </>
+      );
+    }
+
+    if (activeTab === "feed") {
+      return (
+        <>
+          <Card>
+            <CardHeader>
+              <CardTitle>Feed rhythm</CardTitle>
+              <p className="text-xs leading-relaxed text-[var(--color-text-secondary)]">
+                Daily feed totals, keeping breastfeeding, bottles, and meals on one weekly line.
+              </p>
+            </CardHeader>
+            <CardContent>
+              <TrendBarChart data={overview.feedChart.data} series={overview.feedChart.series} />
+            </CardContent>
+          </Card>
+          <TrendNarrativeCard title="Feed read" lines={[overview.feedNarrative]} />
+        </>
+      );
+    }
+
+    if (activeTab === "sleep") {
+      return (
+        <>
+          <Card>
+            <CardHeader>
+              <CardTitle>Sleep totals</CardTitle>
+              <p className="text-xs leading-relaxed text-[var(--color-text-secondary)]">
+                Hours of sleep by day, so naps and nights read as one weekly rhythm.
+              </p>
+            </CardHeader>
+            <CardContent>
+              <TrendBarChart data={overview.sleepChart.data} series={overview.sleepChart.series} valueSuffix="h" />
+            </CardContent>
+          </Card>
+          <TrendNarrativeCard title="Sleep read" lines={[overview.sleepNarrative]} />
+        </>
+      );
+    }
+
+    if (activeTab === "diaper") {
+      return (
+        <>
+          <Card>
+            <CardHeader>
+              <CardTitle>Diaper output</CardTitle>
+              <p className="text-xs leading-relaxed text-[var(--color-text-secondary)]">
+                Wet and dirty diaper counts by day, with enough context to spot steadier hydration patterns.
+              </p>
+            </CardHeader>
+            <CardContent>
+              <TrendBarChart data={overview.diaperChart.data} series={overview.diaperChart.series} />
+            </CardContent>
+          </Card>
+          <TrendNarrativeCard title="Diaper read" lines={[overview.diaperNarrative]} />
+        </>
+      );
+    }
+
+    const showConsistency = poopStats.consistency.length > 1;
+    const showFrequency = poopStats.frequency.length > 0;
+
+    return (
+      <>
+        <Card>
+          <CardHeader>
+            <CardTitle>{showConsistency ? "Consistency trend" : "Poop frequency"}</CardTitle>
+            <p className="text-xs leading-relaxed text-[var(--color-text-secondary)]">
+              {showConsistency
+                ? "Types 3-5 are the expected range, so this view keeps the stool trend easy to read."
+                : "Daily stool counts over the selected range."}
             </p>
-          </div>
-          <div className="flex rounded-full border border-[var(--color-border)] bg-[var(--color-bg-elevated)] p-1">
-            {PERIOD_OPTIONS.map((opt) => (
-              <button
-                key={opt.value}
-                onClick={() => setDays(opt.value)}
-                className={cn(
-                  "rounded-full px-3 py-1.5 text-xs font-semibold cursor-pointer transition-colors duration-200",
-                  days === opt.value
-                    ? "bg-[var(--color-primary)] text-[var(--color-on-primary)] shadow-[var(--shadow-soft)]"
-                    : "text-[var(--color-text-secondary)] hover:text-[var(--color-text)]",
-                )}
-              >
-                {opt.label}
-              </button>
-            ))}
-          </div>
-        </div>
+          </CardHeader>
+          <CardContent>
+            {showConsistency ? (
+              <Suspense fallback={chartFallback}>
+                <ConsistencyTrend data={poopStats.consistency} />
+              </Suspense>
+            ) : showFrequency ? (
+              <Suspense fallback={chartFallback}>
+                <FrequencyChart data={poopStats.frequency} days={days} />
+              </Suspense>
+            ) : (
+              <p className="py-8 text-center text-sm text-[var(--color-muted)]">No poop data for this period</p>
+            )}
+          </CardContent>
+        </Card>
+        {poopStats.colorDist.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Recent stool colors</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Suspense fallback={<div className="h-10" />}>
+                <ColorDistribution data={poopStats.colorDist} />
+              </Suspense>
+            </CardContent>
+          </Card>
+        )}
+        <TrendNarrativeCard title="Poop read" lines={[overview.poopNarrative]} />
+      </>
+    );
+  };
+
+  return (
+    <PageBody className="mt-0 space-y-4 px-4 pb-5 pt-0 md:px-6 lg:px-8">
+      <section className="border-b border-[var(--color-border)] pb-4">
+        <CompactPageHeader
+          eyebrow="Patterns"
+          title="Trends"
+          value={days}
+          options={PERIOD_OPTIONS}
+          onChange={setDays}
+        />
       </section>
 
+      <div className="-mx-1 flex gap-3 overflow-x-auto px-1 pb-1" data-no-page-swipe="true">
+        {overview.summaryTiles.map((tile) => (
+          <TrendSummaryTile
+            key={tile.id}
+            tile={tile}
+            isActive={activeTab === tile.id}
+            onClick={() => setActiveTab(tile.id)}
+          />
+        ))}
+      </div>
+
+      <TrendSegmentedControl value={activeTab} onChange={setActiveTab} />
+
       <div className="flex flex-col gap-4">
-        <Card>
-          <CardHeader>
-            <CardTitle>Daily Frequency</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {frequency.length > 0 ? (
-              <Suspense fallback={chartFallback}>
-                <FrequencyChart data={frequency} days={days} />
-              </Suspense>
-            ) : (
-              <p className="text-sm text-[var(--color-muted)] text-center py-8">
-                No data for this period
-              </p>
-            )}
-          </CardContent>
-        </Card>
+        {renderActivePanel()}
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Consistency Trend</CardTitle>
-            <p className="text-xs text-[var(--color-muted)]">
-              Types 3-5 are in the normal range (dashed lines)
-            </p>
-          </CardHeader>
-          <CardContent>
-            {consistency.length > 0 ? (
-              <Suspense fallback={chartFallback}>
-                <ConsistencyTrend data={consistency} />
-              </Suspense>
-            ) : (
-              <p className="text-sm text-[var(--color-muted)] text-center py-8">
-                No type data for this period
-              </p>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Color Distribution</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {colorDist.length > 0 ? (
-              <ColorDistribution data={colorDist} />
-            ) : (
-              <p className="text-sm text-[var(--color-muted)] text-center py-8">
-                No color data for this period
-              </p>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Feeds & Poops</CardTitle>
-            <p className="text-xs text-[var(--color-muted)]">
-              Timeline to help spot feeding and food→poop patterns
-            </p>
-          </CardHeader>
-          <CardContent>
-            <DietCorrelation poopLogs={logs} feedingLogs={feedingLogs} days={days} />
-          </CardContent>
-        </Card>
-
-        <DiscoveryLinks
-          eyebrow="Next"
-          title="Use trends with the right follow-up"
-          description="Trend is the analysis surface. These adjacent pages help turn patterns into action."
-          compact
-          items={[
-            {
-              to: "/report",
-              title: "Generate report",
-              description: "Prepare a summary for your doctor.",
-              tone: "cta",
-            },
-            {
-              to: "/history",
-              title: "History",
-              description: "Inspect the timeline behind the charts.",
-            },
-            {
-              to: "/growth",
-              title: "Growth",
-              description: "Check whether body trends line up too.",
-              tone: "info",
-            },
-            {
-              to: "/guidance",
-              title: "Guidance",
-              description: "Open evidence-based context when needed.",
-              tone: "healthy",
-            },
-          ]}
-        />
+        <section>
+          <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--color-text-soft)]">Next</p>
+          <div className="mt-2.5">
+            <CareToolGrid items={[...TREND_TOOL_ITEMS]} />
+          </div>
+        </section>
       </div>
     </PageBody>
   );

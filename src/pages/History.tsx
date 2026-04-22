@@ -8,8 +8,8 @@ import { EditPoopSheet } from "../components/logging/EditPoopSheet";
 import { EditMealSheet } from "../components/logging/EditMealSheet";
 import { EditDiaperSheet } from "../components/logging/EditDiaperSheet";
 import { EditSleepSheet } from "../components/sleep/EditSleepSheet";
-import { cn } from "../lib/cn";
 import { HistoryTimeline } from "../components/history/HistoryTimeline";
+import { CompactPageHeader } from "../components/ui/page-layout";
 import {
   getEarliestHistoryDate,
   getHistoryDisplayDays,
@@ -73,35 +73,16 @@ export function History() {
   return (
     <div className="mb-5 px-4 pb-5">
       <div className="mb-4">
-        <div className="flex items-center justify-between gap-3">
-          <h2 className="font-[var(--font-display)] text-2xl text-[var(--color-text)]">
-            History
-          </h2>
-          <div className="flex rounded-full border border-[var(--color-border)] bg-[var(--color-bg-elevated)] p-1">
-            {HISTORY_RANGE_OPTIONS.map((option) => {
-              const active = !searchDate && quickRangeDays === option.value;
-              return (
-                <button
-                  key={option.value}
-                  type="button"
-                  onClick={() => {
-                    setSearchDate(null);
-                    setExpandedDay(null);
-                    setQuickRangeDays(option.value);
-                  }}
-                  className={cn(
-                    "rounded-full px-3 py-1.5 text-[11px] font-semibold transition-colors duration-200",
-                    active
-                      ? "bg-[var(--color-primary)] text-[var(--color-on-primary)]"
-                      : "text-[var(--color-text-secondary)] hover:bg-[var(--color-surface)]",
-                  )}
-                >
-                  {option.label}
-                </button>
-              );
-            })}
-          </div>
-        </div>
+        <CompactPageHeader
+          title="History"
+          value={quickRangeDays}
+          options={HISTORY_RANGE_OPTIONS}
+          onChange={(value) => {
+            setSearchDate(null);
+            setExpandedDay(null);
+            setQuickRangeDays(value);
+          }}
+        />
         <div className="mt-3 flex items-center gap-2">
           <div className="flex-1">
             <DatePicker
