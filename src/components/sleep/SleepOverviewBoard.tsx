@@ -244,7 +244,7 @@ export function SleepOverviewBoard({
         </div>
 
         {activePanel === "rhythm" ? (
-          <div className="rounded-[28px] border border-[color-mix(in_srgb,var(--color-border)_88%,transparent)] bg-[color-mix(in_srgb,var(--color-bg-elevated)_88%,var(--color-surface-strong))] px-3 py-3 shadow-[var(--shadow-soft)]">
+          <div>
             <div className="grid gap-3 sm:grid-cols-2">
               <RhythmDetailCard
                 label="Wake baseline"
@@ -259,7 +259,6 @@ export function SleepOverviewBoard({
                 tone={wakeRisk.tone}
               />
             </div>
-
             <button
               type="button"
               className="mt-4 w-full text-center text-sm text-[var(--color-text-soft)] underline decoration-[var(--color-border-strong)] underline-offset-2 hover:text-[var(--color-text-secondary)]"
