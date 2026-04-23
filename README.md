@@ -4,6 +4,31 @@ A smart baby bowel health tracker for iOS and Android. Helps parents track their
 
 **100% offline. 100% on-device. No accounts. No cloud. No tracking.**
 
+## Working With Codex
+
+If you are using Codex on this repo, the main source-of-truth docs are:
+
+- `AGENTS.md` for repository rules and implementation guardrails
+- `docs/CODEX_PLAYBOOK.md` for prompt templates, task scoping, and verification expectations
+- `README.md` for setup, commands, and product context
+- `ARCHITECTURE_GUIDELINES.md` for deeper architectural decisions
+
+For best results, give Codex:
+
+- a concrete goal
+- the files or docs to inspect first
+- constraints or non-goals
+- the verification commands to run
+
+Example:
+
+```text
+Goal: Refactor the report page without changing behavior.
+Context: AGENTS.md, docs/CODEX_PLAYBOOK.md, src/pages/Report.tsx, src/hooks/useReportPageState.ts, tests/report-view-model.test.ts.
+Constraints: Keep route files thin. Preserve behavior. Do not change the Tauri layer.
+Verification: npm test and npm run check:dead-code.
+```
+
 ## What It Does
 
 - **Quick logging** — log poop (type, color, size, photo) and meals in seconds
