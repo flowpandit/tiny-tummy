@@ -125,22 +125,23 @@ export function getPrediction(
 
 export function getHydrationStatus(logs: DiaperEntry[], symptomType?: string): HydrationStatus {
   const wetLogs = getRelevantLogs(logs, "wet");
-  const lastWet = wetLogs[0] ?? null;
+  const lastValidWetTimestamp = wetLogs.reduce<number | null>((latest, log) => {
+    const timestamp = getValidDiaperTimestamp(log.logged_at);
+    if (timestamp === null) return latest;
+    return latest === null ? timestamp : Math.max(latest, timestamp);
+  }, null);
   const todayWetCount = wetLogs.filter((log) => isOnLocalDay(log.logged_at, getDayKey())).length;
-  const recentDarkUrine = wetLogs.some((log) => (
-    getValidDiaperTimestamp(log.logged_at) !== null
-    && (
-    log.urine_color === "dark"
-    && Date.now() - (getValidDiaperTimestamp(log.logged_at) ?? 0) < 24 * 3600000
-    )
-  ));
-  const lastWetTimestamp = lastWet ? getValidDiaperTimestamp(lastWet.logged_at) : null;
-  const hoursSinceWet = lastWet
-    && lastWetTimestamp !== null
-    ? (Date.now() - lastWetTimestamp) / 3600000
-    : Number.POSITIVE_INFINITY;
+  const recentDarkUrine = wetLogs.some((log) => {
+    const timestamp = getValidDiaperTimestamp(log.logged_at);
+    return timestamp !== null
+      && log.urine_color === "dark"
+      && Date.now() - timestamp < 24 * 3600000;
+  });
+  const hoursSinceWet = lastValidWetTimestamp !== null
+    ? (Date.now() - lastValidWetTimestamp) / 3600000
+    : null;
 
-  if (symptomType === "dehydration_concern" || recentDarkUrine || hoursSinceWet >= 8) {
+  if (symptomType === "dehydration_concern" || recentDarkUrine || (hoursSinceWet !== null && hoursSinceWet >= 8)) {
     return {
       tone: "cta",
       title: "Hydration needs a check",
@@ -148,7 +149,7 @@ export function getHydrationStatus(logs: DiaperEntry[], symptomType?: string): H
     };
   }
 
-  if (todayWetCount < 4 || hoursSinceWet >= 5) {
+  if (todayWetCount < 4 || (hoursSinceWet !== null && hoursSinceWet >= 5)) {
     return {
       tone: "info",
       title: "Watch wet output",
