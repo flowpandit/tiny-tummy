@@ -1,5 +1,5 @@
 import type { Episode, EpisodeEvent } from "../types";
-import { generateId, nowISO } from "../utils";
+import { generateId, getUtcIsoBoundsForLocalDateRange, nowISO } from "../utils";
 import { getDb } from "./connection";
 
 export async function createEpisode(input: {
@@ -123,13 +123,14 @@ export async function getEpisodesForRange(
   endDate: string,
 ): Promise<Episode[]> {
   const conn = await getDb();
+  const { startUtcIso, endUtcIso } = getUtcIsoBoundsForLocalDateRange(startDate, endDate);
   return conn.select<Episode[]>(
     `SELECT * FROM episodes
      WHERE child_id = ?
        AND started_at <= ?
        AND (ended_at IS NULL OR ended_at >= ?)
      ORDER BY started_at DESC`,
-    [childId, endDate + "T23:59:59", startDate],
+    [childId, endUtcIso, startUtcIso],
   );
 }
 
@@ -139,10 +140,11 @@ export async function getEpisodeEventsForRange(
   endDate: string,
 ): Promise<EpisodeEvent[]> {
   const conn = await getDb();
+  const { startUtcIso, endUtcIso } = getUtcIsoBoundsForLocalDateRange(startDate, endDate);
   return conn.select<EpisodeEvent[]>(
     `SELECT * FROM episode_events
      WHERE child_id = ? AND logged_at >= ? AND logged_at <= ?
      ORDER BY logged_at DESC`,
-    [childId, startDate, endDate + "T23:59:59"],
+    [childId, startUtcIso, endUtcIso],
   );
 }
