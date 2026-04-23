@@ -40,6 +40,24 @@ export interface SleepPrediction {
   adjustments: SleepAdjustment[];
 }
 
+function getValidTimestamp(value: string): number | null {
+  const timestamp = new Date(value).getTime();
+  return Number.isNaN(timestamp) ? null : timestamp;
+}
+
+export function getCompletedSleepLogs(logs: SleepEntry[], now = Date.now()): SleepEntry[] {
+  return logs.filter((log) => {
+    const startedAt = getValidTimestamp(log.started_at);
+    const endedAt = getValidTimestamp(log.ended_at);
+
+    if (startedAt === null || endedAt === null) {
+      return false;
+    }
+
+    return startedAt < endedAt && startedAt <= now && endedAt <= now;
+  });
+}
+
 export function getDurationMinutes(entry: SleepEntry): number {
   return Math.max(0, Math.round((new Date(entry.ended_at).getTime() - new Date(entry.started_at).getTime()) / 60000));
 }
@@ -108,13 +126,14 @@ export function getLastNapDisplay(activeChildDob: string | null, logs: SleepEntr
   timestamp: string | null;
   label: string;
 } {
-  const latestNap = logs.find((log) => log.sleep_type === "nap") ?? null;
+  const completedLogs = getCompletedSleepLogs(logs);
+  const latestNap = completedLogs.find((log) => log.sleep_type === "nap") ?? null;
   const ageDays = activeChildDob ? getAgeDays(activeChildDob) : 0;
   const shouldUseLastSleep = ageDays >= 730 || !latestNap;
 
   if (shouldUseLastSleep) {
     return {
-      timestamp: logs[0]?.ended_at ?? null,
+      timestamp: completedLogs[0]?.ended_at ?? null,
       label: "Last sleep",
     };
   }
@@ -179,7 +198,7 @@ function lowerConfidence(confidence: PredictionConfidence): PredictionConfidence
 }
 
 export function getSleepPrediction(logs: SleepEntry[], baseline: WakeBaseline): SleepPrediction | null {
-  const relevantLogs = logs.slice(0, 8);
+  const relevantLogs = getCompletedSleepLogs(logs).slice(0, 8);
   const lastSleep = relevantLogs[0] ?? null;
   if (!lastSleep) return null;
 

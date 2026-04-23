@@ -1,6 +1,25 @@
 import { getDiaperTypeLabel, getUrineColorLabel } from "../../lib/diaper";
-import { getDiaperPatternTone, getStoolShortLabel } from "../../lib/diaper-insights";
+import { getDiaperPatternTone, getStoolShortLabel, getValidDiaperTimestamp } from "../../lib/diaper-insights";
 import type { DiaperEntry } from "../../lib/types";
+
+function getPatternPosition(loggedAt: string): number | null {
+  const timestamp = getValidDiaperTimestamp(loggedAt);
+  if (timestamp === null) {
+    return null;
+  }
+
+  const date = new Date(timestamp);
+  return ((date.getHours() + date.getMinutes() / 60) / 24) * 100;
+}
+
+function formatPatternTime(loggedAt: string): string {
+  const timestamp = getValidDiaperTimestamp(loggedAt);
+  if (timestamp === null) {
+    return "Logged";
+  }
+
+  return new Date(timestamp).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+}
 
 export function DiaperPatternCard({
   patternLogs,
@@ -11,6 +30,8 @@ export function DiaperPatternCard({
   selectedPatternLog: DiaperEntry | null;
   onToggleLog: (logId: string) => void;
 }) {
+  const selectedPatternPosition = selectedPatternLog ? getPatternPosition(selectedPatternLog.logged_at) : null;
+
   return (
     <section className="px-1">
       <div className="rounded-[22px] border border-[var(--color-border)] bg-[var(--color-surface-strong)] px-4 py-3 shadow-[var(--shadow-soft)]">
@@ -41,14 +62,16 @@ export function DiaperPatternCard({
                           {patternLogs
                             .filter((log) => log.diaper_type === type)
                             .map((log) => {
-                              const date = new Date(log.logged_at);
-                              const left = ((date.getHours() + date.getMinutes() / 60) / 24) * 100;
+                              const left = getPatternPosition(log.logged_at);
+                              if (left === null) {
+                                return null;
+                              }
                               const tone = getDiaperPatternTone(type);
                               return (
                                 <button
                                   type="button"
                                   key={log.id}
-                                  aria-label={`${getDiaperTypeLabel(log.diaper_type)} at ${date.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}`}
+                                  aria-label={`${getDiaperTypeLabel(log.diaper_type)} at ${formatPatternTime(log.logged_at)}`}
                                   className="absolute top-0 h-4.5 -translate-x-1/2 rounded-[6px] border shadow-[var(--shadow-soft)]"
                                   onClick={() => onToggleLog(log.id)}
                                   style={{
@@ -63,11 +86,11 @@ export function DiaperPatternCard({
                         </div>
                       ))}
                     </div>
-                    {selectedPatternLog && (
+                    {selectedPatternLog && selectedPatternPosition !== null && (
                       <div
                         className="absolute top-2 z-10 -translate-x-1/2 rounded-[10px] border border-[var(--color-border)] bg-[var(--color-surface)] px-2.5 py-2 text-left shadow-[var(--shadow-soft)]"
                         style={{
-                          left: `${((new Date(selectedPatternLog.logged_at).getHours() + new Date(selectedPatternLog.logged_at).getMinutes() / 60) / 24) * 100}%`,
+                          left: `${selectedPatternPosition}%`,
                           width: "100px",
                           maxWidth: "100px",
                         }}
@@ -76,7 +99,7 @@ export function DiaperPatternCard({
                           {getDiaperTypeLabel(selectedPatternLog.diaper_type)}
                         </p>
                         <p className="mt-0.5 text-[0.68rem] text-[var(--color-text-secondary)]">
-                          {new Date(selectedPatternLog.logged_at).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}
+                          {formatPatternTime(selectedPatternLog.logged_at)}
                         </p>
                         <p className="mt-1 text-[0.68rem] leading-snug text-[var(--color-text-secondary)]">
                           {selectedPatternLog.diaper_type === "wet"

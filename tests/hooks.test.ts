@@ -1,11 +1,14 @@
 import test, { afterEach } from "node:test";
 import assert from "node:assert/strict";
+import React from "react";
 import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
 import "./test-dom.ts";
+import { DatabaseProvider, type DbClient } from "../src/contexts/DatabaseContext.tsx";
 import { useLoggingSheetLifecycle } from "../src/hooks/useLoggingSheetLifecycle.ts";
 import { usePhotoField } from "../src/hooks/usePhotoField.ts";
 import { useVisibilityRefresh } from "../src/hooks/useVisibilityRefresh.ts";
 import { useChildWorkflowActions } from "../src/hooks/useChildWorkflowActions.ts";
+import { useSleepLogSheetState } from "../src/hooks/useSleepLogSheetState.ts";
 import type { Child } from "../src/lib/types.ts";
 
 afterEach(() => {
@@ -276,6 +279,63 @@ test("useVisibilityRefresh subscribes to focus and visibility events and cleans 
     document.addEventListener = addDocumentListener;
     window.removeEventListener = removeWindowListener;
     document.removeEventListener = removeDocumentListener;
+  }
+});
+
+test("useSleepLogSheetState blocks future manual sleep logs", async () => {
+  const createSleepLogCalls: Array<Record<string, unknown>> = [];
+  const errors: string[] = [];
+  const success: string[] = [];
+  const dbClient = {
+    getSetting: async () => "",
+    setSetting: async () => {},
+    createSleepLog: async (input: Record<string, unknown>) => {
+      createSleepLogCalls.push(input);
+    },
+  } as unknown as DbClient;
+  const wrapper = ({ children }: { children: React.ReactNode }) => (
+    React.createElement(DatabaseProvider, { client: dbClient }, children)
+  );
+
+  const { result } = renderHook(() => useSleepLogSheetState({
+    open: true,
+    childId: child.id,
+    onLogged: () => {},
+    onClose: () => {},
+    onError: (message) => {
+      errors.push(message);
+    },
+    onSuccess: (message) => {
+      success.push(message);
+    },
+  }), { wrapper });
+
+  await waitFor(() => {
+    assert.equal(result.current.timerSession, null);
+  });
+
+  act(() => {
+    result.current.setStartDate("2026-04-10");
+    result.current.setStartTime("11:00");
+    result.current.setEndDate("2026-04-11");
+    result.current.setEndTime("11:00");
+  });
+
+  const realDateNow = Date.now;
+  Date.now = () => new Date("2026-04-10T12:00:00.000Z").getTime();
+
+  try {
+    let saved = false;
+    await act(async () => {
+      saved = await result.current.handleSaveManual();
+    });
+
+    assert.equal(saved, false);
+    assert.deepEqual(errors, ["Sleep logs cannot be saved in the future."]);
+    assert.deepEqual(success, []);
+    assert.equal(createSleepLogCalls.length, 0);
+  } finally {
+    Date.now = realDateNow;
   }
 });
 

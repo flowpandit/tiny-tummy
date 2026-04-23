@@ -22,7 +22,10 @@ import {
   setSmartReminderEnabled,
   syncSmartRemindersForChildren,
 } from "../../lib/notifications";
-import type { EliminationViewPreference } from "../../lib/diaper";
+import {
+  getAllowedEliminationViewPreferences,
+  type EliminationViewPreference,
+} from "../../lib/diaper";
 import type { Child, UnitSystem } from "../../lib/types";
 
 const THEME_OPTIONS: { value: "system" | "light" | "dark"; label: string }[] = [
@@ -268,6 +271,8 @@ export function ThemeSection({ child }: { child: Child | null }) {
   const { mode, setMode, nightModeEnabled, setNightModeEnabled, nightModeStart, nightModeEnd, setNightModeSchedule } = useTheme();
   const { unitSystem, setUnitSystem } = useUnits();
   const { preference: eliminationPreference, setPreference } = useEliminationPreference(child);
+  const eliminationOptions = ELIMINATION_VIEW_OPTIONS.filter((option) => getAllowedEliminationViewPreferences(child).includes(option.value));
+  const eliminationGridClassName = eliminationOptions.length === 2 ? "grid-cols-2" : "grid-cols-3";
 
   return (
     <div className="mb-6">
@@ -317,9 +322,9 @@ export function ThemeSection({ child }: { child: Child | null }) {
                       const preference = next as EliminationViewPreference;
                       void setPreference(preference);
                     }}
-                    options={ELIMINATION_VIEW_OPTIONS}
+                    options={eliminationOptions}
                     className="w-full"
-                    gridClassName="grid-cols-3"
+                    gridClassName={eliminationGridClassName}
                     size="sm"
                     variant="settings"
                   />

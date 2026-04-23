@@ -48,7 +48,7 @@ import {
 export function Poop() {
   const navigate = useNavigate();
   const activeChild = useActiveChild();
-  const { experience } = useEliminationPreference(activeChild);
+  const { experience, isLoading: isEliminationPreferenceLoading } = useEliminationPreference(activeChild);
   const { showError, showSuccess } = useToast();
   const { logs, lastRealPoop, refresh } = usePoopLogs(activeChild?.id ?? null, 500);
   const { logs: feedingLogs } = useFeedingLogs(activeChild?.id ?? null);
@@ -66,10 +66,10 @@ export function Poop() {
   const [statusExpanded, setStatusExpanded] = useState(false);
 
   useEffect(() => {
-    if (experience.mode === "diaper") {
+    if (!isEliminationPreferenceLoading && experience.mode === "diaper") {
       navigate("/diaper", { replace: true });
     }
-  }, [experience.mode, navigate]);
+  }, [experience.mode, isEliminationPreferenceLoading, navigate]);
 
   useEffect(() => {
     if (!activeChild) {
@@ -209,6 +209,7 @@ export function Poop() {
   });
 
   if (!activeChild) return null;
+  if (isEliminationPreferenceLoading) return null;
   if (experience.mode === "diaper") return null;
 
   return (
