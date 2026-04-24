@@ -11,6 +11,67 @@ export function getStatusLabel(status: HealthStatus): string {
   return "Status unavailable";
 }
 
+export function deriveHandoffOverview(input: {
+  baseStatus: HealthStatus;
+  baseDescription: string;
+  alerts: Alert[];
+  activeEpisode: Episode | null;
+  latestEpisodeUpdate: EpisodeEvent | null;
+  recentSymptoms: SymptomEntry[];
+}): { status: HealthStatus; description: string } {
+  const highestPriorityAlert = input.alerts.find((alert) => alert.severity === "urgent")
+    ?? input.alerts.find((alert) => alert.severity === "warning")
+    ?? input.alerts.find((alert) => alert.severity === "info");
+
+  if (highestPriorityAlert) {
+    return {
+      status: highestPriorityAlert.severity === "urgent" ? "alert" : "caution",
+      description: highestPriorityAlert.message?.trim()
+        ? `${highestPriorityAlert.title}: ${highestPriorityAlert.message.trim()}`
+        : highestPriorityAlert.title,
+    };
+  }
+
+  const severeSymptom = input.recentSymptoms.find((symptom) => symptom.severity === "severe");
+  if (severeSymptom) {
+    return {
+      status: "alert",
+      description: severeSymptom.notes?.trim()
+        ? severeSymptom.notes.trim()
+        : `Recent symptom: ${getSymptomTypeLabel(severeSymptom.symptom_type)} (${getSymptomSeverityLabel(severeSymptom.severity).toLowerCase()}).`,
+    };
+  }
+
+  if (input.activeEpisode) {
+    const episodeSummary = input.activeEpisode.summary?.trim();
+    const latestUpdate = input.latestEpisodeUpdate
+      ? ` Latest update: ${input.latestEpisodeUpdate.title}.`
+      : "";
+
+    return {
+      status: "caution",
+      description: episodeSummary
+        ? episodeSummary
+        : `${getEpisodeTypeLabel(input.activeEpisode.episode_type)} episode is active.${latestUpdate}`,
+    };
+  }
+
+  const recentSymptom = input.recentSymptoms[0];
+  if (recentSymptom) {
+    return {
+      status: recentSymptom.severity === "severe" ? "alert" : "caution",
+      description: recentSymptom.notes?.trim()
+        ? recentSymptom.notes.trim()
+        : `Recent symptom: ${getSymptomTypeLabel(recentSymptom.symptom_type)} (${getSymptomSeverityLabel(recentSymptom.severity).toLowerCase()}).`,
+    };
+  }
+
+  return {
+    status: input.baseStatus,
+    description: input.baseDescription,
+  };
+}
+
 export function getLastPoopSummary(lastPoop: PoopEntry | null): string {
   if (!lastPoop) return "No poop logged yet";
   return `${timeSince(lastPoop.logged_at)} (${formatDate(lastPoop.logged_at)})`;
@@ -24,7 +85,7 @@ export function getLastFeedSummary(lastFeed: FeedingEntry | null, unitSystem: Un
 export function buildHandoffSummary(input: {
   childName: string;
   status: HealthStatus;
-  normalDescription: string;
+  statusDescription: string;
   alerts: Alert[];
   lastPoop: PoopEntry | null;
   lastFeed: FeedingEntry | null;
@@ -54,7 +115,9 @@ export function buildHandoffSummary(input: {
     `${input.childName} handoff update`,
     "",
     `Right now: ${getStatusLabel(input.status)}`,
-    input.normalDescription ? `Expected range: ${input.normalDescription}` : null,
+    input.statusDescription
+      ? `${input.status === "healthy" ? "Expected range" : "Focus"}: ${input.statusDescription}`
+      : null,
     "",
     `Last poop: ${getLastPoopSummary(input.lastPoop)}`,
     `Last feed: ${getLastFeedSummary(input.lastFeed, input.unitSystem ?? "metric")}`,

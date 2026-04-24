@@ -17,7 +17,7 @@ import { useSymptoms } from "../hooks/useSymptoms";
 import { useCaregiverNote } from "../hooks/useCaregiverNote";
 import { buildChildDailySummary } from "../lib/child-summary";
 import { getFeedingEntryDisplayLabel } from "../lib/feeding";
-import { buildHandoffSummary, getLastFeedSummary, getLastPoopSummary, getStatusLabel } from "../lib/handoff";
+import { buildHandoffSummary, deriveHandoffOverview, getLastFeedSummary, getLastPoopSummary, getStatusLabel } from "../lib/handoff";
 import { getEpisodeEventTypeLabel, getEpisodeTypeLabel } from "../lib/episode-constants";
 import { getSymptomSeverityBadgeVariant, getSymptomSeverityLabel, getSymptomTypeLabel } from "../lib/symptom-constants";
 import { getChildStatus } from "../lib/tauri";
@@ -84,10 +84,19 @@ export function Handoff() {
     symptomLogs,
   });
 
+  const handoffOverview = deriveHandoffOverview({
+    baseStatus: status,
+    baseDescription: normalDesc,
+    alerts,
+    activeEpisode: summary.activeEpisode,
+    latestEpisodeUpdate: summary.latestEpisodeUpdate,
+    recentSymptoms: summary.recentSymptoms,
+  });
+
   const summaryText = buildHandoffSummary({
     childName: activeChild.name,
-    status,
-    normalDescription: normalDesc,
+    status: handoffOverview.status,
+    statusDescription: handoffOverview.description,
     alerts,
     lastPoop: lastRealPoop,
     lastFeed: summary.lastFeed,
@@ -145,13 +154,13 @@ export function Handoff() {
           <div className="flex items-start justify-between gap-3">
             <div>
               <p className="text-sm font-medium text-[var(--color-text)]">{activeChild.name}</p>
-              <p className="mt-1 text-xs text-[var(--color-text-soft)]">{getStatusLabel(status)}</p>
+              <p className="mt-1 text-xs text-[var(--color-text-soft)]">{getStatusLabel(handoffOverview.status)}</p>
             </div>
-            <Badge variant={status === "healthy" ? "healthy" : status === "caution" ? "caution" : "alert"}>
-              {status === "healthy" ? "Normal" : status === "caution" ? "Watch" : "Attention"}
+            <Badge variant={handoffOverview.status === "healthy" ? "healthy" : handoffOverview.status === "caution" ? "caution" : "alert"}>
+              {handoffOverview.status === "healthy" ? "Normal" : handoffOverview.status === "caution" ? "Watch" : "Attention"}
             </Badge>
           </div>
-          <p className="mt-3 text-sm leading-relaxed text-[var(--color-text-secondary)]">{normalDesc}</p>
+          <p className="mt-3 text-sm leading-relaxed text-[var(--color-text-secondary)]">{handoffOverview.description}</p>
           <Button variant="cta" className="mt-4 w-full" onClick={handleShare}>
             Copy or Share Update
           </Button>
