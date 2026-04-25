@@ -52,33 +52,94 @@ function formatScheduleTime(value: string) {
   return `${displayHour}:${minute.toString().padStart(2, "0")} ${suffix}`;
 }
 
-function SettingsNavCard({
+type SettingsListIcon = "history" | "growth" | "milestones" | "guidance" | "about";
+
+function SettingsListIcon({ icon }: { icon: SettingsListIcon }) {
+  const commonProps = {
+    className: "h-5 w-5",
+    fill: "none",
+    stroke: "currentColor",
+    strokeLinecap: "round" as const,
+    strokeLinejoin: "round" as const,
+    strokeWidth: 2,
+    viewBox: "0 0 24 24",
+  };
+
+  if (icon === "history") {
+    return (
+      <svg {...commonProps}>
+        <circle cx="12" cy="12" r="9" />
+        <path d="M12 7v5l3 2" />
+      </svg>
+    );
+  }
+
+  if (icon === "growth") {
+    return (
+      <svg {...commonProps}>
+        <path d="M4 19V5" />
+        <path d="M4 19h16" />
+        <path d="m7 15 4-4 3 3 5-7" />
+        <path d="M16 7h3v3" />
+      </svg>
+    );
+  }
+
+  if (icon === "milestones") {
+    return (
+      <svg {...commonProps}>
+        <path d="M5 21V5" />
+        <path d="M5 5c3-2 6 2 9 0 2-1 3-1 5 0v10c-2-1-3-1-5 0-3 2-6-2-9 0" />
+      </svg>
+    );
+  }
+
+  if (icon === "guidance") {
+    return (
+      <svg {...commonProps}>
+        <circle cx="12" cy="12" r="9" />
+        <path d="M9.6 9a2.6 2.6 0 0 1 5 1c0 2-2.6 2.2-2.6 4" />
+        <path d="M12 17h.01" />
+      </svg>
+    );
+  }
+
+  return (
+    <svg {...commonProps}>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 11v6" />
+      <path d="M12 7h.01" />
+    </svg>
+  );
+}
+
+function SettingsListRow({
   title,
   description,
+  icon,
   onClick,
 }: {
   title: string;
-  description: string;
+  description?: string;
+  icon: SettingsListIcon;
   onClick: () => void;
 }) {
   return (
-    <Card
-      role="button"
-      tabIndex={0}
-      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onClick(); }}
-      className="cursor-pointer transition-shadow hover:shadow-[var(--shadow-soft)]"
+    <button
+      type="button"
       onClick={onClick}
+      className="group flex min-h-[52px] w-full cursor-pointer items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-[var(--color-surface)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]/35"
     >
-      <CardContent className="flex items-center justify-between py-3">
-        <div>
-          <p className="text-sm font-medium text-[var(--color-text)]">{title}</p>
-          <p className="text-xs text-[var(--color-text-secondary)]">{description}</p>
-        </div>
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="var(--color-muted)" className="h-5 w-5">
-          <path fillRule="evenodd" d="M8.22 5.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L11.94 10 8.22 6.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
-        </svg>
-      </CardContent>
-    </Card>
+      <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center text-[var(--color-text-secondary)] transition-colors group-hover:text-[var(--color-text)]">
+        <SettingsListIcon icon={icon} />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-[0.95rem] font-semibold leading-tight text-[var(--color-text)]">{title}</span>
+        {description && (
+          <span className="mt-0.5 block truncate text-xs leading-tight text-[var(--color-text-secondary)]">{description}</span>
+        )}
+      </span>
+    </button>
   );
 }
 
@@ -232,37 +293,37 @@ export function NotificationSection({ children }: { children: Child[] }) {
   };
 
   const reminderRows: Array<{ key: keyof typeof smartSettings; title: string; description: string }> = [
-    { key: "noPoop", title: "No-poop threshold", description: "Age-aware reminder when it's time to review a long gap since the last poop." },
-    { key: "redFlagFollowUp", title: "Red-flag stool follow-up", description: "Follow up after white, red, or post-newborn black stool entries." },
-    { key: "episodeCheckIn", title: "Active episode check-in", description: "Nudge you to add another update when an episode is still active." },
+    { key: "noPoop", title: "No-poop threshold", description: "Review long gaps since the last poop." },
+    { key: "redFlagFollowUp", title: "Red-flag stool follow-up", description: "Follow up after urgent stool colors." },
+    { key: "episodeCheckIn", title: "Active episode check-in", description: "Nudge for another episode update." },
   ];
 
   return (
     <div className="mb-6">
       <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]">Notifications</h3>
-      <Card>
-        <CardContent className="flex items-center justify-between py-3">
-          <div>
-            <p className="text-sm font-medium text-[var(--color-text)]">Daily check-in</p>
-            <p className="text-xs text-[var(--color-text-secondary)]">Remind me to log daily</p>
+      <Card className="overflow-hidden">
+        <CardContent className="p-0">
+          <div className="flex min-h-[52px] items-center justify-between gap-3 px-4 py-2.5">
+            <div className="min-w-0">
+              <p className="truncate text-[0.9rem] font-semibold leading-tight text-[var(--color-text)]">Daily check-in</p>
+              <p className="mt-0.5 truncate text-xs leading-tight text-[var(--color-text-secondary)]">Remind me to log daily</p>
+            </div>
+            <Switch checked={enabled} onCheckedChange={handleToggle} disabled={loading} ariaLabel="Toggle daily reminder" />
           </div>
-          <Switch checked={enabled} onCheckedChange={handleToggle} disabled={loading} ariaLabel="Toggle daily reminder" />
+
+          {reminderRows.map((row) => (
+            <div key={row.key} className="border-t border-[var(--color-border)]">
+              <div className="flex min-h-[52px] items-center justify-between gap-3 px-4 py-2.5">
+                <div className="min-w-0">
+                  <p className="truncate text-[0.9rem] font-semibold leading-tight text-[var(--color-text)]">{row.title}</p>
+                  <p className="mt-0.5 truncate text-xs leading-tight text-[var(--color-text-secondary)]">{row.description}</p>
+                </div>
+                <Switch checked={smartSettings[row.key]} onCheckedChange={() => handleSmartToggle(row.key)} disabled={loading} ariaLabel={`Toggle ${row.title}`} />
+              </div>
+            </div>
+          ))}
         </CardContent>
       </Card>
-
-      <div className="mt-3 flex flex-col gap-2">
-        {reminderRows.map((row) => (
-          <Card key={row.key}>
-            <CardContent className="flex items-center justify-between gap-3 py-3">
-              <div className="min-w-0">
-                <p className="text-sm font-medium text-[var(--color-text)]">{row.title}</p>
-                <p className="text-xs text-[var(--color-text-secondary)]">{row.description}</p>
-              </div>
-              <Switch checked={smartSettings[row.key]} onCheckedChange={() => handleSmartToggle(row.key)} disabled={loading} ariaLabel={`Toggle ${row.title}`} />
-            </CardContent>
-          </Card>
-        ))}
-      </div>
     </div>
   );
 }
@@ -277,8 +338,8 @@ export function ThemeSection({ child }: { child: Child | null }) {
   return (
     <div className="mb-6">
       <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]">App preferences</h3>
-      <Card className="border-[rgba(145,164,204,0.14)] bg-[rgba(32,43,61,0.94)] shadow-[0_18px_44px_rgba(8,12,22,0.24)]">
-        <CardContent className="space-y-0 py-2">
+      <Card>
+        <CardContent className="space-y-0 py-1.5">
           <CompactPreferenceRow
             label="Theme"
             control={(
@@ -294,7 +355,7 @@ export function ThemeSection({ child }: { child: Child | null }) {
             )}
           />
 
-          <div className="border-t border-[rgba(145,164,204,0.12)] pt-3">
+          <div className="border-t border-[var(--color-border)] pt-1.5">
             <CompactPreferenceRow
               label="Unit system"
               control={(
@@ -312,7 +373,7 @@ export function ThemeSection({ child }: { child: Child | null }) {
           </div>
 
           {eliminationPreference && (
-            <div className="border-t border-[rgba(145,164,204,0.12)] pt-3">
+            <div className="border-t border-[var(--color-border)] pt-1.5">
               <CompactPreferenceRow
                 label="Main tracking page"
                 control={(
@@ -333,8 +394,8 @@ export function ThemeSection({ child }: { child: Child | null }) {
             </div>
           )}
 
-          <div className="border-t border-[rgba(145,164,204,0.12)] pt-3">
-            <div className="rounded-[22px] bg-[rgba(28,37,55,0.86)] p-3.5">
+          <div className="border-t border-[var(--color-border)] pt-1.5">
+            <div className="rounded-[18px] border border-[var(--color-border)] bg-[var(--color-surface)] p-3">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <p className="text-sm font-medium text-[var(--color-text)]">Night mode schedule</p>
@@ -386,39 +447,47 @@ function CompactPreferenceRow({
   control: ReactNode;
 }) {
   return (
-    <div className="grid grid-cols-[110px_minmax(0,1fr)] items-center gap-3 py-2">
-      <div className="min-w-0 pr-2">
-        <p className="text-[0.92rem] font-medium leading-[1.15] text-[rgba(246,240,236,0.98)]">{label}</p>
+    <div className="grid grid-cols-[128px_minmax(0,1fr)] items-center gap-2.5 py-1">
+      <div className="min-w-0 pr-1">
+        <p className="text-[0.86rem] font-medium leading-[1.1] text-[var(--color-text)]">{label}</p>
       </div>
       <div className="min-w-0">{control}</div>
     </div>
   );
 }
 
-export function RecordsSection() {
+export function RecordsSupportSection() {
   const navigate = useNavigate();
+  const rows: Array<{
+    title: string;
+    description?: string;
+    icon: SettingsListIcon;
+    onClick: () => void;
+  }> = [
+    { title: "History", icon: "history", onClick: () => navigate("/history") },
+    { title: "Growth", icon: "growth", onClick: () => navigate("/growth") },
+    { title: "Milestones", icon: "milestones", onClick: () => navigate("/milestones") },
+    { title: "Support & Guidance", icon: "guidance", onClick: () => navigate("/guidance") },
+    {
+      title: `About Tiny Tummy v${__APP_VERSION__}`,
+      description: "Privacy policy and offline data details",
+      icon: "about",
+      onClick: () => navigate("/privacy"),
+    },
+  ];
 
   return (
     <div className="mb-6">
-      <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]">Records</h3>
-      <div className="flex flex-col gap-2">
-        <SettingsNavCard title="History" description="Timeline of logged entries" onClick={() => navigate("/history")} />
-        <SettingsNavCard title="Growth" description="Weight, length, and head circumference trends" onClick={() => navigate("/growth")} />
-        <SettingsNavCard title="Milestones" description="Health-linked context like solids, illness, teething, or medication changes" onClick={() => navigate("/milestones")} />
-      </div>
-    </div>
-  );
-}
-
-export function SupportSection() {
-  const navigate = useNavigate();
-
-  return (
-    <div className="mb-6">
-      <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]">Support</h3>
-      <div className="flex flex-col gap-2">
-        <SettingsNavCard title="Guidance" description="Evidence-based tips and when to call the doctor" onClick={() => navigate("/guidance")} />
-      </div>
+      <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]">Records &amp; Support</h3>
+      <Card className="overflow-hidden">
+        <CardContent className="p-0">
+          {rows.map((row, index) => (
+            <div key={row.title} className={index > 0 ? "border-t border-[var(--color-border)]" : undefined}>
+              <SettingsListRow {...row} />
+            </div>
+          ))}
+        </CardContent>
+      </Card>
     </div>
   );
 }
@@ -451,27 +520,6 @@ export function AccessSection() {
           <Button variant="secondary" className="mt-4 w-full" onClick={() => { void handleRestore(); }}>
             Restore Purchases
           </Button>
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
-
-export function AboutSection() {
-  const navigate = useNavigate();
-
-  return (
-    <div className="mb-6">
-      <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]">About</h3>
-      <Card>
-        <CardContent className="flex flex-col gap-2 py-3">
-          <p className="text-sm text-[var(--color-text)]">Tiny Tummy v{__APP_VERSION__}</p>
-          <p className="text-xs text-[var(--color-muted)]">100% offline. Your data never leaves this device.</p>
-          <div className="flex gap-4">
-            <button onClick={() => navigate("/privacy")} className="cursor-pointer text-left text-xs font-medium text-[var(--color-primary)]">
-              Privacy Policy
-            </button>
-          </div>
         </CardContent>
       </Card>
     </div>

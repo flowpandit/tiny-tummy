@@ -5,12 +5,10 @@ import { useTrialActions } from "../contexts/TrialContext";
 import { EditChildSheet } from "../components/settings/EditChildSheet";
 import {
   AccessSection,
-  AboutSection,
   ChildrenSection,
   DeveloperToolsSection,
   NotificationSection,
-  RecordsSection,
-  SupportSection,
+  RecordsSupportSection,
   ThemeSection,
 } from "../components/settings/SettingsSections";
 import { useDeleteChildAction } from "../hooks/useSettingsActions";
@@ -61,13 +59,7 @@ export function Settings() {
 
       <AccessSection />
 
-      <RecordsSection />
-
-      {/* Reports */}
-      <SupportSection />
-
-      {/* About */}
-      <AboutSection />
+      <RecordsSupportSection />
 
       <DeveloperToolsSection
         onSimulateExpiration={async () => {

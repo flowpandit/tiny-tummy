@@ -124,21 +124,25 @@ export function getPrediction(
 }
 
 export function getHydrationStatus(logs: DiaperEntry[], symptomType?: string): HydrationStatus {
+  const now = Date.now();
   const wetLogs = getRelevantLogs(logs, "wet");
   const lastValidWetTimestamp = wetLogs.reduce<number | null>((latest, log) => {
     const timestamp = getValidDiaperTimestamp(log.logged_at);
     if (timestamp === null) return latest;
     return latest === null ? timestamp : Math.max(latest, timestamp);
   }, null);
-  const todayWetCount = wetLogs.filter((log) => isOnLocalDay(log.logged_at, getDayKey())).length;
+  const recentWetCount = wetLogs.filter((log) => {
+    const timestamp = getValidDiaperTimestamp(log.logged_at);
+    return timestamp !== null && now - timestamp < 24 * 3600000;
+  }).length;
   const recentDarkUrine = wetLogs.some((log) => {
     const timestamp = getValidDiaperTimestamp(log.logged_at);
     return timestamp !== null
       && log.urine_color === "dark"
-      && Date.now() - timestamp < 24 * 3600000;
+      && now - timestamp < 24 * 3600000;
   });
   const hoursSinceWet = lastValidWetTimestamp !== null
-    ? (Date.now() - lastValidWetTimestamp) / 3600000
+    ? (now - lastValidWetTimestamp) / 3600000
     : null;
 
   if (symptomType === "dehydration_concern" || recentDarkUrine || (hoursSinceWet !== null && hoursSinceWet >= 8)) {
@@ -149,7 +153,7 @@ export function getHydrationStatus(logs: DiaperEntry[], symptomType?: string): H
     };
   }
 
-  if (todayWetCount < 4 || (hoursSinceWet !== null && hoursSinceWet >= 5)) {
+  if (recentWetCount < 4 || (hoursSinceWet !== null && hoursSinceWet >= 5)) {
     return {
       tone: "info",
       title: "Watch wet output",
