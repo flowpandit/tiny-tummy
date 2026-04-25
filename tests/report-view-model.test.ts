@@ -23,7 +23,6 @@ test("exposes the expected report option toggles", () => {
       "includeEpisodeSummary",
       "includeGrowth",
       "includeNotes",
-      "includeCaregiverNote",
     ],
   );
 });

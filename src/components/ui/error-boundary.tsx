@@ -20,6 +20,10 @@ export class ErrorBoundary extends Component<Props, State> {
     return { hasError: true, error };
   }
 
+  componentDidCatch(error: Error, errorInfo: { componentStack: string }) {
+    console.error("Tiny Tummy error boundary caught an error", error, errorInfo.componentStack);
+  }
+
   render() {
     if (this.state.hasError) {
       return (

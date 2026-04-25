@@ -15,7 +15,6 @@ export const REPORT_OPTION_TOGGLES: ReportOptionToggle[] = [
   { key: "includeEpisodeSummary", label: "Active episode" },
   { key: "includeGrowth", label: "Growth" },
   { key: "includeNotes", label: "Notes" },
-  { key: "includeCaregiverNote", label: "Caregiver note" },
 ];
 
 export function addDays(dateString: string, delta: number): string {

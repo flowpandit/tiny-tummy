@@ -30,12 +30,13 @@ import {
   getPrediction,
   getPredictionRingDisplay,
   getTodayDiaperCounts,
+  getValidDiaperTimestamp,
 } from "../lib/diaper-insights";
 
 export function Diaper() {
   const navigate = useNavigate();
   const activeChild = useActiveChild();
-  const { experience } = useEliminationPreference(activeChild);
+  const { experience, isLoading: isEliminationPreferenceLoading } = useEliminationPreference(activeChild);
   const { logs, lastDiaper, lastWetDiaper, lastDirtyDiaper, refresh } = useDiaperLogs(activeChild?.id ?? null);
   const { logs: symptomLogs } = useSymptoms(activeChild?.id ?? null);
   const { alerts, refresh: refreshAlerts, dismiss } = useAlerts(activeChild?.id ?? null);
@@ -56,10 +57,10 @@ export function Diaper() {
   );
 
   useEffect(() => {
-    if (experience.mode === "poop") {
+    if (!isEliminationPreferenceLoading && experience.mode === "poop") {
       navigate("/poop", { replace: true });
     }
-  }, [experience.mode, navigate]);
+  }, [experience.mode, isEliminationPreferenceLoading, navigate]);
 
   const todayKey = getDayKey();
   const { todayLogs, wetCount: todayWetCount, dirtyCount: todayDirtyCount, mixedCount: todayMixedCount } = useMemo(
@@ -69,7 +70,11 @@ export function Diaper() {
   const hydrationStatus = getHydrationStatus(logs, symptomLogs[0]?.symptom_type);
   const recentLogs = useMemo(() => logs.slice(0, 3), [logs]);
   const patternLogs = useMemo(
-    () => [...todayLogs].sort((left, right) => new Date(left.logged_at).getTime() - new Date(right.logged_at).getTime()),
+    () => [...todayLogs].sort((left, right) => {
+      const leftTime = getValidDiaperTimestamp(left.logged_at) ?? Number.MAX_SAFE_INTEGER;
+      const rightTime = getValidDiaperTimestamp(right.logged_at) ?? Number.MAX_SAFE_INTEGER;
+      return leftTime - rightTime;
+    }),
     [todayLogs],
   );
   const selectedPatternLog = useMemo(
@@ -96,6 +101,7 @@ export function Diaper() {
   }, [selectedPatternLogId]);
 
   if (!activeChild) return null;
+  if (isEliminationPreferenceLoading) return null;
   if (experience.mode === "poop") return null;
   const child = activeChild;
   const wetPrediction = getPrediction(logs, child.date_of_birth, "wet");

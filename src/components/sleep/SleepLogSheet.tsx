@@ -178,7 +178,7 @@ export function SleepLogSheet({ open, onClose, childId, onLogged }: SleepLogShee
               <div>
                 <FieldLabel>End</FieldLabel>
                 <div className="grid grid-cols-2 gap-2">
-                  <DatePicker value={endDate} onChange={setEndDate} />
+                  <DatePicker value={endDate} onChange={setEndDate} max={getCurrentLocalDate()} />
                   <TimePicker value={endTime} onChange={setEndTime} />
                 </div>
               </div>

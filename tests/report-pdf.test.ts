@@ -54,7 +54,6 @@ const reportData: ReportData = {
   activeEpisodeGroup: null,
   symptomLogs: [],
   milestoneLogs: [],
-  caregiverNote: null,
   photoUrls: {},
   highlights: [
     {

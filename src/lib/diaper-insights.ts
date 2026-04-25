@@ -34,11 +34,19 @@ export interface DiaperPatternTone {
   text: string;
 }
 
+export function getValidDiaperTimestamp(value: string): number | null {
+  const timestamp = new Date(value).getTime();
+  return Number.isNaN(timestamp) ? null : timestamp;
+}
+
 export function getDayKey(date: Date = new Date()): string {
   return formatLocalDateKey(date);
 }
 
 export function getRecentHistoryDayLabel(dateStr: string): string {
+  if (getValidDiaperTimestamp(dateStr) === null) {
+    return "Logged";
+  }
   return getRelativeDayLabel(dateStr);
 }
 
@@ -87,8 +95,11 @@ export function getPrediction(
 
   const intervals: number[] = [];
   for (let index = 0; index < relevant.length - 1; index += 1) {
-    const current = new Date(relevant[index].logged_at).getTime();
-    const next = new Date(relevant[index + 1].logged_at).getTime();
+    const current = getValidDiaperTimestamp(relevant[index].logged_at);
+    const next = getValidDiaperTimestamp(relevant[index + 1].logged_at);
+    if (current === null || next === null) {
+      continue;
+    }
     const intervalHours = (current - next) / 3600000;
     if (intervalHours > 0 && intervalHours < 72) {
       intervals.push(intervalHours);
@@ -113,18 +124,28 @@ export function getPrediction(
 }
 
 export function getHydrationStatus(logs: DiaperEntry[], symptomType?: string): HydrationStatus {
+  const now = Date.now();
   const wetLogs = getRelevantLogs(logs, "wet");
-  const lastWet = wetLogs[0] ?? null;
-  const todayWetCount = wetLogs.filter((log) => isOnLocalDay(log.logged_at, getDayKey())).length;
-  const recentDarkUrine = wetLogs.some((log) => (
-    log.urine_color === "dark"
-    && Date.now() - new Date(log.logged_at).getTime() < 24 * 3600000
-  ));
-  const hoursSinceWet = lastWet
-    ? (Date.now() - new Date(lastWet.logged_at).getTime()) / 3600000
-    : Number.POSITIVE_INFINITY;
+  const lastValidWetTimestamp = wetLogs.reduce<number | null>((latest, log) => {
+    const timestamp = getValidDiaperTimestamp(log.logged_at);
+    if (timestamp === null) return latest;
+    return latest === null ? timestamp : Math.max(latest, timestamp);
+  }, null);
+  const recentWetCount = wetLogs.filter((log) => {
+    const timestamp = getValidDiaperTimestamp(log.logged_at);
+    return timestamp !== null && now - timestamp < 24 * 3600000;
+  }).length;
+  const recentDarkUrine = wetLogs.some((log) => {
+    const timestamp = getValidDiaperTimestamp(log.logged_at);
+    return timestamp !== null
+      && log.urine_color === "dark"
+      && now - timestamp < 24 * 3600000;
+  });
+  const hoursSinceWet = lastValidWetTimestamp !== null
+    ? (now - lastValidWetTimestamp) / 3600000
+    : null;
 
-  if (symptomType === "dehydration_concern" || recentDarkUrine || hoursSinceWet >= 8) {
+  if (symptomType === "dehydration_concern" || recentDarkUrine || (hoursSinceWet !== null && hoursSinceWet >= 8)) {
     return {
       tone: "cta",
       title: "Hydration needs a check",
@@ -132,7 +153,7 @@ export function getHydrationStatus(logs: DiaperEntry[], symptomType?: string): H
     };
   }
 
-  if (todayWetCount < 4 || hoursSinceWet >= 5) {
+  if (recentWetCount < 4 || (hoursSinceWet !== null && hoursSinceWet >= 5)) {
     return {
       tone: "info",
       title: "Watch wet output",
@@ -240,9 +261,10 @@ export function getDiaperPatternTone(diaperType: DiaperEntry["diaper_type"]): Di
 
 export function getDirtyDiaperMeta(log: DiaperEntry | null) {
   if (!log) return null;
+  const loggedAt = getValidDiaperTimestamp(log.logged_at);
 
   return {
-    timeSinceLabel: timeSince(log.logged_at),
+    timeSinceLabel: loggedAt === null ? "Recently logged" : timeSince(log.logged_at),
     stoolLabel: getStoolShortLabel(log.stool_type),
     stoolColorLabel: log.color
       ? STOOL_COLORS.find((item) => item.value === log.color)?.label ?? log.color

@@ -127,6 +127,51 @@ test("groups mixed timeline events by day and sorts events within each day chron
   );
 });
 
+test("groups UTC-backed timeline events by the local day instead of the raw ISO date prefix", () => {
+  const diaperLogs = [createDiaperEntry("diaper-1", "2026-04-23T23:19:00.000Z")];
+  const poopLogs: PoopEntry[] = [];
+  const feedingLogs: FeedingEntry[] = [{
+    id: "feed-1",
+    child_id: "child-1",
+    logged_at: "2026-04-23T23:22:00.000Z",
+    food_type: "breast_milk",
+    food_name: null,
+    amount_ml: null,
+    duration_minutes: 1,
+    breast_side: "left",
+    bottle_content: null,
+    reaction_notes: null,
+    is_constipation_support: 0,
+    notes: "Timed breastfeeding session • Left 23s",
+    created_at: "2026-04-23T23:22:00.000Z",
+  }];
+  const sleepLogs = [createSleepEntry("2026-04-23T22:21:00.000Z", "2026-04-23T23:21:00.000Z")];
+  const symptomLogs: SymptomEntry[] = [];
+  const growthLogs: GrowthEntry[] = [];
+  const milestoneLogs: MilestoneEntry[] = [];
+  const episodes: Episode[] = [];
+  const episodeEvents: EpisodeEvent[] = [];
+
+  const grouped = groupTimelineByDay({
+    diaperLogs,
+    poopLogs,
+    feedingLogs,
+    sleepLogs,
+    symptomLogs,
+    growthLogs,
+    milestoneLogs,
+    episodes,
+    episodeEvents,
+    timeZoneOffsetMinutes: -600,
+  });
+
+  assert.deepEqual([...grouped.keys()], ["2026-04-24"]);
+  assert.deepEqual(
+    grouped.get("2026-04-24")?.map((event) => event.kind),
+    ["sleep", "diaper", "meal"],
+  );
+});
+
 test("formats sleep durations using hours and minutes", () => {
   assert.equal(
     formatHistorySleepDuration(createSleepEntry("2026-04-14T06:00:00", "2026-04-14T07:30:00")),

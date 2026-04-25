@@ -1,4 +1,4 @@
-import { formatLocalDateKey } from "./utils.ts";
+import { formatLocalDateKey, getLocalDateKeyFromValue } from "./utils.ts";
 import type {
   DiaperEntry,
   Episode,
@@ -107,6 +107,7 @@ export function groupTimelineByDay({
   milestoneLogs,
   episodes,
   episodeEvents,
+  timeZoneOffsetMinutes = new Date().getTimezoneOffset(),
 }: {
   diaperLogs: DiaperEntry[];
   poopLogs: PoopEntry[];
@@ -117,6 +118,7 @@ export function groupTimelineByDay({
   milestoneLogs: MilestoneEntry[];
   episodes: Episode[];
   episodeEvents: EpisodeEvent[];
+  timeZoneOffsetMinutes?: number;
 }): Map<string, TimelineEvent[]> {
   const all: TimelineEvent[] = [
     ...diaperLogs.map((entry) => ({ kind: "diaper" as const, entry })),
@@ -133,7 +135,7 @@ export function groupTimelineByDay({
   const grouped = new Map<string, TimelineEvent[]>();
 
   for (const item of all) {
-    const day = getEventTimestamp(item).split("T")[0];
+    const day = getLocalDateKeyFromValue(getEventTimestamp(item), timeZoneOffsetMinutes);
     if (!grouped.has(day)) grouped.set(day, []);
     grouped.get(day)?.push(item);
   }

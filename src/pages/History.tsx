@@ -54,7 +54,7 @@ export function History() {
 
   if (!isLoading && !hasAnyLogs) {
     return (
-      <div className="px-4 py-8">
+      <div className="px-4 pb-8 pt-10 md:px-6 lg:px-8">
         <div className="mt-4 flex flex-col items-center justify-center rounded-[16px] border border-[var(--color-border)] bg-[var(--color-surface)] px-8 py-16 text-center shadow-[var(--shadow-soft)] backdrop-blur-xl">
           <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[var(--color-surface-strong)]">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="var(--color-muted)" className="h-8 w-8">
@@ -71,7 +71,7 @@ export function History() {
   const earliestDate = getEarliestHistoryDate(grouped, today);
 
   return (
-    <div className="mb-5 px-4 pb-5">
+    <div className="mb-5 px-4 pb-5 pt-10 md:px-6 lg:px-8">
       <div className="mb-4">
         <CompactPageHeader
           title="History"

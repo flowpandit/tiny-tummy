@@ -36,7 +36,6 @@ export interface ReportOptions {
   includeMilestones: boolean;
   includeGrowth: boolean;
   includeNotes: boolean;
-  includeCaregiverNote: boolean;
   includePhotos: boolean;
 }
 
@@ -79,7 +78,6 @@ export interface ReportData {
   activeEpisodeGroup: EpisodeReportGroup | null;
   symptomLogs: SymptomEntry[];
   milestoneLogs: MilestoneEntry[];
-  caregiverNote: string | null;
   photoUrls: Record<string, string>;
   highlights: ReportHighlight[];
   stats: {
@@ -108,7 +106,6 @@ export interface ReportSourceData {
   episodeEvents: EpisodeEvent[];
   symptomLogs: SymptomEntry[];
   milestoneLogs: MilestoneEntry[];
-  caregiverNote: string | null;
 }
 
 export const defaultReportOptions: ReportOptions = {
@@ -119,7 +116,6 @@ export const defaultReportOptions: ReportOptions = {
   includeMilestones: true,
   includeGrowth: true,
   includeNotes: true,
-  includeCaregiverNote: true,
   includePhotos: true,
 };
 
@@ -129,14 +125,13 @@ export async function fetchReportSourceData(
   endDate: string,
   options: ReportOptions = defaultReportOptions,
 ): Promise<ReportSourceData> {
-  const [logs, feedingLogs, episodes, episodeEvents, symptomLogs, milestoneLogs, caregiverNote, growthLogs] = await Promise.all([
+  const [logs, feedingLogs, episodes, episodeEvents, symptomLogs, milestoneLogs, growthLogs] = await Promise.all([
     db.getPoopLogsForRange(childId, startDate, endDate),
     db.getFeedingLogsForRange(childId, startDate, endDate),
     db.getEpisodesForRange(childId, startDate, endDate),
     db.getEpisodeEventsForRange(childId, startDate, endDate),
     db.getSymptomsForRange(childId, startDate, endDate),
     db.getMilestonesForRange(childId, startDate, endDate),
-    db.getSetting(`handoff_note:${childId}`),
     options.includeGrowth ? db.getGrowthLogsForRange(childId, startDate, endDate) : Promise.resolve([]),
   ]);
 
@@ -148,7 +143,6 @@ export async function fetchReportSourceData(
     episodeEvents,
     symptomLogs,
     milestoneLogs,
-    caregiverNote,
   };
 }
 
@@ -459,7 +453,6 @@ function buildContextSections(input: {
   growthLogs: GrowthEntry[];
   episodeGroups: EpisodeReportGroup[];
   activeEpisodeGroup: EpisodeReportGroup | null;
-  caregiverNote: string | null;
   options: ReportOptions;
   dayCount: number;
   unitSystem: UnitSystem;
@@ -573,14 +566,6 @@ function buildContextSections(input: {
         meta: formatDate(log.logged_at),
         detail: log.notes ?? undefined,
       })),
-    });
-  }
-
-  if (input.options.includeCaregiverNote && input.caregiverNote) {
-    sections.push({
-      title: "Caregiver Note",
-      emptyText: "No caregiver note was included for this report.",
-      rows: input.caregiverNote ? [{ title: "Parent handoff note", detail: input.caregiverNote }] : [],
     });
   }
 
@@ -718,7 +703,6 @@ export function buildReportData(
     activeEpisodeGroup,
     symptomLogs: source.symptomLogs,
     milestoneLogs: source.milestoneLogs,
-    caregiverNote: source.caregiverNote,
     photoUrls: {},
     highlights: buildReportHighlights({
       logs: source.logs,
@@ -745,7 +729,6 @@ export function buildReportData(
       growthLogs: source.growthLogs,
       episodeGroups,
       activeEpisodeGroup,
-      caregiverNote: source.caregiverNote,
       options,
       dayCount,
       unitSystem,

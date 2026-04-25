@@ -1,6 +1,5 @@
 import type { Child } from "../types";
 import { getBreastfeedingLastSideSettingKey, getBreastfeedingSessionSettingKey } from "../breastfeeding";
-import { getCaregiverNoteSettingKey } from "../caregiver-note";
 import { deleteAvatar, deletePhoto } from "../photos";
 import { generateId, nowISO } from "../utils";
 import { getDb } from "./connection";
@@ -101,7 +100,6 @@ export async function deleteChild(id: string): Promise<void> {
   await conn.execute("DELETE FROM poop_logs WHERE child_id = ?", [id]);
   await conn.execute("DELETE FROM children WHERE id = ?", [id]);
 
-  await deleteSetting(getCaregiverNoteSettingKey(id));
   await deleteSetting(getBreastfeedingSessionSettingKey(id));
   await deleteSetting(getBreastfeedingLastSideSettingKey(id));
 }

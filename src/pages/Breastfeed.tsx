@@ -163,7 +163,7 @@ export function Breastfeed() {
               <TrackerMetricRing
                 value={leftRing.value}
                 unit={leftRing.unit}
-                label="Left total"
+                label="Left session"
                 gradient={leftRing.gradient}
               />
               <TrackerMetricRing
@@ -175,7 +175,7 @@ export function Breastfeed() {
               <TrackerMetricRing
                 value={rightRing.value}
                 unit={rightRing.unit}
-                label="Right total"
+                label="Right session"
                 gradient={rightRing.gradient}
               />
             </div>

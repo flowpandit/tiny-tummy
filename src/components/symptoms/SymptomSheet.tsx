@@ -43,7 +43,7 @@ export function SymptomSheet({
           Log symptom
         </h2>
         <p className="mb-5 text-center text-sm text-[var(--color-text-secondary)]">
-          Capture symptoms that matter for bowel patterns, handoff, and doctor visits.
+          Capture symptoms that matter for bowel patterns, reports, and doctor visits.
         </p>
 
         <div className="flex flex-col gap-5">

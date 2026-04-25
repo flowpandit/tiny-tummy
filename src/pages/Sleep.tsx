@@ -18,6 +18,7 @@ import { SleepRecentHistorySection } from "../components/sleep/SleepRecentHistor
 import type { SleepEntry } from "../lib/types";
 import {
   buildSleepWeekSummary,
+  getCompletedSleepLogs,
   formatDurationRing,
   formatWakeBaselineRange,
   getDurationMinutes,
@@ -43,28 +44,29 @@ export function Sleep() {
   const [weekOffset, setWeekOffset] = useState(0);
   const [activePanel, setActivePanel] = useState<"rhythm" | "patterns">("rhythm");
   const { timerSession, tick } = useSleepTimerPreview(activeChild, sheetOpen);
+  const completedLogs = useMemo(() => getCompletedSleepLogs(logs), [logs]);
 
   const todayKey = getTodayKey();
   const todayLogs = useMemo(() => {
     const dayStart = new Date(`${todayKey}T00:00:00`).getTime();
     const dayEnd = dayStart + 24 * 60 * 60 * 1000;
-    return logs.filter((log) => {
+    return completedLogs.filter((log) => {
       const startedAt = new Date(log.started_at).getTime();
       const endedAt = new Date(log.ended_at).getTime();
       return endedAt > dayStart && startedAt < dayEnd;
     });
-  }, [logs, todayKey]);
+  }, [completedLogs, todayKey]);
   const totalTodayMinutes = useMemo(
     () => todayLogs.reduce((sum, log) => sum + getOverlapMinutesForDay(log, todayKey), 0),
     [todayKey, todayLogs],
   );
-  const latestLog = logs[0] ?? null;
+  const latestLog = completedLogs[0] ?? null;
   const lastNapDisplay = useMemo(
-    () => getLastNapDisplay(activeChild?.date_of_birth ?? null, logs),
-    [activeChild, logs],
+    () => getLastNapDisplay(activeChild?.date_of_birth ?? null, completedLogs),
+    [activeChild, completedLogs],
   );
   const patternDayKey = todayLogs.length > 0 ? todayKey : (latestLog ? toDayKey(latestLog.started_at) : todayKey);
-  const patternLogs = logs.filter((log) => toDayKey(log.started_at) === patternDayKey);
+  const patternLogs = completedLogs.filter((log) => toDayKey(log.started_at) === patternDayKey);
   const patternLabel = patternDayKey === todayKey
     ? "Today"
     : `Latest logged day · ${new Date(`${patternDayKey}T00:00:00`).toLocaleDateString(undefined, { month: "short", day: "numeric" })}`;
@@ -76,8 +78,8 @@ export function Sleep() {
   }, [searchParams]);
 
   const earliestLoggedDate = useMemo(() => {
-    return getEarliestLoggedDate(logs, (log) => log.started_at);
-  }, [logs]);
+    return getEarliestLoggedDate(completedLogs, (log) => log.started_at);
+  }, [completedLogs]);
 
   const maxWeekOffset = useMemo(() => {
     return getMaxWeekOffset(earliestLoggedDate);
@@ -94,8 +96,8 @@ export function Sleep() {
   const weekEndKey = formatLocalDateKey(endDate);
 
   const weekLogs = useMemo(
-    () => logs.filter((log) => log.started_at >= `${weekStartKey}T00:00:00` && log.started_at <= `${weekEndKey}T23:59:59`),
-    [logs, weekEndKey, weekStartKey],
+    () => completedLogs.filter((log) => log.started_at >= `${weekStartKey}T00:00:00` && log.started_at <= `${weekEndKey}T23:59:59`),
+    [completedLogs, weekEndKey, weekStartKey],
   );
 
   const sleepByDay = useMemo(() => {
@@ -113,7 +115,7 @@ export function Sleep() {
     () => getWakeBaseline(activeChild?.date_of_birth ?? formatLocalDateKey(new Date())),
     [activeChild],
   );
-  const prediction = useMemo(() => getSleepPrediction(logs, baseline), [baseline, logs]);
+  const prediction = useMemo(() => getSleepPrediction(completedLogs, baseline), [baseline, completedLogs]);
   const hoursSinceWake = latestLog ? (Date.now() - new Date(latestLog.ended_at).getTime()) / 3600000 : null;
   const wakeComparison = useMemo(() => getWakeComparison(hoursSinceWake, baseline), [baseline, hoursSinceWake]);
   const wakeRisk = useMemo(() => getWakeRisk(hoursSinceWake, baseline, prediction), [baseline, hoursSinceWake, prediction]);
@@ -123,7 +125,7 @@ export function Sleep() {
   if (!activeChild) return null;
 
   const weekSummary = buildSleepWeekSummary(weekLogs.length, totalTodayMinutes);
-  const recentHistory = logs.slice(0, 3);
+  const recentHistory = completedLogs.slice(0, 3);
 
   const handleLogged = async () => {
     await refresh();
@@ -165,7 +167,7 @@ export function Sleep() {
           onOpenSleepSheet={() => setSheetOpen(true)}
         />
 
-        {logs.length === 0 ? (
+        {completedLogs.length === 0 ? (
           <EmptyState
             icon={(
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" strokeWidth="1.75" className="h-8 w-8">

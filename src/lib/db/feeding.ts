@@ -1,5 +1,5 @@
 import type { FeedingEntry } from "../types";
-import { generateId, nowISO } from "../utils";
+import { generateId, getUtcIsoBoundsForLocalDateRange, nowISO } from "../utils";
 import { getDb } from "./connection";
 
 export async function createFeedingLog(input: {
@@ -75,11 +75,12 @@ export async function getFeedingLogsForRange(
   endDate: string,
 ): Promise<FeedingEntry[]> {
   const conn = await getDb();
+  const { startUtcIso, endUtcIso } = getUtcIsoBoundsForLocalDateRange(startDate, endDate);
   return conn.select<FeedingEntry[]>(
     `SELECT * FROM diet_logs
      WHERE child_id = ? AND logged_at >= ? AND logged_at <= ?
      ORDER BY logged_at DESC`,
-    [childId, startDate, endDate + "T23:59:59"],
+    [childId, startUtcIso, endUtcIso],
   );
 }
 

@@ -3,6 +3,15 @@ export function parseLocalDate(value: string): Date {
   return new Date(year, (month || 1) - 1, day || 1);
 }
 
+function getDateKeyParts(value: string): { year: number; month: number; day: number } {
+  const [year, month, day] = value.split("-").map(Number);
+  return {
+    year: year || 0,
+    month: month || 1,
+    day: day || 1,
+  };
+}
+
 function pad(value: number): string {
   return String(value).padStart(2, "0");
 }
@@ -29,6 +38,16 @@ export function combineLocalDateAndTimeToUtcIso(date: string, time: string): str
   return new Date(year, (month || 1) - 1, day || 1, hours || 0, minutes || 0, 0, 0).toISOString();
 }
 
+export function getUtcIsoBoundsForLocalDateRange(startDate: string, endDate: string): { startUtcIso: string; endUtcIso: string } {
+  const start = getDateKeyParts(startDate);
+  const end = getDateKeyParts(endDate);
+
+  return {
+    startUtcIso: new Date(start.year, start.month - 1, start.day, 0, 0, 0, 0).toISOString(),
+    endUtcIso: new Date(end.year, end.month - 1, end.day, 23, 59, 59, 999).toISOString(),
+  };
+}
+
 export function getLocalDateTimeParts(value: string): { date: string; time: string } {
   const parsed = new Date(value);
   if (!Number.isNaN(parsed.getTime())) {
@@ -44,17 +63,34 @@ export function getLocalDateTimeParts(value: string): { date: string; time: stri
   };
 }
 
-export function isOnLocalDay(value: string, dayKey: string): boolean {
+export function getLocalDateKeyFromValue(value: string, timeZoneOffsetMinutes = new Date().getTimezoneOffset()): string {
   const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return value.startsWith(dayKey);
-  return formatLocalDateKey(parsed) === dayKey;
+  if (Number.isNaN(parsed.getTime())) return value.split("T")[0] ?? getCurrentLocalDate();
+
+  const adjusted = new Date(parsed.getTime() - (timeZoneOffsetMinutes * 60000));
+  return `${adjusted.getUTCFullYear()}-${pad(adjusted.getUTCMonth() + 1)}-${pad(adjusted.getUTCDate())}`;
 }
 
-export function getAgeLabelFromDob(dob: string): string {
+export function isOnLocalDay(value: string, dayKey: string): boolean {
+  return getLocalDateKeyFromValue(value) === dayKey;
+}
+
+function getLocalDayDifference(start: Date, end: Date): number {
+  const startUtc = Date.UTC(start.getFullYear(), start.getMonth(), start.getDate());
+  const endUtc = Date.UTC(end.getFullYear(), end.getMonth(), end.getDate());
+  return Math.floor((endUtc - startUtc) / 86400000);
+}
+
+function getCalendarMonthCount(start: Date, end: Date): number {
+  let totalMonths = ((end.getFullYear() - start.getFullYear()) * 12) + (end.getMonth() - start.getMonth());
+  if (end.getDate() < start.getDate()) totalMonths -= 1;
+  return Math.max(0, totalMonths);
+}
+
+export function getAgeLabelFromDob(dob: string, referenceDate = new Date()): string {
   const birth = parseLocalDate(dob);
-  const now = new Date();
-  const diffMs = now.getTime() - birth.getTime();
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  const now = new Date(referenceDate.getFullYear(), referenceDate.getMonth(), referenceDate.getDate());
+  const diffDays = getLocalDayDifference(birth, now);
 
   if (diffDays < 0) return "";
   if (diffDays < 7) return `${diffDays} day${diffDays !== 1 ? "s" : ""} old`;
@@ -62,7 +98,8 @@ export function getAgeLabelFromDob(dob: string): string {
     const weeks = Math.floor(diffDays / 7);
     return `${weeks} week${weeks !== 1 ? "s" : ""} old`;
   }
-  const months = Math.floor(diffDays / 30.44);
+
+  const months = Math.max(1, getCalendarMonthCount(birth, now));
   if (months < 24) return `${months} month${months !== 1 ? "s" : ""} old`;
   const years = Math.floor(months / 12);
   const remainingMonths = months % 12;

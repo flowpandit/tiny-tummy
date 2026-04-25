@@ -57,6 +57,11 @@ export function useEditSleepSheetState({
       return;
     }
 
+    if (new Date(startedAt).getTime() > Date.now() || new Date(endedAt).getTime() > Date.now()) {
+      onError("Sleep logs cannot be saved in the future.");
+      return;
+    }
+
     setIsSaving(true);
     try {
       await db.updateSleepLog(entry.id, {

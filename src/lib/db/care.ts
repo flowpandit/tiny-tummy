@@ -1,5 +1,5 @@
 import type { Alert, GrowthEntry, MilestoneEntry, SleepEntry, SymptomEntry } from "../types";
-import { generateId, nowISO } from "../utils";
+import { generateId, getUtcIsoBoundsForLocalDateRange, nowISO } from "../utils";
 import { getDb } from "./connection";
 
 export async function createSymptomLog(input: {
@@ -59,11 +59,12 @@ export async function getSymptomsForRange(
   endDate: string,
 ): Promise<SymptomEntry[]> {
   const conn = await getDb();
+  const { startUtcIso, endUtcIso } = getUtcIsoBoundsForLocalDateRange(startDate, endDate);
   return conn.select<SymptomEntry[]>(
     `SELECT * FROM symptom_logs
      WHERE child_id = ? AND logged_at >= ? AND logged_at <= ?
      ORDER BY logged_at DESC`,
-    [childId, startDate, endDate + "T23:59:59"],
+    [childId, startUtcIso, endUtcIso],
   );
 }
 
@@ -121,11 +122,12 @@ export async function getGrowthLogsForRange(
   endDate: string,
 ): Promise<GrowthEntry[]> {
   const conn = await getDb();
+  const { startUtcIso, endUtcIso } = getUtcIsoBoundsForLocalDateRange(startDate, endDate);
   return conn.select<GrowthEntry[]>(
     `SELECT * FROM growth_logs
      WHERE child_id = ? AND measured_at >= ? AND measured_at <= ?
      ORDER BY measured_at DESC`,
-    [childId, startDate, `${endDate}T23:59:59`],
+    [childId, startUtcIso, endUtcIso],
   );
 }
 
@@ -220,11 +222,12 @@ export async function getSleepLogsForRange(
   endDate: string,
 ): Promise<SleepEntry[]> {
   const conn = await getDb();
+  const { startUtcIso, endUtcIso } = getUtcIsoBoundsForLocalDateRange(startDate, endDate);
   return conn.select<SleepEntry[]>(
     `SELECT * FROM sleep_logs
      WHERE child_id = ? AND started_at >= ? AND started_at <= ?
      ORDER BY started_at DESC`,
-    [childId, startDate, `${endDate}T23:59:59`],
+    [childId, startUtcIso, endUtcIso],
   );
 }
 
@@ -295,11 +298,12 @@ export async function getMilestonesForRange(
   endDate: string,
 ): Promise<MilestoneEntry[]> {
   const conn = await getDb();
+  const { startUtcIso, endUtcIso } = getUtcIsoBoundsForLocalDateRange(startDate, endDate);
   return conn.select<MilestoneEntry[]>(
     `SELECT * FROM milestone_logs
      WHERE child_id = ? AND logged_at >= ? AND logged_at <= ?
      ORDER BY logged_at DESC`,
-    [childId, startDate, endDate + "T23:59:59"],
+    [childId, startUtcIso, endUtcIso],
   );
 }
 
