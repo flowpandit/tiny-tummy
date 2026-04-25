@@ -67,7 +67,6 @@ export function AppShell() {
     "/breastfeed": "/",
     "/growth": "/settings",
     "/guidance": "/settings",
-    "/handoff": "/settings",
     "/history": "/settings",
     "/milestones": "/settings",
     "/report": "/dashboard",

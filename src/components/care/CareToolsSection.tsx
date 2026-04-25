@@ -1,6 +1,5 @@
 import {
   HomeToolGrowthIcon,
-  HomeToolHandoffIcon,
   HomeToolHistoryIcon,
   HomeToolMilestonesIcon,
 } from "../ui/icons";
@@ -28,12 +27,6 @@ const CARE_TOOL_ITEMS = [
     icon: <HomeToolMilestonesIcon className="h-5 w-5" />,
     background: "var(--color-home-tool-milestone)",
     to: "/milestones",
-  },
-  {
-    label: "Caregiver handoff",
-    icon: <HomeToolHandoffIcon className="h-5 w-5" />,
-    background: "var(--color-home-tool-handoff)",
-    to: "/handoff",
   },
 ] as const;
 

@@ -23,7 +23,6 @@ const Growth = lazy(() => import("./pages/Growth").then((m) => ({ default: m.Gro
 const Sleep = lazy(() => import("./pages/Sleep").then((m) => ({ default: m.Sleep })));
 const Milestones = lazy(() => import("./pages/Milestones").then((m) => ({ default: m.Milestones })));
 const Breastfeed = lazy(() => import("./pages/Breastfeed").then((m) => ({ default: m.Breastfeed })));
-const Handoff = lazy(() => import("./pages/Handoff").then((m) => ({ default: m.Handoff })));
 const Guidance = lazy(() => import("./pages/Guidance").then((m) => ({ default: m.Guidance })));
 const Settings = lazy(() => import("./pages/Settings").then((m) => ({ default: m.Settings })));
 const Report = lazy(() => import("./pages/Report").then((m) => ({ default: m.Report })));
@@ -152,7 +151,6 @@ function AppRoutes() {
           <Route path="/sleep" element={<Sleep />} />
           <Route path="/milestones" element={<Milestones />} />
           <Route path="/breastfeed" element={<Breastfeed />} />
-          <Route path="/handoff" element={<Handoff />} />
           <Route path="/guidance" element={<Guidance />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/report" element={<Report />} />

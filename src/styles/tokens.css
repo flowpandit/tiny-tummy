@@ -102,7 +102,7 @@
   --color-home-tool-history: linear-gradient(180deg, #6da7e7 0%, #5b8fd8 100%);
   --color-home-tool-growth: linear-gradient(180deg, #6aa7ea 0%, #5388d9 100%);
   --color-home-tool-milestone: linear-gradient(180deg, #73ca70 0%, #5aae56 100%);
-  --color-home-tool-handoff: linear-gradient(180deg, #77cb69 0%, #62b85a 100%);
+  --color-home-tool-report: linear-gradient(180deg, #77cb69 0%, #62b85a 100%);
   --color-home-activity-icon-feed: #efb184;
   --color-home-activity-icon-caution: #e1bd63;
   --color-home-activity-icon-neutral: #8f8aa7;
@@ -226,7 +226,7 @@
     --color-home-tool-history: linear-gradient(180deg, #4f7fc6 0%, #4068a9 100%);
     --color-home-tool-growth: linear-gradient(180deg, #5084cc 0%, #436bab 100%);
     --color-home-tool-milestone: linear-gradient(180deg, #4fa462 0%, #3f8650 100%);
-    --color-home-tool-handoff: linear-gradient(180deg, #58a75a 0%, #448548 100%);
+    --color-home-tool-report: linear-gradient(180deg, #58a75a 0%, #448548 100%);
     --color-home-activity-icon-feed: #d08b62;
     --color-home-activity-icon-caution: #bb9850;
     --color-home-activity-icon-neutral: #6f6b89;
@@ -322,7 +322,7 @@
   --color-home-tool-history: linear-gradient(180deg, #4f7fc6 0%, #4068a9 100%);
   --color-home-tool-growth: linear-gradient(180deg, #5084cc 0%, #436bab 100%);
   --color-home-tool-milestone: linear-gradient(180deg, #4fa462 0%, #3f8650 100%);
-  --color-home-tool-handoff: linear-gradient(180deg, #58a75a 0%, #448548 100%);
+  --color-home-tool-report: linear-gradient(180deg, #58a75a 0%, #448548 100%);
   --color-home-activity-icon-feed: #d08b62;
   --color-home-activity-icon-caution: #bb9850;
   --color-home-activity-icon-neutral: #6f6b89;

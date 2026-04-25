@@ -155,7 +155,7 @@ export function Paywall() {
                 transition={{ duration: 0.55, delay: 0.2, ease: "easeOut" }}
                 className="mt-5 max-w-[34rem] text-lg leading-relaxed text-[var(--color-text-secondary)]"
               >
-                Tiny Tummy stays focused on the daily details that matter: logs, patterns, reports, and handoff notes you can trust when something changes.
+                Tiny Tummy stays focused on the daily details that matter: logs, patterns, reports, and private records you can trust when something changes.
               </motion.p>
 
               <motion.div

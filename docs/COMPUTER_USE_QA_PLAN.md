@@ -120,21 +120,20 @@ Before running any suite, confirm:
 | Notifications | `allowed`, `denied` | verify daily check-in and smart reminder toggles plus denial messaging |
 | Report Save | `accept`, `cancel` | applicable to Report and file-dialog recovery suites |
 | Photo Flow | `accept+save`, `cancel`, `accept+remove` | applicable to avatar and elimination-photo flows |
-| Share Path | `native share success`, `clipboard fallback`, `graceful failure` | applicable to Handoff |
 | Access State | `AP1`, `AP2`, `AP3`, `AP4` | overlay where relevant |
 
 ### Pairwise Modifier Bundles
 
 Use these bundles when a suite includes the relevant surfaces. Run the suite baseline first, then apply the applicable modifier bundles.
 
-| Bundle | Theme | Units | Notifications | Report Save | Photo Flow | Share Path | Access |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| `MB0` | system | metric | allowed | n/a | n/a | n/a | `AP1` |
-| `MB1` | dark | imperial | allowed | n/a | n/a | n/a | `AP1` |
-| `MB2` | light | metric | denied | n/a | n/a | n/a | `AP1` |
-| `MB3` | system | imperial | allowed | accept | accept+save | native share success | `AP4` |
-| `MB4` | dark | metric | allowed | cancel | cancel | clipboard fallback | `AP2` |
-| `MB5` | light | imperial | allowed | accept | accept+remove | graceful failure if reachable | `AP3` |
+| Bundle | Theme | Units | Notifications | Report Save | Photo Flow | Access |
+| --- | --- | --- | --- | --- | --- | --- |
+| `MB0` | system | metric | allowed | n/a | n/a | `AP1` |
+| `MB1` | dark | imperial | allowed | n/a | n/a | `AP1` |
+| `MB2` | light | metric | denied | n/a | n/a | `AP1` |
+| `MB3` | system | imperial | allowed | accept | accept+save | `AP4` |
+| `MB4` | dark | metric | allowed | cancel | cancel | `AP2` |
+| `MB5` | light | imperial | allowed | accept | accept+remove | `AP3` |
 
 ### Coverage Rule
 
@@ -170,7 +169,6 @@ Use these bundles when a suite includes the relevant surfaces. Run the suite bas
 | `/history` | History | `S12` |
 | `/growth` | Growth | `S11`, `S12` |
 | `/milestones` | Milestones | `S11`, `S12` |
-| `/handoff` | Handoff | `S04`, `S12`, `S13` |
 | `/guidance` | Guidance | `S12` |
 | `/settings` | Settings | `S01`, `S03` |
 | `/report` | Report | `S12`, `S13` |
@@ -205,7 +203,6 @@ Use these bundles when a suite includes the relevant surfaces. Run the suite bas
 | Milestone log sheet | sheet | `CU-S11-01`, `CU-S11-02` |
 | Growth log sheet | sheet + delete | `CU-S11-03` to `CU-S11-07` |
 | Report generate and save | CTA + file dialog | `CU-S12-07`, `CU-S12-08`, `CU-S13-03`, `CU-S13-04` |
-| Handoff copy or share | CTA + boundary | `CU-S12-10`, `CU-S13-08`, `CU-S13-09`, `CU-S13-10` |
 
 ## Suite Matrix
 
@@ -261,8 +258,6 @@ Use these bundles when a suite includes the relevant surfaces. Run the suite bas
 | `CU-S04-02` | `E` | seeded data | Open Home | Populated summary cards, recent activity, and care tools render without overlap or stale data | `SS-CU-S04-02-1` |  |
 | `CU-S04-03` | `F` | seeded data and multiple children | Scroll Home to reveal sticky child bar, switch child from bar | Sticky child bar appears cleanly and switching child refreshes data | `SS-CU-S04-03-1` |  |
 | `CU-S04-04` | `E` | active alerts exist | Dismiss alerts from Home | Alert dismissal updates banner state without breaking downstream surfaces | `SS-CU-S04-04-1` |  |
-| `CU-S04-05` | `E` | Home open | Edit caregiver note and save | Save state, toast, and persisted note are correct | `SS-CU-S04-05-1` |  |
-| `CU-S04-06` | `E` | Home open | Use Handoff shortcut from caregiver note card | Handoff opens with current child context | `SS-CU-S04-06-1` |  |
 | `CU-S04-07` | `B` and `E` | Home open | Use every quick action: elimination, feed, breastfeed, sleep, episode, symptom | Each quick action opens the correct sheet or route for the current child profile | `SS-CU-S04-07-1` |  |
 | `CU-S04-08` | `E` | recent activity seeded | Open edit entry point for poop, diaper, feed, and sleep from recent activity across repeated runs | Correct edit sheet opens with current record data | `SS-CU-S04-08-1` |  |
 
@@ -283,7 +278,7 @@ Use these bundles when a suite includes the relevant surfaces. Run the suite bas
 | Test ID | Profile | Preconditions | Actions | Expected | Evidence | Defect Notes |
 | --- | --- | --- | --- | --- | --- | --- |
 | `CU-S06-01` | `E` | Poop page open | Use every quick preset tile | Preset creates a log, shows feedback, and updates recent/history surfaces | `SS-CU-S06-01-1` |  |
-| `CU-S06-02` | `E` | at least one prior normal poop exists | Use `Repeat last` | New log matches prior pattern and appears in Home, History, and Handoff/report consumers | `SS-CU-S06-02-1` |  |
+| `CU-S06-02` | `E` | at least one prior normal poop exists | Use `Repeat last` | New log matches prior pattern and appears in Home, History, and Report consumers | `SS-CU-S06-02-1` |  |
 | `CU-S06-03` | `E` | Poop form open | Sweep stool types `1` through `7` across repeated entries | Every stool type is selectable, savable, and rendered correctly in UI summaries | `SS-CU-S06-03-1` |  |
 | `CU-S06-04` | `E` | Poop form open | Sweep normal stool colors `yellow`, `green`, `brown`, `orange` | Colors save and display consistently in Poop, History, and Report preview | `SS-CU-S06-04-1` |  |
 | `CU-S06-05` | `E` | Poop form open | Sweep red-flag colors `black`, `red`, `white` on otherwise valid logs | Appropriate alerts, emphasis, and downstream status changes appear without crash | `SS-CU-S06-05-1` |  |
@@ -291,7 +286,7 @@ Use these bundles when a suite includes the relevant surfaces. Run the suite bas
 | `CU-S06-07` | `E` | Poop form open | Add notes and sweep sizes `small`, `medium`, `large` | Notes and size persist and render in entry detail surfaces | `SS-CU-S06-07-1` |  |
 | `CU-S06-08` | `E` | seeded poop history exists | Navigate weekly pattern older and newer, inspect recent history, open edit sheet | Trend navigation and recent-history interactions stay in sync with logs | `SS-CU-S06-08-1` |  |
 | `CU-S06-09` | `E` | editable poop exists | Edit then delete a poop log | Changes propagate everywhere; delete removes entry from origin and secondary consumers | `SS-CU-S06-09-1` |  |
-| `CU-S06-10` | `E` seeded or environment-prepared | auto-generated or seeded no-poop day exists | Verify Home, History, and Handoff surfaces for no-poop day | No-poop day renders correctly wherever surfaced; if not reachable, mark blocked not failed | `SS-CU-S06-10-1` | `EN` if no reachable setup path |
+| `CU-S06-10` | `E` seeded or environment-prepared | auto-generated or seeded no-poop day exists | Verify Home, History, and Report surfaces for no-poop day | No-poop day renders correctly wherever surfaced; if not reachable, mark blocked not failed | `SS-CU-S06-10-1` | `EN` if no reachable setup path |
 
 ### S07 Diaper Flow Matrix
 
@@ -304,8 +299,8 @@ Use these bundles when a suite includes the relevant surfaces. Run the suite bas
 | `CU-S07-05` | `C` or `E` | dirty or mixed form open | Add photo then save | Photo is accepted only when stool fields are relevant and app returns stable | `SS-CU-S07-05-1` | `SB` if picker blocked |
 | `CU-S07-06` | `C` or `E` | dirty or mixed photo preview exists | Cancel picker and remove existing photo across repeated runs | Cancel and remove flows leave the form usable | `SS-CU-S07-06-1` |  |
 | `CU-S07-07` | `C` or `E` | seeded diaper logs exist | Edit wet, dirty, and mixed entries across repeated runs | Conditional fields reopen correctly for each diaper type | `SS-CU-S07-07-1` |  |
-| `CU-S07-08` | `C` or `E` | editable diaper exists | Delete a diaper entry | Entry disappears from origin, Home, History, Handoff, and Report consumers | `SS-CU-S07-08-1` |  |
-| `CU-S07-09` | `C` or `E` | diaper logs and linked stool data seeded | Cross-check linked elimination data in Home, History, Handoff, and Report | Linked views stay internally consistent and do not duplicate or drop data unexpectedly | `SS-CU-S07-09-1` |  |
+| `CU-S07-08` | `C` or `E` | editable diaper exists | Delete a diaper entry | Entry disappears from origin, Home, History, and Report consumers | `SS-CU-S07-08-1` |  |
+| `CU-S07-09` | `C` or `E` | diaper logs and linked stool data seeded | Cross-check linked elimination data in Home, History, and Report | Linked views stay internally consistent and do not duplicate or drop data unexpectedly | `SS-CU-S07-09-1` |  |
 
 ### S08 Feed and Breastfeed Matrix
 
@@ -346,7 +341,7 @@ Use these bundles when a suite includes the relevant surfaces. Run the suite bas
 | `CU-S10-03` | `E` | active episode exists | Add one update for each event type: `Symptom`, `Hydration`, `Food`, `Intervention`, `Progress` | Timeline renders every event type correctly | `SS-CU-S10-03-1` |  |
 | `CU-S10-04` | `E` | active episode exists | Add title-only update, notes-only update, and titled+noted update across repeated runs | Validation and default-label behavior stay correct | `SS-CU-S10-04-1` |  |
 | `CU-S10-05` | `E` | active episode with updates exists | Resolve episode | Active-episode state clears and summary surfaces update correctly | `SS-CU-S10-05-1` |  |
-| `CU-S10-06` | `E` | Symptom sheet open, no active episode | Sweep every symptom type at every severity across repeated runs | Each symptom logs successfully and displays correctly in Handoff and alerts/concerns surfaces | `SS-CU-S10-06-1` |  |
+| `CU-S10-06` | `E` | Symptom sheet open, no active episode | Sweep every symptom type at every severity across repeated runs | Each symptom logs successfully and displays correctly in alerts and concern surfaces | `SS-CU-S10-06-1` |  |
 | `CU-S10-07` | `E` | active episode exists | Log symptoms with `Linked` and `Not linked` states across repeated runs | Linked symptoms appear in episode context; unlinked symptoms remain standalone | `SS-CU-S10-07-1` |  |
 
 ### S11 Milestones and Growth Matrix
@@ -361,7 +356,7 @@ Use these bundles when a suite includes the relevant surfaces. Run the suite bas
 | `CU-S11-06` | `E` and sex-missing variant | Growth history exists | Toggle units, inspect percentile and sex-missing messaging | Unit conversion is consistent and missing-sex messaging appears only when appropriate | `SS-CU-S11-06-1` |  |
 | `CU-S11-07` | `E` | editable growth entry exists | Edit and delete growth entries | Changes propagate and delete fully removes the entry | `SS-CU-S11-07-1` |  |
 
-### S12 Dashboard, History, Report, Guidance, Handoff, Privacy
+### S12 Dashboard, History, Report, Guidance, Privacy
 
 | Test ID | Profile | Preconditions | Actions | Expected | Evidence | Defect Notes |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -373,8 +368,6 @@ Use these bundles when a suite includes the relevant surfaces. Run the suite bas
 | `CU-S12-06` | `E` | History seeded | Delete poop, diaper, feed, and sleep from History across repeated clean runs | Deletions fully remove entries from origin and secondary surfaces | `SS-CU-S12-06-1` |  |
 | `CU-S12-07` | `B` and `E` | Report route open | Generate report for no-data and seeded ranges; toggle include chips | No-data warning behaves correctly; seeded preview renders and options update preview | `SS-CU-S12-07-1` |  |
 | `CU-S12-08` | `E` | seeded report preview exists | Run save flow once with accept and once with cancel | File dialog accept saves successfully; cancel returns cleanly with no broken UI | `SS-CU-S12-08-1` | `SB` if file dialog blocked |
-| `CU-S12-09` | `E` | Handoff route open | Verify summary cards, current concerns, note editor, and recent-care details | All seeded concerns and summary values are coherent | `SS-CU-S12-09-1` |  |
-| `CU-S12-10` | `E` | Handoff route open | Use `Copy or Share Update` in both share-success and clipboard-fallback contexts | Success feedback is correct and app remains usable after return | `SS-CU-S12-10-1` |  |
 | `CU-S12-11` | `E` | Guidance route open | Sweep filter chips and expand/collapse multiple tips | Filtering and expansion are stable with no stuck state | `SS-CU-S12-11-1` |  |
 | `CU-S12-12` | any unlocked or locked state | open Privacy via Settings and locked paywall path | Verify privacy route content and return navigation | Privacy is reachable in both allowed contexts and returns safely | `SS-CU-S12-12-1` |  |
 
@@ -389,9 +382,6 @@ Use these bundles when a suite includes the relevant surfaces. Run the suite bas
 | `CU-S13-05` | `A` or `E` | avatar or elimination photo flow open | Accept image picker and save selection | Preview appears and app remains interactive | `SS-CU-S13-05-1` |  |
 | `CU-S13-06` | `A` or `E` | avatar or elimination photo flow open | Cancel image picker | App returns to prior screen with no broken state | `SS-CU-S13-06-1` |  |
 | `CU-S13-07` | `A` or `E` | photo preview exists | Remove selected photo before save or during edit | Removal succeeds and control can be reused | `SS-CU-S13-07-1` |  |
-| `CU-S13-08` | `E` | share target available | Trigger native share from Handoff and complete a happy path | Tiny Tummy survives round-trip to share UI | `SS-CU-S13-08-1` | `SB` if system share path unavailable |
-| `CU-S13-09` | `E` | clipboard fallback environment prepared | Trigger Handoff share where native share is unavailable | Clipboard fallback succeeds with correct success feedback | `SS-CU-S13-09-1` |  |
-| `CU-S13-10` | `E` | failure boundary environment prepared if reachable | Trigger a graceful share or boundary failure | App shows helpful error and remains fully usable | `SS-CU-S13-10-1` |  |
 
 ## Persistence Requirements
 
@@ -408,7 +398,6 @@ The following data writes must each include at least one relaunch-persistence co
 - growth entry
 - symptom log
 - episode start, update, and resolution
-- caregiver handoff note
 - theme
 - units
 - elimination main-page preference
@@ -420,7 +409,7 @@ This plan is complete only when all of the following are true:
 
 - every route in `src/App.tsx` is executed or explicitly marked blocked with reason
 - every primary CTA, sheet, dialog, segmented control, and destructive action listed in the Primary Surface Inventory has a recorded test result
-- every saved entry type is verified in its origin screen, in History, and in at least one secondary consumer such as Home, Dashboard, Handoff, or Report
+- every saved entry type is verified in its origin screen, in History, and in at least one secondary consumer such as Home, Dashboard, or Report
 - every profile includes at least one relaunch-persistence pass
 - every access state confirms forward and backward navigation, including the locked-mode exception that still exposes Settings and Privacy
 - every blocked item is classified as `AI`, `SB`, or `EN` and includes evidence

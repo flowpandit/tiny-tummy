@@ -8,7 +8,6 @@ import { useSleepLogs } from "../hooks/useSleepLogs";
 import { useAlerts } from "../hooks/useAlerts";
 import { useEpisodes } from "../hooks/useEpisodes";
 import { useSymptoms } from "../hooks/useSymptoms";
-import { useCaregiverNote } from "../hooks/useCaregiverNote";
 import { useEliminationPreference } from "../hooks/useEliminationPreference";
 import { useChildWorkflowActions } from "../hooks/useChildWorkflowActions";
 import { useHomePageState } from "../hooks/useHomePageState";
@@ -21,11 +20,9 @@ import { HomeTopSection } from "../components/home/HomeTopSection";
 import { RecentActivity } from "../components/home/RecentActivity";
 import { CareToolsSection } from "../components/care/CareToolsSection";
 import { HomeQuickActions } from "../components/home/HomeQuickActions";
-import { HomeCaregiverNoteCard } from "../components/home/HomeCaregiverNoteCard";
 import { HomeSheets } from "../components/home/HomeSheets";
 import { AlertBanner } from "../components/dashboard/AlertBanner";
 import { NoLogsYet } from "../components/home/NoLogsYet";
-import { useToast } from "../components/ui/toast";
 import { CompactChildNav } from "../components/layout/CompactChildNav";
 
 export function Home() {
@@ -36,7 +33,6 @@ export function Home() {
   const children = useChildren();
   const { setActiveChildId } = useChildActions();
   const { experience } = useEliminationPreference(activeChild);
-  const { showError, showSuccess } = useToast();
   const { logs, lastRealPoop, refresh: refreshLogs } = usePoopLogs(activeChild?.id ?? null);
   const {
     logs: diaperLogs,
@@ -53,13 +49,6 @@ export function Home() {
   const hasLogs = experience.mode === "diaper" ? hasDiaperLogs : logs.length > 0;
   const { activeBreastfeedingSide } = useHomeBreastfeedingState(activeChild, refreshFeedingLogs);
   const { avatarAnchorRef, showStickyChildBar } = useHomeStickyChildBar(activeChild, hasLogs);
-  const {
-    note: handoffNote,
-    setNote: setHandoffNote,
-    isSaving: isSavingHandoffNote,
-    hasChanges: handoffNoteChanged,
-    save: saveHandoffNote,
-  } = useCaregiverNote(activeChild?.id ?? null);
 
   useHomeEffects({
     activeChild,
@@ -118,15 +107,6 @@ export function Home() {
       refresh: [refreshFeedingLogs],
       reminders: true,
     });
-  };
-
-  const handleSaveHandoffNote = async () => {
-    try {
-      await saveHandoffNote();
-      showSuccess("Caregiver note saved.");
-    } catch {
-      showError("Could not save the caregiver note. Please try again.");
-    }
   };
 
   const handleEpisodeUpdated = async () => {
@@ -228,15 +208,6 @@ export function Home() {
         onOpenSleep={() => setSleepSheetOpen(true)}
         onOpenEpisode={() => openEpisodeSheet(activeEpisode ? "update" : "start")}
         onOpenSymptom={() => setSymptomSheetOpen(true)}
-      />
-
-      <HomeCaregiverNoteCard
-        handoffNote={handoffNote}
-        handoffNoteChanged={handoffNoteChanged}
-        isSavingHandoffNote={isSavingHandoffNote}
-        onChangeNote={setHandoffNote}
-        onOpenHandoff={() => navigate("/handoff")}
-        onSave={handleSaveHandoffNote}
       />
 
       {(logs.length > 0 || feedingLogs.length > 0) && (

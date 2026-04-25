@@ -85,7 +85,6 @@ const NAV_ITEMS = [
       || pathname === "/growth"
       || pathname === "/milestones"
       || pathname === "/guidance"
-      || pathname === "/handoff"
       || pathname === "/all-kids"
     ),
     icon: (active: boolean) => (

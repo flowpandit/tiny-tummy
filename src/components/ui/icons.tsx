@@ -155,7 +155,7 @@ export function HomeToolMilestonesIcon({ className = "h-5 w-5" }: StrokeIconProp
   );
 }
 
-export function HomeToolHandoffIcon({ className = "h-5 w-5" }: StrokeIconProps) {
+export function HomeToolReportIcon({ className = "h-5 w-5" }: StrokeIconProps) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
       <path d="M7.5 12.25c0-1.8 1.45-3.25 3.25-3.25h2.5c1.8 0 3.25 1.45 3.25 3.25" />

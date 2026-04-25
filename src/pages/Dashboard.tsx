@@ -9,8 +9,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card"
 import {
   HomeActionBottleIcon,
   HomeActionSleepIcon,
-  HomeToolHandoffIcon,
   HomeToolHistoryIcon,
+  HomeToolReportIcon,
 } from "../components/ui/icons";
 import { CompactPageHeader, EmptyState, PageBody } from "../components/ui/page-layout";
 import { useActiveChild } from "../contexts/ChildContext";
@@ -54,8 +54,8 @@ const TREND_TOOL_ITEMS = [
   },
   {
     label: "Report",
-    icon: <HomeToolHandoffIcon className="h-5 w-5" />,
-    background: "var(--color-home-tool-handoff)",
+    icon: <HomeToolReportIcon className="h-5 w-5" />,
+    background: "var(--color-home-tool-report)",
     to: "/report",
   },
 ] as const;
