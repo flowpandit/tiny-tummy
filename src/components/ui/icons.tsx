@@ -155,6 +155,18 @@ export function HomeToolMilestonesIcon({ className = "h-5 w-5" }: StrokeIconProp
   );
 }
 
+export function HomeToolTrendsIcon({ className = "h-5 w-5" }: StrokeIconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
+      <path d="M5 18.5h14" />
+      <path d="M7 15.5v-4" />
+      <path d="M12 15.5V7" />
+      <path d="M17 15.5v-6" />
+      <path d="m7 9.5 4-3 3.25 2.25L18 5.75" />
+    </svg>
+  );
+}
+
 export function HomeToolReportIcon({ className = "h-5 w-5" }: StrokeIconProps) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">

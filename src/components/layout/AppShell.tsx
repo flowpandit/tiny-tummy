@@ -65,14 +65,14 @@ export function AppShell() {
   );
   const headerBackFallbackByPath: Record<string, string> = {
     "/breastfeed": "/",
+    "/dashboard": "/",
     "/growth": "/settings",
     "/guidance": "/settings",
-    "/history": "/settings",
     "/milestones": "/settings",
     "/report": "/dashboard",
   };
   const revealOnScrollPaths = new Set(["/poop", "/diaper", "/feed", "/sleep", "/breastfeed", "/growth"]);
-  const hideHeaderPaths = new Set(["/", "/settings"]);
+  const hideHeaderPaths = new Set(["/", "/history", "/settings"]);
   const showHeader = !hideHeaderPaths.has(location.pathname);
   const headerFallbackTo = headerBackFallbackByPath[location.pathname];
   const showHeaderBackButton = Boolean(headerFallbackTo);
@@ -80,9 +80,9 @@ export function AppShell() {
   const isBreastOnly = activeChild?.feeding_type === "breast";
   const isFeedingTransitionEligible = isBreastOnly && Boolean(activeChild) && getAgeInMonthsFromDob(activeChild.date_of_birth) >= 6;
   const feedNavPath = isBreastOnly ? "/breastfeed" : "/feed";
-  const feedNavLabel = isBreastOnly ? "Breastfeed" : "Feed";
+  const feedNavLabel = "Feed";
   const bottomNavPaths = useMemo(
-    () => ["/", experience.route, "/dashboard", feedNavPath, "/sleep", "/settings"],
+    () => ["/", experience.route, feedNavPath, "/sleep", "/history", "/settings"],
     [experience.route, feedNavPath],
   );
   const bottomNavMeta = useMemo<Record<string, { label: string; eyebrow: string; description: string }>>(
@@ -97,11 +97,6 @@ export function AppShell() {
         eyebrow: "Log",
         description: `Jump to ${experience.navLabel.toLowerCase()} tracking.`,
       },
-      "/dashboard": {
-        label: "Trend",
-        eyebrow: "Patterns",
-        description: "Review feeding, sleep, diaper, and stool patterns together.",
-      },
       [feedNavPath]: {
         label: feedNavLabel,
         eyebrow: isBreastOnly ? "Nursing" : "Meals",
@@ -115,6 +110,11 @@ export function AppShell() {
         label: "Sleep",
         eyebrow: "Rest",
         description: "Check naps, overnight sleep, and totals.",
+      },
+      "/history": {
+        label: "History",
+        eyebrow: "Timeline",
+        description: "Review the full care timeline.",
       },
       "/settings": {
         label: "Settings",

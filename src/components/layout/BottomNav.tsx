@@ -6,7 +6,7 @@ import { useEliminationPreference } from "../../hooks/useEliminationPreference";
 import { useDbClient } from "../../contexts/DatabaseContext";
 import { cn } from "../../lib/cn";
 import { Button } from "../ui/button";
-import { HomeActionBreastfeedIcon } from "../ui/icons";
+import { HomeActionBreastfeedIcon, HomeToolHistoryIcon } from "../ui/icons";
 import { combineLocalDateAndTimeToUtcIso, getAgeInMonthsFromDob, getCurrentLocalDate, getCurrentLocalTime } from "../../lib/utils";
 
 const iconClassName = "h-5 w-5";
@@ -30,16 +30,6 @@ const NAV_ITEMS = [
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill={active ? "currentColor" : "none"} stroke="currentColor" strokeWidth={active ? 0 : 1.5} className={iconClassName}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M12 3.75c.87 0 1.601.61 1.789 1.423.152.656.514 1.243 1.029 1.671A4.86 4.86 0 0 1 18 10.5c0 3.314-2.686 6-6 6s-6-2.686-6-6a4.86 4.86 0 0 1 3.182-4.556 3.01 3.01 0 0 0 1.029-1.671A1.835 1.835 0 0 1 12 3.75Z" />
         <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 19.5c.73.477 1.601.75 2.55.75.949 0 1.82-.273 2.55-.75" />
-      </svg>
-    ),
-  },
-  {
-    path: "/dashboard",
-    label: "Trend",
-    matches: (pathname: string) => pathname === "/dashboard",
-    icon: (active: boolean) => (
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill={active ? "currentColor" : "none"} stroke="currentColor" strokeWidth={active ? 0 : 1.5} className={iconClassName}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z" />
       </svg>
     ),
   },
@@ -77,11 +67,16 @@ const NAV_ITEMS = [
     ),
   },
   {
+    path: "/history",
+    label: "History",
+    matches: (pathname: string) => pathname === "/history",
+    icon: () => <HomeToolHistoryIcon className={iconClassName} />,
+  },
+  {
     path: "/settings",
-    label: "Setting",
+    label: "Settings",
     matches: (pathname: string) => (
       pathname === "/settings"
-      || pathname === "/history"
       || pathname === "/growth"
       || pathname === "/milestones"
       || pathname === "/guidance"
@@ -126,7 +121,7 @@ export function BottomNav() {
   const isBreastOnly = activeChild?.feeding_type === "breast";
   const isFeedingTransitionEligible = isBreastOnly && Boolean(activeChild) && getAgeInMonthsFromDob(activeChild.date_of_birth) >= 6;
   const feedNavPath = isBreastOnly ? "/breastfeed" : "/feed";
-  const feedNavLabel = isBreastOnly ? "Breastfeed" : "Feed";
+  const feedNavLabel = "Feed";
 
   const navItems = useMemo(
     () => NAV_ITEMS.map((item) => {

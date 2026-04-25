@@ -2,6 +2,7 @@ import {
   HomeToolGrowthIcon,
   HomeToolHistoryIcon,
   HomeToolMilestonesIcon,
+  HomeToolTrendsIcon,
 } from "../ui/icons";
 import { CareToolGrid } from "./CareToolGrid";
 
@@ -10,6 +11,12 @@ interface CareToolsSectionProps {
 }
 
 const CARE_TOOL_ITEMS = [
+  {
+    label: "Trends",
+    icon: <HomeToolTrendsIcon className="h-5 w-5" />,
+    background: "var(--color-home-tool-report)",
+    to: "/dashboard",
+  },
   {
     label: "History",
     icon: <HomeToolHistoryIcon className="h-5 w-5" />,
