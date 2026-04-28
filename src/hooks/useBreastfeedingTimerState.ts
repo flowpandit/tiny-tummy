@@ -10,7 +10,13 @@ import {
   getRoundedDurationMinutes,
   parseBreastfeedingSession,
 } from "../lib/breastfeeding";
-import { combineLocalDateAndTimeToUtcIso, getCurrentLocalDate, getCurrentLocalTime } from "../lib/utils";
+import {
+  combineLocalDateAndTimeToUtcIso,
+  getCurrentLocalDate,
+  getCurrentLocalTime,
+  generateId,
+  nowISO,
+} from "../lib/utils";
 import { useDbClient } from "../contexts/DatabaseContext";
 import type { BreastSide, Child, FeedingEntry } from "../lib/types";
 
@@ -233,6 +239,11 @@ export function useBreastfeedingTimerState({
         duration_minutes: getRoundedDurationMinutes(totalDurationMs),
         breast_side: breastSide,
         notes: `Timed breastfeeding session • ${sideBreakdown}`,
+        food_name: null,
+        amount_ml: null,
+        bottle_content: null,
+        reaction_notes: null,
+        is_constipation_support: 0,
         created_at: nowISO(),
       };
       setRecentHistory((prev) => [newEntry, ...prev].slice(0, 30));
