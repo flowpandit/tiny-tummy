@@ -279,6 +279,50 @@ Once configured in Xcode, you can also run future builds from the CLI:
 cargo tauri ios dev --device
 ```
 
+#### iPad/iPhone Deployment Workflow (Recommended)
+
+To ensure the latest frontend changes and database optimizations are correctly installed on your physical device:
+
+1. **Build Frontend**: Update the assets that Xcode will bundle:
+   ```bash
+   pnpm build
+   ```
+2. **Patch Xcode Project**: Ensure signing and sandbox settings are correct:
+   ```bash
+   pnpm fix:ios-xcodeproj
+   ```
+3. **Open Xcode**:
+   ```bash
+   npm run tauri ios open
+   ```
+4. **Clean Build Folder**: In Xcode, go to **Product > Clean Build Folder** (or `Cmd + Shift + K`). This is critical for clearing cached assets and ensuring the new SQLite WAL mode is active.
+5. **Run**: Select your iPad/iPhone as the target and hit **Play**.
+
+#### Enforcing Portrait Orientation
+
+To prevent layout thrashing and "rotation freezes" on tablets:
+
+- **iOS (Xcode)**:
+  1. Open the project in Xcode.
+  2. Select the `tiny-tummy` Target.
+  3. Under the **General** tab > **Deployment Info**, uncheck **Landscape Left** and **Landscape Right**. Leave only **Portrait** checked.
+- **Android**:
+  1. Open `src-tauri/gen/android/app/src/main/AndroidManifest.xml`.
+  2. In the `<activity>` tag, add `android:screenOrientation="portrait"`.
+
+#### App Icon Troubleshooting
+
+If the iPad shows the default Tauri icon:
+
+1. **Regenerate Icons**:
+   ```bash
+   pnpm tauri icon src-tauri/icons/icon.png
+   ```
+2. **Xcode Verification**:
+   - Open Xcode and go to the **Assets** catalog.
+   - Click **AppIcon** and ensure your custom icon is present in the slots.
+3. **Clean & Rebuild**: Perform a **Clean Build Folder** in Xcode before running again.
+
 #### Dual Platform Dev
 
 If you want to run the Android simulator at the same time as the iPhone/iPad simulator, start Android with:

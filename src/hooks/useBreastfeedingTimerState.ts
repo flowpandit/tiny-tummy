@@ -224,10 +224,25 @@ export function useBreastfeedingTimerState({
       
       await persistSession(clearedSession);
 
+      // Manually update the local history state immediately for a snappy UI
+      const newEntry: FeedingEntry = {
+        id: generateId(), // Temporary ID for UI
+        child_id: activeChild.id,
+        logged_at: combineLocalDateAndTimeToUtcIso(getCurrentLocalDate(), getCurrentLocalTime()),
+        food_type: "breast_milk",
+        duration_minutes: getRoundedDurationMinutes(totalDurationMs),
+        breast_side: breastSide,
+        notes: `Timed breastfeeding session • ${sideBreakdown}`,
+        created_at: nowISO(),
+      };
+      setRecentHistory((prev) => [newEntry, ...prev].slice(0, 30));
       setIsSaving(false);
+
       onSuccess("Breastfeeding session saved.");
 
       try {
+        // Tiny delay before database refresh ensures SQLite index is settled (especially in WAL mode)
+        await new Promise((resolve) => setTimeout(resolve, 150));
         await runPostLogActions({
           refresh: [refreshRecentBreastHistory],
           reminders: true,

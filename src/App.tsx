@@ -52,6 +52,9 @@ function AppRoutes() {
   }, [isLoading, isTrialLoading]);
 
   if (isLoading || isTrialLoading) {
+    // Show nothing for the first 100ms to avoid a flash if loading is instant
+    if (loadingForMs < 100) return <div className="min-h-screen bg-[var(--color-bg)]" />;
+
     const loadingParts = [
       isLoading ? "children" : null,
       isTrialLoading ? "trial" : null,

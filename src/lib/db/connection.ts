@@ -18,6 +18,8 @@ export async function getDb(): Promise<Database> {
       "Database connection",
     )
       .then(async (conn) => {
+        // WAL mode is much faster for concurrent access and prevents many locking issues
+        await conn.execute("PRAGMA journal_mode = WAL;");
         // Set a busy timeout so SQLite waits if another write is in progress
         await conn.execute("PRAGMA busy_timeout = 5000;");
         db = conn;
