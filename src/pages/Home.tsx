@@ -40,7 +40,7 @@ export function Home() {
   } = useDiaperLogs(activeChild?.id ?? null);
   const { logs: feedingLogs, refresh: refreshFeedingLogs } = useFeedingLogs(activeChild?.id ?? null);
   const { logs: sleepLogs, refresh: refreshSleepLogs } = useSleepLogs(activeChild?.id ?? null);
-  const { activeEpisode, events: episodeEvents, recentEpisodes, refresh: refreshEpisodes } = useEpisodes(activeChild?.id ?? null);
+  const { activeEpisode, events: episodeEvents, refresh: refreshEpisodes } = useEpisodes(activeChild?.id ?? null);
   const { logs: symptomLogs, refresh: refreshSymptoms } = useSymptoms(activeChild?.id ?? null);
   const { alerts, refresh: refreshAlerts, dismiss } = useAlerts(activeChild?.id ?? null);
   const { refreshChildAlerts, syncChildReminders, runPostLogActions } = useChildWorkflowActions(activeChild, refreshAlerts);
@@ -57,12 +57,9 @@ export function Home() {
     episodeEvents,
     feedingLogs,
     lastRealPoop,
-    latestPoopLogId: logs[0]?.id,
-    recentEpisodes,
     refreshChildAlerts,
     refreshLogs,
     syncChildReminders,
-    symptomLogs,
   });
 
   const {

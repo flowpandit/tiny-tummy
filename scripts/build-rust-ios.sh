@@ -48,6 +48,30 @@ pick_node_bin() {
   return 1
 }
 
+copy_frontend_assets() {
+  npm_bin=$(command_path npm)
+  [ -n "$npm_bin" ] || fail "npm is required to build the frontend but was not found in PATH"
+
+  (cd "$REPO_DIR" && "$npm_bin" run build)
+
+  [ -f "$REPO_DIR/dist/index.html" ] || fail "expected frontend build output was not produced at '$REPO_DIR/dist/index.html'"
+
+  rm -rf "$APPLE_DIR/assets"
+  mkdir -p "$APPLE_DIR/assets"
+  cp -R "$REPO_DIR/dist/." "$APPLE_DIR/assets/"
+
+  # When Xcode decides the folder-reference resources are already up to date,
+  # the app bundle can keep an older hashed index.html/asset pair and boot to a
+  # blank screen. Mirror the freshly built frontend directly into the active
+  # resources output as well so device builds always launch the current bundle.
+  if [ -n "${TARGET_BUILD_DIR:-}" ] && [ -n "${UNLOCALIZED_RESOURCES_FOLDER_PATH:-}" ]; then
+    BUNDLE_ASSETS_DIR="$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/assets"
+    rm -rf "$BUNDLE_ASSETS_DIR"
+    mkdir -p "$BUNDLE_ASSETS_DIR"
+    cp -R "$REPO_DIR/dist/." "$BUNDLE_ASSETS_DIR/"
+  fi
+}
+
 normalize_configuration() {
   value=$(printf "%s" "$1" | tr '[:upper:]' '[:lower:]')
   case "$value" in
@@ -132,6 +156,8 @@ export PATH
 export CARGO_HOME="${CARGO_HOME:-${HOME:-}/.cargo}"
 export RUSTUP_HOME="${RUSTUP_HOME:-${HOME:-}/.rustup}"
 
+copy_frontend_assets
+
 XCRUN_BIN=$(command_path xcrun)
 [ -n "$XCRUN_BIN" ] || fail "xcrun is required but was not found in PATH"
 
@@ -151,22 +177,32 @@ case "$SDKROOT_VALUE" in
     ;;
 esac
 
+# Xcode-driven iOS debug builds still compile with Tauri's `cfg(dev)`.
+# Force the mobile build to use bundled assets instead of a localhost dev server.
+export TAURI_CONFIG='{"build":{"devUrl":null}}'
+
 CARGO_BIN=$(command_path cargo)
 [ -n "$CARGO_BIN" ] || fail "cargo is required but was not found in PATH"
 
 OUTPUT_DIR="$APPLE_DIR/Externals/$ARCH_DIR/$CONFIGURATION_VALUE"
 mkdir -p "$OUTPUT_DIR"
 
-BUILD_ARGS="--manifest-path $TAURI_DIR/Cargo.toml --target $RUST_TARGET"
+BUILD_ARGS="--manifest-path $TAURI_DIR/Cargo.toml --target $RUST_TARGET --lib --crate-type staticlib"
 if [ "$CONFIGURATION_VALUE" = "release" ]; then
   # shellcheck disable=SC2086
-  "$CARGO_BIN" build $BUILD_ARGS --release
+  "$CARGO_BIN" rustc $BUILD_ARGS --release
 else
   # shellcheck disable=SC2086
-  "$CARGO_BIN" build $BUILD_ARGS
+  "$CARGO_BIN" rustc $BUILD_ARGS
 fi
 
 SOURCE_LIB="$TAURI_DIR/target/$RUST_TARGET/$CONFIGURATION_VALUE/libtiny_tummy_lib.a"
 [ -f "$SOURCE_LIB" ] || fail "expected Rust static library was not produced at '$SOURCE_LIB'"
 
 cp -f "$SOURCE_LIB" "$OUTPUT_DIR/libapp.a"
+
+SWIFT_MODULE_DIR="$APPLE_DIR/Externals/SwiftModules"
+mkdir -p "$SWIFT_MODULE_DIR"
+find "$TAURI_DIR/target/$RUST_TARGET/$CONFIGURATION_VALUE" \
+  \( -name "Tauri.swiftmodule" -o -name "SwiftRs.swiftmodule" \) \
+  -exec cp -R {} "$SWIFT_MODULE_DIR/" \;

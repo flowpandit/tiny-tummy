@@ -13,15 +13,60 @@
   </head>
   <body>
     <script>
+      window.__TINYTUMMY_STARTUP_ERRORS__ = [];
+      window.__TINYTUMMY_REPORT_STARTUP_ERROR__ = function (label, detail) {
+        var text = String(detail && detail.stack ? detail.stack : detail || "Unknown startup error");
+        var message = label + ": " + text;
+        window.__TINYTUMMY_STARTUP_ERRORS__.push(message);
+
+        var existing = document.getElementById("startup-error-overlay");
+        if (!existing) {
+          existing = document.createElement("pre");
+          existing.id = "startup-error-overlay";
+          existing.style.position = "fixed";
+          existing.style.left = "12px";
+          existing.style.right = "12px";
+          existing.style.bottom = "12px";
+          existing.style.zIndex = "99999";
+          existing.style.maxHeight = "45vh";
+          existing.style.overflow = "auto";
+          existing.style.padding = "12px";
+          existing.style.borderRadius = "12px";
+          existing.style.background = "#7f1d1d";
+          existing.style.color = "#fff7ed";
+          existing.style.boxShadow = "0 10px 30px rgba(0,0,0,0.25)";
+          existing.style.font = "12px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace";
+          existing.style.whiteSpace = "pre-wrap";
+          document.addEventListener("DOMContentLoaded", function () {
+            document.body.appendChild(existing);
+          }, { once: true });
+        }
+
+        existing.textContent = window.__TINYTUMMY_STARTUP_ERRORS__.join("\n\n");
+      };
+
+      window.addEventListener("error", function (event) {
+        window.__TINYTUMMY_REPORT_STARTUP_ERROR__("window.error", event.error || event.message);
+      });
+
+      window.addEventListener("unhandledrejection", function (event) {
+        window.__TINYTUMMY_REPORT_STARTUP_ERROR__("unhandledrejection", event.reason);
+      });
+
       // Detect Android synchronously before first paint — env(safe-area-inset-top)
       // doesn't work on Android WebView, so we set the CSS variable manually.
+      console.log("[startup] index inline script");
       if (/android/i.test(navigator.userAgent)) {
         document.documentElement.dataset.platform = 'android';
         document.documentElement.style.setProperty('--safe-area-top', '36px');
         document.documentElement.style.setProperty('--safe-area-bottom', '12px');
       }
     </script>
-    <div id="root"></div>
+    <div id="root">
+      <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:#fff8f1;color:#263241;font:600 18px system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">
+        Tiny Tummy loading...
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

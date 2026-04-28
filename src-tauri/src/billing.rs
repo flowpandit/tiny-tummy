@@ -16,7 +16,7 @@ pub struct BillingHandle<R: Runtime>(pub PluginHandle<R>);
 #[cfg(target_os = "ios")]
 tauri::ios_plugin_binding!(init_plugin_billing);
 
-#[cfg(target_os = "android")]
+#[cfg(any(target_os = "android", target_os = "ios"))]
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 struct BillingProductPayload {

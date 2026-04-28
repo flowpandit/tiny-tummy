@@ -190,6 +190,7 @@ cargo tauri android build --apk
 ```
 
 The release APK is at:
+
 ```
 src-tauri/gen/android/app/build/outputs/apk/universal/release/app-universal-release-unsigned.apk
 ```
@@ -210,11 +211,14 @@ adb install src-tauri/gen/android/app/build/outputs/apk/universal/release/app-un
 ```
 
 Alternatively, skip signing by building a debug APK (larger file, ~140 MB for single arch):
+
 ```bash
 cargo tauri android build --apk --debug --target aarch64
 ```
 
 ### iOS
+
+#### Running on a Simulator
 
 ```bash
 # 1. Initialize iOS project (one-time per machine)
@@ -243,6 +247,40 @@ cargo tauri ios dev
 
 If the simulator is already booted, you can just run `cargo tauri ios dev`.
 
+#### Running on a Physical Device
+
+To test on a physical iPhone, you need an Apple Developer account to configure signing in Xcode.
+
+1. **Enable Developer Mode:** On your iPhone, go to Settings > Privacy & Security > Developer Mode and toggle it on. Restart when prompted.
+2. **Connect Device:** Plug your iPhone into your Mac and "Trust" the computer.
+3. **Open Xcode:** Run `npm run tauri ios open` (or open `src-tauri/gen/apple/tiny-tummy.xcodeproj` directly).
+4. **Configure Account:** In Xcode, go to Xcode > Settings > Accounts and sign in with your Apple Developer account.
+5. **Set up Signing:**
+   - Click the `tiny-tummy` project in the left Project Navigator.
+   - Click the `tiny_tummy` target under TARGETS.
+   - Go to the **Signing & Capabilities** tab.
+   - Check "Automatically manage signing".
+   - Select your developer account from the "Team" dropdown menu.
+6. **Select Device:** At the top center of the Xcode window, click the device selector and choose your connected physical iPhone.
+
+If Xcode fails in the `Build Rust Code` phase because the script tries to write into `src-tauri/gen/apple/assets`, run:
+
+```bash
+npm run fix:ios-xcodeproj
+```
+
+That patches the generated iOS project to set `ENABLE_USER_SCRIPT_SANDBOXING = NO` for the `tiny-tummy_iOS` target, which allows the pre-build Rust/frontend asset script to write its outputs.
+7. **Run:** Click the Play button (or press `Cmd + R`) to build and install.
+8. **Trust Certificate:** The first time it installs, you may get an untrusted developer error on launch. On your iPhone, go to Settings > General > VPN & Device Management, tap your developer profile, and trust it.
+
+Once configured in Xcode, you can also run future builds from the CLI:
+
+```bash
+cargo tauri ios dev --device
+```
+
+#### Dual Platform Dev
+
 If you want to run the Android simulator at the same time as the iPhone/iPad simulator, start Android with:
 
 ```bash
@@ -250,8 +288,6 @@ cargo tauri android dev -c '{"build":{"beforeDevCommand":"true"}}'
 ```
 
 That skips re-running the shared frontend dev command, which is useful when iOS dev is already using it.
-
-> **Note:** Testing on a physical iPhone requires an Apple Developer account and a provisioning profile configured in the Xcode project at `src-tauri/gen/apple/`.
 
 ## Building for Production (Store Submission)
 
@@ -336,6 +372,7 @@ The `.ipa` is generated in `src-tauri/gen/apple/build/`. Upload to [App Store Co
 ## Database
 
 SQLite database stored at the platform's app data directory:
+
 - **iOS**: `~/Library/Containers/<bundle-id>/Data/`
 - **Android**: `/data/data/<package>/`
 - **macOS** (dev): `~/Library/Application Support/com.nikhilmehral.tinytummy/`

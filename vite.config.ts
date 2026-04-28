@@ -8,20 +8,15 @@ const host = process.env.TAURI_DEV_HOST;
 // https://vite.dev/config/
 export default defineConfig(async () => ({
   plugins: [react(), tailwindcss()],
+  base: "./",
 
   define: {
     __APP_VERSION__: JSON.stringify(process.env.npm_package_version || "0.1.0"),
   },
 
   build: {
-    rollupOptions: {
-      output: {
-        manualChunks: {
-          recharts: ["recharts"],
-          "framer-motion": ["framer-motion"],
-        },
-      },
-    },
+    cssCodeSplit: false,
+    modulePreload: false,
   },
 
   // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`

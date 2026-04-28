@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useDbClient } from "../contexts/DatabaseContext";
 import { syncSmartRemindersForChildren } from "../lib/notifications";
-import type { Child, Episode, EpisodeEvent, FeedingEntry, PoopEntry, SymptomEntry } from "../lib/types";
+import type { Child, Episode, EpisodeEvent, FeedingEntry, PoopEntry } from "../lib/types";
 
 interface UseHomeEffectsInput {
   activeChild: Child | null;
@@ -9,12 +9,9 @@ interface UseHomeEffectsInput {
   episodeEvents: EpisodeEvent[];
   feedingLogs: FeedingEntry[];
   lastRealPoop: PoopEntry | null;
-  latestPoopLogId?: string;
-  recentEpisodes: Episode[];
   refreshChildAlerts: () => Promise<void>;
   refreshLogs: () => Promise<void>;
   syncChildReminders: () => Promise<void>;
-  symptomLogs: SymptomEntry[];
   activeEpisode: Episode | null;
 }
 
@@ -25,43 +22,46 @@ export function useHomeEffects({
   episodeEvents,
   feedingLogs,
   lastRealPoop,
-  latestPoopLogId,
-  recentEpisodes,
   refreshChildAlerts,
   refreshLogs,
   syncChildReminders,
-  symptomLogs,
 }: UseHomeEffectsInput) {
   const db = useDbClient();
   const latestFeedingLogId = feedingLogs[0]?.id;
   const latestFeedingLoggedAt = feedingLogs[0]?.logged_at;
-  const latestRecentEpisodeId = recentEpisodes[0]?.id;
-  const latestSymptomLogId = symptomLogs[0]?.id;
   const latestEpisodeEventId = episodeEvents[0]?.id;
   const latestEpisodeEventLoggedAt = episodeEvents[0]?.logged_at;
 
   useEffect(() => {
     if (children.length === 0) return;
-    syncSmartRemindersForChildren(children).catch(() => {
-      // Reminder sync is non-critical
-    });
+
+    // Delay reminder sync to avoid blocking the main thread during startup
+    const timer = setTimeout(() => {
+      syncSmartRemindersForChildren(children).catch(() => {
+        // Reminder sync is non-critical
+      });
+    }, 3000);
+
+    return () => clearTimeout(timer);
   }, [children]);
 
   useEffect(() => {
     if (!activeChild) return;
-    db.reconcileAutoNoPoopDays(activeChild.id).then((changes: number) => {
-      if (changes > 0) {
-        void refreshLogs();
-      }
-    }).catch(() => {
-      // Auto no-poop marking is non-critical
-    });
+
+    // Delay background cleanup to let the UI finish its initial render
+    const timer = setTimeout(() => {
+      db.reconcileAutoNoPoopDays(activeChild.id).then((changes: number) => {
+        if (changes > 0) {
+          void refreshLogs();
+        }
+      }).catch(() => {
+        // Auto no-poop marking is non-critical
+      });
+    }, 2000);
+
+    return () => clearTimeout(timer);
   }, [
     activeChild,
-    latestPoopLogId,
-    latestFeedingLogId,
-    latestRecentEpisodeId,
-    latestSymptomLogId,
     refreshLogs,
   ]);
 

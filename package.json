@@ -4,8 +4,9 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "vite --host",
     "build": "tsc && vite build",
+    "fix:ios-xcodeproj": "./scripts/patch-ios-xcodeproj.sh",
     "test": "node --import tsx --test tests/*.test.ts",
     "test:e2e:tauri": "node ./e2e/run-tauri-e2e.mjs",
     "lint": "eslint .",

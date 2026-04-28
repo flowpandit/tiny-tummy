@@ -148,69 +148,80 @@ export async function reconcileAutoNoPoopDays(childId: string): Promise<number> 
   const conn = await getDb();
   const now = nowISO();
   const todayKey = formatLocalDateKey(new Date());
-  const redundantRows = await conn.select<{ cnt: number }[]>(
-    `SELECT COUNT(*) as cnt
-     FROM poop_logs
-     WHERE child_id = ?
-       AND is_no_poop = 1
-       AND date(logged_at, 'localtime') IN (
-         SELECT DISTINCT date(logged_at, 'localtime')
-         FROM poop_logs
-         WHERE child_id = ? AND is_no_poop = 0
-       )`,
-    [childId, childId],
-  );
-  const removedCount = redundantRows[0]?.cnt ?? 0;
 
-  await conn.execute(
-    `DELETE FROM poop_logs
-     WHERE child_id = ?
-       AND is_no_poop = 1
-       AND date(logged_at, 'localtime') IN (
-         SELECT DISTINCT date(logged_at, 'localtime')
-         FROM poop_logs
-         WHERE child_id = ? AND is_no_poop = 0
-       )`,
-    [childId, childId],
-  );
+  // We wrap everything in a transaction to ensure atomicity and significantly
+  // better performance on mobile by avoiding individual auto-commits.
+  await conn.execute("BEGIN TRANSACTION");
 
-  const candidateRows = await conn.select<{ day: string }[]>(
-    `SELECT DISTINCT day
-     FROM (
-       SELECT date(logged_at, 'localtime') AS day FROM diet_logs WHERE child_id = ?
-       UNION
-       SELECT date(logged_at, 'localtime') AS day FROM symptom_logs WHERE child_id = ?
-       UNION
-       SELECT date(logged_at, 'localtime') AS day FROM milestone_logs WHERE child_id = ?
-       UNION
-       SELECT date(started_at, 'localtime') AS day FROM sleep_logs WHERE child_id = ?
-       UNION
-       SELECT date(measured_at, 'localtime') AS day FROM growth_logs WHERE child_id = ?
-       UNION
-       SELECT date(started_at, 'localtime') AS day FROM episodes WHERE child_id = ?
-       UNION
-       SELECT date(logged_at, 'localtime') AS day FROM episode_events WHERE child_id = ?
-     )
-     WHERE day < ?
-       AND day NOT IN (
-         SELECT DISTINCT date(logged_at, 'localtime')
-         FROM poop_logs
-         WHERE child_id = ?
-       )
-     ORDER BY day ASC`,
-    [childId, childId, childId, childId, childId, childId, childId, todayKey, childId],
-  );
-
-  for (const row of candidateRows) {
-    await conn.execute(
-      `INSERT INTO poop_logs (
-        id, child_id, logged_at, stool_type, color, size, is_no_poop, notes, photo_path, created_at, updated_at
-      ) VALUES (?, ?, ?, NULL, NULL, NULL, 1, NULL, NULL, ?, ?)`,
-      [generateId(), childId, combineLocalDateAndTimeToUtcIso(row.day, "20:00"), now, now],
+  try {
+    const redundantRows = await conn.select<{ cnt: number }[]>(
+      `SELECT COUNT(*) as cnt
+       FROM poop_logs
+       WHERE child_id = ?
+         AND is_no_poop = 1
+         AND date(logged_at, 'localtime') IN (
+           SELECT DISTINCT date(logged_at, 'localtime')
+           FROM poop_logs
+           WHERE child_id = ? AND is_no_poop = 0
+         )`,
+      [childId, childId],
     );
-  }
+    const removedCount = redundantRows[0]?.cnt ?? 0;
 
-  return removedCount + candidateRows.length;
+    await conn.execute(
+      `DELETE FROM poop_logs
+       WHERE child_id = ?
+         AND is_no_poop = 1
+         AND date(logged_at, 'localtime') IN (
+           SELECT DISTINCT date(logged_at, 'localtime')
+           FROM poop_logs
+           WHERE child_id = ? AND is_no_poop = 0
+         )`,
+      [childId, childId],
+    );
+
+    const candidateRows = await conn.select<{ day: string }[]>(
+      `SELECT DISTINCT day
+       FROM (
+         SELECT date(logged_at, 'localtime') AS day FROM diet_logs WHERE child_id = ?
+         UNION
+         SELECT date(logged_at, 'localtime') AS day FROM symptom_logs WHERE child_id = ?
+         UNION
+         SELECT date(logged_at, 'localtime') AS day FROM milestone_logs WHERE child_id = ?
+         UNION
+         SELECT date(started_at, 'localtime') AS day FROM sleep_logs WHERE child_id = ?
+         UNION
+         SELECT date(measured_at, 'localtime') AS day FROM growth_logs WHERE child_id = ?
+         UNION
+         SELECT date(started_at, 'localtime') AS day FROM episodes WHERE child_id = ?
+         UNION
+         SELECT date(logged_at, 'localtime') AS day FROM episode_events WHERE child_id = ?
+       )
+       WHERE day < ?
+         AND day NOT IN (
+           SELECT DISTINCT date(logged_at, 'localtime')
+           FROM poop_logs
+           WHERE child_id = ?
+         )
+       ORDER BY day ASC`,
+      [childId, childId, childId, childId, childId, childId, childId, todayKey, childId],
+    );
+
+    for (const row of candidateRows) {
+      await conn.execute(
+        `INSERT INTO poop_logs (
+          id, child_id, logged_at, stool_type, color, size, is_no_poop, notes, photo_path, created_at, updated_at
+        ) VALUES (?, ?, ?, NULL, NULL, NULL, 1, NULL, NULL, ?, ?)`,
+        [generateId(), childId, combineLocalDateAndTimeToUtcIso(row.day, "20:00"), now, now],
+      );
+    }
+
+    await conn.execute("COMMIT");
+    return removedCount + candidateRows.length;
+  } catch (error) {
+    await conn.execute("ROLLBACK");
+    throw error;
+  }
 }
 
 export async function createDiaperLog(input: {
