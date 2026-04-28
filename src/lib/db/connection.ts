@@ -17,7 +17,9 @@ export async function getDb(): Promise<Database> {
       15000,
       "Database connection",
     )
-      .then((conn) => {
+      .then(async (conn) => {
+        // Set a busy timeout so SQLite waits if another write is in progress
+        await conn.execute("PRAGMA busy_timeout = 5000;");
         db = conn;
         return conn;
       })

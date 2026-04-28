@@ -123,7 +123,7 @@ export function useBreastfeedingTimerState({
     await db.setSetting(getBreastfeedingSessionSettingKey(activeChild.id), JSON.stringify(session));
   }, [activeChild]);
 
-  const flushActiveDuration = useCallback(async (): Promise<BreastfeedingSessionState> => {
+  const flushActiveDuration = useCallback(async (options: { persist?: boolean } = { persist: true }): Promise<BreastfeedingSessionState> => {
     if (!activeSide || !activeStartedAt) {
       return {
         durations,
@@ -147,7 +147,9 @@ export function useBreastfeedingTimerState({
     setActiveSide(null);
     setActiveStartedAt(null);
     setTick(Date.now());
-    await persistSession(nextSession);
+    if (options.persist) {
+      await persistSession(nextSession);
+    }
     return nextSession;
   }, [activeSide, activeStartedAt, durations, lastUsedSide, persistSession]);
 
@@ -182,7 +184,7 @@ export function useBreastfeedingTimerState({
   const handleSave = useCallback(async () => {
     if (!activeChild) return;
 
-    const finalSession = await flushActiveDuration();
+    const finalSession = await flushActiveDuration({ persist: false });
     const saveSide = finalSession.lastUsedSide;
     const sidesUsed = (["left", "right"] as const).filter((side) => finalSession.durations[side] >= 1000);
 
@@ -210,7 +212,7 @@ export function useBreastfeedingTimerState({
       });
 
       if (saveSide === "left" || saveSide === "right") {
-        await db.setSetting(getBreastfeedingLastSideSettingKey(activeChild.id), saveSide);
+        await db.setSetting(getBreastfeedingLastSideSettingKey(activeChild.id), saveSide).catch(() => {});
       }
 
       const clearedSession = getEmptyBreastfeedingSession(saveSide);
@@ -219,19 +221,29 @@ export function useBreastfeedingTimerState({
       setActiveStartedAt(null);
       setLastUsedSide(clearedSession.lastUsedSide);
       setTick(Date.now());
+      
       await persistSession(clearedSession);
-      await runPostLogActions({
-        refresh: [refreshRecentBreastHistory],
-        reminders: true,
-      });
-      onSuccess("Breastfeeding session saved.");
-    } catch {
-      onError("Could not save the breastfeeding session.");
-      setDurations(finalSession.durations);
-    } finally {
+
       setIsSaving(false);
+      onSuccess("Breastfeeding session saved.");
+
+      try {
+        await runPostLogActions({
+          refresh: [refreshRecentBreastHistory],
+          reminders: true,
+        });
+      } catch (err) {
+        console.error("Post-save actions failed:", err);
+        await refreshRecentBreastHistory().catch(() => {});
+      }
+    } catch (err) {
+      setIsSaving(false);
+      const errorDetail = err instanceof Error ? err.message : String(err);
+      onError(`Could not save the breastfeeding session: ${errorDetail}`);
+      setDurations(finalSession.durations);
+      await persistSession(finalSession).catch(() => {});
     }
-  }, [activeChild, flushActiveDuration, onError, onSuccess, persistSession, refreshRecentBreastHistory, runPostLogActions]);
+  }, [activeChild, db, flushActiveDuration, onError, onSuccess, persistSession, refreshRecentBreastHistory, runPostLogActions]);
 
   const handleConfirmSolidTransition = useCallback(async () => {
     if (!activeChild) return false;
@@ -283,6 +295,42 @@ export function useBreastfeedingTimerState({
       .sort((left, right) => new Date(left.logged_at).getTime() - new Date(right.logged_at).getTime());
   }, [recentHistory]);
 
+  const last24hDurations = useMemo(() => {
+    const cutoff = Date.now() - (24 * 60 * 60 * 1000);
+    const logs = recentHistory.filter((log) => {
+      if (log.food_type !== "breast_milk") return false;
+      const side = log.breast_side;
+      if (side !== "left" && side !== "right" && side !== "both") return false;
+      return new Date(log.logged_at).getTime() >= cutoff;
+    });
+
+    let left = 0;
+    let right = 0;
+
+    for (const log of logs) {
+      const durationMs = (log.duration_minutes ?? 0) * 60000;
+      if (log.breast_side === "left") {
+        left += durationMs;
+      } else if (log.breast_side === "right") {
+        right += durationMs;
+      } else if (log.breast_side === "both") {
+        left += durationMs / 2;
+        right += durationMs / 2;
+      }
+    }
+
+    return { left, right };
+  }, [recentHistory]);
+
+  const last24hLeftDuration = last24hDurations.left + leftDuration;
+  const last24hRightDuration = last24hDurations.right + rightDuration;
+  
+  // For visual consistency in the rings, we sum the rounded minutes of each side
+  // This prevents cases where "6 + 5 = 10" due to separate rounding.
+  const leftMins = Math.round(last24hLeftDuration / 60000);
+  const rightMins = Math.round(last24hRightDuration / 60000);
+  const last24hTotalDuration = (leftMins + rightMins) * 60000;
+
   return {
     activeSide,
     canShowSolidTransition: activeChild?.feeding_type === "breast",
@@ -294,6 +342,9 @@ export function useBreastfeedingTimerState({
     handleStartSide,
     isSaving,
     isTransitioningToMixed,
+    last24hLeftDuration,
+    last24hRightDuration,
+    last24hTotalDuration,
     lastUsedSide,
     leftDuration,
     patternLogs,

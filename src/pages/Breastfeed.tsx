@@ -39,6 +39,9 @@ export function Breastfeed() {
     handleStartSide,
     isSaving,
     isTransitioningToMixed,
+    last24hLeftDuration,
+    last24hRightDuration,
+    last24hTotalDuration,
     lastUsedSide,
     leftDuration,
     patternLogs,
@@ -82,9 +85,9 @@ export function Breastfeed() {
     setFeedingFormOpen(true);
   };
 
-  const currentSessionRing = getDurationRingDisplay(totalDuration, "var(--gradient-status-caution)");
-  const leftRing = getDurationRingDisplay(leftDuration, "var(--gradient-status-healthy)");
-  const rightRing = getDurationRingDisplay(rightDuration, "var(--gradient-status-head)");
+  const total24hRing = getDurationRingDisplay(last24hTotalDuration, "var(--gradient-status-caution)");
+  const left24hRing = getDurationRingDisplay(last24hLeftDuration, "var(--gradient-status-healthy)");
+  const right24hRing = getDurationRingDisplay(last24hRightDuration, "var(--gradient-status-head)");
 
   return (
     <PageBody className="mt-0 space-y-0 px-0 py-0">
@@ -161,22 +164,22 @@ export function Breastfeed() {
           <>
             <div className="-mt-32 relative z-10 grid grid-cols-3 gap-3 px-4 pt-4">
               <TrackerMetricRing
-                value={leftRing.value}
-                unit={leftRing.unit}
-                label="Left session"
-                gradient={leftRing.gradient}
+                value={left24hRing.value}
+                unit={left24hRing.unit}
+                label="Left (24h)"
+                gradient={left24hRing.gradient}
               />
               <TrackerMetricRing
-                value={currentSessionRing.value}
-                unit={currentSessionRing.unit}
-                label="Current session"
-                gradient={currentSessionRing.gradient}
+                value={total24hRing.value}
+                unit={total24hRing.unit}
+                label="Total (24h)"
+                gradient={total24hRing.gradient}
               />
               <TrackerMetricRing
-                value={rightRing.value}
-                unit={rightRing.unit}
-                label="Right session"
-                gradient={rightRing.gradient}
+                value={right24hRing.value}
+                unit={right24hRing.unit}
+                label="Right (24h)"
+                gradient={right24hRing.gradient}
               />
             </div>
 
