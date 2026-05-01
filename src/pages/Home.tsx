@@ -53,7 +53,6 @@ export function Home() {
   useHomeEffects({
     activeChild,
     activeEpisode,
-    children,
     episodeEvents,
     feedingLogs,
     lastRealPoop,

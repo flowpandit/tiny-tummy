@@ -367,64 +367,97 @@ test("useVisibilityRefresh does not subscribe when disabled", () => {
 });
 
 test("useChildWorkflowActions runs refresh, alert, and reminder steps in order", async () => {
+  const originalSetTimeout = globalThis.setTimeout;
+  const scheduled: Array<() => void> = [];
+  globalThis.setTimeout = ((callback: TimerHandler) => {
+    scheduled.push(callback as () => void);
+    return scheduled.length as unknown as number;
+  }) as typeof globalThis.setTimeout;
+
   const calls: string[] = [];
-  const { result } = renderHook(() => useChildWorkflowActions(
-    child,
-    async () => {
-      calls.push("refreshAlerts");
-    },
-    {
-      runChecks: async () => {
-        calls.push("runChecks");
-      },
-      syncSmartRemindersForChild: async () => {
-        calls.push("syncReminders");
-      },
-    },
-  ));
-
-  await result.current.runPostLogActions({
-    refresh: [
+  try {
+    const { result } = renderHook(() => useChildWorkflowActions(
+      child,
       async () => {
-        calls.push("refreshA");
+        calls.push("refreshAlerts");
       },
-      async () => {
-        calls.push("refreshB");
+      {
+        runChecks: async () => {
+          calls.push("runChecks");
+        },
+        syncSmartRemindersForChild: async () => {
+          calls.push("syncReminders");
+        },
       },
-    ],
-    alerts: true,
-    reminders: true,
-  });
+    ));
 
-  assert.deepEqual(calls, [
-    "refreshA",
-    "refreshB",
-    "runChecks",
-    "refreshAlerts",
-    "syncReminders",
-  ]);
+    await result.current.runPostLogActions({
+      refresh: [
+        async () => {
+          calls.push("refreshA");
+        },
+        async () => {
+          calls.push("refreshB");
+        },
+      ],
+      alerts: true,
+      reminders: true,
+    });
+
+    assert.deepEqual(calls, [
+      "refreshA",
+      "refreshB",
+      "runChecks",
+      "refreshAlerts",
+    ]);
+    assert.equal(scheduled.length, 1);
+
+    scheduled[0]?.();
+
+    assert.deepEqual(calls, [
+      "refreshA",
+      "refreshB",
+      "runChecks",
+      "refreshAlerts",
+      "syncReminders",
+    ]);
+  } finally {
+    globalThis.setTimeout = originalSetTimeout;
+  }
 });
 
-test("useChildWorkflowActions safely no-ops when the child is missing", async () => {
+test("useChildWorkflowActions does not schedule reminders when the child is missing", async () => {
+  const originalSetTimeout = globalThis.setTimeout;
+  const scheduled: Array<() => void> = [];
+  globalThis.setTimeout = ((callback: TimerHandler) => {
+    scheduled.push(callback as () => void);
+    return scheduled.length as unknown as number;
+  }) as typeof globalThis.setTimeout;
+
   const calls: string[] = [];
-  const { result } = renderHook(() => useChildWorkflowActions(
-    null,
-    async () => {
-      calls.push("refreshAlerts");
-    },
-    {
-      runChecks: async () => {
-        calls.push("runChecks");
+  try {
+    const { result } = renderHook(() => useChildWorkflowActions(
+      null,
+      async () => {
+        calls.push("refreshAlerts");
       },
-      syncSmartRemindersForChild: async () => {
-        calls.push("syncReminders");
+      {
+        runChecks: async () => {
+          calls.push("runChecks");
+        },
+        syncSmartRemindersForChild: async () => {
+          calls.push("syncReminders");
+        },
       },
-    },
-  ));
+    ));
 
-  await result.current.refreshChildAlerts();
-  await result.current.syncChildReminders();
-  await result.current.runPostLogActions({ alerts: true, reminders: true });
+    await result.current.refreshChildAlerts();
+    await result.current.syncChildReminders();
+    await result.current.runPostLogActions({ alerts: true, reminders: true });
 
-  assert.deepEqual(calls, []);
+    assert.deepEqual(calls, []);
+    assert.equal(scheduled.length, 0);
+  } finally {
+    globalThis.setTimeout = originalSetTimeout;
+  }
 });

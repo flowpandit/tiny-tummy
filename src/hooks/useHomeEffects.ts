@@ -1,11 +1,9 @@
 import { useEffect } from "react";
 import { useDbClient } from "../contexts/DatabaseContext";
-import { syncSmartRemindersForChildren } from "../lib/notifications";
 import type { Child, Episode, EpisodeEvent, FeedingEntry, PoopEntry } from "../lib/types";
 
 interface UseHomeEffectsInput {
   activeChild: Child | null;
-  children: Child[];
   episodeEvents: EpisodeEvent[];
   feedingLogs: FeedingEntry[];
   lastRealPoop: PoopEntry | null;
@@ -18,7 +16,6 @@ interface UseHomeEffectsInput {
 export function useHomeEffects({
   activeChild,
   activeEpisode,
-  children,
   episodeEvents,
   feedingLogs,
   lastRealPoop,
@@ -31,19 +28,6 @@ export function useHomeEffects({
   const latestFeedingLoggedAt = feedingLogs[0]?.logged_at;
   const latestEpisodeEventId = episodeEvents[0]?.id;
   const latestEpisodeEventLoggedAt = episodeEvents[0]?.logged_at;
-
-  useEffect(() => {
-    if (children.length === 0) return;
-
-    // Delay reminder sync to avoid blocking the main thread during startup
-    const timer = setTimeout(() => {
-      syncSmartRemindersForChildren(children).catch(() => {
-        // Reminder sync is non-critical
-      });
-    }, 3000);
-
-    return () => clearTimeout(timer);
-  }, [children]);
 
   useEffect(() => {
     if (!activeChild) return;

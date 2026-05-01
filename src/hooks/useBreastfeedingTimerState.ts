@@ -251,17 +251,16 @@ export function useBreastfeedingTimerState({
 
       onSuccess("Breastfeeding session saved.");
 
-      try {
-        // Tiny delay before database refresh ensures SQLite index is settled (especially in WAL mode)
-        await new Promise((resolve) => setTimeout(resolve, 150));
-        await runPostLogActions({
+      // Fire-and-forget background actions so the UI stays responsive
+      setTimeout(() => {
+        runPostLogActions({
           refresh: [refreshRecentBreastHistory],
           reminders: true,
+        }).catch((err) => {
+          console.error("Post-save background actions failed:", err);
+          refreshRecentBreastHistory().catch(() => {});
         });
-      } catch (err) {
-        console.error("Post-save actions failed:", err);
-        await refreshRecentBreastHistory().catch(() => {});
-      }
+      }, 50);
     } catch (err) {
       setIsSaving(false);
       const errorDetail = err instanceof Error ? err.message : String(err);
