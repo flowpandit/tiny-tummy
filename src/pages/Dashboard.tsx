@@ -1,17 +1,10 @@
 import { lazy, Suspense, useState } from "react";
-import { CareToolGrid } from "../components/care/CareToolGrid";
 import { OverviewRhythmChart } from "../components/trends/OverviewRhythmChart";
 import { TrendBarChart } from "../components/trends/TrendBarChart";
 import { TrendNarrativeCard } from "../components/trends/TrendNarrativeCard";
 import { TrendSegmentedControl } from "../components/trends/TrendSegmentedControl";
 import { TrendSummaryTile } from "../components/trends/TrendSummaryTile";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
-import {
-  HomeActionBottleIcon,
-  HomeActionSleepIcon,
-  HomeToolHistoryIcon,
-  HomeToolReportIcon,
-} from "../components/ui/icons";
 import { CompactPageHeader, EmptyState, PageBody } from "../components/ui/page-layout";
 import { useActiveChild } from "../contexts/ChildContext";
 import { useTrendsOverview } from "../hooks/useTrendsOverview";
@@ -32,33 +25,6 @@ const PERIOD_OPTIONS = [
   { label: "14 days", value: 14 },
   { label: "30 days", value: 30 },
 ];
-
-const TREND_TOOL_ITEMS = [
-  {
-    label: "Feed",
-    icon: <HomeActionBottleIcon className="h-5 w-5" />,
-    background: "var(--color-home-tool-growth)",
-    to: "/feed",
-  },
-  {
-    label: "Sleep",
-    icon: <HomeActionSleepIcon className="h-5 w-5" />,
-    background: "var(--color-home-tool-milestone)",
-    to: "/sleep",
-  },
-  {
-    label: "History",
-    icon: <HomeToolHistoryIcon className="h-5 w-5" />,
-    background: "var(--color-home-tool-history)",
-    to: "/history",
-  },
-  {
-    label: "Report",
-    icon: <HomeToolReportIcon className="h-5 w-5" />,
-    background: "var(--color-home-tool-report)",
-    to: "/report",
-  },
-] as const;
 
 export function Dashboard() {
   const activeChild = useActiveChild();
@@ -229,13 +195,6 @@ export function Dashboard() {
 
       <div className="flex flex-col gap-4">
         {renderActivePanel()}
-
-        <section>
-          <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--color-text-soft)]">Next</p>
-          <div className="mt-2.5">
-            <CareToolGrid items={[...TREND_TOOL_ITEMS]} />
-          </div>
-        </section>
       </div>
     </PageBody>
   );

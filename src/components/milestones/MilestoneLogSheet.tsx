@@ -8,16 +8,18 @@ import { cn } from "../../lib/cn";
 import { useMilestoneLogSheetState } from "../../hooks/useMilestoneLogSheetState";
 import { MILESTONE_OPTIONS } from "../../lib/milestone-constants";
 import { getCurrentLocalDate } from "../../lib/utils";
+import type { MilestoneType } from "../../lib/types";
 
 interface MilestoneLogSheetProps extends SheetVisibilityProps {
   childId: string;
+  initialType?: MilestoneType;
   onLogged: () => Promise<void> | void;
 }
 
-export function MilestoneLogSheet({ open, onClose, childId, onLogged }: MilestoneLogSheetProps) {
+export function MilestoneLogSheet({ open, onClose, childId, initialType, onLogged }: MilestoneLogSheetProps) {
   const { showError, showSuccess } = useToast();
   const { milestoneType, setMilestoneType, logDate, setLogDate, logTime, setLogTime, notes, setNotes, isSubmitting, handleSubmit } =
-    useMilestoneLogSheetState({ open, childId, onLogged, onClose, onError: showError, onSuccess: showSuccess });
+    useMilestoneLogSheetState({ open, childId, initialType, onLogged, onClose, onError: showError, onSuccess: showSuccess });
 
   return (
     <Sheet open={open} onClose={onClose}>
