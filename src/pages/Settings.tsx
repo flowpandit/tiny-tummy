@@ -11,6 +11,7 @@ import {
   RecordsSupportSection,
   ThemeSection,
 } from "../components/settings/SettingsSections";
+import { PageBody } from "../components/ui/page-layout";
 import { useDeleteChildAction } from "../hooks/useSettingsActions";
 import type { Child } from "../lib/types";
 
@@ -41,9 +42,9 @@ function SettingsHeroArt() {
 
 function SettingsHero() {
   return (
-    <section className="-mx-4 -mt-8 overflow-hidden md:-mx-6 lg:-mx-8">
+    <section className="overflow-hidden">
       <div
-        className="relative min-h-[214px] overflow-hidden rounded-b-[34px] px-8 pb-12 pt-14 md:min-h-[252px] md:px-14 md:pb-16 md:pt-16 lg:px-16"
+        className="relative min-h-[214px] overflow-hidden rounded-b-[34px] px-8 pb-12 pt-14 md:min-h-[252px] md:px-10 md:pb-16 md:pt-16"
         style={{
           background: "linear-gradient(135deg, color-mix(in srgb, var(--color-bg) 90%, white) 0%, color-mix(in srgb, var(--color-primary) 8%, var(--color-bg)) 52%, color-mix(in srgb, var(--color-bg) 86%, #ffd7a8) 100%)",
         }}
@@ -81,48 +82,52 @@ export function Settings() {
   };
 
   return (
-    <div className="px-4 pb-12 md:px-6 lg:px-8">
+    <PageBody className="-mt-8 space-y-0 px-0 py-0">
       <SettingsHero />
 
-      <ChildrenSection
-        activeChild={activeChild}
-        children={children}
-        className="relative z-10 -mt-16 md:-mt-20"
-        onAddChild={() => navigate("/add-child")}
-        confirmDelete={confirmDelete}
-        onConfirmDelete={setConfirmDelete}
-        onDelete={handleDelete}
-        onEditChild={setEditingChild}
-        onOpenAllKids={() => navigate("/all-kids")}
-        onSetConfirmDelete={setConfirmDelete}
-      />
+      <div className="px-4 md:px-10">
+        <ChildrenSection
+          activeChild={activeChild}
+          children={children}
+          className="relative z-10 -mt-16 md:-mt-20"
+          onAddChild={() => navigate("/add-child")}
+          confirmDelete={confirmDelete}
+          onConfirmDelete={setConfirmDelete}
+          onDelete={handleDelete}
+          onEditChild={setEditingChild}
+          onOpenAllKids={() => navigate("/all-kids")}
+          onSetConfirmDelete={setConfirmDelete}
+        />
+      </div>
 
-      <AccessSection />
+      <div className="space-y-3 px-4 pb-12 pt-3 md:space-y-5 md:px-10 md:pb-16 md:pt-4">
+        <AccessSection />
 
-      <ThemeSection child={activeChild} />
+        <ThemeSection child={activeChild} />
 
-      <NotificationSection children={children} />
+        <NotificationSection children={children} />
 
-      <RecordsSupportSection />
+        <RecordsSupportSection />
 
-      <DeveloperToolsSection
-        onSimulateExpiration={async () => {
-          await simulateExpiration();
-          navigate("/", { replace: true });
-        }}
-        onResetTrial={() => {
-          void resetTrial();
-        }}
-        onSetTrialDaysAgo={(daysAgo) => {
-          void setTrialDaysAgo(daysAgo);
-        }}
-        onClearPremium={() => {
-          void clearPremium();
-        }}
-        onSimulatePremiumUnlock={() => {
-          void unlockPremium();
-        }}
-      />
+        <DeveloperToolsSection
+          onSimulateExpiration={async () => {
+            await simulateExpiration();
+            navigate("/", { replace: true });
+          }}
+          onResetTrial={() => {
+            void resetTrial();
+          }}
+          onSetTrialDaysAgo={(daysAgo) => {
+            void setTrialDaysAgo(daysAgo);
+          }}
+          onClearPremium={() => {
+            void clearPremium();
+          }}
+          onSimulatePremiumUnlock={() => {
+            void unlockPremium();
+          }}
+        />
+      </div>
 
       {/* Edit sheet */}
       {editingChild && (
@@ -134,6 +139,6 @@ export function Settings() {
           onSaved={refreshChildren}
         />
       )}
-    </div>
+    </PageBody>
   );
 }

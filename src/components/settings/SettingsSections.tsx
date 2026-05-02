@@ -47,6 +47,11 @@ const ELIMINATION_VIEW_OPTIONS: { value: EliminationViewPreference; label: strin
   { value: "poop", label: "Poop" },
 ];
 
+const SETTINGS_SECTION_TITLE_CLASS = "mb-2.5 px-1 text-[0.74rem] font-bold uppercase tracking-[0.18em] text-[var(--color-text-secondary)] md:mb-3 md:text-[0.78rem]";
+const SETTINGS_CARD_CLASS = "overflow-hidden rounded-[18px] shadow-[var(--shadow-home-card)] md:rounded-[24px]";
+const SETTINGS_ROW_CLASS = "flex min-h-[56px] items-center gap-3 px-4 py-3 transition-colors hover:bg-[var(--color-surface)]";
+const SETTINGS_DESCRIPTION_CLASS = "mt-0.5 text-[0.76rem] leading-snug text-[var(--color-text-secondary)]";
+
 function formatScheduleTime(value: string) {
   const [hour, minute] = value.split(":").map(Number);
   const suffix = hour >= 12 ? "PM" : "AM";
@@ -106,7 +111,7 @@ function SettingsListRow({
     <button
       type="button"
       onClick={onClick}
-      className="group flex min-h-[52px] w-full cursor-pointer items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-[var(--color-surface)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]/35"
+      className={`group w-full cursor-pointer text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]/35 ${SETTINGS_ROW_CLASS}`}
     >
       <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center text-[var(--color-text-secondary)] transition-colors group-hover:text-[var(--color-text)]">
         <SettingsListIcon icon={icon} />
@@ -114,7 +119,7 @@ function SettingsListRow({
       <span className="min-w-0 flex-1">
         <span className="block truncate text-[0.95rem] font-semibold leading-tight text-[var(--color-text)]">{title}</span>
         {description && (
-          <span className="mt-0.5 block truncate text-xs leading-tight text-[var(--color-text-secondary)]">{description}</span>
+          <span className="mt-0.5 block truncate text-[0.76rem] leading-tight text-[var(--color-text-secondary)]">{description}</span>
         )}
       </span>
     </button>
@@ -145,9 +150,9 @@ export function ChildrenSection({
   onSetConfirmDelete: (id: string | null) => void;
 }) {
   return (
-    <div className={`mb-6 ${className}`}>
+    <div className={className}>
       <div className="mb-3 flex items-center justify-between">
-        <h3 className="text-sm font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]">Children</h3>
+        <h3 className={SETTINGS_SECTION_TITLE_CLASS}>Children</h3>
         <div className="flex gap-2">
           {children.length > 1 && (
             <button onClick={onOpenAllKids} className="cursor-pointer text-xs font-semibold text-[var(--color-primary)]">
@@ -157,7 +162,7 @@ export function ChildrenSection({
         </div>
       </div>
 
-      <Card className="overflow-hidden">
+      <Card className={SETTINGS_CARD_CLASS}>
         <CardContent className="p-0">
           {children.map((child, index) => (
             <div key={child.id} className={index > 0 ? "border-t border-[var(--color-border)]" : undefined}>
@@ -304,24 +309,24 @@ export function NotificationSection({ children }: { children: Child[] }) {
   ];
 
   return (
-    <div className="mb-6">
-      <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]">Notifications</h3>
-      <Card className="overflow-hidden">
+    <section>
+      <h3 className={SETTINGS_SECTION_TITLE_CLASS}>Notifications</h3>
+      <Card className={SETTINGS_CARD_CLASS}>
         <CardContent className="p-0">
-          <div className="flex min-h-[52px] items-center justify-between gap-3 px-4 py-2.5">
+          <div className="flex min-h-[56px] items-center justify-between gap-3 px-4 py-3">
             <div className="min-w-0">
               <p className="truncate text-[0.9rem] font-semibold leading-tight text-[var(--color-text)]">Daily check-in</p>
-              <p className="mt-0.5 truncate text-xs leading-tight text-[var(--color-text-secondary)]">Remind me to log daily</p>
+              <p className={SETTINGS_DESCRIPTION_CLASS}>Remind me to log daily</p>
             </div>
             <Switch checked={enabled} onCheckedChange={handleToggle} disabled={loading} ariaLabel="Toggle daily reminder" />
           </div>
 
           {reminderRows.map((row) => (
             <div key={row.key} className="border-t border-[var(--color-border)]">
-              <div className="flex min-h-[52px] items-center justify-between gap-3 px-4 py-2.5">
+              <div className="flex min-h-[56px] items-center justify-between gap-3 px-4 py-3">
                 <div className="min-w-0">
                   <p className="truncate text-[0.9rem] font-semibold leading-tight text-[var(--color-text)]">{row.title}</p>
-                  <p className="mt-0.5 truncate text-xs leading-tight text-[var(--color-text-secondary)]">{row.description}</p>
+                  <p className={SETTINGS_DESCRIPTION_CLASS}>{row.description}</p>
                 </div>
                 <Switch checked={smartSettings[row.key]} onCheckedChange={() => handleSmartToggle(row.key)} disabled={loading} ariaLabel={`Toggle ${row.title}`} />
               </div>
@@ -329,7 +334,7 @@ export function NotificationSection({ children }: { children: Child[] }) {
           ))}
         </CardContent>
       </Card>
-    </div>
+    </section>
   );
 }
 
@@ -341,11 +346,11 @@ export function ThemeSection({ child }: { child: Child | null }) {
   const eliminationGridClassName = eliminationOptions.length === 2 ? "grid-cols-2" : "grid-cols-3";
 
   return (
-    <div className="mb-6">
-      <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]">App preferences</h3>
-      <Card>
-        <CardContent className="space-y-0 py-1.5">
-          <CompactPreferenceRow
+    <section>
+      <h3 className={SETTINGS_SECTION_TITLE_CLASS}>App preferences</h3>
+      <Card className={SETTINGS_CARD_CLASS}>
+        <CardContent className="p-0">
+          <SettingsControlRow
             label="Theme"
             control={(
               <SegmentedControl
@@ -360,8 +365,8 @@ export function ThemeSection({ child }: { child: Child | null }) {
             )}
           />
 
-          <div className="border-t border-[var(--color-border)] pt-1.5">
-            <CompactPreferenceRow
+          <div className="border-t border-[var(--color-border)]">
+            <SettingsControlRow
               label="Unit system"
               control={(
                 <SegmentedControl
@@ -378,8 +383,8 @@ export function ThemeSection({ child }: { child: Child | null }) {
           </div>
 
           {eliminationPreference && (
-            <div className="border-t border-[var(--color-border)] pt-1.5">
-              <CompactPreferenceRow
+            <div className="border-t border-[var(--color-border)]">
+              <SettingsControlRow
                 label="Main tracking page"
                 control={(
                   <SegmentedControl
@@ -399,40 +404,38 @@ export function ThemeSection({ child }: { child: Child | null }) {
             </div>
           )}
 
-          <div className="border-t border-[var(--color-border)] pt-1.5">
-            <div className="rounded-[18px] border border-[var(--color-border)] bg-[var(--color-surface)] p-3">
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="text-sm font-medium text-[var(--color-text)]">Night mode schedule</p>
-                  <p className="mt-1 text-xs leading-relaxed text-[var(--color-text-secondary)]">
-                    Automatically switch to the softer low-glare palette overnight.
-                  </p>
-                </div>
-                <Switch checked={nightModeEnabled} onCheckedChange={setNightModeEnabled} ariaLabel="Toggle scheduled night mode" />
+          <div className="border-t border-[var(--color-border)] px-4 py-3">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-[0.9rem] font-semibold leading-tight text-[var(--color-text)]">Night mode schedule</p>
+                <p className={SETTINGS_DESCRIPTION_CLASS}>
+                  Switch to the softer low-glare palette overnight.
+                </p>
               </div>
-
-              {nightModeEnabled && (
-                <div className="mt-3">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <FieldLabel>Starts</FieldLabel>
-                      <TimePicker value={nightModeStart} onChange={(value) => setNightModeSchedule(value, nightModeEnd)} label="Night mode starts" />
-                    </div>
-                    <div>
-                      <FieldLabel>Ends</FieldLabel>
-                      <TimePicker value={nightModeEnd} onChange={(value) => setNightModeSchedule(nightModeStart, value)} label="Night mode ends" />
-                    </div>
-                  </div>
-                  <p className="mt-3 text-xs text-[var(--color-text-secondary)]">
-                    Active from {formatScheduleTime(nightModeStart)} to {formatScheduleTime(nightModeEnd)}.
-                  </p>
-                </div>
-              )}
+              <Switch checked={nightModeEnabled} onCheckedChange={setNightModeEnabled} ariaLabel="Toggle scheduled night mode" />
             </div>
+
+            {nightModeEnabled && (
+              <div className="mt-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <FieldLabel>Starts</FieldLabel>
+                    <TimePicker value={nightModeStart} onChange={(value) => setNightModeSchedule(value, nightModeEnd)} label="Night mode starts" />
+                  </div>
+                  <div>
+                    <FieldLabel>Ends</FieldLabel>
+                    <TimePicker value={nightModeEnd} onChange={(value) => setNightModeSchedule(nightModeStart, value)} label="Night mode ends" />
+                  </div>
+                </div>
+                <p className="mt-3 text-xs text-[var(--color-text-secondary)]">
+                  Active from {formatScheduleTime(nightModeStart)} to {formatScheduleTime(nightModeEnd)}.
+                </p>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
-    </div>
+    </section>
   );
 }
 
@@ -444,7 +447,7 @@ export function EliminationSection() {
   return null;
 }
 
-function CompactPreferenceRow({
+function SettingsControlRow({
   label,
   control,
 }: {
@@ -452,9 +455,9 @@ function CompactPreferenceRow({
   control: ReactNode;
 }) {
   return (
-    <div className="grid grid-cols-[128px_minmax(0,1fr)] items-center gap-2.5 py-1">
+    <div className="grid min-h-[56px] grid-cols-[128px_minmax(0,1fr)] items-center gap-2.5 px-4 py-3">
       <div className="min-w-0 pr-1">
-        <p className="text-[0.86rem] font-medium leading-[1.1] text-[var(--color-text)]">{label}</p>
+        <p className="text-[0.9rem] font-semibold leading-[1.1] text-[var(--color-text)]">{label}</p>
       </div>
       <div className="min-w-0">{control}</div>
     </div>
@@ -493,9 +496,9 @@ export function RecordsSupportSection() {
   ];
 
   return (
-    <div className="mb-6">
-      <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]">Records &amp; Support</h3>
-      <Card className="overflow-hidden">
+    <section>
+      <h3 className={SETTINGS_SECTION_TITLE_CLASS}>Records &amp; Support</h3>
+      <Card className={SETTINGS_CARD_CLASS}>
         <CardContent className="p-0">
           {rows.map((row, index) => (
             <div key={row.title} className={index > 0 ? "border-t border-[var(--color-border)]" : undefined}>
@@ -504,7 +507,7 @@ export function RecordsSupportSection() {
           ))}
         </CardContent>
       </Card>
-    </div>
+    </section>
   );
 }
 
@@ -528,7 +531,7 @@ export function AccessSection() {
   };
 
   return (
-    <div className="mb-5 mt-3 md:mt-4">
+    <section>
       <div
         className="relative overflow-hidden rounded-[18px] border px-3.5 py-3 shadow-[0_12px_28px_rgba(213,164,84,0.1)] md:flex md:items-center md:gap-4 md:px-4"
         style={{
@@ -578,7 +581,7 @@ export function AccessSection() {
           </button>
         </div>
       </div>
-    </div>
+    </section>
   );
 }
 
@@ -612,9 +615,9 @@ export function DeveloperToolsSection({
   };
 
   return (
-    <div className="mb-12">
-      <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-[var(--color-alert)]">Developer Tools</h3>
-      <Card className="border-[var(--color-alert)]/30">
+    <section className="pb-4">
+      <h3 className="mb-3 px-1 text-[0.74rem] font-bold uppercase tracking-[0.18em] text-[var(--color-alert)] md:text-[0.78rem]">Developer Tools</h3>
+      <Card className={`${SETTINGS_CARD_CLASS} border-[var(--color-alert)]/30`}>
         <CardContent className="flex flex-col gap-3 py-3">
           <p className="text-xs text-[var(--color-text-secondary)]">These tools only appear during local development.</p>
           <p className="rounded-[var(--radius-sm)] bg-[var(--color-alert)]/8 px-3 py-2 text-xs text-[var(--color-text)]">
@@ -667,6 +670,6 @@ export function DeveloperToolsSection({
           </Button>
         </CardContent>
       </Card>
-    </div>
+    </section>
   );
 }
