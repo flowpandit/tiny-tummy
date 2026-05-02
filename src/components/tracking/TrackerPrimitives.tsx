@@ -23,7 +23,13 @@ export function TrackerMetricRing({
   const isSmall = size === "sm";
 
   return (
-    <div className={cn("flex flex-col items-center text-center", isSmall ? "gap-1.5" : "gap-2", className)}>
+    <div
+      className={cn(
+        "grid justify-items-center text-center",
+        isSmall ? "grid-rows-[72px_32px_14px] gap-1.5" : "grid-rows-[96px_34px_16px] gap-2",
+        className,
+      )}
+    >
       <div
         className={cn(
           "relative flex items-center justify-center rounded-full shadow-[var(--shadow-soft)]",
@@ -49,12 +55,15 @@ export function TrackerMetricRing({
           <span className={cn("text-[var(--color-text-secondary)]", isSmall ? "text-[10px]" : "text-[11px]")}>{unit}</span>
         </div>
       </div>
-      {detail && (
-        <p className={cn("leading-tight text-[var(--color-text-secondary)]", isSmall ? "max-w-[10ch] text-[10px]" : "max-w-[9ch] text-[11px]")}>
-          {detail}
-        </p>
-      )}
-      <p className={cn("font-medium uppercase tracking-[0.12em] text-[var(--color-text-soft)]", isSmall ? "text-[10px]" : "text-[11px]")}>{label}</p>
+      <p
+        className={cn(
+          "flex items-start justify-center overflow-hidden leading-tight text-[var(--color-text-secondary)]",
+          isSmall ? "max-w-[10ch] text-[10px]" : "max-w-[9ch] text-[11px]",
+        )}
+      >
+        {detail ?? ""}
+      </p>
+      <p className={cn("self-start font-medium uppercase tracking-[0.12em] text-[var(--color-text-soft)]", isSmall ? "text-[10px]" : "text-[11px]")}>{label}</p>
     </div>
   );
 }

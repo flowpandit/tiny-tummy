@@ -1,6 +1,7 @@
 import { lazy, Suspense, useState } from "react";
 import { OverviewRhythmChart } from "../components/trends/OverviewRhythmChart";
 import { TrendBarChart } from "../components/trends/TrendBarChart";
+import { TrendHighlightsCard } from "../components/trends/TrendHighlightsCard";
 import { TrendNarrativeCard } from "../components/trends/TrendNarrativeCard";
 import { TrendSegmentedControl } from "../components/trends/TrendSegmentedControl";
 import { TrendSummaryTile } from "../components/trends/TrendSummaryTile";
@@ -61,7 +62,6 @@ export function Dashboard() {
       return (
         <>
           <OverviewRhythmChart rows={overview.overviewRows} />
-          <TrendNarrativeCard lines={overview.overviewNarrative} />
         </>
       );
     }
@@ -195,6 +195,7 @@ export function Dashboard() {
 
       <div className="flex flex-col gap-4">
         {renderActivePanel()}
+        <TrendHighlightsCard highlights={overview.trendHighlights} />
       </div>
     </PageBody>
   );

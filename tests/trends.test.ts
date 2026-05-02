@@ -119,6 +119,11 @@ test("buildTrendsOverviewModel creates compact summary ring data for each domain
   assert.ok(model.summaryTiles.every((tile) => tile.gradient.includes("gradient")));
   assert.ok(model.summaryTiles.every((tile) => tile.value.length > 0));
   assert.equal(model.summaryTiles.find((tile) => tile.id === "poop")?.unit, "type");
+  assert.deepEqual(
+    model.trendHighlights.map((highlight) => highlight.id),
+    ["feed", "sleep", "wet", "stool"],
+  );
+  assert.ok(model.trendHighlights.every((highlight) => highlight.headline.length > 0));
 });
 
 test("buildTrendsOverviewModel shapes overview rows and day-series data", () => {
@@ -146,4 +151,8 @@ test("buildTrendsOverviewModel shapes overview rows and day-series data", () => 
   assert.equal(model.diaperChart.data.length, 7);
   assert.ok(model.overviewNarrative.length >= 3);
   assert.match(model.poopNarrative, /latest stool|poop trends/i);
+  assert.match(
+    model.trendHighlights.find((highlight) => highlight.id === "feed")?.detail ?? "",
+    /Recent days average/i,
+  );
 });
