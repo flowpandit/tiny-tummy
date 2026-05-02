@@ -217,18 +217,23 @@ function QuickActionButton({
   const background = tone === "sleep"
     ? "var(--gradient-home-action-sleep)"
     : tone === "active"
-      ? "linear-gradient(180deg, rgba(255, 242, 236, 0.98) 0%, rgba(255, 232, 224, 0.86) 100%)"
-      : "linear-gradient(180deg, rgba(239, 246, 255, 0.98) 0%, rgba(230, 239, 255, 0.9) 100%)";
+      ? "var(--gradient-home-action-diaper)"
+      : "var(--gradient-home-action-breastfeed)";
   const iconColor = tone === "sleep"
     ? "var(--color-home-action-sleep-icon)"
     : tone === "active"
-      ? "#ff6d35"
-      : "#4b8df7";
+      ? "var(--color-home-action-diaper-icon)"
+      : "var(--color-care-tool-soft-blue)";
+  const textColor = tone === "sleep"
+    ? "var(--color-home-action-sleep-text)"
+    : tone === "active"
+      ? "var(--color-home-action-diaper-text)"
+      : "var(--color-care-tool-soft-text)";
   const badgeColor = tone === "sleep"
     ? "var(--color-home-action-sleep-icon)"
     : tone === "active"
-      ? "#ff5f2a"
-      : "#4b8df7";
+      ? "var(--color-home-action-diaper-icon)"
+      : "var(--color-care-tool-soft-blue)";
 
   return (
     <button
@@ -245,10 +250,10 @@ function QuickActionButton({
         {icon}
       </span>
       <span className="min-w-0">
-        <span className="block text-[0.92rem] font-semibold leading-tight tracking-[-0.02em] text-[var(--color-text)] md:text-[1.2rem]">
+        <span className="block text-[0.92rem] font-semibold leading-tight tracking-[-0.02em] md:text-[1.2rem]" style={{ color: textColor }}>
           {title}
         </span>
-        <span className="mt-1 hidden text-[0.92rem] leading-snug text-[var(--color-text-secondary)] md:block">
+        <span className="mt-1 hidden text-[0.92rem] leading-snug md:block" style={{ color: `color-mix(in srgb, ${textColor} 72%, transparent)` }}>
           {detail}
         </span>
         {badge && (
@@ -420,7 +425,7 @@ function ChartIcon({ className = "h-5 w-5" }: { className?: string }) {
 
 function glanceBackground(accent: SleepGlanceStat["accent"]) {
   if (accent === "total") return "var(--gradient-home-glance-sleep)";
-  if (accent === "naps") return "linear-gradient(180deg, rgba(255, 249, 231, 0.98) 0%, rgba(255, 241, 204, 0.9) 100%)";
+  if (accent === "naps") return "var(--gradient-home-recommendation)";
   if (accent === "longest") return "var(--gradient-home-glance-feed)";
   return "var(--gradient-home-glance-diaper)";
 }
@@ -460,13 +465,13 @@ function SleepInsightCard({ copy }: { copy: SleepAssistantCopy }) {
     <section
       className="relative overflow-hidden rounded-[18px] border px-4 py-4 shadow-[0_12px_28px_rgba(112,155,222,0.08)] md:rounded-[22px] md:px-5 md:py-5"
       style={{
-        background: "linear-gradient(135deg, rgba(238,246,255,0.94) 0%, rgba(246,241,255,0.92) 100%)",
+        background: "var(--gradient-home-glance-diaper)",
         borderColor: "var(--color-home-card-border)",
       }}
     >
       <CloudInsightArt />
       <div className="relative z-10 max-w-[28ch]">
-        <div className="flex items-center gap-2 text-[0.78rem] font-semibold uppercase tracking-[0.14em] text-[#4b8df7] md:text-[0.85rem]">
+        <div className="flex items-center gap-2 text-[0.78rem] font-semibold uppercase tracking-[0.14em] text-[var(--color-care-tool-soft-blue)] md:text-[0.85rem]">
           <InfoIcon />
           <span>Sleep insight</span>
         </div>
