@@ -89,7 +89,7 @@ function SleepHero({ copy }: { copy: SleepAssistantCopy }) {
   return (
     <section className="px-0 md:px-10">
       <div
-        className="relative min-h-[382px] overflow-hidden rounded-b-[22px] border-y border-[var(--color-home-card-border)] px-8 pb-6 pt-8 shadow-[0_16px_34px_rgba(124,88,238,0.08)] md:min-h-[376px] md:rounded-[28px] md:border md:px-9 md:pb-7 md:pt-9"
+        className="relative min-h-[340px] overflow-hidden rounded-b-[22px] border-y border-[var(--color-home-card-border)] px-8 pb-1 pt-4 shadow-[0_16px_34px_rgba(124,88,238,0.08)] md:min-h-[376px] md:rounded-[28px] md:border md:px-9 md:pb-7 md:pt-9"
         style={{
           background: "linear-gradient(112deg, color-mix(in srgb, var(--color-home-sleep-surface) 48%, var(--color-surface) 52%) 0%, color-mix(in srgb, var(--color-home-card-surface) 84%, transparent) 56%, color-mix(in srgb, var(--color-home-sleep-surface) 66%, var(--color-surface) 34%) 100%)",
         }}
@@ -102,9 +102,8 @@ function SleepHero({ copy }: { copy: SleepAssistantCopy }) {
           src={sleepSceneArt}
           alt=""
           aria-hidden="true"
-          className="pointer-events-none absolute bottom-16 right-[-34px] w-[62%] max-w-none opacity-90 md:bottom-6 md:right-8 md:w-[50%] lg:right-12 lg:w-[46%]"
+          className="pointer-events-none absolute bottom-32 right-[-34px] w-[62%] max-w-none opacity-90 md:bottom-16 md:right-8 md:w-[50%] lg:right-12 lg:w-[46%]"
         />
-        <div className="pointer-events-none absolute bottom-6 right-2 h-16 w-28 rounded-full bg-white/72 blur-[2px] md:bottom-10 md:right-[104px] md:h-20 md:w-40" />
 
         <div className="relative z-10 max-w-[16.5rem] md:max-w-[23rem]">
           <div className="flex items-center gap-2 text-[0.8rem] font-semibold uppercase tracking-[0.14em] text-[var(--color-home-action-sleep-icon)] md:text-[0.85rem]">
