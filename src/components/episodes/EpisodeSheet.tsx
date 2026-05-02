@@ -46,11 +46,12 @@ export function EpisodeSheet({
     open, childId, activeEpisode, initialMode, onUpdated, onClose,
     onError: showError, onSuccess: showSuccess,
   });
+  const isStartingEpisode = initialMode === "start" || !activeEpisode;
 
   return (
     <Sheet open={open} onClose={onClose}>
       <div className="px-5 pb-8">
-        {!activeEpisode ? (
+        {isStartingEpisode ? (
           <form onSubmit={(e: FormEvent) => { e.preventDefault(); void handleCreateEpisode(); }}>
             <h2 className="mb-2 text-center text-lg font-semibold text-[var(--color-text)]">
               Start Episode

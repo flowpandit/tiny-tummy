@@ -9,15 +9,6 @@ export async function createEpisode(input: {
   summary?: string | null;
 }): Promise<Episode> {
   const conn = await getDb();
-  const active = await conn.select<{ id: string }[]>(
-    "SELECT id FROM episodes WHERE child_id = ? AND status = 'active' LIMIT 1",
-    [input.child_id],
-  );
-
-  if (active.length > 0) {
-    throw new Error("An active episode already exists");
-  }
-
   const id = generateId();
   const now = nowISO();
 
@@ -49,6 +40,14 @@ export async function getActiveEpisode(childId: string): Promise<Episode | null>
     [childId],
   );
   return rows[0] ?? null;
+}
+
+export async function getActiveEpisodes(childId: string): Promise<Episode[]> {
+  const conn = await getDb();
+  return conn.select<Episode[]>(
+    "SELECT * FROM episodes WHERE child_id = ? AND status = 'active' ORDER BY started_at DESC",
+    [childId],
+  );
 }
 
 export async function getEpisodes(childId: string, limit = 10): Promise<Episode[]> {

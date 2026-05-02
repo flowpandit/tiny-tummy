@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useActiveChild } from "../contexts/ChildContext";
 import { usePoopLogs } from "../hooks/usePoopLogs";
@@ -18,9 +18,12 @@ import { HomeTopSection } from "../components/home/HomeTopSection";
 import { RecentActivity } from "../components/home/RecentActivity";
 import { CareToolsSection } from "../components/care/CareToolsSection";
 import { HomeQuickActions } from "../components/home/HomeQuickActions";
+import { HomeHealthActions } from "../components/home/HomeHealthActions";
+import { HomeActiveEpisodes } from "../components/home/HomeActiveEpisodes";
 import { HomeSheets } from "../components/home/HomeSheets";
 import { AlertBanner } from "../components/dashboard/AlertBanner";
 import { HomeActionBottleIcon, HomeActionSleepIcon } from "../components/ui/icons";
+import type { Episode } from "../lib/types";
 
 function RecommendationBottleArt() {
   return (
@@ -46,12 +49,19 @@ export function Home() {
   } = useDiaperLogs(activeChild?.id ?? null);
   const { logs: feedingLogs, refresh: refreshFeedingLogs } = useFeedingLogs(activeChild?.id ?? null);
   const { logs: sleepLogs, refresh: refreshSleepLogs } = useSleepLogs(activeChild?.id ?? null);
-  const { activeEpisode, events: episodeEvents, refresh: refreshEpisodes } = useEpisodes(activeChild?.id ?? null);
+  const {
+    activeEpisode,
+    activeEpisodes,
+    activeEpisodeEventsById,
+    events: episodeEvents,
+    refresh: refreshEpisodes,
+  } = useEpisodes(activeChild?.id ?? null);
   const { logs: symptomLogs, refresh: refreshSymptoms } = useSymptoms(activeChild?.id ?? null);
   const { alerts, refresh: refreshAlerts, dismiss } = useAlerts(activeChild?.id ?? null);
   const { refreshChildAlerts, syncChildReminders, runPostLogActions } = useChildWorkflowActions(activeChild, refreshAlerts);
   const { experience: eliminationExperience } = useEliminationPreference(activeChild);
   const homeState = useHomePageState();
+  const [selectedEpisodeId, setSelectedEpisodeId] = useState<string | null>(null);
 
   useHomeEffects({
     activeChild,
@@ -83,6 +93,7 @@ export function Home() {
     closeFeedingForm,
     closePoopForm,
     openDiaperForm,
+    openEpisodeSheet,
     openFeedingForm,
     openPoopForm,
     setEditingDiaper,
@@ -121,6 +132,29 @@ export function Home() {
 
   const handleSleepLogged = async () => {
     await refreshSleepLogs();
+  };
+
+  const selectedEpisode = selectedEpisodeId
+    ? activeEpisodes.find((episode) => episode.id === selectedEpisodeId) ?? null
+    : null;
+  const sheetEpisode = episodeSheetMode === "start" ? null : selectedEpisode ?? activeEpisode;
+  const sheetEpisodeEvents = sheetEpisode
+    ? activeEpisodeEventsById[sheetEpisode.id] ?? []
+    : episodeEvents;
+
+  const handleOpenEpisode = (episode: Episode) => {
+    setSelectedEpisodeId(episode.id);
+    openEpisodeSheet("update");
+  };
+
+  const handleStartEpisode = () => {
+    setSelectedEpisodeId(null);
+    openEpisodeSheet("start");
+  };
+
+  const handleCloseEpisodeSheet = () => {
+    setSelectedEpisodeId(null);
+    closeEpisodeSheet();
   };
 
   const summary = activeChild
@@ -180,6 +214,16 @@ export function Home() {
         onOpenSleep={() => setSleepSheetOpen(true)}
       />
 
+      <HomeHealthActions
+        onLogSymptoms={() => setSymptomSheetOpen(true)}
+        onOpenEpisode={handleStartEpisode}
+      />
+
+      <HomeActiveEpisodes
+        episodes={activeEpisodes}
+        onSelectEpisode={handleOpenEpisode}
+      />
+
       <div className="px-4 md:px-10">
         <div
           className="relative flex min-h-[82px] items-center gap-3 overflow-hidden rounded-[18px] border px-3.5 py-3 shadow-[0_16px_34px_rgba(211,174,103,0.1)] md:min-h-[154px] md:gap-4 md:rounded-[28px] md:px-8 md:py-5"
@@ -228,13 +272,13 @@ export function Home() {
 
       <HomeSheets
         activeChildId={activeChild.id}
-        activeEpisode={activeEpisode}
+        activeEpisode={sheetEpisode}
         diaperDraft={diaperDraft}
         diaperFormOpen={diaperFormOpen}
         editingDiaper={editingDiaper}
         editingMeal={editingMeal}
         editingPoop={editingPoop}
-        episodeEvents={episodeEvents}
+        episodeEvents={sheetEpisodeEvents}
         episodeSheetMode={episodeSheetMode}
         episodeSheetOpen={episodeSheetOpen}
         feedingDraft={feedingDraft}
@@ -244,7 +288,7 @@ export function Home() {
         sleepSheetOpen={sleepSheetOpen}
         symptomSheetOpen={symptomSheetOpen}
         onCloseDiaperForm={closeDiaperForm}
-        onCloseEpisodeSheet={closeEpisodeSheet}
+        onCloseEpisodeSheet={handleCloseEpisodeSheet}
         onCloseFeedingForm={closeFeedingForm}
         onClosePoopForm={closePoopForm}
         onCloseSleepSheet={() => setSleepSheetOpen(false)}
