@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useActiveChild } from "../../contexts/ChildContext";
+import { useEliminationPreference } from "../../hooks/useEliminationPreference";
 import { Header } from "./Header";
 import { BottomNav } from "./BottomNav";
 import { getAgeInMonthsFromDob } from "../../lib/utils";
@@ -71,13 +72,16 @@ export function AppShell() {
   const showHeader = Boolean(activeChild);
   const headerFallbackTo = headerBackFallbackByPath[location.pathname];
   const showHeaderBackButton = Boolean(headerFallbackTo);
+  const { experience: eliminationExperience } = useEliminationPreference(activeChild);
   const isBreastOnly = activeChild?.feeding_type === "breast";
   const isFeedingTransitionEligible = isBreastOnly && Boolean(activeChild) && getAgeInMonthsFromDob(activeChild.date_of_birth) >= 6;
+  const eliminationNavPath = eliminationExperience.route;
+  const eliminationNavLabel = eliminationExperience.navLabel;
   const feedNavPath = isBreastOnly ? "/breastfeed" : "/feed";
   const feedNavLabel = "Feed";
   const bottomNavPaths = useMemo(
-    () => ["/", "/diaper", feedNavPath, "/sleep", "/history", "/settings"],
-    [feedNavPath],
+    () => ["/", eliminationNavPath, feedNavPath, "/sleep", "/history", "/settings"],
+    [eliminationNavPath, feedNavPath],
   );
   const bottomNavMeta = useMemo<Record<string, { label: string; eyebrow: string; description: string }>>(
     () => ({
@@ -86,15 +90,12 @@ export function AppShell() {
         eyebrow: "Today",
         description: "Return to the daily overview and quick actions.",
       },
-      "/diaper": {
-        label: "Diaper",
+      [eliminationNavPath]: {
+        label: eliminationNavLabel,
         eyebrow: "Log",
-        description: "Jump to diaper tracking.",
-      },
-      "/poop": {
-        label: "Poop",
-        eyebrow: "Log",
-        description: "Jump to poop tracking.",
+        description: eliminationExperience.mode === "poop"
+          ? "Jump to poop tracking."
+          : "Jump to diaper tracking.",
       },
       [feedNavPath]: {
         label: feedNavLabel,
@@ -121,7 +122,7 @@ export function AppShell() {
         description: "Open reports, growth, milestones, and preferences.",
       },
     }),
-    [feedNavLabel, feedNavPath, isBreastOnly, isFeedingTransitionEligible],
+    [eliminationExperience.mode, eliminationNavLabel, eliminationNavPath, feedNavLabel, feedNavPath, isBreastOnly, isFeedingTransitionEligible],
   );
   const swipeRouteIndex = bottomNavPaths.indexOf(location.pathname);
   const canSwipeBetweenBottomRoutes = swipeRouteIndex !== -1;
@@ -468,7 +469,7 @@ export function AppShell() {
           </motion.div>
         </div>
       </main>
-      <BottomNav />
+      <BottomNav eliminationExperience={eliminationExperience} />
     </div>
   );
 }

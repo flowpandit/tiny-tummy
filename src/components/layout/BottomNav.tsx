@@ -4,8 +4,9 @@ import { useActiveChild, useChildActions } from "../../contexts/ChildContext";
 import { useUpdateChildFeedingTypeAction } from "../../hooks/useSettingsActions";
 import { useDbClient } from "../../contexts/DatabaseContext";
 import { cn } from "../../lib/cn";
+import type { EliminationExperience } from "../../lib/diaper";
 import { Button } from "../ui/button";
-import { HomeActionBottleIcon, HomeActionBreastfeedIcon, HomeActionDiaperIcon, HomeToolHistoryIcon } from "../ui/icons";
+import { HomeActionBottleIcon, HomeActionBreastfeedIcon, HomeActionDiaperIcon, HomeToolHistoryIcon, PoopIcon } from "../ui/icons";
 import { combineLocalDateAndTimeToUtcIso, getAgeInMonthsFromDob, getCurrentLocalDate, getCurrentLocalTime } from "../../lib/utils";
 
 const iconClassName = "h-[1.35rem] w-[1.35rem] md:h-6 md:w-6";
@@ -75,7 +76,11 @@ const NAV_ITEMS = [
   },
 ];
 
-export function BottomNav() {
+interface BottomNavProps {
+  eliminationExperience: EliminationExperience;
+}
+
+export function BottomNav({ eliminationExperience }: BottomNavProps) {
   const db = useDbClient();
   const location = useLocation();
   const navigate = useNavigate();
@@ -108,6 +113,20 @@ export function BottomNav() {
 
   const navItems = useMemo(
     () => NAV_ITEMS.map((item) => {
+      if (item.path === "/diaper") {
+        return {
+          ...item,
+          path: eliminationExperience.route,
+          label: eliminationExperience.navLabel,
+          matches: (pathname: string) => pathname === "/diaper" || pathname === "/poop",
+          icon: (active: boolean) => (
+            eliminationExperience.mode === "poop"
+              ? <PoopIcon className={cn(iconClassName, active ? "scale-110" : "")} />
+              : item.icon(active)
+          ),
+        };
+      }
+
       if (item.path === "/feed") {
         return {
           ...item,
@@ -124,7 +143,7 @@ export function BottomNav() {
 
       return item;
     }),
-    [feedNavLabel, feedNavPath, isBreastOnly],
+    [eliminationExperience.mode, eliminationExperience.navLabel, eliminationExperience.route, feedNavLabel, feedNavPath, isBreastOnly],
   );
 
   const handleFeedTransitionConfirm = async () => {
