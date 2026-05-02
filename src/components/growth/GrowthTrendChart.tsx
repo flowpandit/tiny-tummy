@@ -1,5 +1,6 @@
 import {
   CartesianGrid,
+  LabelList,
   Line,
   LineChart,
   ResponsiveContainer,
@@ -9,6 +10,7 @@ import {
 } from "recharts";
 import { getAgeInMonths } from "../../lib/growth-percentile-math";
 import { getGrowthPercentileCurve, getGrowthPercentile, type GrowthMetric } from "../../lib/growth-percentiles";
+import { formatOrdinal } from "../../lib/growth-reference";
 import { growthMetricToDisplay } from "../../lib/units";
 import type { ChildSex, GrowthEntry } from "../../lib/types";
 
@@ -21,6 +23,8 @@ interface GrowthTrendChartProps {
   sex: ChildSex | null;
   countryCode: string | null;
 }
+
+const PERCENTILE_GUIDES = [3, 15, 50, 85, 97] as const;
 
 export function GrowthTrendChart({
   logs,
@@ -35,19 +39,24 @@ export function GrowthTrendChart({
   const childData = [...logs]
     .filter((log) => log[metric] !== null)
     .sort((left, right) => new Date(left.measured_at).getTime() - new Date(right.measured_at).getTime())
-    .map((log) => ({
-      measured_at: log.measured_at,
-      ageMonths: getAgeInMonths(dateOfBirth, log.measured_at),
-      value: growthMetricToDisplay(metric, log[metric]!, unitSystem),
-      percentile: getGrowthPercentile({
+    .map((log) => {
+      const percentileMeta = getGrowthPercentile({
         countryCode,
         sex,
         dateOfBirth,
         measuredAt: log.measured_at,
         metric,
         value: log[metric],
-      })?.percentileLabel ?? null,
-    }));
+      });
+
+      return {
+        measured_at: log.measured_at,
+        ageMonths: getAgeInMonths(dateOfBirth, log.measured_at),
+        value: growthMetricToDisplay(metric, log[metric]!, unitSystem),
+        percentile: percentileMeta?.percentileLabel ?? null,
+        reference: percentileMeta?.reference ?? null,
+      };
+    });
 
   if (childData.length === 0) {
     return (
@@ -65,7 +74,7 @@ export function GrowthTrendChart({
     metric,
     ageMonthsStart: Math.max(0, ageMin - 1),
     ageMonthsEnd: ageMax < 3 ? Math.max(3, ageMax + 1) : ageMax + 1,
-    percentiles: [3, 15, 50, 85, 97],
+    percentiles: [...PERCENTILE_GUIDES],
     samples: 28,
   });
 
@@ -106,8 +115,7 @@ export function GrowthTrendChart({
     });
   }
 
-  const percentileKeys = [3, 15, 50, 85, 97] as const;
-  for (const percentile of percentileKeys) {
+  for (const percentile of PERCENTILE_GUIDES) {
     const points = curveMap.get(percentile) ?? [];
     for (const point of points) {
       const key = keyForAge(point.ageMonths);
@@ -130,39 +138,81 @@ export function GrowthTrendChart({
 
   function formatAgeLabel(ageMonths: number): string {
     if (ageMonths < 24) {
-      return `${ageMonths < 1 ? ageMonths.toFixed(1) : Math.round(ageMonths)}m`;
+      return ageMonths < 0.5 ? "0" : `${Math.round(ageMonths)}m`;
     }
 
     const years = ageMonths / 12;
     return `${years.toFixed(years >= 10 ? 0 : 1)}y`;
   }
 
+  function formatMeasurementTick(value: number): string {
+    const rounded = Number(value);
+    const precision = metric === "weight_kg" || unitSystem === "imperial" ? 1 : 0;
+    return rounded.toFixed(precision).replace(/\.0$/, "");
+  }
+
+  function buildAgeTicks(start: number, end: number): number[] {
+    const firstTick = Math.max(0, Math.floor(start));
+    const lastTick = Math.ceil(end);
+    const range = Math.max(1, lastTick - firstTick);
+    const step = range <= 6 ? 1 : range <= 18 ? 3 : range <= 36 ? 6 : 12;
+    const ticks: number[] = [];
+
+    for (let value = firstTick; value <= lastTick; value += step) {
+      ticks.push(value);
+    }
+
+    if (ticks[ticks.length - 1] !== lastTick) ticks.push(lastTick);
+    return ticks;
+  }
+
+  const ageTicks = buildAgeTicks(Math.max(0, minAge - xPadding), maxAge + xPadding);
+  const reference = curveSet?.reference ?? childData.find((point) => point.reference)?.reference;
   const percentileLineColor = "var(--color-text-soft)";
+  const curveLabelAges = new Map(
+    PERCENTILE_GUIDES.map((percentile) => {
+      const points = curveMap.get(percentile) ?? [];
+      return [percentile, keyForAge(points[points.length - 1]?.ageMonths ?? -1)];
+    }),
+  );
+
+  function getPercentileLabelAccessor(percentile: (typeof PERCENTILE_GUIDES)[number]) {
+    return (entry: { payload?: unknown }) => {
+      const payload = entry.payload as { ageMonths?: unknown } | undefined;
+      const ageMonths = Number(payload?.ageMonths);
+      if (!Number.isFinite(ageMonths) || keyForAge(ageMonths) !== curveLabelAges.get(percentile)) {
+        return "";
+      }
+
+      return formatOrdinal(percentile);
+    };
+  }
 
   return (
     <div className="w-full">
-      <div className="h-72 w-full">
+      <div className="relative h-[112px] w-full md:h-[180px]">
         <ResponsiveContainer width="100%" height="100%">
-        <LineChart data={data} margin={{ top: 12, right: 16, bottom: 4, left: -18 }}>
+        <LineChart data={data} margin={{ top: 12, right: 38, bottom: 2, left: -6 }}>
           <CartesianGrid strokeDasharray="4 8" stroke="var(--color-border)" vertical={false} />
           <XAxis
             dataKey="ageMonths"
             type="number"
             domain={[Math.max(0, minAge - xPadding), maxAge + xPadding]}
+            ticks={ageTicks}
             tickFormatter={formatAgeLabel}
             tick={{ fontSize: 10, fill: "var(--color-muted)" }}
             axisLine={false}
             tickLine={false}
             minTickGap={20}
-            tickCount={5}
           />
           <YAxis
+            tickFormatter={formatMeasurementTick}
             tick={{ fontSize: 10, fill: "var(--color-muted)" }}
             axisLine={false}
             tickLine={false}
-            width={34}
-            tickFormatter={(value) => Number(value).toFixed(metric === "weight_kg" ? 1 : 0)}
+            width={36}
             domain={[Math.max(0, minValue - yPadding), maxValue + yPadding]}
+            tickCount={4}
           />
           <Tooltip
             labelFormatter={(label) => `Age ${formatAgeLabel(Number(label))}`}
@@ -171,7 +221,7 @@ export function GrowthTrendChart({
                 return [`${value} ${unit}${item.payload.childPercentile ? ` · ${item.payload.childPercentile}` : ""}`, "Measurement"];
               }
 
-              const percentileLabel = String(name).replace("p", "") + "th";
+              const percentileLabel = formatOrdinal(Number(String(name).replace("p", "")));
               return [`${value} ${unit}`, `${percentileLabel} percentile`];
             }}
             contentStyle={{
@@ -181,44 +231,39 @@ export function GrowthTrendChart({
               fontSize: 12,
             }}
           />
-          <Line dataKey="p3" stroke={percentileLineColor} strokeOpacity={0.28} strokeWidth={1.2} strokeDasharray="4 5" dot={false} connectNulls isAnimationActive={false} />
-          <Line dataKey="p15" stroke={percentileLineColor} strokeOpacity={0.2} strokeWidth={1.2} strokeDasharray="4 5" dot={false} connectNulls isAnimationActive={false} />
-          <Line dataKey="p50" stroke={percentileLineColor} strokeOpacity={0.42} strokeWidth={1.8} dot={false} connectNulls isAnimationActive={false} />
-          <Line dataKey="p85" stroke={percentileLineColor} strokeOpacity={0.2} strokeWidth={1.2} strokeDasharray="4 5" dot={false} connectNulls isAnimationActive={false} />
-          <Line dataKey="p97" stroke={percentileLineColor} strokeOpacity={0.28} strokeWidth={1.2} strokeDasharray="4 5" dot={false} connectNulls isAnimationActive={false} />
+          <Line dataKey="p3" stroke={percentileLineColor} strokeOpacity={0.42} strokeWidth={1.4} strokeDasharray="4 5" dot={false} connectNulls isAnimationActive={false}>
+            <LabelList valueAccessor={getPercentileLabelAccessor(3)} position="right" offset={4} fill="var(--color-muted)" fontSize={9} fontWeight={650} />
+          </Line>
+          <Line dataKey="p15" stroke={percentileLineColor} strokeOpacity={0.36} strokeWidth={1.4} strokeDasharray="4 5" dot={false} connectNulls isAnimationActive={false}>
+            <LabelList valueAccessor={getPercentileLabelAccessor(15)} position="right" offset={4} fill="var(--color-muted)" fontSize={9} fontWeight={650} />
+          </Line>
+          <Line dataKey="p50" stroke={percentileLineColor} strokeOpacity={0.66} strokeWidth={1.8} dot={false} connectNulls isAnimationActive={false}>
+            <LabelList valueAccessor={getPercentileLabelAccessor(50)} position="right" offset={4} fill="var(--color-muted)" fontSize={9} fontWeight={650} />
+          </Line>
+          <Line dataKey="p85" stroke={percentileLineColor} strokeOpacity={0.42} strokeWidth={1.4} strokeDasharray="4 5" dot={false} connectNulls isAnimationActive={false}>
+            <LabelList valueAccessor={getPercentileLabelAccessor(85)} position="right" offset={4} fill="var(--color-muted)" fontSize={9} fontWeight={650} />
+          </Line>
+          <Line dataKey="p97" stroke={percentileLineColor} strokeOpacity={0.48} strokeWidth={1.4} strokeDasharray="4 5" dot={false} connectNulls isAnimationActive={false}>
+            <LabelList valueAccessor={getPercentileLabelAccessor(97)} position="right" offset={4} fill="var(--color-muted)" fontSize={9} fontWeight={650} />
+          </Line>
           <Line
             type="monotone"
             dataKey="child"
             stroke={lineColor}
             strokeWidth={3}
-            dot={{ r: 4, strokeWidth: 2, stroke: "white", fill: lineColor }}
-            activeDot={{ r: 5, strokeWidth: 2, stroke: "white", fill: lineColor }}
+            dot={{ r: 4, strokeWidth: 2, stroke: "var(--color-home-card-surface)", fill: lineColor }}
+            activeDot={{ r: 5, strokeWidth: 2, stroke: "var(--color-home-card-surface)", fill: lineColor }}
             connectNulls
             isAnimationActive={false}
           />
         </LineChart>
         </ResponsiveContainer>
       </div>
-      <div className="mt-3 flex flex-wrap gap-2">
-        {curveSet && [3, 15, 50, 85, 97].map((percentile) => (
-          <span
-            key={percentile}
-            className="rounded-full border border-[var(--color-border)] bg-[var(--color-surface-strong)] px-2.5 py-1 text-[11px] font-medium text-[var(--color-text-secondary)]"
-          >
-            {percentile}th
-          </span>
-        ))}
-        {curveSet && (
-          <span className="rounded-full border border-[var(--color-border)] bg-[var(--color-surface-strong)] px-2.5 py-1 text-[11px] font-medium text-[var(--color-text-secondary)]">
-            {curveSet.reference} reference
-          </span>
-        )}
-        {childData.length < 2 && (
-          <span className="rounded-full border border-[var(--color-border)] bg-[var(--color-surface-strong)] px-2.5 py-1 text-[11px] font-medium text-[var(--color-text-secondary)]">
-            Add one more point to connect the child trend
-          </span>
-        )}
-      </div>
+      {reference && (
+        <p className="sr-only">
+          Showing 3rd, 15th, 50th, 85th, and 97th percentile curves on the {reference} reference.
+        </p>
+      )}
     </div>
   );
 }

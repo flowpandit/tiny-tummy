@@ -167,6 +167,7 @@
   --gradient-tracker-insight-feed: linear-gradient(135deg, rgba(255, 248, 242, 0.92) 0%, var(--color-home-card-surface) 58%, rgba(245, 255, 249, 0.9) 100%);
   --gradient-tracker-insight-poop: linear-gradient(135deg, rgba(255, 248, 242, 0.92) 0%, var(--color-home-card-surface) 58%, rgba(245, 255, 249, 0.9) 100%);
   --gradient-tracker-insight-diaper: linear-gradient(135deg, rgba(245, 255, 249, 0.9) 0%, var(--color-home-card-surface) 62%, rgba(255, 250, 244, 0.92) 100%);
+  --gradient-tracker-insight-growth: linear-gradient(135deg, rgba(255, 248, 242, 0.92) 0%, var(--color-home-card-surface) 56%, rgba(241, 252, 246, 0.92) 100%);
   --color-tracker-next-healthy-surface: rgba(230, 249, 239, 0.86);
   --color-tracker-next-healthy-text: #167553;
   --color-tracker-next-healthy-border: rgba(68, 185, 166, 0.14);
@@ -323,6 +324,7 @@
     --gradient-tracker-insight-feed: linear-gradient(135deg, rgba(29, 38, 53, 0.96) 0%, var(--color-home-card-surface) 58%, rgba(45, 72, 62, 0.72) 100%);
     --gradient-tracker-insight-poop: linear-gradient(135deg, rgba(48, 38, 34, 0.9) 0%, var(--color-home-card-surface) 55%, rgba(41, 58, 52, 0.72) 100%);
     --gradient-tracker-insight-diaper: linear-gradient(135deg, rgba(36, 65, 53, 0.82) 0%, var(--color-home-card-surface) 62%, rgba(50, 44, 37, 0.76) 100%);
+    --gradient-tracker-insight-growth: linear-gradient(135deg, rgba(45, 42, 37, 0.9) 0%, var(--color-home-card-surface) 56%, rgba(38, 61, 54, 0.72) 100%);
     --color-tracker-next-healthy-surface: rgba(34, 70, 57, 0.88);
     --color-tracker-next-healthy-text: #86d6ae;
     --color-tracker-next-healthy-border: rgba(134, 214, 174, 0.18);
@@ -505,6 +507,7 @@
   --gradient-tracker-insight-feed: linear-gradient(135deg, rgba(29, 38, 53, 0.96) 0%, var(--color-home-card-surface) 58%, rgba(45, 72, 62, 0.72) 100%);
   --gradient-tracker-insight-poop: linear-gradient(135deg, rgba(48, 38, 34, 0.9) 0%, var(--color-home-card-surface) 55%, rgba(41, 58, 52, 0.72) 100%);
   --gradient-tracker-insight-diaper: linear-gradient(135deg, rgba(36, 65, 53, 0.82) 0%, var(--color-home-card-surface) 62%, rgba(50, 44, 37, 0.76) 100%);
+  --gradient-tracker-insight-growth: linear-gradient(135deg, rgba(45, 42, 37, 0.9) 0%, var(--color-home-card-surface) 56%, rgba(38, 61, 54, 0.72) 100%);
   --color-tracker-next-healthy-surface: rgba(34, 70, 57, 0.88);
   --color-tracker-next-healthy-text: #86d6ae;
   --color-tracker-next-healthy-border: rgba(134, 214, 174, 0.18);
@@ -680,6 +683,7 @@
   --gradient-tracker-insight-feed: linear-gradient(135deg, rgba(24, 20, 33, 0.96) 0%, var(--color-home-card-surface) 58%, rgba(50, 67, 58, 0.68) 100%);
   --gradient-tracker-insight-poop: linear-gradient(135deg, rgba(54, 39, 39, 0.86) 0%, var(--color-home-card-surface) 55%, rgba(44, 53, 48, 0.66) 100%);
   --gradient-tracker-insight-diaper: linear-gradient(135deg, rgba(49, 63, 55, 0.78) 0%, var(--color-home-card-surface) 62%, rgba(52, 41, 44, 0.7) 100%);
+  --gradient-tracker-insight-growth: linear-gradient(135deg, rgba(48, 43, 45, 0.82) 0%, var(--color-home-card-surface) 56%, rgba(43, 57, 51, 0.66) 100%);
   --color-tracker-next-healthy-surface: rgba(52, 78, 64, 0.82);
   --color-tracker-next-healthy-text: #8cc3a0;
   --color-tracker-next-healthy-border: rgba(140, 195, 160, 0.18);
