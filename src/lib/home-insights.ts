@@ -259,6 +259,7 @@ function buildRecommendation(input: {
   summary: ChildDailySummary;
   feedLogs: FeedingEntry[];
   sleepLogs: SleepEntry[];
+  includeHydration: boolean;
 }): HomeRecommendationCard {
   const feedPrediction = getFeedPrediction(input.feedLogs, getFeedBaseline(input.child.date_of_birth, input.child.feeding_type));
   const sleepPrediction = getSleepPrediction(input.sleepLogs, getWakeBaseline(input.child.date_of_birth));
@@ -296,7 +297,7 @@ function buildRecommendation(input: {
     };
   }
 
-  if (input.summary.todayWetDiapers === 0) {
+  if (input.includeHydration && input.summary.todayWetDiapers === 0) {
     return {
       title: "Check hydration",
       detail: "A wet diaper update will help round out today’s picture.",
@@ -413,9 +414,11 @@ export function buildHomeAssistantModel(input: {
   feedingLogs: FeedingEntry[];
   sleepLogs: SleepEntry[];
   alerts: Alert[];
+  includeHydration?: boolean;
   now?: Date;
 }): HomeAssistantModel {
   const dayKey = formatLocalDateKey(input.now ?? new Date());
+  const includeHydration = input.includeHydration ?? true;
   const feedPrediction = getFeedPrediction(input.feedingLogs, getFeedBaseline(input.child.date_of_birth, input.child.feeding_type));
   const sleepPrediction = getSleepPrediction(input.sleepLogs, getWakeBaseline(input.child.date_of_birth));
   const status = buildStatusMessage({
@@ -434,14 +437,15 @@ export function buildHomeAssistantModel(input: {
     status,
     insights: [
       buildPoopInsight(input.summary, input.poopLogs, input.diaperLogs, dayKey),
-      buildHydrationInsight(input.summary),
+      includeHydration ? buildHydrationInsight(input.summary) : null,
       buildSleepInsight(input.child, input.sleepLogs),
-    ],
+    ].filter((insight): insight is HomeInsightCard => insight !== null),
     recommendation: buildRecommendation({
       child: input.child,
       summary: input.summary,
       feedLogs: input.feedingLogs,
       sleepLogs: input.sleepLogs,
+      includeHydration,
     }),
     timeline: buildTimeline(input.poopLogs, input.diaperLogs, input.feedingLogs, dayKey),
     glanceStats: buildGlanceStats({

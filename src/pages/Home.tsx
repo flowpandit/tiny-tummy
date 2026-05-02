@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { useActiveChild } from "../contexts/ChildContext";
 import { usePoopLogs } from "../hooks/usePoopLogs";
 import { useDiaperLogs } from "../hooks/useDiaperLogs";
@@ -8,10 +9,11 @@ import { useAlerts } from "../hooks/useAlerts";
 import { useEpisodes } from "../hooks/useEpisodes";
 import { useSymptoms } from "../hooks/useSymptoms";
 import { useChildWorkflowActions } from "../hooks/useChildWorkflowActions";
+import { useEliminationPreference } from "../hooks/useEliminationPreference";
 import { useHomePageState } from "../hooks/useHomePageState";
 import { useHomeEffects } from "../hooks/useHomeEffects";
 import { buildChildDailySummary } from "../lib/child-summary";
-import { buildHomeAssistantModel } from "../lib/home-insights";
+import { buildHomeAssistantModel, type HomeInsightCard } from "../lib/home-insights";
 import { HomeTopSection } from "../components/home/HomeTopSection";
 import { RecentActivity } from "../components/home/RecentActivity";
 import { CareToolsSection } from "../components/care/CareToolsSection";
@@ -35,6 +37,7 @@ function RecommendationBottleArt() {
 }
 
 export function Home() {
+  const navigate = useNavigate();
   const activeChild = useActiveChild();
   const { logs, lastRealPoop, refresh: refreshLogs } = usePoopLogs(activeChild?.id ?? null);
   const {
@@ -47,6 +50,7 @@ export function Home() {
   const { logs: symptomLogs, refresh: refreshSymptoms } = useSymptoms(activeChild?.id ?? null);
   const { alerts, refresh: refreshAlerts, dismiss } = useAlerts(activeChild?.id ?? null);
   const { refreshChildAlerts, syncChildReminders, runPostLogActions } = useChildWorkflowActions(activeChild, refreshAlerts);
+  const { experience: eliminationExperience } = useEliminationPreference(activeChild);
   const homeState = useHomePageState();
 
   useHomeEffects({
@@ -141,10 +145,20 @@ export function Home() {
       feedingLogs,
       sleepLogs,
       alerts,
+      includeHydration: eliminationExperience.mode === "diaper",
     });
-  }, [activeChild, alerts, diaperLogs, feedingLogs, logs, sleepLogs, summary]);
+  }, [activeChild, alerts, diaperLogs, eliminationExperience.mode, feedingLogs, logs, sleepLogs, summary]);
 
   if (!activeChild || !summary || !assistantModel) return null;
+
+  const handleInsightSelect = (insight: HomeInsightCard) => {
+    if (insight.accent === "sleep") {
+      navigate("/sleep");
+      return;
+    }
+
+    navigate(eliminationExperience.route);
+  };
 
   const recommendationIcon = assistantModel.recommendation.accent === "sleep"
     ? <HomeActionSleepIcon className="h-6 w-6 text-[var(--color-home-recommendation-sleep-icon)] md:h-8 md:w-8" />
@@ -156,6 +170,7 @@ export function Home() {
       <HomeTopSection
         status={assistantModel.status}
         insights={assistantModel.insights}
+        onInsightSelect={handleInsightSelect}
       />
 
       <HomeQuickActions

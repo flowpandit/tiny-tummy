@@ -4,6 +4,7 @@ import { type HomeInsightCard, type HomeStatusMessage } from "../../lib/home-ins
 interface HomeTopSectionProps {
   status: HomeStatusMessage;
   insights: HomeInsightCard[];
+  onInsightSelect: (insight: HomeInsightCard) => void;
 }
 
 function InsightIcon({ accent }: { accent: HomeInsightCard["accent"] }) {
@@ -94,7 +95,10 @@ function InsightSummaryItem({ insight }: { insight: HomeInsightCard }) {
 export function HomeTopSection({
   status,
   insights,
+  onInsightSelect,
 }: HomeTopSectionProps) {
+  const insightsGridClassName = insights.length >= 3 ? "md:grid-cols-3" : "md:grid-cols-2";
+
   return (
     <section className="relative px-4 pt-1 md:px-10 md:pt-0">
       <div className="relative min-h-[124px] overflow-hidden rounded-[20px] px-4 pb-3 pt-3.5 shadow-[0_12px_28px_rgba(180,138,101,0.08)] [background:var(--gradient-home-hero-card)] md:min-h-[178px] md:rounded-[28px] md:px-8 md:pb-6 md:pt-6 md:shadow-[0_16px_34px_rgba(180,138,101,0.08)]">
@@ -140,16 +144,18 @@ export function HomeTopSection({
             <p className="text-[0.8rem] font-semibold uppercase tracking-[0.16em] text-[var(--color-text-soft)] md:text-[0.85rem]">
               Today&apos;s insights
             </p>
-            <p className="flex items-center gap-1 text-[0.8rem] font-medium text-[var(--color-home-link)] md:text-[0.92rem]">
-              View details
-              <span aria-hidden="true" className="text-[1.2rem] leading-none text-[var(--color-home-chevron)]">›</span>
-            </p>
           </div>
 
-          <div className="mt-3 grid gap-0 md:mt-5 md:grid-cols-3 md:gap-8">
+          <div className={`mt-3 grid gap-0 md:mt-5 ${insightsGridClassName} md:gap-8`}>
             {insights.map((insight) => (
               <div key={insight.id} className="border-b border-[var(--color-home-divider)] py-2 first:pt-0 last:border-b-0 last:pb-0 md:border-b-0 md:border-r md:py-0 md:pr-6 md:last:border-r-0 md:last:pr-0">
-                <InsightSummaryItem insight={insight} />
+                <button
+                  type="button"
+                  className="block w-full rounded-[16px] text-left transition-opacity hover:opacity-85 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-transparent md:rounded-[22px]"
+                  onClick={() => onInsightSelect(insight)}
+                >
+                  <InsightSummaryItem insight={insight} />
+                </button>
               </div>
             ))}
           </div>
