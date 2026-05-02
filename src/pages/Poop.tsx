@@ -21,6 +21,7 @@ import {
   TrackerMetricRing,
 } from "../components/tracking/TrackerPrimitives";
 import { AlertBanner } from "../components/dashboard/AlertBanner";
+import { CareToolsSection } from "../components/care/CareToolsSection";
 import { PoopPresetEditorSheet } from "../components/presets/QuickPresetEditorSheet";
 import { LogForm } from "../components/logging/LogForm";
 import { EditPoopSheet } from "../components/logging/EditPoopSheet";
@@ -29,7 +30,6 @@ import { useToast } from "../components/ui/toast";
 import { PoopHealthInsightCard } from "../components/poop/PoopHealthInsightCard";
 import { PoopQuickLogCard } from "../components/poop/PoopQuickLogCard";
 import { PoopRecentHistorySection } from "../components/poop/PoopRecentHistorySection";
-import { PoopRelatedLinks } from "../components/poop/PoopRelatedLinks";
 import { PoopWeeklyPatternCard } from "../components/poop/PoopWeeklyPatternCard";
 import type { HealthStatus, PoopEntry, PoopLogDraft } from "../lib/types";
 import {
@@ -276,7 +276,7 @@ export function Poop() {
 
         <PoopRecentHistorySection recentHistory={recentHistory} />
 
-        <PoopRelatedLinks />
+        <CareToolsSection className="px-0" />
 
         <LogForm
           open={logFormOpen}

@@ -8,10 +8,10 @@ import { useEliminationPreference } from "../hooks/useEliminationPreference";
 import { useChildWorkflowActions } from "../hooks/useChildWorkflowActions";
 import { diaperDirtyIcon, diaperMixedIcon, diaperWetIcon } from "../assets/icons";
 import { AlertBanner } from "../components/dashboard/AlertBanner";
+import { CareToolsSection } from "../components/care/CareToolsSection";
 import { DiaperPatternCard } from "../components/diaper/DiaperPatternCard";
 import { DiaperQuickLogCard } from "../components/diaper/DiaperQuickLogCard";
 import { DiaperRecentHistorySection } from "../components/diaper/DiaperRecentHistorySection";
-import { DiaperRelatedLinks } from "../components/diaper/DiaperRelatedLinks";
 import { DiaperStatusCard } from "../components/diaper/DiaperStatusCard";
 import { DiaperLogForm } from "../components/logging/DiaperLogForm";
 import { EditDiaperSheet } from "../components/logging/EditDiaperSheet";
@@ -207,7 +207,7 @@ export function Diaper() {
                   selectedPatternLog={selectedPatternLog}
                   onToggleLog={(logId) => setSelectedPatternLogId((current) => (current === logId ? null : logId))}
                 />
-                <DiaperRelatedLinks />
+                <CareToolsSection className="px-0" />
               </div>
             )}
           </div>

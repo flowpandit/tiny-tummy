@@ -1,7 +1,7 @@
 import {
   HomeToolGrowthIcon,
-  HomeToolHistoryIcon,
   HomeToolMilestonesIcon,
+  HomeToolReportIcon,
   HomeToolTrendsIcon,
 } from "../ui/icons";
 import { CareToolGrid } from "./CareToolGrid";
@@ -18,10 +18,10 @@ const CARE_TOOL_ITEMS = [
     to: "/dashboard",
   },
   {
-    label: "History",
-    icon: <HomeToolHistoryIcon className="h-5 w-5" />,
+    label: "Report",
+    icon: <HomeToolReportIcon className="h-5 w-5" />,
     background: "var(--color-home-tool-history)",
-    to: "/history",
+    to: "/report",
   },
   {
     label: "Growth",

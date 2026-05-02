@@ -9,6 +9,7 @@ import { ToastProvider } from "./components/ui/toast";
 import { TrialProvider, useTrialAccess, useTrialActions } from "./contexts/TrialContext";
 import { AppShell } from "./components/layout/AppShell";
 import { Paywall } from "./components/billing/Paywall";
+import { Logo } from "./components/ui/Logo";
 import { Home } from "./pages/Home";
 import { Onboarding } from "./pages/Onboarding";
 import { History } from "./pages/History";
@@ -26,6 +27,36 @@ import { Report } from "./pages/Report";
 import { AddChild } from "./pages/AddChild";
 import { AllKids } from "./pages/AllKids";
 import { Privacy } from "./pages/Privacy";
+
+function StartupSetupScreen({ loadingParts, loadingForMs }: { loadingParts: string; loadingForMs: number }) {
+  return (
+    <div className="min-h-screen bg-[var(--color-bg)] px-6 text-[var(--color-text)]">
+      <div className="mx-auto flex min-h-screen w-full max-w-sm flex-col items-center justify-center text-center">
+        <div className="relative mb-6 flex h-24 w-24 items-center justify-center rounded-[28px] border border-[var(--color-border)] bg-[var(--color-surface-strong)] p-5 shadow-[var(--shadow-soft)]">
+          <Logo className="h-full w-full" />
+          <span className="absolute -bottom-2 -right-2 h-7 w-7 rounded-full border-4 border-[var(--color-bg)] bg-[var(--color-primary)]">
+            <span className="block h-full w-full animate-ping rounded-full bg-[var(--color-primary)] opacity-35" />
+          </span>
+        </div>
+        <h1 className="font-[var(--font-display)] text-2xl font-semibold tracking-[-0.03em]">
+          Setting up Tiny Tummy
+        </h1>
+        <p className="mt-3 max-w-[18rem] text-sm leading-6 text-[var(--color-text-secondary)]">
+          Preparing your private on-device space. This usually only takes a moment on first install.
+        </p>
+        <div className="mt-8 h-2 w-full overflow-hidden rounded-full bg-[var(--color-surface-strong)]">
+          <div className="h-full w-1/2 animate-[pulse_1.4s_ease-in-out_infinite] rounded-full bg-[var(--color-primary)]" />
+        </div>
+        {import.meta.env.DEV && (
+          <div className="mt-5 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 text-xs text-[var(--color-text-secondary)]">
+            <div>Loading: {loadingParts || "startup"}</div>
+            <div>{(loadingForMs / 1000).toFixed(1)}s</div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 function AppRoutes() {
   const children = useChildren();
@@ -53,26 +84,14 @@ function AppRoutes() {
 
   if (isLoading || isTrialLoading) {
     // Show nothing for the first 100ms to avoid a flash if loading is instant
-    if (loadingForMs < 100) return <div className="min-h-screen bg-[var(--color-bg)]" />;
+    if (loadingForMs < 250) return <div className="min-h-screen bg-[var(--color-bg)]" />;
 
     const loadingParts = [
       isLoading ? "children" : null,
       isTrialLoading ? "trial" : null,
     ].filter(Boolean).join(" + ");
 
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[var(--color-bg)]">
-        <div className="flex flex-col items-center gap-3 px-6 text-center">
-          <div className="w-8 h-8 border-3 border-[var(--color-primary)] border-t-transparent rounded-full animate-spin" />
-          {import.meta.env.DEV ? (
-            <div className="max-w-xs text-xs text-[var(--color-text-secondary)]">
-              <div>Loading: {loadingParts || "startup"}</div>
-              <div>{(loadingForMs / 1000).toFixed(1)}s</div>
-            </div>
-          ) : null}
-        </div>
-      </div>
-    );
+    return <StartupSetupScreen loadingParts={loadingParts} loadingForMs={loadingForMs} />;
   }
 
   if (childLoadError || trialLoadError) {
@@ -110,6 +129,7 @@ function AppRoutes() {
         <Route element={<AppShell />}>
           <Route path="/settings" element={<Settings />} />
         </Route>
+        <Route path="/unlock" element={<Paywall />} />
         <Route path="/privacy" element={<Privacy />} />
         <Route path="*" element={<Paywall />} />
       </Routes>
@@ -142,6 +162,7 @@ function AppRoutes() {
         <Route path="/settings" element={<Settings />} />
         <Route path="/report" element={<Report />} />
       </Route>
+      <Route path="/unlock" element={<Paywall />} />
       <Route path="/add-child" element={<AddChild />} />
       <Route path="/all-kids" element={<AllKids />} />
       <Route path="/privacy" element={<Privacy />} />

@@ -496,6 +496,7 @@ export function AccessSection() {
   const { daysRemaining, isLocked } = useTrialAccess();
   const { restorePremium } = useTrialActions();
   const { showError, showSuccess } = useToast();
+  const navigate = useNavigate();
 
   const handleRestore = async () => {
     try {
@@ -517,6 +518,11 @@ export function AccessSection() {
           <p className="mt-1 text-xs text-[var(--color-text-secondary)]">
             Tiny Tummy uses a local 14-day trial and a one-time premium unlock. Restores work from the current store account once mobile billing is wired.
           </p>
+          {!isLocked && (
+            <Button variant="primary" className="mt-4 w-full" onClick={() => navigate("/unlock")}>
+              Unlock Now
+            </Button>
+          )}
           <Button variant="secondary" className="mt-4 w-full" onClick={() => { void handleRestore(); }}>
             Restore Purchases
           </Button>
