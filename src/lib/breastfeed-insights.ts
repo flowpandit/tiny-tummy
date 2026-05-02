@@ -17,17 +17,20 @@ export function getBreastHistoryTone(side: BreastSide | null) {
     return {
       mirrored: false,
       bg: "linear-gradient(135deg, color-mix(in srgb, #de5c9f 30%, transparent) 0%, color-mix(in srgb, #c84c89 30%, transparent) 100%)",
+      dot: "#c84c89",
     };
   }
   if (side === "right") {
     return {
       mirrored: true,
       bg: "linear-gradient(135deg, color-mix(in srgb, #84a7ff 30%, transparent) 0%, color-mix(in srgb, #6f8df0 30%, transparent) 100%)",
+      dot: "#6f8df0",
     };
   }
   return {
     mirrored: false,
     bg: "linear-gradient(135deg, color-mix(in srgb, #de5c9f 26%, transparent) 0%, color-mix(in srgb, #84a7ff 26%, transparent) 100%)",
+    dot: "#8f83c9",
   };
 }
 

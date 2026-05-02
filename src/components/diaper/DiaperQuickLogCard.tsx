@@ -60,7 +60,7 @@ export function DiaperQuickLogCard({
               key={action.label}
               type="button"
               onClick={() => onPresetSelect(action.draft)}
-              className="flex min-h-[68px] flex-col items-center justify-center gap-1.5 rounded-[14px] border border-[var(--color-home-card-border)] bg-white/72 px-2 py-2 text-[0.78rem] font-semibold text-[var(--color-text)] shadow-[0_10px_22px_rgba(172,139,113,0.07)] transition duration-200 hover:-translate-y-0.5 hover:bg-white/86 active:translate-y-0 md:min-h-[82px] md:rounded-[18px] md:text-[0.88rem]"
+              className="flex min-h-[68px] flex-col items-center justify-center gap-1.5 rounded-[14px] border border-[var(--color-home-card-border)] bg-[var(--color-tracker-tile-surface)] px-2 py-2 text-[0.78rem] font-semibold text-[var(--color-text)] shadow-[var(--shadow-tracker-tile)] transition duration-200 hover:-translate-y-0.5 hover:bg-[var(--color-tracker-tile-surface-hover)] active:translate-y-0 md:min-h-[82px] md:rounded-[18px] md:text-[0.88rem]"
             >
               <img src={action.icon} alt="" aria-hidden="true" className={`${action.iconClassName} object-contain`} />
               {action.label}

@@ -73,7 +73,7 @@ export function DiaperPatternCard({
                 <>
                   <div className="absolute inset-x-4 bottom-3 top-3 grid grid-cols-12 gap-2 md:inset-x-5">
                     {Array.from({ length: 12 }, (_, index) => (
-                      <div key={index} className="rounded-[10px] bg-white/24" />
+                      <div key={index} className="rounded-[10px] bg-[var(--color-tracker-chart-guide)]" />
                     ))}
                   </div>
                   <div className="absolute inset-x-4 top-[18px] h-[38px] md:inset-x-5 md:top-[22px]">

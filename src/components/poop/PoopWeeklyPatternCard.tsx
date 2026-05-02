@@ -66,7 +66,7 @@ export function PoopWeeklyPatternCard({
             7-day pattern
           </p>
           <div className="flex items-center gap-2">
-            <span className="rounded-full bg-white/62 px-2.5 py-1 text-[0.62rem] font-semibold text-[var(--color-text-secondary)] md:text-[0.7rem]">
+            <span className="rounded-full bg-[var(--color-tracker-pill-surface)] px-2.5 py-1 text-[0.62rem] font-semibold text-[var(--color-text-secondary)] md:text-[0.7rem]">
               {todayPoopCount} today
             </span>
             <span className="inline-flex items-center gap-1.5 text-[0.62rem] font-medium text-[var(--color-text-secondary)] md:text-[0.7rem]">

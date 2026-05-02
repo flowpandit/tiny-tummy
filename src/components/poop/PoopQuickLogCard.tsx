@@ -47,7 +47,7 @@ export function PoopQuickLogCard({
             <button
               type="button"
               onClick={onEditPresets}
-              className="rounded-full border border-[var(--color-home-card-border)] bg-white/62 px-3 py-1.5 text-[0.68rem] font-semibold text-[var(--color-text-secondary)] transition-colors hover:bg-white/82 md:text-[0.74rem]"
+              className="rounded-full border border-[var(--color-home-card-border)] bg-[var(--color-tracker-pill-surface)] px-3 py-1.5 text-[0.68rem] font-semibold text-[var(--color-text-secondary)] transition-colors hover:bg-[var(--color-tracker-pill-surface-hover)] md:text-[0.74rem]"
             >
               Edit
             </button>
@@ -60,7 +60,7 @@ export function PoopQuickLogCard({
               key={preset.id}
               type="button"
               onClick={() => onQuickPreset(preset)}
-              className="flex min-h-[68px] flex-col items-center justify-center gap-1.5 rounded-[14px] border border-[var(--color-home-card-border)] bg-white/72 px-2 py-2 text-center text-[0.78rem] font-semibold text-[var(--color-text)] shadow-[0_10px_22px_rgba(172,139,113,0.07)] transition duration-200 hover:-translate-y-0.5 hover:bg-white/86 active:translate-y-0 md:min-h-[82px] md:rounded-[18px] md:text-[0.88rem]"
+              className="flex min-h-[68px] flex-col items-center justify-center gap-1.5 rounded-[14px] border border-[var(--color-home-card-border)] bg-[var(--color-tracker-tile-surface)] px-2 py-2 text-center text-[0.78rem] font-semibold text-[var(--color-text)] shadow-[var(--shadow-tracker-tile)] transition duration-200 hover:-translate-y-0.5 hover:bg-[var(--color-tracker-tile-surface-hover)] active:translate-y-0 md:min-h-[82px] md:rounded-[18px] md:text-[0.88rem]"
             >
               <PoopPresetIcon draft={preset.draft} className="h-8 w-8 md:h-9 md:w-9" />
               <span className="max-w-full truncate">{preset.label}</span>

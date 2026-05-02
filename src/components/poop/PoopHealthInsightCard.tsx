@@ -32,30 +32,30 @@ function ChevronIcon({ expanded }: { expanded: boolean }) {
 function nextLikelyToneStyles(prediction: PoopPrediction | null) {
   if (prediction?.state === "overdue") {
     return {
-      background: "rgba(255, 239, 235, 0.86)",
-      color: "#a64236",
-      borderColor: "rgba(226, 92, 77, 0.18)",
+      background: "var(--color-tracker-next-alert-surface)",
+      color: "var(--color-tracker-next-alert-text)",
+      borderColor: "var(--color-tracker-next-alert-border)",
     };
   }
 
   if (prediction?.state === "due") {
     return {
-      background: "rgba(255, 247, 231, 0.9)",
-      color: "#95671c",
-      borderColor: "rgba(233, 200, 125, 0.28)",
+      background: "var(--color-tracker-next-caution-surface)",
+      color: "var(--color-tracker-next-caution-text)",
+      borderColor: "var(--color-tracker-next-caution-border)",
     };
   }
 
   return {
-    background: "rgba(230, 249, 239, 0.86)",
-    color: "#167553",
-    borderColor: "rgba(68, 185, 166, 0.14)",
+    background: "var(--color-tracker-next-healthy-surface)",
+    color: "var(--color-tracker-next-healthy-text)",
+    borderColor: "var(--color-tracker-next-healthy-border)",
   };
 }
 
 function InsightPoopArt({ accentColor }: { accentColor: string }) {
   return (
-    <div className="pointer-events-none absolute bottom-5 right-5 hidden h-20 w-20 items-center justify-center rounded-full bg-white/42 md:flex" aria-hidden="true">
+    <div className="pointer-events-none absolute bottom-5 right-5 hidden h-20 w-20 items-center justify-center rounded-full bg-[var(--color-tracker-art-surface)] md:flex" aria-hidden="true">
       <PoopIcon className="h-11 w-11" color={accentColor} />
     </div>
   );
@@ -97,7 +97,7 @@ function BaselineTile({
   baselineComparison: BaselineComparison;
 }) {
   return (
-    <div className="min-w-0 rounded-[14px] border border-[var(--color-home-card-border)] bg-white/62 px-3 py-2.5 md:rounded-[16px] md:px-3.5 md:py-3">
+    <div className="min-w-0 rounded-[14px] border border-[var(--color-home-card-border)] bg-[var(--color-tracker-next-neutral-surface)] px-3 py-2.5 md:rounded-[16px] md:px-3.5 md:py-3">
       <p className="text-[0.66rem] font-semibold uppercase tracking-[0.14em] text-[var(--color-text)] md:text-[0.7rem]">
         Usual rhythm
       </p>
@@ -136,7 +136,7 @@ export function PoopHealthInsightCard({
     <Card
       className="relative h-full overflow-hidden rounded-[18px] border shadow-[var(--shadow-home-card)] backdrop-blur-sm md:rounded-[24px]"
       style={{
-        background: "linear-gradient(135deg, rgba(255, 248, 242, 0.92) 0%, var(--color-home-card-surface) 58%, rgba(245, 255, 249, 0.9) 100%)",
+        background: "var(--gradient-tracker-insight-poop)",
         borderColor: "var(--color-home-card-border)",
       }}
     >
@@ -159,7 +159,7 @@ export function PoopHealthInsightCard({
           </span>
         </div>
 
-        <div className="mt-4 rounded-[16px] border border-[var(--color-home-card-border)] bg-white/54 p-2.5 md:mt-5 md:p-3">
+        <div className="mt-4 rounded-[16px] border border-[var(--color-home-card-border)] bg-[var(--color-tracker-panel-surface)] p-2.5 md:mt-5 md:p-3">
           <p className="px-1 text-[0.66rem] font-semibold uppercase tracking-[0.16em] text-[var(--color-text)] md:text-[0.72rem]">
             Next likely
           </p>
@@ -209,7 +209,7 @@ export function PoopHealthInsightCard({
                     description={dueRisk.description}
                     tone={dueRisk.tone}
                   />
-                  <InsetPanel className="col-span-2 border-[var(--color-home-card-border)] bg-white/54 p-3">
+                  <InsetPanel className="col-span-2 border-[var(--color-home-card-border)] bg-[var(--color-tracker-panel-surface)] p-3">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--color-text-soft)]">Next likely poop</p>
@@ -221,29 +221,29 @@ export function PoopHealthInsightCard({
                         </p>
                       </div>
                       {prediction && (
-                        <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-semibold text-[var(--color-text-secondary)]">
+                        <span className="rounded-full border border-[var(--color-border)] bg-[var(--color-tracker-chip-surface)] px-2.5 py-1 text-[11px] font-semibold text-[var(--color-tracker-chip-text)]">
                           {prediction.confidence}
                         </span>
                       )}
                     </div>
                     {prediction && (
                       <div className="mt-3 flex flex-wrap gap-2">
-                        <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-chip-text-on-light)]">
+                        <span className="rounded-full border border-[var(--color-border)] bg-[var(--color-tracker-chip-surface)] px-2.5 py-1 text-[11px] font-medium text-[var(--color-tracker-chip-text)]">
                           Typical gap: {prediction.intervalLabel}
                         </span>
-                        <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-chip-text-on-light)]">
+                        <span className="rounded-full border border-[var(--color-border)] bg-[var(--color-tracker-chip-surface)] px-2.5 py-1 text-[11px] font-medium text-[var(--color-tracker-chip-text)]">
                           {formatPredictionRelative(prediction)}
                         </span>
-                        <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-chip-text-on-light)]">
+                        <span className="rounded-full border border-[var(--color-border)] bg-[var(--color-tracker-chip-surface)] px-2.5 py-1 text-[11px] font-medium text-[var(--color-tracker-chip-text)]">
                           Source: {prediction.source === "history" ? "recent rhythm" : "age baseline"}
                         </span>
-                        <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-chip-text-on-light)]">
+                        <span className="rounded-full border border-[var(--color-border)] bg-[var(--color-tracker-chip-surface)] px-2.5 py-1 text-[11px] font-medium text-[var(--color-tracker-chip-text)]">
                           Window: {formatPredictionRange(prediction)}
                         </span>
                         {prediction.adjustments.slice(0, 2).map((adjustment) => (
                           <span
                             key={adjustment.label}
-                            className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-chip-text-on-light)]"
+                            className="rounded-full border border-[var(--color-border)] bg-[var(--color-tracker-chip-surface)] px-2.5 py-1 text-[11px] font-medium text-[var(--color-tracker-chip-text)]"
                           >
                             {adjustment.direction === "earlier" ? "Earlier" : "Later"}: {adjustment.label}
                           </span>
@@ -251,7 +251,7 @@ export function PoopHealthInsightCard({
                       </div>
                     )}
                   </InsetPanel>
-                  <InsetPanel className="col-span-2 border-[var(--color-home-card-border)] bg-white/54 p-3">
+                  <InsetPanel className="col-span-2 border-[var(--color-home-card-border)] bg-[var(--color-tracker-panel-surface)] p-3">
                     <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--color-text-soft)]">What this means</p>
                     <p className="mt-2 text-[13px] leading-relaxed text-[var(--color-text-secondary)]">{patternNarrative}</p>
                   </InsetPanel>

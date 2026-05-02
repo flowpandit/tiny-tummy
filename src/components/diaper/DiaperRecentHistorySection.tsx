@@ -86,7 +86,7 @@ export function DiaperRecentHistorySection({
                   {formatHistoryTimeLabel(log.logged_at)}
                 </p>
               </div>
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/62 md:h-9 md:w-9">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--color-tracker-pill-surface)] md:h-9 md:w-9">
                 <img
                   src={getRecentHistoryDiaperIcon(log.diaper_type, icons)}
                   alt=""

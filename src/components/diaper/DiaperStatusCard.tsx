@@ -65,32 +65,32 @@ function HydrationDropArt({ tone }: { tone: HydrationStatus["tone"] }) {
 function nextLikelyToneStyles(tone: DiaperNextLikelyEstimate["tone"]) {
   if (tone === "dirty") {
     return {
-      background: "rgba(255, 241, 235, 0.82)",
-      color: "#a24f21",
-      borderColor: "rgba(244, 123, 49, 0.14)",
+      background: "var(--color-tracker-next-dirty-surface)",
+      color: "var(--color-tracker-next-dirty-text)",
+      borderColor: "var(--color-tracker-next-dirty-border)",
     };
   }
 
   if (tone === "soon") {
     return {
-      background: "rgba(255, 247, 231, 0.9)",
-      color: "#95671c",
-      borderColor: "rgba(233, 200, 125, 0.28)",
+      background: "var(--color-tracker-next-caution-surface)",
+      color: "var(--color-tracker-next-caution-text)",
+      borderColor: "var(--color-tracker-next-caution-border)",
     };
   }
 
   if (tone === "baseline") {
     return {
-      background: "rgba(255, 255, 255, 0.62)",
-      color: "var(--color-text-secondary)",
-      borderColor: "var(--color-home-card-border)",
+      background: "var(--color-tracker-next-neutral-surface)",
+      color: "var(--color-tracker-next-neutral-text)",
+      borderColor: "var(--color-tracker-next-neutral-border)",
     };
   }
 
   return {
-    background: "rgba(230, 249, 239, 0.86)",
-    color: "#167553",
-    borderColor: "rgba(68, 185, 166, 0.14)",
+    background: "var(--color-tracker-next-healthy-surface)",
+    color: "var(--color-tracker-next-healthy-text)",
+    borderColor: "var(--color-tracker-next-healthy-border)",
   };
 }
 
@@ -155,7 +155,7 @@ export function DiaperStatusCard({
     <Card
       className="relative h-full overflow-hidden rounded-[18px] border shadow-[var(--shadow-home-card)] backdrop-blur-sm md:rounded-[24px]"
       style={{
-        background: "linear-gradient(135deg, rgba(245, 255, 249, 0.9) 0%, var(--color-home-card-surface) 62%, rgba(255, 250, 244, 0.92) 100%)",
+        background: "var(--gradient-tracker-insight-diaper)",
         borderColor: "var(--color-home-card-border)",
       }}
     >
@@ -178,7 +178,7 @@ export function DiaperStatusCard({
           </span>
         </div>
 
-        <div className="mt-4 rounded-[16px] border border-[var(--color-home-card-border)] bg-white/54 p-2.5 md:mt-5 md:p-3">
+        <div className="mt-4 rounded-[16px] border border-[var(--color-home-card-border)] bg-[var(--color-tracker-panel-surface)] p-2.5 md:mt-5 md:p-3">
           <p className="px-1 text-[0.66rem] font-semibold uppercase tracking-[0.16em] text-[var(--color-text)] md:text-[0.72rem]">
             Next likely
           </p>
@@ -222,27 +222,27 @@ export function DiaperStatusCard({
                       { label: "Dirty", value: todayDirtyCount },
                       { label: "Mixed", value: todayMixedCount },
                     ].map(({ label, value }) => (
-                      <InsetPanel key={label} className="border-[var(--color-home-card-border)] bg-white/54 p-2.5 text-center">
+                      <InsetPanel key={label} className="border-[var(--color-home-card-border)] bg-[var(--color-tracker-panel-surface)] p-2.5 text-center">
                         <p className="text-[0.95rem] font-semibold leading-none text-[var(--color-text)]">{value}</p>
                         <p className="mt-1 text-[0.64rem] uppercase tracking-[0.14em] text-[var(--color-text-soft)]">{label}</p>
                       </InsetPanel>
                     ))}
                   </div>
-                  <InsetPanel className="border-[var(--color-home-card-border)] bg-white/54 p-3">
+                  <InsetPanel className="border-[var(--color-home-card-border)] bg-[var(--color-tracker-panel-surface)] p-3">
                     <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--color-text-soft)]">Dirty diaper rhythm</p>
                     <p className="mt-2 text-[13px] leading-relaxed text-[var(--color-text-secondary)]">{dirtyPrediction.detail}</p>
                     {dirtyDiaperMeta && (
                       <div className="mt-3 flex flex-wrap gap-2">
-                        <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-text-secondary)]">
+                        <span className="rounded-full border border-[var(--color-border)] bg-[var(--color-tracker-chip-surface)] px-2.5 py-1 text-[11px] font-medium text-[var(--color-tracker-chip-text)]">
                           Last dirty: {dirtyDiaperMeta.timeSinceLabel}
                         </span>
                         {dirtyDiaperMeta.stoolLabel && (
-                          <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-text-secondary)]">
+                          <span className="rounded-full border border-[var(--color-border)] bg-[var(--color-tracker-chip-surface)] px-2.5 py-1 text-[11px] font-medium text-[var(--color-tracker-chip-text)]">
                             {dirtyDiaperMeta.stoolLabel}
                           </span>
                         )}
                         {dirtyDiaperMeta.stoolColorLabel && (
-                          <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-text-secondary)]">
+                          <span className="rounded-full border border-[var(--color-border)] bg-[var(--color-tracker-chip-surface)] px-2.5 py-1 text-[11px] font-medium text-[var(--color-tracker-chip-text)]">
                             {dirtyDiaperMeta.stoolColorLabel}
                           </span>
                         )}

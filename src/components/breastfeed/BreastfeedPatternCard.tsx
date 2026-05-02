@@ -1,5 +1,6 @@
 import { getBreastPatternLabel, getBreastPatternTone } from "../../lib/breastfeed-insights";
 import type { FeedingEntry } from "../../lib/types";
+import { Card, CardContent } from "../ui/card";
 
 export function BreastfeedPatternCard({
   patternLogs,
@@ -11,22 +12,47 @@ export function BreastfeedPatternCard({
   onToggleLog: (logId: string) => void;
 }) {
   return (
-    <section className="px-1">
-      <div className="rounded-[22px] border border-[var(--color-border)] bg-[var(--color-surface-strong)] px-4 py-3 shadow-[var(--shadow-soft)]">
-        <p className="text-[0.9rem] font-semibold text-[var(--color-text)]">24-hour pattern</p>
-        <div className="mt-2.5 overflow-x-auto pb-1">
+    <Card
+      className="overflow-hidden rounded-[18px] border shadow-[var(--shadow-home-card)] backdrop-blur-sm md:rounded-[24px]"
+      style={{
+        background: "var(--color-home-card-surface)",
+        borderColor: "var(--color-home-card-border)",
+      }}
+    >
+      <CardContent className="p-4 md:p-5">
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-[var(--color-text)] md:text-[0.74rem]">
+            24-hour pattern
+          </p>
+          <div className="flex flex-wrap justify-end gap-2">
+            {(["left", "right", "both"] as const).map((side) => {
+              const tone = getBreastPatternTone(side);
+              return (
+                <span
+                  key={side}
+                  className="inline-flex items-center gap-1.5 text-[0.62rem] font-medium text-[var(--color-text-secondary)] md:text-[0.7rem]"
+                >
+                  <span className="h-2 w-2 rounded-full" style={{ background: tone.text }} />
+                  {getBreastPatternLabel(side)}
+                </span>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="mt-4 overflow-x-auto pb-0.5">
           <div className="w-[520px] min-w-full">
             <div className="space-y-2">
-              <div className="relative h-[92px] rounded-[14px] border border-[var(--color-border)] bg-[var(--color-surface)]/72 px-2.5 py-2.5">
+              <div className="relative h-[92px] rounded-[16px] bg-[var(--color-home-empty-surface)] px-2.5 py-2.5 md:rounded-[18px]">
                 {patternLogs.length === 0 ? (
-                  <div className="flex h-full items-center justify-center rounded-[10px] border border-dashed border-[var(--color-border)] text-[0.86rem] text-[var(--color-text-soft)]">
-                    No breastfeeding logs yet
+                  <div className="flex h-full items-center justify-center text-[0.78rem] text-[var(--color-text-soft)]">
+                    No breastfeeding logs yet today.
                   </div>
                 ) : (
                   <>
                     <div className="absolute inset-x-2.5 top-2.5 grid grid-cols-24 gap-1.5">
                       {Array.from({ length: 24 }, (_, hour) => (
-                        <div key={hour} className="h-[64px] rounded-[8px] bg-[var(--color-bg-elevated)]/32" />
+                        <div key={hour} className="h-[64px] rounded-[8px] bg-[var(--color-tracker-chart-guide)]" />
                       ))}
                     </div>
                     <div className="absolute inset-x-2.5 top-[14px] space-y-[8px]">
@@ -81,33 +107,17 @@ export function BreastfeedPatternCard({
                 )}
               </div>
 
-              <div className="grid grid-cols-5 px-0.5 text-[0.7rem] font-medium uppercase tracking-[0.12em] text-[var(--color-text-soft)]">
-                <span>12A</span>
-                <span className="text-center">6A</span>
-                <span className="text-center">12P</span>
-                <span className="text-center">6P</span>
-                <span className="text-right">11:59P</span>
+              <div className="grid grid-cols-5 px-0.5 text-[0.68rem] font-medium uppercase tracking-[0.08em] text-[var(--color-text)] md:text-[0.72rem]">
+                <span>12 AM</span>
+                <span className="text-center">6 AM</span>
+                <span className="text-center">12 PM</span>
+                <span className="text-center">6 PM</span>
+                <span className="text-right">12 AM</span>
               </div>
             </div>
           </div>
         </div>
-
-        <div className="mt-2.5 flex flex-wrap gap-2">
-          {(["left", "right", "both"] as const).map((side) => {
-            const tone = getBreastPatternTone(side);
-            return (
-              <span
-                key={side}
-                className="inline-flex items-center gap-2 rounded-full border px-2.5 py-0.75 text-[10px] font-medium"
-                style={{ borderColor: tone.border, color: tone.text, background: tone.bg }}
-              >
-                <span className="h-2 w-2 rounded-full" style={{ background: tone.bg }} />
-                {getBreastPatternLabel(side)}
-              </span>
-            );
-          })}
-        </div>
-      </div>
-    </section>
+      </CardContent>
+    </Card>
   );
 }
