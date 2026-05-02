@@ -180,13 +180,13 @@ export function Home() {
             {recommendationIcon}
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-[0.64rem] font-semibold uppercase tracking-[0.16em] text-[var(--color-home-recommendation-label)] md:text-[0.85rem]">
+            <p className="text-[0.8rem] font-semibold uppercase tracking-[0.16em] text-[var(--color-home-recommendation-label)] md:text-[0.85rem]">
               Recommended next
             </p>
-            <p className="mt-1 text-[0.92rem] font-semibold leading-tight tracking-[-0.03em] text-[var(--color-text)] md:mt-1.5 md:text-[1.45rem]">
+            <p className="mt-1 text-[1.06rem] font-semibold leading-tight tracking-[-0.03em] text-[var(--color-text)] md:mt-1.5 md:text-[1.45rem]">
               {assistantModel.recommendation.title}
             </p>
-            <p className="mt-1 text-[0.76rem] leading-snug text-[var(--color-text-secondary)] md:mt-2 md:text-[1.06rem] md:leading-relaxed">
+            <p className="mt-1 text-[0.85rem] leading-snug text-[var(--color-text-secondary)] md:mt-2 md:text-[1.06rem] md:leading-relaxed">
               {assistantModel.recommendation.detail}
             </p>
           </div>

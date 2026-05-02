@@ -55,7 +55,7 @@ export function HomeQuickActions({
   return (
     <div className="px-4 pt-0 md:px-10 md:pt-1">
       <div className="flex items-center justify-between gap-3 px-3 md:px-0">
-        <p className="text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-[var(--color-text)] md:text-[0.82rem]">
+        <p className="text-[0.8rem] font-semibold uppercase tracking-[0.16em] text-[var(--color-text)] md:text-[0.85rem]">
           Quick actions
         </p>
       </div>
@@ -73,7 +73,7 @@ export function HomeQuickActions({
             <div className="flex h-6 w-6 items-center justify-center md:h-11 md:w-11">
               {action.icon}
             </div>
-            <p className={`text-[0.68rem] font-semibold tracking-[-0.02em] md:text-[1.2rem] ${action.text}`}>
+            <p className={`text-[0.78rem] font-semibold leading-tight tracking-[-0.02em] md:text-[1.2rem] ${action.text}`}>
               {action.label}
             </p>
           </motion.button>

@@ -90,13 +90,13 @@ export function RecentActivity({ timeline, glanceStats }: RecentActivityProps) {
         }}
       >
         <div className="flex items-center justify-between gap-3">
-          <p className="text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-[var(--color-text)] md:text-[0.82rem]">
+          <p className="text-[0.8rem] font-semibold uppercase tracking-[0.16em] text-[var(--color-text)] md:text-[0.85rem]">
             Today timeline
           </p>
           <button
             type="button"
             onClick={() => navigate("/history")}
-            className="flex items-center gap-1 text-[0.7rem] font-semibold text-[var(--color-home-link)] transition-opacity hover:opacity-80 md:text-[0.92rem]"
+            className="flex items-center gap-1 text-[0.8rem] font-semibold text-[var(--color-home-link)] transition-opacity hover:opacity-80 md:text-[0.92rem]"
           >
             View all
             <span aria-hidden="true" className="text-[1.1rem] leading-none">›</span>
@@ -121,12 +121,12 @@ export function RecentActivity({ timeline, glanceStats }: RecentActivityProps) {
                         <span className="mt-1 min-h-[42px] w-px flex-1 md:min-h-[54px]" style={{ background: "var(--gradient-home-timeline-line)" }} />
                       )}
                     </div>
-                    <div className="pt-0.5 text-[0.76rem] font-medium text-[var(--color-text)] md:text-[1rem]">
+                    <div className="pt-0.5 text-[0.85rem] font-medium text-[var(--color-text)] md:text-[1rem]">
                       {item.timeLabel}
                     </div>
                   </div>
 
-                  <div className={`flex flex-1 items-start gap-2.5 md:gap-3 ${!isLast ? "border-b border-[var(--color-home-divider)] pb-2.5 md:pb-5" : ""}`}>
+                  <div className={`relative flex flex-1 items-start gap-2.5 md:gap-3 ${!isLast ? "pb-2.5 md:pb-5" : ""}`}>
                     <div
                       className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full md:h-12 md:w-12"
                       style={{ background: accentStyles.iconSurface }}
@@ -134,28 +134,34 @@ export function RecentActivity({ timeline, glanceStats }: RecentActivityProps) {
                       <TimelineIcon accent={item.accent} />
                     </div>
                     <div className="min-w-0 flex-1 pb-2 md:pb-4">
-                      <p className="text-[0.82rem] font-semibold tracking-[-0.02em] text-[var(--color-text)] md:text-[1.08rem]">
+                      <p className="text-[0.95rem] font-semibold tracking-[-0.02em] text-[var(--color-text)] md:text-[1.08rem]">
                         {item.title}
                       </p>
-                      <p className="mt-0.5 text-[0.74rem] leading-snug text-[var(--color-text-secondary)] md:mt-1 md:text-[0.9rem]">
+                      <p className="mt-0.5 text-[0.84rem] leading-snug text-[var(--color-text-secondary)] md:mt-1 md:text-[0.9rem]">
                         {item.detail}
                       </p>
                     </div>
                     <span aria-hidden="true" className="pt-0.5 text-[1.35rem] leading-none text-[var(--color-home-chevron)] md:pt-1 md:text-[1.75rem]">›</span>
+                    {!isLast && (
+                      <span
+                        aria-hidden="true"
+                        className="pointer-events-none absolute inset-x-0 bottom-2.5 h-px bg-[var(--color-home-divider)] md:bottom-3.5"
+                      />
+                    )}
                   </div>
                 </div>
               );
             })}
           </div>
         ) : (
-          <div className="mt-3 rounded-[18px] bg-[var(--color-home-empty-surface)] px-4 py-4 text-[0.78rem] leading-relaxed text-[var(--color-text-secondary)] md:mt-5 md:rounded-[24px] md:px-5 md:py-6 md:text-[0.98rem]">
+          <div className="mt-3 rounded-[18px] bg-[var(--color-home-empty-surface)] px-4 py-4 text-[0.88rem] leading-relaxed text-[var(--color-text-secondary)] md:mt-5 md:rounded-[24px] md:px-5 md:py-6 md:text-[0.98rem]">
             Your day will appear here as you log events.
           </div>
         )}
       </div>
 
       <div className="mt-4 md:mt-8">
-        <p className="px-2 text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-[var(--color-text)] md:px-0 md:text-[0.82rem]">
+        <p className="px-2 text-[0.8rem] font-semibold uppercase tracking-[0.16em] text-[var(--color-text)] md:px-0 md:text-[0.85rem]">
           Today at a glance
         </p>
         <div className="mt-2.5 grid grid-cols-4 gap-2 md:mt-4 md:gap-6">
@@ -169,14 +175,14 @@ export function RecentActivity({ timeline, glanceStats }: RecentActivityProps) {
                 <div className="flex h-5 w-5 shrink-0 items-center justify-center md:h-10 md:w-10">
                   <GlanceIcon accent={stat.accent} />
                 </div>
-                <p className="text-[1.35rem] font-semibold leading-none tracking-[-0.04em] text-[var(--color-text)] md:text-[2rem]">
+                <p className="text-[1.45rem] font-semibold leading-none tracking-[-0.04em] text-[var(--color-text)] md:text-[2rem]">
                   {stat.value}
                 </p>
               </div>
-              <p className="mt-1.5 text-[0.62rem] font-semibold leading-tight tracking-[-0.01em] text-[var(--color-text)] md:text-[0.95rem]">
+              <p className="mt-1.5 text-[0.72rem] font-semibold leading-tight tracking-[-0.01em] text-[var(--color-text)] md:text-[0.95rem]">
                 {stat.label}
               </p>
-              <p className={`mt-0.5 text-[0.62rem] md:text-[0.86rem] ${stat.id === "wet-diapers" ? "text-[var(--color-home-good)]" : "text-[var(--color-text-secondary)]"}`}>
+              <p className={`mt-0.5 text-[0.68rem] leading-snug md:text-[0.86rem] ${stat.id === "wet-diapers" ? "text-[var(--color-home-good)]" : "text-[var(--color-text-secondary)]"}`}>
                 {stat.detail}
               </p>
             </div>

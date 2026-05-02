@@ -44,6 +44,10 @@ export function Header({ showBackButton = false, fallbackTo = "/", visible = tru
       style={{
         height: isCompact ? "calc(var(--safe-area-top) + 72px)" : "calc(var(--safe-area-top) + 92px)",
         background: "var(--gradient-shell-top-overlay)",
+        borderBottom: "1px solid color-mix(in srgb, var(--color-border) 90%, transparent)",
+        backdropFilter: "blur(24px) saturate(1.18)",
+        WebkitBackdropFilter: "blur(24px) saturate(1.18)",
+        boxShadow: "0 12px 30px rgba(120, 92, 69, 0.06)",
       }}
     >
       <div
@@ -65,7 +69,7 @@ export function Header({ showBackButton = false, fallbackTo = "/", visible = tru
               aria-label="Notifications"
               className={`relative flex items-center justify-center rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)] shadow-[var(--shadow-soft)] transition-transform hover:scale-[1.02] ${isCompact ? "h-9 w-9" : "h-10 w-10"}`}
             >
-              <svg viewBox="0 0 24 24" fill="none" className={isCompact ? "h-4 w-4" : "h-5 w-5"} aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" className={isCompact ? "h-8 w-8" : "h-9 w-9"} aria-hidden="true">
                 <path d="M8.2 18.25h7.6M10 20.5h4M6.75 16.2c.7-.72 1.05-1.6 1.05-2.64V10.7c0-2.5 1.72-4.38 4.2-4.38s4.2 1.88 4.2 4.38v2.86c0 1.04.35 1.92 1.05 2.64.32.33.09.88-.37.88H7.12c-.46 0-.69-.55-.37-.88Z" stroke="currentColor" strokeWidth="1.65" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
               <span className={`absolute rounded-full border-2 border-[var(--color-surface)] bg-[#f15c4b] ${isCompact ? "right-2 top-2 h-2.5 w-2.5" : "right-2.5 top-2.5 h-2.5 w-2.5"}`} />

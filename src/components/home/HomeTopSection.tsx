@@ -74,14 +74,14 @@ function InsightSummaryItem({ insight }: { insight: HomeInsightCard }) {
         <InsightIcon accent={insight.accent} />
       </div>
       <div className="min-w-0 flex-1">
-        <p className={`text-[0.84rem] font-semibold leading-snug tracking-[-0.01em] md:text-[0.95rem] ${accentStyles.labelClassName}`}>
+        <p className={`text-[1rem] font-semibold leading-snug tracking-[-0.01em] md:text-[0.95rem] ${accentStyles.labelClassName}`}>
           {insight.value}
         </p>
-        <p className={`mt-0.5 text-[0.78rem] font-medium leading-snug md:text-[0.92rem] ${accentStyles.valueClassName}`}>
+        <p className={`mt-0.5 text-[0.85rem] font-medium leading-snug md:text-[0.92rem] ${accentStyles.valueClassName}`}>
           {insight.detail}
         </p>
         {insight.accent === "poop" && (
-          <p className="mt-0.5 text-[0.74rem] leading-snug text-[var(--color-text-secondary)] md:text-[0.9rem]">
+          <p className="mt-0.5 text-[0.75rem] leading-snug text-[var(--color-text-secondary)] md:text-[0.9rem]">
             Keep an eye on it
           </p>
         )}
@@ -137,10 +137,10 @@ export function HomeTopSection({
           }}
         >
           <div className="flex items-center justify-between gap-3">
-            <p className="text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-[var(--color-text-soft)] md:text-[0.85rem]">
+            <p className="text-[0.8rem] font-semibold uppercase tracking-[0.16em] text-[var(--color-text-soft)] md:text-[0.85rem]">
               Today&apos;s insights
             </p>
-            <p className="flex items-center gap-1 text-[0.72rem] font-medium text-[var(--color-home-link)] md:text-[0.92rem]">
+            <p className="flex items-center gap-1 text-[0.8rem] font-medium text-[var(--color-home-link)] md:text-[0.92rem]">
               View details
               <span aria-hidden="true" className="text-[1.2rem] leading-none text-[var(--color-home-chevron)]">›</span>
             </p>

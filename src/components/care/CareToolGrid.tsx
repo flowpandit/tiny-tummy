@@ -33,7 +33,7 @@ export function CareToolGrid({
           <span className="flex h-7 w-7 items-center justify-center md:h-9 md:w-9" style={{ color: item.color ?? "#2fbf75" }}>
             {item.icon}
           </span>
-          <span className="text-[0.82rem] font-semibold leading-tight md:text-[1.1rem]" style={{ color: item.textColor }}>{item.label}</span>
+          <span className="text-[0.9rem] font-semibold leading-tight md:text-[1.1rem]" style={{ color: item.textColor }}>{item.label}</span>
         </button>
       ))}
     </div>

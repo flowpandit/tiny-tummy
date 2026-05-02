@@ -87,7 +87,7 @@ export function CareToolsSection({ className = "px-4", palette = "default" }: Ca
   return (
     <div className={className}>
       <div>
-        <p className="px-3 text-[0.82rem] font-semibold uppercase tracking-[0.16em] text-[var(--color-text)] md:px-0">Care tools</p>
+        <p className="px-3 text-[0.8rem] font-semibold uppercase tracking-[0.16em] text-[var(--color-text)] md:px-0 md:text-[0.85rem]">Care tools</p>
         <div className="mt-4">
           <CareToolGrid items={[...items]} />
         </div>

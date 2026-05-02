@@ -8,7 +8,7 @@ import { Button } from "../ui/button";
 import { HomeActionBottleIcon, HomeActionBreastfeedIcon, HomeActionDiaperIcon, HomeToolHistoryIcon } from "../ui/icons";
 import { combineLocalDateAndTimeToUtcIso, getAgeInMonthsFromDob, getCurrentLocalDate, getCurrentLocalTime } from "../../lib/utils";
 
-const iconClassName = "h-5 w-5";
+const iconClassName = "h-[1.35rem] w-[1.35rem] md:h-6 md:w-6";
 
 const NAV_ITEMS = [
   {
@@ -162,7 +162,7 @@ export function BottomNav() {
   return (
     <>
       {showFeedingTransitionConfirm && (
-        <div className="fixed inset-0 z-40 flex items-end justify-center bg-black/35 px-4 pb-[calc(var(--safe-area-bottom)+108px)] pt-10" onClick={() => setShowFeedingTransitionConfirm(false)}>
+        <div className="fixed inset-0 z-40 flex items-end justify-center bg-black/35 px-4 pb-[calc(var(--safe-area-bottom)+112px)] pt-10" onClick={() => setShowFeedingTransitionConfirm(false)}>
           <div
             className="w-full max-w-[420px] rounded-[28px] border border-[var(--color-border)] bg-[var(--color-surface-strong)] p-5 shadow-[var(--shadow-lg)]"
             onClick={(event) => event.stopPropagation()}
@@ -211,8 +211,8 @@ export function BottomNav() {
       >
         <div
           className={cn(
-            "mx-auto flex max-w-[720px] items-center justify-around border border-[var(--color-border)] shadow-[var(--shadow-lg)] backdrop-blur-[20px] md:h-[96px] md:max-w-[860px] md:rounded-[34px]",
-            "h-[64px] rounded-[24px] px-1.5",
+            "mx-auto flex max-w-[720px] items-center justify-around border border-[var(--color-border)] shadow-[var(--shadow-lg)] backdrop-blur-[20px] md:h-[100px] md:max-w-[860px] md:rounded-[34px]",
+            "h-[68px] rounded-[24px] px-1.5",
           )}
           style={{ background: "var(--color-nav-surface)" }}
         >
@@ -223,8 +223,8 @@ export function BottomNav() {
                 key={item.path}
                 onClick={() => handleNavPress(item.path)}
                 className={cn(
-                  "relative flex min-w-0 flex-1 cursor-pointer flex-col items-center justify-center transition-all duration-200 md:h-[76px] md:gap-2 md:rounded-[28px]",
-                  "h-[52px] gap-0.5 rounded-[18px]",
+                  "relative flex min-w-0 flex-1 cursor-pointer flex-col items-center justify-center transition-all duration-200 md:h-[80px] md:gap-2 md:rounded-[28px]",
+                  "h-[56px] gap-1 rounded-[18px]",
                   isActive
                     ? "text-[var(--color-primary)] shadow-[var(--shadow-soft)]"
                     : "text-[var(--color-nav-inactive)] hover:text-[var(--color-nav-inactive-hover)]",
@@ -238,10 +238,10 @@ export function BottomNav() {
                     isActive ? "bg-[var(--color-nav-active-indicator)] opacity-100" : "opacity-0",
                   )}
                 />
-                <span className="flex h-5 w-5 scale-90 items-center justify-center">
+                <span className="flex h-6 w-6 items-center justify-center md:h-7 md:w-7">
                   {item.icon(isActive)}
                 </span>
-                <span className="max-w-full truncate px-1 text-[9px] font-semibold tracking-[0.01em] md:text-[0.92rem]">{item.label}</span>
+                <span className="max-w-full truncate px-1 text-[0.68rem] font-semibold tracking-[0.01em] md:text-[1rem]">{item.label}</span>
               </button>
             );
           })}
