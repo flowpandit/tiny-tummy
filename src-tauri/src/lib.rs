@@ -180,6 +180,7 @@ pub fn run() {
             get_child_status,
             get_guidance_tips,
             generate_report_pdf,
+            downloads::open_pdf_from_downloads,
             downloads::save_pdf_to_downloads,
             statusbar::set_status_bar_style,
         ])

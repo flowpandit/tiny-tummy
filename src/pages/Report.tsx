@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { writeFile } from "@tauri-apps/plugin-fs";
 import { save } from "@tauri-apps/plugin-dialog";
 import { platform } from "@tauri-apps/plugin-os";
@@ -10,6 +11,7 @@ import { ReportComposerCard } from "../components/report/ReportComposerCard";
 import { PageBody } from "../components/ui/page-layout";
 import { ReportPreview } from "../components/report/ReportPreview";
 import { ReportReadyCard } from "../components/report/ReportReadyCard";
+import { Button } from "../components/ui/button";
 import { buildReportPdfPayload } from "../lib/report-pdf";
 import {
   buildReportPatientSummary,
@@ -18,7 +20,7 @@ import {
   hasReportableTimeline,
 } from "../lib/report-view-model";
 import { useToast } from "../components/ui/toast";
-import { generateReportPdf, savePdfToDownloads } from "../lib/tauri";
+import { generateReportPdf, openPdfFromDownloads, savePdfToDownloads } from "../lib/tauri";
 import { loadAvatarDataUrl } from "../lib/photos";
 
 export function Report() {
@@ -26,6 +28,7 @@ export function Report() {
   const { unitSystem } = useUnits();
   const { showError, showSuccess } = useToast();
   const isAndroid = platform() === "android";
+  const [savedAndroidReport, setSavedAndroidReport] = useState<{ fileName: string; uri: string } | null>(null);
   const {
     today,
     startDate,
@@ -58,21 +61,25 @@ export function Report() {
     }
 
     try {
+      setSavedAndroidReport(null);
       const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
       const fileName = `tiny-tummy-pediatrician-report-${startDate}-to-${endDate}-${timestamp}.pdf`;
       const childAvatarDataUrl = await loadAvatarDataUrl(activeChild.id).catch(() => null);
-      const encodedPdf = await generateReportPdf(buildReportPdfPayload({
-        child: activeChild,
-        startDate,
-        endDate,
-        data: reportData,
-        unitSystem,
-        childAvatarDataUrl,
-      }));
+      const encodedPdf = await generateReportPdf(
+        buildReportPdfPayload({
+          child: activeChild,
+          startDate,
+          endDate,
+          data: reportData,
+          unitSystem,
+          childAvatarDataUrl,
+        }),
+      );
 
       if (isAndroid) {
-        await savePdfToDownloads(fileName, encodedPdf);
-        showSuccess(`PDF saved to Downloads as ${fileName}.`);
+        const savedReport = await savePdfToDownloads(fileName, encodedPdf);
+        setSavedAndroidReport(savedReport);
+        showSuccess("Report saved to Downloads.");
         return;
       }
 
@@ -96,6 +103,17 @@ export function Report() {
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       showError(`Could not generate the PDF report: ${message}`);
+    }
+  };
+
+  const handleOpenSavedAndroidReport = async () => {
+    if (!savedAndroidReport) return;
+
+    try {
+      await openPdfFromDownloads(savedAndroidReport.uri);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      showError(message || "Could not open the saved PDF report.");
     }
   };
 
@@ -147,6 +165,30 @@ export function Report() {
               saveHelpText={getReportSaveHelpText(isAndroid)}
               onSave={handlePrint}
             />
+
+            {isAndroid && savedAndroidReport && (
+              <div className="rounded-[18px] border border-[var(--color-home-card-border)] bg-[var(--color-surface-strong)] p-4 shadow-[var(--shadow-soft)]">
+                <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-[var(--color-text)]">
+                      Report saved to Downloads.
+                    </p>
+                    <p className="mt-1 truncate text-xs text-[var(--color-text-secondary)]">
+                      {savedAndroidReport.fileName}
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    className="shrink-0"
+                    onClick={handleOpenSavedAndroidReport}
+                  >
+                    Open PDF
+                  </Button>
+                </div>
+              </div>
+            )}
 
             {reportPreviewPayload && hasGeneratedTimeline && <ReportPreview payload={reportPreviewPayload} />}
           </>

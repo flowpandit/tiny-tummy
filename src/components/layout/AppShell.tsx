@@ -62,16 +62,22 @@ export function AppShell() {
     || (window.navigator.platform === "MacIntel" && window.navigator.maxTouchPoints > 1)
   );
   const headerBackFallbackByPath: Record<string, string> = {
-    "/breastfeed": "/",
     "/dashboard": "/",
     "/growth": "/settings",
     "/guidance": "/settings",
     "/milestones": "/settings",
     "/report": "/dashboard",
   };
+  const originPath = location.state && typeof location.state === "object" && "origin" in location.state
+    ? (location.state as { origin?: string }).origin
+    : undefined;
   const showHeader = Boolean(activeChild);
-  const headerFallbackTo = headerBackFallbackByPath[location.pathname];
-  const showHeaderBackButton = Boolean(headerFallbackTo);
+  const headerFallbackTo = location.pathname === "/breastfeed" && originPath
+    ? originPath
+    : headerBackFallbackByPath[location.pathname];
+  const showHeaderBackButton = location.pathname === "/breastfeed"
+    ? Boolean(originPath)
+    : Boolean(headerFallbackTo);
   const { experience: eliminationExperience } = useEliminationPreference(activeChild);
   const isBreastOnly = activeChild?.feeding_type === "breast";
   const isFeedingTransitionEligible = isBreastOnly && Boolean(activeChild) && getAgeInMonthsFromDob(activeChild.date_of_birth) >= 6;
