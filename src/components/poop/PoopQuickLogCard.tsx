@@ -17,21 +17,29 @@ export function PoopQuickLogCard({
   onQuickPreset: (preset: QuickPoopPreset) => void;
 }) {
   return (
-    <Card>
-      <CardContent className="p-4">
+    <Card
+      className="h-full overflow-hidden rounded-[18px] border shadow-[var(--shadow-home-card)] backdrop-blur-sm md:rounded-[24px]"
+      style={{
+        background: "var(--color-home-card-surface)",
+        borderColor: "var(--color-home-card-border)",
+      }}
+    >
+      <CardContent className="p-4 md:p-5">
         <div className="flex items-center justify-between gap-3">
-          <div>
-            <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--color-text-soft)]">Quick log</p>
-            {repeatablePoop && (
-              <p className="mt-1 text-[12px] text-[var(--color-text-soft)]">Last safe pattern ready to repeat.</p>
-            )}
+          <div className="min-w-0">
+            <p className="text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-[var(--color-text)] md:text-[0.74rem]">
+              Quick log
+            </p>
+            <p className="mt-1 max-w-[34ch] text-[0.74rem] leading-snug text-[var(--color-text-secondary)] md:text-[0.82rem]">
+              Start with the closest poop pattern.
+            </p>
           </div>
           <div className="flex items-center gap-2">
             {repeatablePoop && (
               <button
                 type="button"
                 onClick={onRepeatLastPoop}
-                className="rounded-full border border-[var(--color-primary)]/20 bg-[var(--color-primary)]/10 px-3 py-1.5 text-[11px] font-semibold text-[var(--color-primary)] transition-colors hover:bg-[var(--color-primary)]/15"
+                className="rounded-full border border-[var(--color-primary)]/20 bg-[var(--color-primary)]/10 px-3 py-1.5 text-[0.68rem] font-semibold text-[var(--color-primary)] transition-colors hover:bg-[var(--color-primary)]/15 md:text-[0.74rem]"
               >
                 Repeat
               </button>
@@ -39,27 +47,33 @@ export function PoopQuickLogCard({
             <button
               type="button"
               onClick={onEditPresets}
-              className="rounded-full border border-[var(--color-border)] bg-[var(--color-surface-strong)] px-3 py-1.5 text-[11px] font-semibold text-[var(--color-text-secondary)] transition-colors hover:bg-white/70"
+              className="rounded-full border border-[var(--color-home-card-border)] bg-white/62 px-3 py-1.5 text-[0.68rem] font-semibold text-[var(--color-text-secondary)] transition-colors hover:bg-white/82 md:text-[0.74rem]"
             >
               Edit
             </button>
           </div>
         </div>
 
-        <div className="mt-2 overflow-x-auto pb-1">
-          <div className="flex w-max gap-3 pr-2">
-            {quickPoopPresets.map((preset) => (
-              <button
-                key={preset.id}
-                type="button"
-                onClick={() => onQuickPreset(preset)}
-                className="flex min-h-[50px] min-w-[50px] flex-col items-center justify-center gap-0.25 rounded-[12px] border border-[var(--color-border)] bg-[var(--color-surface-strong)] px-2.5 py-0.5 text-center transition-colors hover:bg-white/70"
-              >
-                <PoopPresetIcon draft={preset.draft} className="h-10 w-10" />
-                <p className="pb-2 text-[0.72rem] font-medium leading-none text-[var(--color-text)]">{preset.label}</p>
-              </button>
-            ))}
-          </div>
+        <div className="mt-4 grid grid-cols-2 gap-2.5 lg:grid-cols-4">
+          {quickPoopPresets.map((preset) => (
+            <button
+              key={preset.id}
+              type="button"
+              onClick={() => onQuickPreset(preset)}
+              className="flex min-h-[68px] flex-col items-center justify-center gap-1.5 rounded-[14px] border border-[var(--color-home-card-border)] bg-white/72 px-2 py-2 text-center text-[0.78rem] font-semibold text-[var(--color-text)] shadow-[0_10px_22px_rgba(172,139,113,0.07)] transition duration-200 hover:-translate-y-0.5 hover:bg-white/86 active:translate-y-0 md:min-h-[82px] md:rounded-[18px] md:text-[0.88rem]"
+            >
+              <PoopPresetIcon draft={preset.draft} className="h-8 w-8 md:h-9 md:w-9" />
+              <span className="max-w-full truncate">{preset.label}</span>
+            </button>
+          ))}
+        </div>
+
+        <div className="mt-3 text-[0.68rem] leading-snug text-[var(--color-text-soft)] md:text-[0.74rem]">
+          {repeatablePoop ? (
+            <p>Last safe pattern is ready to repeat.</p>
+          ) : (
+            <p>Edit presets to keep your most common patterns close.</p>
+          )}
         </div>
       </CardContent>
     </Card>
