@@ -108,6 +108,7 @@ test("buildReportPdfPayload returns branded white-report sections", () => {
 
   assert.equal(payload.title, "Pediatrician Summary");
   assert.equal(payload.attentionChips.length, 1);
+  assert.equal(payload.attentionChips[0]?.detail, "1 episode captured in this date range.");
   assert.ok(payload.summaryCards.length >= 4);
   assert.equal(payload.charts[0]?.title, "Daily stool output");
   assert.ok(payload.charts.some((chart) => chart.kind === "bar"));
