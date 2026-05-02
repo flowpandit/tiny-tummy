@@ -19,6 +19,7 @@ import {
 } from "../lib/report-view-model";
 import { useToast } from "../components/ui/toast";
 import { generateReportPdf, savePdfToDownloads } from "../lib/tauri";
+import { loadAvatarDataUrl } from "../lib/photos";
 
 export function Report() {
   const activeChild = useActiveChild();
@@ -59,12 +60,14 @@ export function Report() {
     try {
       const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
       const fileName = `tiny-tummy-pediatrician-report-${startDate}-to-${endDate}-${timestamp}.pdf`;
+      const childAvatarDataUrl = await loadAvatarDataUrl(activeChild.id).catch(() => null);
       const encodedPdf = await generateReportPdf(buildReportPdfPayload({
         child: activeChild,
         startDate,
         endDate,
         data: reportData,
         unitSystem,
+        childAvatarDataUrl,
       }));
 
       if (isAndroid) {

@@ -3,7 +3,8 @@ use base64::Engine;
 use printpdf::{
     graphics::{Line, LinePoint, PaintMode, Point, Rect, WindingOrder},
     ops::PdfFontHandle,
-    BuiltinFont, Color, Mm, Op, PdfDocument, PdfPage, PdfSaveOptions, Pt, Rgb, TextItem,
+    BuiltinFont, Color, Mm, Op, PdfDocument, PdfPage, PdfSaveOptions, Pt, RawImage, Rgb, TextItem,
+    XObjectTransform,
 };
 use serde::Deserialize;
 
@@ -22,6 +23,10 @@ pub struct ReportPdfPayload {
     pub subtitle: String,
     pub child_name: String,
     pub child_meta: String,
+    #[serde(default)]
+    pub child_avatar_color: Option<String>,
+    #[serde(default)]
+    pub child_avatar_data_url: Option<String>,
     pub generated_at_label: String,
     pub patient_summary: String,
     pub attention_chips: Vec<ReportPdfChip>,
@@ -101,10 +106,11 @@ pub fn generate_report_pdf(payload: ReportPdfPayload) -> Result<String, String> 
     let mut layout = PdfLayout::new(&payload.title);
 
     layout.draw_page_one(&payload)?;
-    if !payload.charts.is_empty() || !payload.context_sections.is_empty() {
-        layout.new_page();
-        layout.draw_page_two(&payload)?;
-    }
+    layout.new_page();
+    layout.draw_page_two(&payload)?;
+
+    layout.new_page();
+    layout.draw_page_three(&payload)?;
 
     if !payload.timeline.is_empty() {
         layout.new_page();
@@ -126,7 +132,6 @@ struct ReportOverviewItem {
     label: String,
     value: String,
     detail: String,
-    tone: String,
 }
 
 struct ReportInsightItem {
@@ -136,11 +141,10 @@ struct ReportInsightItem {
     tone: String,
 }
 
-struct ReportRecordRow {
-    title: String,
-    meta: String,
-    detail: String,
-    tone: String,
+struct AtAGlanceRow {
+    category: String,
+    value: String,
+    note: String,
 }
 
 impl PdfLayout {
@@ -157,15 +161,7 @@ impl PdfLayout {
         self.finish_page();
 
         for (index, page) in self.pages.iter_mut().enumerate() {
-            let footer = format!("Tiny Tummy | Baby health log | Page {}", index + 1);
-            page.ops.extend(text_ops(
-                &footer,
-                MARGIN_LEFT_MM,
-                PAGE_HEIGHT_MM - 9.0,
-                8.0,
-                BuiltinFont::Helvetica,
-                gray(0.55),
-            ));
+            page.ops.extend(footer_ops(index + 1));
         }
 
         self.doc.with_pages(self.pages);
@@ -207,36 +203,54 @@ impl PdfLayout {
     fn draw_page_two(&mut self, payload: &ReportPdfPayload) -> Result<(), String> {
         self.draw_compact_page_header(
             payload,
-            "Daily overview",
-            "A quick look at daily averages, ranges, and table records.",
+            "Daily Overview + Domain Trends",
+            "Daily stool output, feed activity, and pattern signals for the selected period.",
         );
 
         if !payload.charts.is_empty() {
             self.draw_chart_panel(&payload.charts)?;
-            self.add_gap(5.0);
+            self.add_gap(7.0);
+        } else {
+            self.draw_empty_panel("No chartable daily activity was logged in this date range.")?;
         }
 
-        if !payload.context_sections.is_empty() {
-            self.draw_section_heading("Detailed summary tables")?;
-        }
+        self.draw_at_a_glance_table(payload)?;
+
+        Ok(())
+    }
+
+    fn draw_page_three(&mut self, payload: &ReportPdfPayload) -> Result<(), String> {
+        self.draw_compact_page_header(
+            payload,
+            "Clinical Context",
+            "Feeding, growth, symptom, episode, and milestone context from the same report period.",
+        );
+
+        self.draw_attention_notes(&payload.attention_chips)?;
 
         for section in &payload.context_sections {
             self.draw_context_section(section)?;
             self.add_gap(4.0);
         }
 
+        if payload.context_sections.is_empty() {
+            self.draw_empty_panel(
+                "No additional clinical context sections were selected or logged for this period.",
+            )?;
+        }
+
         Ok(())
     }
 
     fn draw_appendix_pages(&mut self, timeline: &[ReportPdfTimelineRow]) -> Result<(), String> {
-        self.draw_section_heading("Timeline details")?;
+        self.draw_section_heading("Clinical Timeline Appendix")?;
         self.draw_wrapped_text(
             "Chronological log for clinical review. Columns: Date/Time, Event, Details, Parent Note.",
             MARGIN_LEFT_MM,
             CONTENT_WIDTH_MM,
             9.0,
             BuiltinFont::Helvetica,
-            gray(0.45),
+            color_muted(),
             3.0,
         )?;
 
@@ -244,13 +258,6 @@ impl PdfLayout {
         let mut zebra = false;
 
         for row in timeline {
-            let height = self.measure_timeline_row_height(row);
-            if self.y_mm + height > PAGE_HEIGHT_MM - MARGIN_BOTTOM_MM {
-                self.new_page();
-                self.draw_section_heading("Timeline details")?;
-                self.draw_timeline_header();
-            }
-
             self.draw_timeline_row(row, zebra)?;
             zebra = !zebra;
         }
@@ -260,26 +267,43 @@ impl PdfLayout {
 
     fn draw_page_one_summary(&mut self, payload: &ReportPdfPayload) -> Result<(), String> {
         self.draw_cover_hero(payload)?;
-        self.add_gap(5.0);
+        self.add_gap(6.0);
         self.draw_overview_tiles(payload)?;
-        self.add_gap(5.0);
+        self.add_gap(6.0);
         self.draw_insight_cards(payload)?;
-        self.add_gap(5.0);
-        self.draw_detail_record_table(payload)?;
         Ok(())
     }
 
     fn draw_cover_hero(&mut self, payload: &ReportPdfPayload) -> Result<(), String> {
         let y = self.y_mm;
-        let height = 88.0;
+        let height = 80.0;
         self.ensure_space(height);
         self.draw_rounded_rect(
             MARGIN_LEFT_MM,
             y,
             CONTENT_WIDTH_MM,
             height,
-            4.2,
-            rgb(1.0, 0.982, 0.964),
+            4.8,
+            color_warm_panel(),
+        );
+        self.draw_ellipse(
+            MARGIN_LEFT_MM + CONTENT_WIDTH_MM - 22.0,
+            y + 30.0,
+            30.0,
+            24.0,
+            rgb(1.0, 0.918, 0.860),
+        );
+        self.draw_circle(
+            MARGIN_LEFT_MM + CONTENT_WIDTH_MM - 56.0,
+            y + 29.0,
+            1.3,
+            color_peach(),
+        );
+        self.draw_circle(
+            MARGIN_LEFT_MM + CONTENT_WIDTH_MM - 18.0,
+            y + 18.0,
+            1.0,
+            color_peach(),
         );
 
         self.draw_logo_mark(MARGIN_LEFT_MM + 6.0, y + 7.0, 10.5);
@@ -294,52 +318,48 @@ impl PdfLayout {
         );
 
         self.draw_wrapped_text_at(
-            "Baby",
+            "Baby Health",
             MARGIN_LEFT_MM + 6.0,
-            y + 29.0,
-            88.0,
-            28.0,
+            y + 26.0,
+            98.0,
+            26.0,
             BuiltinFont::HelveticaBold,
-            rgb(0.20, 0.07, 0.05),
+            color_ink(),
         );
         self.draw_wrapped_text_at(
-            "Health Report",
+            "Report",
             MARGIN_LEFT_MM + 6.0,
-            y + 41.8,
+            y + 38.0,
             94.0,
-            28.0,
+            26.0,
             BuiltinFont::HelveticaBold,
-            rgb(0.20, 0.07, 0.05),
+            color_ink(),
         );
         self.draw_wrapped_text_at(
             &sanitize_text(&payload.child_name),
             MARGIN_LEFT_MM + 6.0,
-            y + 58.0,
+            y + 54.0,
             78.0,
-            16.0,
+            15.5,
             BuiltinFont::HelveticaBold,
-            rgb(0.95, 0.45, 0.29),
+            color_peach_text(),
         );
-        let child_meta = if payload.child_meta.trim().is_empty() {
-            &payload.patient_summary
-        } else {
-            &payload.child_meta
-        };
+        let child_meta = patient_detail_line(payload);
 
         self.draw_wrapped_text_at(
-            &sanitize_text(child_meta),
+            &sanitize_text(&child_meta),
             MARGIN_LEFT_MM + 6.0,
-            y + 67.2,
+            y + 62.5,
             82.0,
-            9.4,
+            8.8,
             BuiltinFont::Helvetica,
-            rgb(0.22, 0.18, 0.16),
+            color_body(),
         );
 
         self.draw_wrapped_text_at(
             "Report period",
             MARGIN_LEFT_MM + 6.0,
-            y + 76.8,
+            y + 70.8,
             40.0,
             7.2,
             BuiltinFont::Helvetica,
@@ -348,16 +368,16 @@ impl PdfLayout {
         self.draw_wrapped_text_at(
             &sanitize_text(&payload.subtitle),
             MARGIN_LEFT_MM + 6.0,
-            y + 81.6,
+            y + 75.3,
             70.0,
             7.8,
             BuiltinFont::Helvetica,
-            gray(0.24),
+            color_body(),
         );
         self.draw_wrapped_text_at(
             "Generated",
             MARGIN_LEFT_MM + 70.0,
-            y + 76.8,
+            y + 70.8,
             34.0,
             7.2,
             BuiltinFont::Helvetica,
@@ -370,25 +390,16 @@ impl PdfLayout {
                     .replace("Generated by Tiny Tummy | ", ""),
             ),
             MARGIN_LEFT_MM + 70.0,
-            y + 81.6,
+            y + 75.3,
             48.0,
             7.8,
             BuiltinFont::Helvetica,
-            gray(0.24),
+            color_body(),
         );
 
         let portrait_x = MARGIN_LEFT_MM + 122.0;
-        let portrait_y = y + 24.0;
-        self.draw_circle(
-            portrait_x + 25.0,
-            portrait_y + 25.0,
-            25.0,
-            rgb(1.0, 0.91, 0.84),
-        );
-        self.draw_logo_mark(portrait_x + 8.0, portrait_y + 8.0, 34.0);
-        self.draw_circle(portrait_x + 58.0, y + 24.0, 0.9, rgb(0.98, 0.74, 0.58));
-        self.draw_sparkle(portrait_x + 54.0, y + 35.0, 1.6, rgb(0.98, 0.74, 0.58));
-        self.draw_sparkle(portrait_x + 84.0, y + 29.0, 1.4, rgb(0.98, 0.74, 0.58));
+        let portrait_y = y + 20.0;
+        self.draw_child_avatar(payload, portrait_x + 25.0, portrait_y + 25.0, 24.0);
 
         self.y_mm += height;
         Ok(())
@@ -400,62 +411,57 @@ impl PdfLayout {
             return Ok(());
         }
 
-        let visible = items.len().min(5);
+        let visible = items.len().min(6);
         let label_height = 8.0;
-        let card_height = 34.0;
-        let gap = 3.4;
-        let card_width =
-            (CONTENT_WIDTH_MM - gap * (visible.saturating_sub(1) as f32)) / visible as f32;
-        self.ensure_space(label_height + card_height);
+        let columns = 3usize;
+        let rows = (visible + columns - 1) / columns;
+        let gap = 4.0;
+        let card_height = 25.5;
+        let card_width = (CONTENT_WIDTH_MM - gap * (columns - 1) as f32) / columns as f32;
+        let total_height =
+            label_height + rows as f32 * card_height + rows.saturating_sub(1) as f32 * gap;
+        self.ensure_space(total_height);
 
-        self.draw_section_label("Overview", self.y_mm);
+        self.draw_section_label("Executive overview", self.y_mm);
         let card_y = self.y_mm + label_height;
 
         for (index, item) in items.iter().take(visible).enumerate() {
-            let x = MARGIN_LEFT_MM + index as f32 * (card_width + gap);
-            self.draw_card(
-                x,
-                card_y,
-                card_width,
-                card_height,
-                Some(rgb(1.0, 0.998, 0.994)),
-            );
-            self.draw_circle(
-                x + card_width / 2.0,
-                card_y + 7.0,
-                4.2,
-                tone_fill(&item.tone),
-            );
+            let row = index / columns;
+            let col = index % columns;
+            let x = MARGIN_LEFT_MM + col as f32 * (card_width + gap);
+            let y = card_y + row as f32 * (card_height + gap);
+            self.draw_card(x, y, card_width, card_height, Some(color_surface()));
             self.draw_wrapped_text_at(
                 &sanitize_text(&item.label),
-                x + 2.5,
-                card_y + 14.0,
-                card_width - 5.0,
-                7.0,
+                x + 4.0,
+                y + 3.6,
+                card_width - 8.0,
+                7.4,
                 BuiltinFont::HelveticaBold,
-                gray(0.12),
+                color_body(),
             );
+            let value_font_size = overview_value_font_size(&item.value);
             self.draw_wrapped_text_at(
                 &sanitize_text(&item.value),
-                x + 2.5,
-                card_y + 19.2,
-                card_width - 5.0,
-                13.0,
+                x + 4.0,
+                y + 10.8,
+                card_width - 8.0,
+                value_font_size,
                 BuiltinFont::HelveticaBold,
-                gray(0.04),
+                color_ink(),
             );
             self.draw_wrapped_text_at(
-                &sanitize_text(&item.detail),
-                x + 2.5,
-                card_y + 28.0,
-                card_width - 5.0,
-                6.6,
+                &sanitize_text(&truncate_text(&item.detail, 58)),
+                x + 4.0,
+                y + 19.8,
+                card_width - 8.0,
+                7.1,
                 BuiltinFont::Helvetica,
-                gray(0.34),
+                color_muted(),
             );
         }
 
-        self.y_mm += label_height + card_height;
+        self.y_mm += total_height;
         Ok(())
     }
 
@@ -467,164 +473,49 @@ impl PdfLayout {
 
         let visible = items.len().min(4);
         let label_height = 8.0;
-        let card_height = 38.0;
+        let card_height = 30.5;
+        let columns = 2usize;
+        let rows = (visible + columns - 1) / columns;
         let gap = 4.0;
-        let card_width =
-            (CONTENT_WIDTH_MM - gap * (visible.saturating_sub(1) as f32)) / visible as f32;
-        self.ensure_space(label_height + card_height);
+        let card_width = (CONTENT_WIDTH_MM - gap) / columns as f32;
+        let total_height =
+            label_height + rows as f32 * card_height + rows.saturating_sub(1) as f32 * gap;
+        self.ensure_space(total_height);
 
-        self.draw_section_label("Patterns & Insights", self.y_mm);
+        self.draw_section_label("Key insights", self.y_mm);
         let card_y = self.y_mm + label_height;
         for (index, card) in items.iter().take(visible).enumerate() {
-            let x = MARGIN_LEFT_MM + index as f32 * (card_width + gap);
-            self.draw_card(
-                x,
-                card_y,
-                card_width,
-                card_height,
-                Some(tone_fill(&card.tone)),
-            );
+            let row = index / columns;
+            let col = index % columns;
+            let x = MARGIN_LEFT_MM + col as f32 * (card_width + gap);
+            let y = card_y + row as f32 * (card_height + gap);
+            self.draw_card(x, y, card_width, card_height, Some(tone_fill(&card.tone)));
             self.draw_wrapped_text_at(
                 &sanitize_text(&card.title),
                 x + 3.0,
-                card_y + 4.0,
+                y + 3.8,
                 card_width - 6.0,
-                7.0,
-                BuiltinFont::Helvetica,
+                7.5,
+                BuiltinFont::HelveticaBold,
                 tone_text(&card.tone),
             );
             self.draw_wrapped_text_at(
                 &sanitize_text(&card.value),
                 x + 3.0,
-                card_y + 11.0,
-                card_width - 6.0,
-                10.0,
+                y + 10.8,
+                card_width - 9.0,
+                insight_value_font_size(&card.value),
                 BuiltinFont::HelveticaBold,
-                gray(0.06),
+                color_ink(),
             );
             self.draw_wrapped_text_at(
-                &sanitize_text(&truncate_text(&card.detail, 70)),
+                &sanitize_text(&truncate_text(&card.detail, 108)),
                 x + 3.0,
-                card_y + 19.5,
-                card_width - 6.0,
-                6.8,
+                y + 18.7,
+                card_width - 9.0,
+                7.5,
                 BuiltinFont::Helvetica,
-                gray(0.24),
-            );
-            self.draw_circle(
-                x + card_width - 8.0,
-                card_y + card_height - 8.0,
-                5.0,
-                gray(0.96),
-            );
-        }
-
-        self.y_mm += label_height + card_height;
-        Ok(())
-    }
-
-    fn draw_detail_record_table(&mut self, payload: &ReportPdfPayload) -> Result<(), String> {
-        let rows = build_detail_record_rows(payload);
-        if rows.is_empty() {
-            return Ok(());
-        }
-
-        let visible = rows.len().min(5);
-        let label_height = 8.0;
-        let header_height = 8.5;
-        let row_height = 10.5;
-        let total_height = label_height + header_height + row_height * visible as f32;
-        self.ensure_space(total_height);
-
-        self.draw_section_label("Detailed Summary Record", self.y_mm);
-        let table_y = self.y_mm + label_height;
-        self.draw_card(
-            MARGIN_LEFT_MM,
-            table_y,
-            CONTENT_WIDTH_MM,
-            header_height + row_height * visible as f32,
-            Some(rgb(1.0, 0.998, 0.994)),
-        );
-        self.draw_filled_rect(
-            MARGIN_LEFT_MM,
-            table_y,
-            CONTENT_WIDTH_MM,
-            header_height,
-            rgb(0.989, 0.964, 0.944),
-        );
-        self.draw_wrapped_text_at(
-            "Record",
-            MARGIN_LEFT_MM + 3.0,
-            table_y + 2.8,
-            48.0,
-            7.0,
-            BuiltinFont::HelveticaBold,
-            gray(0.18),
-        );
-        self.draw_wrapped_text_at(
-            "When",
-            MARGIN_LEFT_MM + 55.0,
-            table_y + 2.8,
-            42.0,
-            7.0,
-            BuiltinFont::HelveticaBold,
-            gray(0.18),
-        );
-        self.draw_wrapped_text_at(
-            "Details",
-            MARGIN_LEFT_MM + 101.0,
-            table_y + 2.8,
-            73.0,
-            7.0,
-            BuiltinFont::HelveticaBold,
-            gray(0.18),
-        );
-
-        for (index, row) in rows.iter().take(visible).enumerate() {
-            let y = table_y + header_height + row_height * index as f32;
-            if index % 2 == 1 {
-                self.draw_filled_rect(
-                    MARGIN_LEFT_MM,
-                    y,
-                    CONTENT_WIDTH_MM,
-                    row_height,
-                    rgb(0.997, 0.991, 0.986),
-                );
-            }
-            self.draw_line(
-                MARGIN_LEFT_MM,
-                y + row_height,
-                PAGE_WIDTH_MM - MARGIN_RIGHT_MM,
-                y + row_height,
-                rgb(0.90, 0.87, 0.84),
-                0.45,
-            );
-            self.draw_wrapped_text_at(
-                &sanitize_text(&row.title),
-                MARGIN_LEFT_MM + 3.0,
-                y + 2.8,
-                48.0,
-                7.0,
-                BuiltinFont::HelveticaBold,
-                tone_text(&row.tone),
-            );
-            self.draw_wrapped_text_at(
-                &sanitize_text(&row.meta),
-                MARGIN_LEFT_MM + 55.0,
-                y + 2.8,
-                42.0,
-                7.0,
-                BuiltinFont::Helvetica,
-                gray(0.35),
-            );
-            self.draw_wrapped_text_at(
-                &sanitize_text(&truncate_text(&row.detail, 76)),
-                MARGIN_LEFT_MM + 101.0,
-                y + 2.8,
-                73.0,
-                7.0,
-                BuiltinFont::Helvetica,
-                gray(0.24),
+                color_body(),
             );
         }
 
@@ -646,7 +537,7 @@ impl PdfLayout {
             45.0,
             7.0,
             BuiltinFont::HelveticaBold,
-            gray(0.16),
+            color_body(),
         );
         self.draw_wrapped_text_at(
             &format!("Report period: {}", sanitize_text(&payload.subtitle)),
@@ -655,7 +546,7 @@ impl PdfLayout {
             80.0,
             6.8,
             BuiltinFont::Helvetica,
-            gray(0.45),
+            color_muted(),
         );
         self.y_mm += 14.0;
         self.draw_wrapped_text_at(
@@ -665,7 +556,7 @@ impl PdfLayout {
             CONTENT_WIDTH_MM,
             15.0,
             BuiltinFont::HelveticaBold,
-            gray(0.08),
+            color_ink(),
         );
         self.draw_wrapped_text_at(
             subtitle,
@@ -674,7 +565,7 @@ impl PdfLayout {
             CONTENT_WIDTH_MM,
             8.0,
             BuiltinFont::Helvetica,
-            gray(0.42),
+            color_muted(),
         );
         self.y_mm += 17.0;
     }
@@ -688,7 +579,7 @@ impl PdfLayout {
         let columns = 2usize;
         let gap = 4.0;
         let chart_width = (CONTENT_WIDTH_MM - gap) / columns as f32;
-        let chart_height = 42.0;
+        let chart_height = 48.0;
         let rows = (visible + columns - 1) / columns;
         let total_height = rows as f32 * chart_height + rows.saturating_sub(1) as f32 * gap;
         self.ensure_space(total_height);
@@ -705,6 +596,213 @@ impl PdfLayout {
         Ok(())
     }
 
+    fn draw_empty_panel(&mut self, text: &str) -> Result<(), String> {
+        let height = 24.0;
+        self.ensure_space(height);
+        self.draw_card(
+            MARGIN_LEFT_MM,
+            self.y_mm,
+            CONTENT_WIDTH_MM,
+            height,
+            Some(color_surface()),
+        );
+        self.draw_wrapped_text_at(
+            text,
+            MARGIN_LEFT_MM + 5.0,
+            self.y_mm + 8.0,
+            CONTENT_WIDTH_MM - 10.0,
+            9.0,
+            BuiltinFont::Helvetica,
+            color_muted(),
+        );
+        self.y_mm += height;
+        Ok(())
+    }
+
+    fn draw_at_a_glance_table(&mut self, payload: &ReportPdfPayload) -> Result<(), String> {
+        let rows = build_at_a_glance_rows(payload);
+        if rows.is_empty() {
+            return Ok(());
+        }
+
+        let visible = rows.len().min(8);
+        let label_height = 8.0;
+        let header_height = 9.2;
+        let row_heights: Vec<f32> = rows
+            .iter()
+            .take(visible)
+            .map(|row| {
+                let note = truncate_text(&row.note, 84);
+                let category_height = line_block_height(&row.category, 44.0, 7.4);
+                let value_height = line_block_height(&row.value, 42.0, 7.4);
+                let note_height = line_block_height(&note, 72.0, 7.4);
+                (category_height.max(value_height).max(note_height) + 5.0).max(12.0)
+            })
+            .collect();
+        let rows_height = row_heights.iter().sum::<f32>();
+        let total_height = label_height + header_height + rows_height;
+        self.ensure_space(total_height);
+
+        self.draw_section_label("At-a-glance table", self.y_mm);
+        let table_y = self.y_mm + label_height;
+        self.draw_card(
+            MARGIN_LEFT_MM,
+            table_y,
+            CONTENT_WIDTH_MM,
+            header_height + rows_height,
+            Some(color_surface()),
+        );
+        self.draw_filled_rect(
+            MARGIN_LEFT_MM + 0.3,
+            table_y + 0.3,
+            CONTENT_WIDTH_MM - 0.6,
+            header_height,
+            color_table_header(),
+        );
+        self.draw_wrapped_text_at(
+            "Category",
+            MARGIN_LEFT_MM + 4.0,
+            table_y + 3.0,
+            42.0,
+            7.5,
+            BuiltinFont::HelveticaBold,
+            color_body(),
+        );
+        self.draw_wrapped_text_at(
+            "Period value",
+            MARGIN_LEFT_MM + 55.0,
+            table_y + 3.0,
+            42.0,
+            7.5,
+            BuiltinFont::HelveticaBold,
+            color_body(),
+        );
+        self.draw_wrapped_text_at(
+            "Clinical note",
+            MARGIN_LEFT_MM + 101.0,
+            table_y + 3.0,
+            72.0,
+            7.5,
+            BuiltinFont::HelveticaBold,
+            color_body(),
+        );
+
+        let mut y = table_y + header_height;
+        for (index, row) in rows.iter().take(visible).enumerate() {
+            let row_height = row_heights[index];
+            let note = truncate_text(&row.note, 84);
+            let category_height = line_block_height(&row.category, 44.0, 7.4);
+            let value_height = line_block_height(&row.value, 42.0, 7.4);
+            let note_height = line_block_height(&note, 72.0, 7.4);
+            let centered_y = |block_height: f32| y + ((row_height - block_height) / 2.0).max(2.0);
+            if index % 2 == 1 {
+                self.draw_filled_rect(
+                    MARGIN_LEFT_MM + 0.3,
+                    y,
+                    CONTENT_WIDTH_MM - 0.6,
+                    row_height,
+                    color_zebra(),
+                );
+            }
+            self.draw_line(
+                MARGIN_LEFT_MM + 3.0,
+                y + row_height,
+                PAGE_WIDTH_MM - MARGIN_RIGHT_MM - 3.0,
+                y + row_height,
+                color_rule(),
+                0.35,
+            );
+            self.draw_wrapped_text_at(
+                &sanitize_text(&row.category),
+                MARGIN_LEFT_MM + 4.0,
+                centered_y(category_height),
+                44.0,
+                7.4,
+                BuiltinFont::HelveticaBold,
+                color_body(),
+            );
+            self.draw_wrapped_text_at(
+                &sanitize_text(&row.value),
+                MARGIN_LEFT_MM + 55.0,
+                centered_y(value_height),
+                42.0,
+                7.4,
+                BuiltinFont::Helvetica,
+                color_body(),
+            );
+            self.draw_wrapped_text_at(
+                &sanitize_text(&note),
+                MARGIN_LEFT_MM + 101.0,
+                centered_y(note_height),
+                72.0,
+                7.4,
+                BuiltinFont::Helvetica,
+                color_muted(),
+            );
+            y += row_height;
+        }
+
+        self.y_mm += total_height;
+        Ok(())
+    }
+
+    fn draw_attention_notes(&mut self, chips: &[ReportPdfChip]) -> Result<(), String> {
+        if chips.is_empty() {
+            return Ok(());
+        }
+
+        let visible = chips.len().min(4);
+        let label_height = 8.0;
+        let row_height = 17.0;
+        let total_height = label_height + row_height * visible as f32;
+        self.ensure_space(total_height);
+        self.draw_section_label("Care notes", self.y_mm);
+
+        let panel_y = self.y_mm + label_height;
+        self.draw_card(
+            MARGIN_LEFT_MM,
+            panel_y,
+            CONTENT_WIDTH_MM,
+            row_height * visible as f32,
+            Some(color_surface()),
+        );
+
+        for (index, chip) in chips.iter().take(visible).enumerate() {
+            let y = panel_y + row_height * index as f32;
+            if index > 0 {
+                self.draw_line(
+                    MARGIN_LEFT_MM + 4.0,
+                    y,
+                    PAGE_WIDTH_MM - MARGIN_RIGHT_MM - 4.0,
+                    y,
+                    color_rule(),
+                    0.35,
+                );
+            }
+            self.draw_wrapped_text_at(
+                &sanitize_text(&chip.text),
+                MARGIN_LEFT_MM + 5.0,
+                y + 3.0,
+                56.0,
+                7.4,
+                BuiltinFont::HelveticaBold,
+                tone_text(&chip.tone),
+            );
+            self.draw_wrapped_text_at(
+                &sanitize_text(&truncate_text(&chip.detail, 130)),
+                MARGIN_LEFT_MM + 66.0,
+                y + 3.0,
+                107.0,
+                7.5,
+                BuiltinFont::Helvetica,
+                color_body(),
+            );
+        }
+
+        self.y_mm += total_height + 5.0;
+        Ok(())
+    }
+
     fn draw_section_label(&mut self, label: &str, y_mm: f32) {
         self.draw_wrapped_text_at(
             &label.to_uppercase(),
@@ -713,7 +811,7 @@ impl PdfLayout {
             CONTENT_WIDTH_MM,
             7.8,
             BuiltinFont::HelveticaBold,
-            gray(0.42),
+            color_muted(),
         );
     }
 
@@ -728,7 +826,7 @@ impl PdfLayout {
             CONTENT_WIDTH_MM,
             15.0,
             BuiltinFont::HelveticaBold,
-            gray(0.12),
+            color_ink(),
             3.0,
         )
     }
@@ -741,13 +839,7 @@ impl PdfLayout {
         width_mm: f32,
         height_mm: f32,
     ) -> Result<(), String> {
-        self.draw_card(
-            x_mm,
-            y_mm,
-            width_mm,
-            height_mm,
-            Some(rgb(0.997, 0.996, 0.994)),
-        );
+        self.draw_card(x_mm, y_mm, width_mm, height_mm, Some(color_surface()));
         self.draw_wrapped_text_at(
             &sanitize_text(&chart.title),
             x_mm + 3.0,
@@ -755,7 +847,7 @@ impl PdfLayout {
             width_mm - 6.0,
             9.5,
             BuiltinFont::HelveticaBold,
-            gray(0.16),
+            color_body(),
         );
 
         if chart.points.is_empty() {
@@ -766,7 +858,7 @@ impl PdfLayout {
                 width_mm - 6.0,
                 9.0,
                 BuiltinFont::Helvetica,
-                gray(0.52),
+                color_muted(),
             );
             return Ok(());
         }
@@ -779,18 +871,22 @@ impl PdfLayout {
             .unwrap_or(0)
             .max(1) as f32;
 
-        let chart_inner_top = y_mm + 14.0;
-        let chart_inner_height = 18.0;
+        let chart_inner_top = y_mm + 15.0;
+        let chart_inner_height = 22.0;
         let chart_inner_width = width_mm - 8.0;
         let start_x = x_mm + 4.0;
         let group_width = chart_inner_width / chart.points.len() as f32;
 
+        for marker in [0.33_f32, 0.66_f32] {
+            let y = chart_inner_top + chart_inner_height * marker;
+            self.draw_line(x_mm + 4.0, y, x_mm + width_mm - 4.0, y, color_rule(), 0.25);
+        }
         self.draw_line(
             x_mm + 4.0,
             chart_inner_top + chart_inner_height,
             x_mm + width_mm - 4.0,
             chart_inner_top + chart_inner_height,
-            gray(0.88),
+            color_rule(),
             0.8,
         );
 
@@ -802,19 +898,21 @@ impl PdfLayout {
                     + (chart_inner_height
                         - (point.primary_value as f32 / max_value) * chart_inner_height);
                 if let Some((px, py)) = previous {
-                    self.draw_line(px, py, center_x, center_y, rgb(0.93, 0.62, 0.48), 1.2);
+                    self.draw_line(px, py, center_x, center_y, color_peach_text(), 1.2);
                 }
-                self.draw_circle(center_x, center_y, 1.3, rgb(0.93, 0.62, 0.48));
+                self.draw_circle(center_x, center_y, 1.25, color_peach_text());
                 previous = Some((center_x, center_y));
-                self.draw_wrapped_text_at(
-                    &sanitize_text(&point.label),
-                    start_x + group_width * index as f32,
-                    y_mm + height_mm - 9.0,
-                    group_width,
-                    6.8,
-                    BuiltinFont::Helvetica,
-                    gray(0.48),
-                );
+                if should_draw_chart_label(index, chart.points.len()) {
+                    self.draw_wrapped_text_at(
+                        &sanitize_text(&point.label),
+                        start_x + group_width * index as f32,
+                        y_mm + height_mm - 8.5,
+                        group_width.max(8.0),
+                        6.2,
+                        BuiltinFont::Helvetica,
+                        color_muted(),
+                    );
+                }
             }
         } else {
             for (index, point) in chart.points.iter().enumerate() {
@@ -830,7 +928,7 @@ impl PdfLayout {
                     chart_inner_top + (chart_inner_height - primary_height),
                     primary_width,
                     primary_height.max(1.0),
-                    rgb(0.93, 0.62, 0.48),
+                    color_peach_text(),
                 );
 
                 if point.secondary_value.unwrap_or(0) > 0 {
@@ -839,19 +937,21 @@ impl PdfLayout {
                         chart_inner_top + (chart_inner_height - secondary_height),
                         secondary_width,
                         secondary_height.max(1.0),
-                        rgb(0.59, 0.70, 0.92),
+                        color_blue(),
                     );
                 }
 
-                self.draw_wrapped_text_at(
-                    &sanitize_text(&point.label),
-                    group_x,
-                    y_mm + height_mm - 9.0,
-                    group_width,
-                    6.8,
-                    BuiltinFont::Helvetica,
-                    gray(0.48),
-                );
+                if should_draw_chart_label(index, chart.points.len()) {
+                    self.draw_wrapped_text_at(
+                        &sanitize_text(&point.label),
+                        group_x,
+                        y_mm + height_mm - 8.5,
+                        group_width.max(8.0),
+                        6.2,
+                        BuiltinFont::Helvetica,
+                        color_muted(),
+                    );
+                }
             }
         }
 
@@ -862,7 +962,7 @@ impl PdfLayout {
             width_mm - 28.0,
             6.2,
             BuiltinFont::Helvetica,
-            gray(0.36),
+            color_body(),
         );
 
         if let Some(label) = &chart.secondary_label {
@@ -873,7 +973,7 @@ impl PdfLayout {
                 width_mm * 0.40,
                 6.2,
                 BuiltinFont::Helvetica,
-                gray(0.50),
+                color_muted(),
             );
         }
 
@@ -887,20 +987,30 @@ impl PdfLayout {
             CONTENT_WIDTH_MM,
             12.0,
             BuiltinFont::HelveticaBold,
-            gray(0.15),
+            color_ink(),
             2.4,
         )?;
 
         if section.rows.is_empty() {
-            self.draw_wrapped_text(
-                &section.empty_text,
+            let height = 18.0;
+            self.ensure_space(height);
+            self.draw_card(
                 MARGIN_LEFT_MM,
+                self.y_mm,
                 CONTENT_WIDTH_MM,
-                9.5,
+                height,
+                Some(color_surface()),
+            );
+            self.draw_wrapped_text_at(
+                &section.empty_text,
+                MARGIN_LEFT_MM + 4.0,
+                self.y_mm + 5.5,
+                CONTENT_WIDTH_MM - 8.0,
+                8.5,
                 BuiltinFont::HelveticaOblique,
-                gray(0.52),
-                3.0,
-            )?;
+                color_muted(),
+            );
+            self.y_mm += height;
             return Ok(());
         }
 
@@ -917,7 +1027,7 @@ impl PdfLayout {
                     CONTENT_WIDTH_MM,
                     12.0,
                     BuiltinFont::HelveticaBold,
-                    gray(0.15),
+                    color_ink(),
                     2.4,
                 )?;
                 self.draw_context_table_header();
@@ -938,7 +1048,7 @@ impl PdfLayout {
             self.y_mm,
             CONTENT_WIDTH_MM,
             header_height,
-            Some(rgb(0.974, 0.953, 0.936)),
+            Some(color_table_header()),
         );
         self.draw_wrapped_text_at(
             "Item",
@@ -947,7 +1057,7 @@ impl PdfLayout {
             45.0,
             7.4,
             BuiltinFont::HelveticaBold,
-            gray(0.18),
+            color_body(),
         );
         self.draw_wrapped_text_at(
             "When / value",
@@ -956,7 +1066,7 @@ impl PdfLayout {
             42.0,
             7.4,
             BuiltinFont::HelveticaBold,
-            gray(0.18),
+            color_body(),
         );
         self.draw_wrapped_text_at(
             "Details",
@@ -965,16 +1075,16 @@ impl PdfLayout {
             79.0,
             7.4,
             BuiltinFont::HelveticaBold,
-            gray(0.18),
+            color_body(),
         );
         self.y_mm += header_height;
     }
 
     fn draw_context_row(&mut self, row: &ReportPdfSectionRow, height: f32, zebra: bool) {
         let fill = if zebra {
-            rgb(0.997, 0.991, 0.986)
+            color_zebra()
         } else {
-            gray(1.0)
+            color_surface()
         };
         self.draw_filled_rect(MARGIN_LEFT_MM, self.y_mm, CONTENT_WIDTH_MM, height, fill);
         self.draw_line(
@@ -982,38 +1092,46 @@ impl PdfLayout {
             self.y_mm + height,
             PAGE_WIDTH_MM - MARGIN_RIGHT_MM,
             self.y_mm + height,
-            rgb(0.90, 0.87, 0.84),
-            0.5,
+            color_rule(),
+            0.35,
         );
+
+        let title_height = line_block_height(&row.title, 45.0, 8.0);
+        let meta_text = row.meta.as_deref().unwrap_or("-");
+        let meta_height = line_block_height(meta_text, 42.0, 7.6);
+        let detail_text = row.detail.as_deref().unwrap_or("-");
+        let detail_height = line_block_height(detail_text, 79.0, 7.6);
+        let row_y = self.y_mm;
+        let centered_y = |block_height: f32| row_y + ((height - block_height) / 2.0).max(2.0);
 
         self.draw_wrapped_text_at(
             &sanitize_text(&row.title),
             MARGIN_LEFT_MM + 3.0,
-            self.y_mm + 3.2,
+            centered_y(title_height),
             45.0,
             8.0,
             BuiltinFont::HelveticaBold,
-            gray(0.15),
+            color_body(),
         );
 
         self.draw_wrapped_text_at(
-            &sanitize_text(row.meta.as_deref().unwrap_or("-")),
+            &sanitize_text(meta_text),
             MARGIN_LEFT_MM + 52.0,
-            self.y_mm + 3.2,
+            centered_y(meta_height),
             42.0,
             7.6,
             BuiltinFont::Helvetica,
-            gray(0.35),
+            color_muted(),
         );
 
         self.draw_wrapped_text_at(
-            &sanitize_text(row.detail.as_deref().unwrap_or("-")),
+            &sanitize_text(detail_text),
             MARGIN_LEFT_MM + 96.0,
-            self.y_mm + 3.2,
+            centered_y(detail_height),
             79.0,
             7.6,
             BuiltinFont::Helvetica,
-            gray(0.25),
+            color_body(),
         );
     }
 
@@ -1025,7 +1143,7 @@ impl PdfLayout {
             self.y_mm,
             CONTENT_WIDTH_MM,
             header_height,
-            Some(rgb(0.974, 0.953, 0.936)),
+            Some(color_table_header()),
         );
         self.draw_wrapped_text_at(
             "Date / Time",
@@ -1034,7 +1152,7 @@ impl PdfLayout {
             30.0,
             8.0,
             BuiltinFont::HelveticaBold,
-            gray(0.18),
+            color_body(),
         );
         self.draw_wrapped_text_at(
             "Event",
@@ -1043,7 +1161,7 @@ impl PdfLayout {
             25.0,
             8.0,
             BuiltinFont::HelveticaBold,
-            gray(0.18),
+            color_body(),
         );
         self.draw_wrapped_text_at(
             "Details",
@@ -1052,7 +1170,7 @@ impl PdfLayout {
             73.0,
             8.0,
             BuiltinFont::HelveticaBold,
-            gray(0.18),
+            color_body(),
         );
         self.draw_wrapped_text_at(
             "Parent Note",
@@ -1061,66 +1179,106 @@ impl PdfLayout {
             39.0,
             8.0,
             BuiltinFont::HelveticaBold,
-            gray(0.18),
+            color_body(),
         );
         self.y_mm += header_height;
     }
 
     fn draw_timeline_row(&mut self, row: &ReportPdfTimelineRow, zebra: bool) -> Result<(), String> {
-        let height = self.measure_timeline_row_height(row);
-        let fill = if zebra {
-            rgb(0.997, 0.991, 0.986)
-        } else {
-            gray(1.0)
-        };
-        self.draw_filled_rect(MARGIN_LEFT_MM, self.y_mm, CONTENT_WIDTH_MM, height, fill);
-        self.draw_line(
-            MARGIN_LEFT_MM,
-            self.y_mm + height,
-            PAGE_WIDTH_MM - MARGIN_RIGHT_MM,
-            self.y_mm + height,
-            rgb(0.90, 0.87, 0.84),
-            0.5,
-        );
+        let font_size = 7.4;
+        let line_height = pt_to_mm(font_size * 1.28);
+        let date_text = sanitize_text(&row.date_time);
+        let event_text = sanitize_text(&row.event_type);
+        let detail_text = sanitize_text(&row.details);
+        let note_text = sanitize_text(row.note.as_deref().unwrap_or("-"));
+        let date_lines = wrap_text(&date_text, 29.0, font_size);
+        let event_lines = wrap_text(&event_text, 24.0, font_size);
+        let detail_lines = wrap_text(&detail_text, 72.0, font_size);
+        let note_lines = wrap_text(&note_text, 38.0, font_size);
+        let max_lines = date_lines
+            .len()
+            .max(event_lines.len())
+            .max(detail_lines.len())
+            .max(note_lines.len())
+            .max(1);
+        let mut line_offset = 0usize;
 
-        self.draw_wrapped_text_at(
-            &sanitize_text(&row.date_time),
-            MARGIN_LEFT_MM + 2.5,
-            self.y_mm + 3.0,
-            30.0,
-            8.0,
-            BuiltinFont::Helvetica,
-            gray(0.20),
-        );
-        self.draw_wrapped_text_at(
-            &sanitize_text(&row.event_type),
-            MARGIN_LEFT_MM + 34.0,
-            self.y_mm + 3.0,
-            25.0,
-            8.0,
-            BuiltinFont::HelveticaBold,
-            gray(0.16),
-        );
-        self.draw_wrapped_text_at(
-            &sanitize_text(&row.details),
-            MARGIN_LEFT_MM + 61.0,
-            self.y_mm + 3.0,
-            73.0,
-            8.0,
-            BuiltinFont::Helvetica,
-            gray(0.24),
-        );
-        self.draw_wrapped_text_at(
-            &sanitize_text(row.note.as_deref().unwrap_or("-")),
-            MARGIN_LEFT_MM + 136.0,
-            self.y_mm + 3.0,
-            39.0,
-            8.0,
-            BuiltinFont::Helvetica,
-            gray(0.34),
-        );
+        while line_offset < max_lines {
+            let bottom = PAGE_HEIGHT_MM - MARGIN_BOTTOM_MM;
+            if self.y_mm + 12.0 > bottom {
+                self.new_page();
+                self.draw_section_heading("Clinical Timeline Appendix")?;
+                self.draw_timeline_header();
+            }
 
-        self.y_mm += height;
+            let available_height = (bottom - self.y_mm - 6.0).max(line_height);
+            let available_lines = (available_height / line_height).floor().max(1.0) as usize;
+            let chunk_len = (max_lines - line_offset).min(available_lines);
+            let height = (chunk_len as f32 * line_height + 6.0).max(12.0);
+            let fill = if zebra {
+                color_zebra()
+            } else {
+                color_surface()
+            };
+
+            self.draw_filled_rect(MARGIN_LEFT_MM, self.y_mm, CONTENT_WIDTH_MM, height, fill);
+            self.draw_line(
+                MARGIN_LEFT_MM,
+                self.y_mm + height,
+                PAGE_WIDTH_MM - MARGIN_RIGHT_MM,
+                self.y_mm + height,
+                color_rule(),
+                0.35,
+            );
+
+            let chunk_height = chunk_len as f32 * line_height;
+            let text_y = self.y_mm + ((height - chunk_height) / 2.0).max(2.0);
+
+            self.draw_text_line_slice(
+                &date_lines,
+                line_offset,
+                chunk_len,
+                MARGIN_LEFT_MM + 2.5,
+                text_y,
+                font_size,
+                BuiltinFont::Helvetica,
+                color_body(),
+            );
+            self.draw_text_line_slice(
+                &event_lines,
+                line_offset,
+                chunk_len,
+                MARGIN_LEFT_MM + 34.0,
+                text_y,
+                font_size,
+                BuiltinFont::HelveticaBold,
+                color_body(),
+            );
+            self.draw_text_line_slice(
+                &detail_lines,
+                line_offset,
+                chunk_len,
+                MARGIN_LEFT_MM + 61.0,
+                text_y,
+                font_size,
+                BuiltinFont::Helvetica,
+                color_body(),
+            );
+            self.draw_text_line_slice(
+                &note_lines,
+                line_offset,
+                chunk_len,
+                MARGIN_LEFT_MM + 136.0,
+                text_y,
+                font_size,
+                BuiltinFont::Helvetica,
+                color_muted(),
+            );
+
+            self.y_mm += height;
+            line_offset += chunk_len;
+        }
+
         Ok(())
     }
 
@@ -1129,14 +1287,6 @@ impl PdfLayout {
         let meta = line_block_height(row.meta.as_deref().unwrap_or("-"), 42.0, 7.6);
         let detail = line_block_height(row.detail.as_deref().unwrap_or("-"), 79.0, 7.6);
         (title.max(meta).max(detail) + 6.4).max(13.0)
-    }
-
-    fn measure_timeline_row_height(&self, row: &ReportPdfTimelineRow) -> f32 {
-        let left = line_block_height(&row.date_time, 30.0, 8.0);
-        let event = line_block_height(&row.event_type, 25.0, 8.0);
-        let details = line_block_height(&row.details, 73.0, 8.0);
-        let note = line_block_height(row.note.as_deref().unwrap_or("-"), 39.0, 8.0);
-        (left.max(event).max(details).max(note) + 6.0).max(13.0)
     }
 
     fn draw_wrapped_text(
@@ -1194,6 +1344,31 @@ impl PdfLayout {
         }
     }
 
+    fn draw_text_line_slice(
+        &mut self,
+        lines: &[String],
+        start: usize,
+        count: usize,
+        x_mm: f32,
+        y_from_top_mm: f32,
+        font_size_pt: f32,
+        font: BuiltinFont,
+        color: Color,
+    ) {
+        let line_height_mm = pt_to_mm(font_size_pt * 1.28);
+        for (index, line) in lines.iter().skip(start).take(count).enumerate() {
+            let sanitized = sanitize_text(line);
+            self.ops.extend(text_ops(
+                &sanitized,
+                x_mm,
+                y_from_top_mm + line_height_mm * index as f32,
+                font_size_pt,
+                font,
+                color.clone(),
+            ));
+        }
+    }
+
     fn draw_card(
         &mut self,
         x_mm: f32,
@@ -1202,14 +1377,16 @@ impl PdfLayout {
         height_mm: f32,
         fill: Option<Color>,
     ) {
-        self.ops.push(Op::SetOutlineColor { col: gray(0.86) });
-        self.ops.push(Op::SetOutlineThickness { pt: Pt(0.6) });
+        self.ops.push(Op::SetOutlineColor {
+            col: color_border(),
+        });
+        self.ops.push(Op::SetOutlineThickness { pt: Pt(0.45) });
         self.ops.push(Op::SetFillColor {
-            col: fill.unwrap_or_else(|| gray(1.0)),
+            col: fill.unwrap_or_else(color_surface),
         });
         self.ops.push(Op::DrawPolygon {
             polygon: polygon_from_top_points(
-                rounded_rect_points(x_mm, y_from_top_mm, width_mm, height_mm, 3.2, 6),
+                rounded_rect_points(x_mm, y_from_top_mm, width_mm, height_mm, 3.8, 6),
                 PaintMode::FillStroke,
             ),
         });
@@ -1291,46 +1468,102 @@ impl PdfLayout {
         radius_mm: f32,
         color: Color,
     ) {
-        let points = circle_points(center_x_mm, center_y_from_top_mm, radius_mm, 18);
+        let points = circle_points(center_x_mm, center_y_from_top_mm, radius_mm, 48);
         self.ops.push(Op::SetFillColor { col: color });
         self.ops.push(Op::DrawPolygon {
             polygon: polygon_from_top_points(points, PaintMode::Fill),
         });
     }
 
-    fn draw_sparkle(
+    fn draw_child_avatar(
         &mut self,
+        payload: &ReportPdfPayload,
         center_x_mm: f32,
         center_y_from_top_mm: f32,
-        size_mm: f32,
-        color: Color,
+        radius_mm: f32,
     ) {
-        let points = vec![
-            (center_x_mm, center_y_from_top_mm - size_mm),
-            (
-                center_x_mm + size_mm * 0.32,
-                center_y_from_top_mm - size_mm * 0.32,
-            ),
-            (center_x_mm + size_mm, center_y_from_top_mm),
-            (
-                center_x_mm + size_mm * 0.32,
-                center_y_from_top_mm + size_mm * 0.32,
-            ),
-            (center_x_mm, center_y_from_top_mm + size_mm),
-            (
-                center_x_mm - size_mm * 0.32,
-                center_y_from_top_mm + size_mm * 0.32,
-            ),
-            (center_x_mm - size_mm, center_y_from_top_mm),
-            (
-                center_x_mm - size_mm * 0.32,
-                center_y_from_top_mm - size_mm * 0.32,
-            ),
-        ];
-        self.ops.push(Op::SetFillColor { col: color });
+        self.draw_circle(
+            center_x_mm,
+            center_y_from_top_mm,
+            radius_mm,
+            avatar_color(payload.child_avatar_color.as_deref()),
+        );
+
+        if let Some(data_url) = payload.child_avatar_data_url.as_deref() {
+            if self.draw_avatar_image(data_url, center_x_mm, center_y_from_top_mm, radius_mm) {
+                return;
+            }
+        }
+
+        let initial = payload
+            .child_name
+            .trim()
+            .chars()
+            .next()
+            .map(|ch| ch.to_uppercase().collect::<String>())
+            .unwrap_or_else(|| "?".to_string());
+        self.draw_wrapped_text_at(
+            &sanitize_text(&initial),
+            center_x_mm - radius_mm * 0.28,
+            center_y_from_top_mm + radius_mm * 0.18,
+            radius_mm,
+            radius_mm * 1.45,
+            BuiltinFont::HelveticaBold,
+            gray(1.0),
+        );
+    }
+
+    fn draw_avatar_image(
+        &mut self,
+        data_url: &str,
+        center_x_mm: f32,
+        center_y_from_top_mm: f32,
+        radius_mm: f32,
+    ) -> bool {
+        let Some(bytes) = decode_data_url(data_url) else {
+            return false;
+        };
+        let mut warnings = Vec::new();
+        let Ok(image) = RawImage::decode_from_bytes(&bytes, &mut warnings) else {
+            return false;
+        };
+
+        let image_width = image.width.max(1) as f32;
+        let image_height = image.height.max(1) as f32;
+        let diameter_mm = radius_mm * 2.0;
+        let dpi = 300.0;
+        let target_size_pt = mm_to_pt(diameter_mm);
+        let natural_width_pt = image_width / dpi * 72.0;
+        let natural_height_pt = image_height / dpi * 72.0;
+        let scale = (target_size_pt / natural_width_pt).max(target_size_pt / natural_height_pt);
+        let draw_width_pt = natural_width_pt * scale;
+        let draw_height_pt = natural_height_pt * scale;
+        let box_left_pt = mm_to_pt(center_x_mm - radius_mm);
+        let box_bottom_pt = mm_to_pt(PAGE_HEIGHT_MM - center_y_from_top_mm - radius_mm);
+        let translate_x = box_left_pt + (target_size_pt - draw_width_pt) / 2.0;
+        let translate_y = box_bottom_pt + (target_size_pt - draw_height_pt) / 2.0;
+        let image_id = self.doc.add_image(&image);
+
+        self.ops.push(Op::SaveGraphicsState);
         self.ops.push(Op::DrawPolygon {
-            polygon: polygon_from_top_points(points, PaintMode::Fill),
+            polygon: polygon_from_top_points(
+                circle_points(center_x_mm, center_y_from_top_mm, radius_mm, 36),
+                PaintMode::Clip,
+            ),
         });
+        self.ops.push(Op::UseXobject {
+            id: image_id,
+            transform: XObjectTransform {
+                translate_x: Some(Pt(translate_x)),
+                translate_y: Some(Pt(translate_y)),
+                rotate: None,
+                scale_x: Some(scale),
+                scale_y: Some(scale),
+                dpi: Some(dpi),
+            },
+        });
+        self.ops.push(Op::RestoreGraphicsState);
+        true
     }
 
     fn draw_ellipse(
@@ -1472,10 +1705,58 @@ fn text_ops(
     ]
 }
 
+fn footer_ops(page_number: usize) -> Vec<Op> {
+    let y = PAGE_HEIGHT_MM - 9.0;
+    let dot_y = y - 1.6;
+    let color = gray(0.55);
+    let mut ops = Vec::new();
+
+    ops.extend(text_ops(
+        "Tiny Tummy",
+        MARGIN_LEFT_MM,
+        y,
+        8.0,
+        BuiltinFont::Helvetica,
+        color.clone(),
+    ));
+    ops.push(Op::SetFillColor { col: color.clone() });
+    ops.push(Op::DrawPolygon {
+        polygon: polygon_from_top_points(
+            circle_points(MARGIN_LEFT_MM + 18.8, dot_y, 0.38, 10),
+            PaintMode::Fill,
+        ),
+    });
+    ops.extend(text_ops(
+        "Baby health log",
+        MARGIN_LEFT_MM + 21.0,
+        y,
+        8.0,
+        BuiltinFont::Helvetica,
+        color.clone(),
+    ));
+    ops.push(Op::SetFillColor { col: color.clone() });
+    ops.push(Op::DrawPolygon {
+        polygon: polygon_from_top_points(
+            circle_points(MARGIN_LEFT_MM + 48.0, dot_y, 0.38, 10),
+            PaintMode::Fill,
+        ),
+    });
+    ops.extend(text_ops(
+        &format!("Page {}", page_number),
+        MARGIN_LEFT_MM + 50.2,
+        y,
+        8.0,
+        BuiltinFont::Helvetica,
+        color,
+    ));
+
+    ops
+}
+
 fn page_background_ops() -> Vec<Op> {
     vec![
         Op::SetFillColor {
-            col: rgb(1.0, 0.997, 0.992),
+            col: color_background(),
         },
         Op::DrawPolygon {
             polygon: Rect {
@@ -1612,11 +1893,11 @@ fn ellipse_points(
 
 fn tone_fill(tone: &str) -> Color {
     match tone {
-        "alert" => rgb(1.0, 0.943, 0.925),
-        "caution" => rgb(1.0, 0.966, 0.900),
-        "healthy" => rgb(0.934, 0.976, 0.946),
-        "info" => rgb(0.948, 0.965, 0.996),
-        _ => rgb(0.997, 0.996, 0.994),
+        "alert" => rgb(1.0, 0.925, 0.900),
+        "caution" => rgb(1.0, 0.942, 0.835),
+        "healthy" => rgb(0.880, 0.955, 0.900),
+        "info" => rgb(0.910, 0.940, 0.995),
+        _ => rgb(0.985, 0.970, 0.952),
     }
 }
 
@@ -1627,6 +1908,107 @@ fn tone_text(tone: &str) -> Color {
         "healthy" => rgb(0.18, 0.39, 0.24),
         "info" => rgb(0.20, 0.31, 0.55),
         _ => gray(0.22),
+    }
+}
+
+fn color_background() -> Color {
+    rgb(1.0, 0.982, 0.955)
+}
+
+fn color_warm_panel() -> Color {
+    rgb(1.0, 0.965, 0.930)
+}
+
+fn color_surface() -> Color {
+    rgb(1.0, 0.998, 0.993)
+}
+
+fn color_table_header() -> Color {
+    rgb(0.988, 0.955, 0.928)
+}
+
+fn color_zebra() -> Color {
+    rgb(0.998, 0.988, 0.978)
+}
+
+fn color_border() -> Color {
+    rgb(0.900, 0.850, 0.805)
+}
+
+fn color_rule() -> Color {
+    rgb(0.895, 0.865, 0.835)
+}
+
+fn color_ink() -> Color {
+    rgb(0.190, 0.070, 0.050)
+}
+
+fn color_body() -> Color {
+    rgb(0.260, 0.205, 0.170)
+}
+
+fn color_muted() -> Color {
+    rgb(0.470, 0.395, 0.340)
+}
+
+fn color_peach() -> Color {
+    rgb(0.965, 0.610, 0.450)
+}
+
+fn color_peach_text() -> Color {
+    rgb(0.890, 0.390, 0.235)
+}
+
+fn color_blue() -> Color {
+    rgb(0.390, 0.560, 0.800)
+}
+
+fn avatar_color(value: Option<&str>) -> Color {
+    value.and_then(parse_hex_color).unwrap_or_else(color_peach)
+}
+
+fn parse_hex_color(value: &str) -> Option<Color> {
+    let hex = value.trim().strip_prefix('#').unwrap_or(value.trim());
+    if !hex.is_ascii() {
+        return None;
+    }
+    match hex.len() {
+        3 => {
+            let mut expanded = String::with_capacity(6);
+            for ch in hex.chars() {
+                expanded.push(ch);
+                expanded.push(ch);
+            }
+            parse_hex_color(&expanded)
+        }
+        6 => {
+            let red = parse_hex_pair(&hex[0..2])?;
+            let green = parse_hex_pair(&hex[2..4])?;
+            let blue = parse_hex_pair(&hex[4..6])?;
+            Some(rgb(red, green, blue))
+        }
+        _ => None,
+    }
+}
+
+fn parse_hex_pair(value: &str) -> Option<f32> {
+    u8::from_str_radix(value, 16)
+        .ok()
+        .map(|channel| channel as f32 / 255.0)
+}
+
+fn overview_value_font_size(value: &str) -> f32 {
+    match sanitize_text(value).chars().count() {
+        0..=8 => 13.0,
+        9..=16 => 12.0,
+        _ => 10.4,
+    }
+}
+
+fn insight_value_font_size(value: &str) -> f32 {
+    match sanitize_text(value).chars().count() {
+        0..=18 => 9.8,
+        _ => 8.8,
     }
 }
 
@@ -1650,32 +2032,128 @@ fn truncate_text(input: &str, max_chars: usize) -> String {
 }
 
 fn build_overview_items(payload: &ReportPdfPayload) -> Vec<ReportOverviewItem> {
-    let mut items: Vec<ReportOverviewItem> = payload
-        .dashboard_stats
-        .iter()
-        .map(|stat| {
-            let label = overview_label(&stat.label).to_string();
-            ReportOverviewItem {
-                tone: overview_tone(&label).to_string(),
-                label,
-                value: stat.value.clone(),
-                detail: stat
-                    .detail
-                    .clone()
-                    .unwrap_or_else(|| "Selected period".to_string()),
-            }
-        })
-        .collect();
+    let mut items: Vec<ReportOverviewItem> = Vec::new();
+    let stool_card = find_summary_card(payload, "Stool pattern");
+    let feed_card = find_summary_card(payload, "Feed rhythm");
+    let symptom_card = find_summary_card(payload, "Symptoms & episodes");
+    let growth_card = find_summary_card(payload, "Growth & milestones");
+    let no_poop_stat = find_stat(payload, "Longest no-poop streak");
+    let bottle_stat = payload.dashboard_stats.iter().find(|stat| {
+        stat.label == "Bottle volume / day" || stat.label == "Breastfeeding duration / day"
+    });
+    let stool_total = chart_total(payload, "Daily stool output", false);
+    let no_poop_total = chart_total(payload, "Daily stool output", true);
+    let feed_total = chart_total(payload, "Daily feed activity", false);
 
-    for card in &payload.summary_cards {
-        if items.len() >= 5 {
-            break;
-        }
+    if let Some(card) = stool_card {
         items.push(ReportOverviewItem {
-            label: overview_label(&card.title).to_string(),
+            label: "Stool count".to_string(),
             value: card.value.clone(),
             detail: card.detail.clone(),
-            tone: card.tone.clone(),
+        });
+    } else if stool_total > 0 {
+        items.push(ReportOverviewItem {
+            label: "Stool count".to_string(),
+            value: format!(
+                "{} stool{}",
+                stool_total,
+                if stool_total == 1 { "" } else { "s" }
+            ),
+            detail: "Total logged stools".to_string(),
+        });
+    }
+
+    if let Some(stat) = no_poop_stat {
+        items.push(ReportOverviewItem {
+            label: "No-poop days".to_string(),
+            value: if no_poop_total > 0 {
+                format!(
+                    "{} day{}",
+                    no_poop_total,
+                    if no_poop_total == 1 { "" } else { "s" }
+                )
+            } else {
+                "None".to_string()
+            },
+            detail: format!("Longest streak {}", stat.value),
+        });
+    }
+
+    if let Some(card) = feed_card {
+        items.push(ReportOverviewItem {
+            label: "Feed sessions".to_string(),
+            value: card.value.clone(),
+            detail: card.detail.clone(),
+        });
+    } else if feed_total > 0 {
+        items.push(ReportOverviewItem {
+            label: "Feed sessions".to_string(),
+            value: format!(
+                "{} feed{}",
+                feed_total,
+                if feed_total == 1 { "" } else { "s" }
+            ),
+            detail: "Total logged feeds".to_string(),
+        });
+    }
+
+    if let Some(stat) = bottle_stat {
+        items.push(ReportOverviewItem {
+            label: overview_label(&stat.label).to_string(),
+            value: stat.value.clone(),
+            detail: stat
+                .detail
+                .clone()
+                .unwrap_or_else(|| "Selected period".to_string()),
+        });
+    }
+
+    if let Some(card) = symptom_card {
+        items.push(ReportOverviewItem {
+            label: "Symptoms".to_string(),
+            value: card.value.clone(),
+            detail: card.detail.clone(),
+        });
+    }
+
+    if let Some(card) = growth_card {
+        items.push(ReportOverviewItem {
+            label: "Growth / milestones".to_string(),
+            value: card.value.clone(),
+            detail: card.detail.clone(),
+        });
+    }
+
+    for stat in &payload.dashboard_stats {
+        if items.len() >= 6 {
+            break;
+        }
+        let label = overview_label(&stat.label).to_string();
+        if items.iter().any(|item| item.label == label) {
+            continue;
+        }
+        items.push(ReportOverviewItem {
+            label,
+            value: stat.value.clone(),
+            detail: stat
+                .detail
+                .clone()
+                .unwrap_or_else(|| "Selected period".to_string()),
+        });
+    }
+
+    for card in &payload.summary_cards {
+        if items.len() >= 6 {
+            break;
+        }
+        let label = overview_label(&card.title).to_string();
+        if items.iter().any(|item| item.label == label) {
+            continue;
+        }
+        items.push(ReportOverviewItem {
+            label,
+            value: card.value.clone(),
+            detail: card.detail.clone(),
         });
     }
 
@@ -1684,15 +2162,6 @@ fn build_overview_items(payload: &ReportPdfPayload) -> Vec<ReportOverviewItem> {
 
 fn build_insight_items(payload: &ReportPdfPayload) -> Vec<ReportInsightItem> {
     let mut items = Vec::new();
-
-    if let Some(chip) = payload.attention_chips.first() {
-        items.push(ReportInsightItem {
-            title: "Care note".to_string(),
-            value: chip.text.clone(),
-            detail: chip.detail.clone(),
-            tone: chip.tone.clone(),
-        });
-    }
 
     for card in &payload.summary_cards {
         if items.len() >= 4 {
@@ -1710,40 +2179,32 @@ fn build_insight_items(payload: &ReportPdfPayload) -> Vec<ReportInsightItem> {
     items
 }
 
-fn build_detail_record_rows(payload: &ReportPdfPayload) -> Vec<ReportRecordRow> {
-    let mut rows: Vec<ReportRecordRow> = payload
-        .timeline
-        .iter()
-        .take(5)
-        .map(|row| {
-            let detail = if let Some(note) = &row.note {
-                format!("{} | {}", row.details, note)
-            } else {
-                row.details.clone()
-            };
-            ReportRecordRow {
-                title: row.event_type.clone(),
-                meta: row.date_time.clone(),
-                detail,
-                tone: record_tone(&row.event_type).to_string(),
-            }
-        })
-        .collect();
+fn build_at_a_glance_rows(payload: &ReportPdfPayload) -> Vec<AtAGlanceRow> {
+    let mut rows = Vec::new();
 
-    if rows.len() >= 5 {
-        return rows;
+    for item in build_overview_items(payload) {
+        rows.push(AtAGlanceRow {
+            category: item.label,
+            value: item.value,
+            note: item.detail,
+        });
     }
 
-    for card in &payload.summary_cards {
-        if rows.len() >= 5 {
+    for stat in &payload.dashboard_stats {
+        if rows.len() >= 8 {
             break;
         }
-
-        rows.push(ReportRecordRow {
-            title: card.title.clone(),
-            meta: card.value.clone(),
-            detail: card.detail.clone(),
-            tone: card.tone.clone(),
+        let category = overview_label(&stat.label).to_string();
+        if rows.iter().any(|row| row.category == category) {
+            continue;
+        }
+        rows.push(AtAGlanceRow {
+            category,
+            value: stat.value.clone(),
+            note: stat
+                .detail
+                .clone()
+                .unwrap_or_else(|| "Selected period".to_string()),
         });
     }
 
@@ -1752,40 +2213,75 @@ fn build_detail_record_rows(payload: &ReportPdfPayload) -> Vec<ReportRecordRow> 
 
 fn overview_label(label: &str) -> &str {
     match label {
-        "Avg stools / day" => "Poop",
-        "Longest no-poop streak" => "No-poop",
-        "Feed sessions / day" => "Feed",
-        "Bottle volume / day" => "Bottle",
-        "Breastfeeding duration / day" => "Nursing",
+        "Avg stools / day" => "Stool count",
+        "Longest no-poop streak" => "No-poop days",
+        "Feed sessions / day" => "Feed sessions",
+        "Bottle volume / day" => "Bottle volume",
+        "Breastfeeding duration / day" => "Nursing time",
         "Active episode" => "Episode",
         "Severe symptoms" => "Symptoms",
         "Growth entries" => "Growth",
-        "Stool pattern" => "Poop",
-        "Feed rhythm" => "Feed",
+        "Stool pattern" => "Stool count",
+        "Feed rhythm" => "Feed sessions",
         "Symptoms & episodes" => "Symptoms",
         "Growth & milestones" => "Growth",
         _ => label,
     }
 }
 
-fn overview_tone(label: &str) -> &str {
-    match label {
-        "Poop" | "No-poop" => "caution",
-        "Feed" | "Bottle" | "Nursing" => "info",
-        "Growth" => "healthy",
-        "Symptoms" | "Episode" => "alert",
-        _ => "default",
-    }
+fn find_summary_card<'a>(
+    payload: &'a ReportPdfPayload,
+    title: &str,
+) -> Option<&'a ReportPdfSummaryCard> {
+    payload
+        .summary_cards
+        .iter()
+        .find(|card| card.title == title)
 }
 
-fn record_tone(event_type: &str) -> &str {
-    match event_type {
-        "Stool" => "caution",
-        "Feed" => "info",
-        "Growth" | "Milestone" => "healthy",
-        "Symptom" | "Episode" | "Episode update" => "alert",
-        _ => "default",
+fn find_stat<'a>(payload: &'a ReportPdfPayload, label: &str) -> Option<&'a ReportPdfStat> {
+    payload
+        .dashboard_stats
+        .iter()
+        .find(|stat| stat.label == label)
+}
+
+fn chart_total(payload: &ReportPdfPayload, title: &str, secondary: bool) -> i64 {
+    payload
+        .charts
+        .iter()
+        .find(|chart| chart.title == title)
+        .map(|chart| {
+            chart
+                .points
+                .iter()
+                .map(|point| {
+                    if secondary {
+                        point.secondary_value.unwrap_or(0)
+                    } else {
+                        point.primary_value
+                    }
+                })
+                .sum()
+        })
+        .unwrap_or(0)
+}
+
+fn should_draw_chart_label(index: usize, len: usize) -> bool {
+    len <= 8 || index == 0 || index + 1 == len || index % ((len / 4).max(1)) == 0
+}
+
+fn patient_detail_line(payload: &ReportPdfPayload) -> String {
+    if payload.patient_summary.trim().is_empty() {
+        return payload.child_meta.clone();
     }
+
+    let prefix = format!("{} · ", payload.child_name);
+    payload
+        .patient_summary
+        .strip_prefix(&prefix)
+        .unwrap_or(&payload.patient_summary)
+        .to_string()
 }
 
 fn wrap_text(text: &str, max_width_mm: f32, font_size_pt: f32) -> Vec<String> {
@@ -1838,16 +2334,18 @@ fn line_block_height(text: &str, max_width_mm: f32, font_size_pt: f32) -> f32 {
 fn sanitize_text(input: &str) -> String {
     input
         .chars()
-        .map(|ch| match ch {
-            '\u{2018}' | '\u{2019}' => '\'',
-            '\u{201C}' | '\u{201D}' => '"',
-            '\u{2013}' | '\u{2014}' => '-',
-            '\u{00B7}' => '-',
-            '\u{2192}' => '>',
-            '\n' | '\t' => ch,
-            c if c.is_ascii() => c,
-            c if ('\u{00A0}'..='\u{00FF}').contains(&c) => c,
-            _ => '?',
+        .filter_map(|ch| match ch {
+            '\u{00C2}' | '\u{00E2}' | '\u{20AC}' | '\u{2039}' | '\u{0153}' => None,
+            '\u{00A0}' => Some(' '),
+            '\u{00A2}' | '\u{00B7}' | '\u{2022}' | '\u{2027}' | '\u{2219}' => Some('-'),
+            '\u{2018}' | '\u{2019}' => Some('\''),
+            '\u{201C}' | '\u{201D}' => Some('"'),
+            '\u{2013}' | '\u{2014}' => Some('-'),
+            '\u{2192}' => Some('>'),
+            '\n' | '\t' => Some(ch),
+            c if c.is_ascii() => Some(c),
+            c if ('\u{00A1}'..='\u{00FF}').contains(&c) => Some(c),
+            _ => Some('?'),
         })
         .collect()
 }
@@ -1864,6 +2362,19 @@ fn pt_to_mm(pt: f32) -> f32 {
     pt * 25.4 / 72.0
 }
 
+fn mm_to_pt(mm: f32) -> f32 {
+    mm * 72.0 / 25.4
+}
+
+fn decode_data_url(data_url: &str) -> Option<Vec<u8>> {
+    let payload = data_url
+        .split_once(',')
+        .map(|(_, encoded)| encoded)
+        .unwrap_or(data_url)
+        .trim();
+    STANDARD.decode(payload).ok()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1875,6 +2386,8 @@ mod tests {
             subtitle: "2026-03-01 to 2026-03-31".to_string(),
             child_name: "Sam".to_string(),
             child_meta: "6 months old - Feeding mixed".to_string(),
+            child_avatar_color: Some("#2563EB".to_string()),
+            child_avatar_data_url: None,
             generated_at_label: "Generated by Tiny Tummy | Mar 31, 2026".to_string(),
             patient_summary: "Sam · DOB 2025-09-30 · 6 months old · Diet mixed".to_string(),
             attention_chips: vec![ReportPdfChip {
@@ -1980,8 +2493,10 @@ mod tests {
             timeline: vec![ReportPdfTimelineRow {
                 date_time: "Mar 12, 9:20 AM".to_string(),
                 event_type: "Stool".to_string(),
-                details: "Type 4 - Color yellow - Size medium".to_string(),
-                note: Some("Normal consistency".to_string()),
+                details: "Type 4 Â· Color yellow Â· Size medium".to_string(),
+                note: Some(
+                    "Timed breastfeeding session â€¢ Left 1m 17s â€¢ Right 1m 24s".to_string(),
+                ),
             }],
         };
 
@@ -1992,5 +2507,17 @@ mod tests {
 
         let output = std::env::temp_dir().join("tiny-tummy-report-test.pdf");
         std::fs::write(output, bytes).expect("should write pdf");
+    }
+
+    #[test]
+    fn sanitizes_pdf_unsafe_separators() {
+        assert_eq!(
+            sanitize_text("Timed breastfeeding session • Left 1m 17s · Right 1m 24s"),
+            "Timed breastfeeding session - Left 1m 17s - Right 1m 24s"
+        );
+        assert_eq!(
+            sanitize_text("Breastfed Â· Both Â· 3 min â€¢ calm"),
+            "Breastfed - Both - 3 min - calm"
+        );
     }
 }
