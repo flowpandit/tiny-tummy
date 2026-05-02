@@ -106,7 +106,8 @@ test("buildReportPdfPayload returns branded white-report sections", () => {
     unitSystem: "metric",
   });
 
-  assert.equal(payload.title, "Pediatrician Summary");
+  assert.equal(payload.title, "Baby Health Report");
+  assert.equal(payload.childName, "Luna");
   assert.equal(payload.attentionChips.length, 1);
   assert.equal(payload.attentionChips[0]?.detail, "1 episode captured in this date range.");
   assert.ok(payload.summaryCards.length >= 4);
