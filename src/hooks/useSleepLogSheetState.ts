@@ -33,6 +33,8 @@ type Mode = "manual" | "timer";
 export function useSleepLogSheetState({
   open,
   childId,
+  initialMode = "manual",
+  initialSleepType = "nap",
   onLogged,
   onClose,
   onError,
@@ -40,6 +42,8 @@ export function useSleepLogSheetState({
 }: {
   open: boolean;
   childId: string;
+  initialMode?: Mode;
+  initialSleepType?: SleepType;
   onLogged: () => Promise<void> | void;
   onClose: () => void;
   onError: (message: string) => void;
@@ -60,8 +64,8 @@ export function useSleepLogSheetState({
 
   const resetManualState = useCallback((session: SleepTimerSession | null) => {
     const manualWindow = getDefaultManualWindow();
-    setModeState(session ? "timer" : "manual");
-    setSleepType(session?.sleepType ?? "nap");
+    setModeState(session ? "timer" : initialMode);
+    setSleepType(session?.sleepType ?? initialSleepType);
     setStartDate(manualWindow.startDate);
     setStartTime(manualWindow.startTime);
     setEndDate(manualWindow.endDate);
@@ -69,7 +73,7 @@ export function useSleepLogSheetState({
     setNotes(session?.notes ?? "");
     setTick(Date.now());
     setIsSubmitting(false);
-  }, []);
+  }, [initialMode, initialSleepType]);
 
   useEffect(() => {
     if (!open) return;

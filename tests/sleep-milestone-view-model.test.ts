@@ -1,10 +1,14 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
+  buildSleepGlanceStats,
   buildSleepPatternPreviewSegments,
+  buildSleepTimelineItems,
   buildSleepWeekPreviewBars,
+  formatElapsedSince,
   getSleepRecentHistoryDayLabel,
   getSleepRecentHistorySummary,
+  getWakeWindowProgress,
 } from "../src/lib/sleep-view-model.ts";
 import {
   formatMilestoneStamp,
@@ -81,6 +85,58 @@ test("sleep recent history labels today, yesterday, and older days", () => {
 test("sleep recent history summary uses parent-facing duration text", () => {
   assert.equal(getSleepRecentHistorySummary(nightLog), "Night, 1h 30m");
   assert.equal(getSleepRecentHistorySummary(napLog), "Nap, 45m");
+});
+
+test("sleep timeline view model turns sleep logs into wake and sleep events", () => {
+  const timeline = buildSleepTimelineItems([napLog], "2026-04-17");
+
+  assert.deepEqual(
+    timeline.map((item) => [item.title, item.detail]),
+    [
+      ["Wake", "Awake again"],
+      ["Nap", "45m"],
+    ],
+  );
+});
+
+test("sleep glance stats summarize today without changing prediction logic", () => {
+  const stats = buildSleepGlanceStats({
+    todayLogs: [napLog],
+    completedLogs: [napLog, nightLog],
+    dayKey: "2026-04-17",
+  });
+
+  assert.deepEqual(
+    stats.map((stat) => [stat.id, stat.value, stat.detail]),
+    [
+      ["total-sleep", "45m", "Today"],
+      ["naps", "1", "Today"],
+      ["longest-nap", "45m", "Today"],
+      ["night-sleep", "1h 30m", "Last night"],
+    ],
+  );
+});
+
+test("sleep assistant timing helpers format elapsed time and wake-window progress", () => {
+  assert.equal(
+    formatElapsedSince("2026-04-17T10:00:00", new Date("2026-04-17T12:40:00").getTime()),
+    "2h 40m ago",
+  );
+
+  assert.deepEqual(
+    getWakeWindowProgress(2, {
+      label: "Early infant wake window",
+      lowerHours: 1,
+      upperHours: 2,
+      description: "Usually short.",
+    }),
+    {
+      thumbPercent: 80,
+      fillPercent: 80,
+      optimalStartPercent: 40,
+      optimalEndPercent: 80,
+    },
+  );
 });
 
 test("milestone badge view model maps milestone types to display tones", () => {

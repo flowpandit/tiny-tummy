@@ -9,6 +9,7 @@ import { LoggingFieldGroup, LoggingFormHeader, LoggingPresetNotice } from "../sr
 import { NormalRangeIntro } from "../src/components/onboarding/NormalRangeIntro.tsx";
 import { SleepRecentHistorySection } from "../src/components/sleep/SleepRecentHistorySection.tsx";
 import { MilestoneRecentActivitySection } from "../src/components/milestones/MilestoneRecentActivitySection.tsx";
+import { formatLocalDateKey } from "../src/lib/utils.ts";
 import type { Child } from "../src/lib/types.ts";
 
 afterEach(() => {
@@ -136,11 +137,18 @@ test("NormalRangeIntro loads the normal-range copy and finishes onboarding", asy
 
 test("SleepRecentHistorySection renders recent logs and forwards edit clicks", () => {
   const edited: string[] = [];
+  const todayKey = formatLocalDateKey(new Date());
+  const todaySleepLog = {
+    ...recentSleepLog,
+    started_at: `${todayKey}T09:15:00`,
+    ended_at: `${todayKey}T10:00:00`,
+    created_at: `${todayKey}T10:00:00`,
+  };
 
   render(
     React.createElement(MemoryRouter, {},
       React.createElement(SleepRecentHistorySection, {
-        logs: [recentSleepLog],
+        logs: [todaySleepLog],
         onEdit: (entry) => {
           edited.push(entry.id);
         },
@@ -148,9 +156,10 @@ test("SleepRecentHistorySection renders recent logs and forwards edit clicks", (
     ),
   );
 
-  assert.ok(screen.getByText("Recent history"));
-  assert.ok(screen.getByText(/Nap, 45m/));
-  fireEvent.click(screen.getByRole("button", { name: /Nap, 45m/i }));
+  assert.ok(screen.getByText("Today timeline"));
+  assert.ok(screen.getByText("Nap"));
+  assert.ok(screen.getByText("45m"));
+  fireEvent.click(screen.getByRole("button", { name: /Nap.*45m/i }));
   assert.deepEqual(edited, ["sleep-1"]);
 });
 

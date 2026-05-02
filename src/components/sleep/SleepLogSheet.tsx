@@ -16,6 +16,8 @@ import { getCurrentLocalDate } from "../../lib/utils";
 
 interface SleepLogSheetProps extends SheetVisibilityProps {
   childId: string;
+  initialMode?: "manual" | "timer";
+  initialSleepType?: SleepType;
   onLogged: () => Promise<void> | void;
 }
 
@@ -24,7 +26,14 @@ const SLEEP_TYPES: Array<{ value: SleepType; label: string; description: string 
   { value: "night", label: "Night", description: "Overnight sleep block." },
 ];
 
-export function SleepLogSheet({ open, onClose, childId, onLogged }: SleepLogSheetProps) {
+export function SleepLogSheet({
+  open,
+  onClose,
+  childId,
+  initialMode = "manual",
+  initialSleepType = "nap",
+  onLogged,
+}: SleepLogSheetProps) {
   const { showError, showSuccess } = useToast();
   const {
     mode,
@@ -52,6 +61,8 @@ export function SleepLogSheet({ open, onClose, childId, onLogged }: SleepLogShee
   } = useSleepLogSheetState({
     open,
     childId,
+    initialMode,
+    initialSleepType,
     onLogged,
     onClose,
     onError: showError,
