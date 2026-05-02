@@ -4,19 +4,18 @@ import { platform } from "@tauri-apps/plugin-os";
 import { useActiveChild } from "../contexts/ChildContext";
 import { useUnits } from "../contexts/UnitsContext";
 import { useReportPageState } from "../hooks/useReportPageState";
-import { Button } from "../components/ui/button";
-import { Card, CardContent } from "../components/ui/card";
-import { PageIntro } from "../components/ui/page-intro";
+import { CareToolsSection } from "../components/care/CareToolsSection";
+import { ScenicHero } from "../components/layout/ScenicHero";
+import { ReportComposerCard } from "../components/report/ReportComposerCard";
 import { PageBody } from "../components/ui/page-layout";
-import { DatePicker } from "../components/ui/date-picker";
 import { ReportPreview } from "../components/report/ReportPreview";
+import { ReportReadyCard } from "../components/report/ReportReadyCard";
 import { buildReportPdfPayload } from "../lib/report-pdf";
 import {
   buildReportPatientSummary,
   getReportSaveHelpText,
   getReportSaveLabel,
   hasReportableTimeline,
-  REPORT_OPTION_TOGGLES,
 } from "../lib/report-view-model";
 import { useToast } from "../components/ui/toast";
 import { generateReportPdf, savePdfToDownloads } from "../lib/tauri";
@@ -107,110 +106,51 @@ export function Report() {
       unitSystem,
     })
     : null;
+  const hasGeneratedTimeline = hasReportableTimeline(reportData);
 
   return (
-    <PageBody>
-      <PageIntro
-        eyebrow="Share"
-        title="Pediatrician Report"
-        description="Generate a bowel-first clinical summary with highlighted concerns, 7-day charts, and a chronological appendix."
+    <PageBody className="-mt-8 space-y-0 px-0 py-0">
+      <ScenicHero
+        child={activeChild}
+        title="Report"
+        description="Prepare a pediatrician-ready PDF with charts, context, and timeline detail."
+        className="-mx-4 overflow-hidden md:-mx-6 lg:-mx-8"
+        showChildInfo={false}
       />
 
-      <Card className="mb-5">
-        <CardContent className="py-4">
-          <div className="grid grid-cols-2 gap-3 mb-4">
-            <div>
-              <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1">
-                From
-              </label>
-              <DatePicker
-                value={startDate}
-                onChange={setStartDate}
-                max={endDate}
-                label="Start date"
-                dismissOnDocumentClick
-                overlayOffsetY={48}
-                usePortal
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1">
-                To
-              </label>
-              <DatePicker
-                value={endDate}
-                onChange={setEndDate}
-                min={startDate}
-                max={today}
-                label="End date"
-                dismissOnDocumentClick
-                overlayOffsetY={48}
-                usePortal
-              />
-            </div>
-          </div>
+      <div className="-mt-36 px-4 md:-mt-32 md:px-10">
+        <ReportComposerCard
+          today={today}
+          startDate={startDate}
+          endDate={endDate}
+          isGenerating={isGenerating}
+          options={options}
+          onStartDateChange={setStartDate}
+          onEndDateChange={setEndDate}
+          onGenerate={handleGenerate}
+          onToggleOption={toggleOption}
+        />
+      </div>
 
-          <div className="mb-4 flex flex-col gap-2">
-            <p className="text-xs font-medium text-[var(--color-text-secondary)]">Include in report</p>
-            <div className="flex flex-wrap gap-2">
-              {REPORT_OPTION_TOGGLES.map((item) => (
-                <button
-                  key={item.key}
-                  type="button"
-                  onClick={() => toggleOption(item.key)}
-                  className={`px-3 py-2 rounded-[var(--radius-full)] text-xs font-semibold border transition-colors ${
-                    options[item.key]
-                      ? "border-[var(--color-primary)] bg-[var(--color-primary)]/10 text-[var(--color-primary)]"
-                      : "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-secondary)]"
-                  }`}
-                >
-                  {item.label}
-                </button>
-              ))}
-            </div>
-          </div>
+      <div className="space-y-3 px-4 py-3 md:space-y-5 md:px-10 md:py-5">
+        {reportData && (
+          <>
+            <ReportReadyCard
+              title={patientSummary.title}
+              subtitle={patientSummary.subtitle}
+              detail={patientSummary.detail}
+              hasReportableData={hasGeneratedTimeline}
+              saveLabel={getReportSaveLabel(isAndroid)}
+              saveHelpText={getReportSaveHelpText(isAndroid)}
+              onSave={handlePrint}
+            />
 
-          <Button
-            variant="primary"
-            className="w-full"
-            onClick={handleGenerate}
-            disabled={isGenerating}
-          >
-            {isGenerating ? "Generating..." : "Generate Report"}
-          </Button>
-        </CardContent>
-      </Card>
+            {reportPreviewPayload && hasGeneratedTimeline && <ReportPreview payload={reportPreviewPayload} />}
+          </>
+        )}
 
-      {reportData && (
-        <div>
-          {!hasReportableTimeline(reportData) && (
-            <Card className="mb-4">
-              <CardContent className="py-4">
-                <p className="text-sm font-medium text-[var(--color-text)]">No reportable data in this date range.</p>
-                <p className="mt-1 text-xs leading-relaxed text-[var(--color-text-secondary)]">
-                  Try expanding the date range. The picker now defaults to the child&apos;s latest recorded activity instead of today.
-                </p>
-              </CardContent>
-            </Card>
-          )}
-
-          <Card className="mb-4">
-            <CardContent className="py-4">
-              <p className="text-lg font-semibold text-[var(--color-text)]">{patientSummary.title}</p>
-              <p className="mt-1 text-sm text-[var(--color-text-secondary)]">{patientSummary.subtitle}</p>
-              <p className="mt-3 text-xs text-[var(--color-muted)]">
-                {patientSummary.detail}
-              </p>
-            </CardContent>
-          </Card>
-
-          {reportPreviewPayload && <ReportPreview payload={reportPreviewPayload} />}
-
-          <Button variant="cta" className="w-full mb-4" onClick={handlePrint}>{getReportSaveLabel(isAndroid)}</Button>
-
-          <p className="text-xs text-[var(--color-muted)] text-center">{getReportSaveHelpText(isAndroid)}</p>
-        </div>
-      )}
+        <CareToolsSection className="px-0" palette="soft" />
+      </div>
     </PageBody>
   );
 }

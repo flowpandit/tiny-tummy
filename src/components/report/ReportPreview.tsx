@@ -1,4 +1,4 @@
-import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
+import { Card, CardContent } from "../ui/card";
 import { Logo } from "../ui/Logo";
 import { cn } from "../../lib/cn";
 import type {
@@ -29,28 +29,37 @@ const SUMMARY_TONE_CLASSES: Record<ReportPdfSummaryCard["tone"], string> = {
   healthy: "border-[var(--color-healthy)]/18 bg-[var(--color-healthy-bg)]",
 };
 
+const PREVIEW_CARD_CLASS = "overflow-hidden rounded-[18px] border shadow-[var(--shadow-home-card)] backdrop-blur-sm md:rounded-[24px]";
+
+const PREVIEW_CARD_STYLE = {
+  background: "var(--color-home-card-surface)",
+  borderColor: "var(--color-home-card-border)",
+};
+
 export function ReportPreview({ payload }: ReportPreviewProps) {
   return (
-    <div className="space-y-4">
-      <Card className="border-[var(--color-border-strong)] bg-[var(--color-bg-elevated)] shadow-[0_20px_56px_rgba(168,127,96,0.12)]">
-        <CardContent className="space-y-5 p-5">
-          <header className="flex items-start justify-between gap-4 border-b border-[var(--color-border)] pb-4">
+    <div className="space-y-3 md:space-y-5">
+      <Card className={PREVIEW_CARD_CLASS} style={PREVIEW_CARD_STYLE}>
+        <CardContent className="space-y-4 p-4 md:space-y-5 md:p-5">
+          <header className="flex flex-col gap-3 border-b border-[var(--color-home-card-border)] pb-4 md:flex-row md:items-start md:justify-between">
             <div className="min-w-0">
               <div className="flex items-center gap-3">
-                <Logo className="h-11 w-11 shrink-0" />
+                <Logo className="h-10 w-10 shrink-0 md:h-11 md:w-11" />
                 <div className="min-w-0">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--color-text-soft)]">
                     Tiny Tummy
                   </p>
-                  <h3 className="text-[1.9rem] font-semibold leading-none tracking-[-0.04em] text-[var(--color-text)]">
+                  <h3 className="mt-1 text-[1.25rem] font-semibold leading-tight tracking-[-0.03em] text-[var(--color-text)] md:text-[1.65rem]">
                     {payload.title}
                   </h3>
                 </div>
               </div>
-              <p className="mt-3 text-sm text-[var(--color-text-secondary)]">{payload.patientSummary}</p>
+              <p className="mt-3 max-w-[68ch] text-sm leading-relaxed text-[var(--color-text-secondary)]">
+                {payload.patientSummary}
+              </p>
             </div>
 
-            <div className="shrink-0 text-right">
+            <div className="shrink-0 md:text-right">
               <p className="text-sm font-medium text-[var(--color-text)]">{payload.subtitle}</p>
               <p className="mt-1 text-xs text-[var(--color-text-soft)]">{payload.generatedAtLabel}</p>
             </div>
@@ -72,7 +81,7 @@ export function ReportPreview({ payload }: ReportPreviewProps) {
             </div>
           )}
 
-          <section className="grid gap-3 md:grid-cols-4">
+          <section className="grid grid-cols-2 gap-3 md:grid-cols-4">
             {payload.dashboardStats.map((stat) => (
               <StatCard key={stat.label} stat={stat} />
             ))}
@@ -92,31 +101,45 @@ export function ReportPreview({ payload }: ReportPreviewProps) {
         </CardContent>
       </Card>
 
-      <Card className="border-[var(--color-border-strong)] bg-[var(--color-bg-elevated)]">
-        <CardHeader>
-          <CardTitle>Clinical Context Preview</CardTitle>
-        </CardHeader>
-        <CardContent className="grid gap-3 md:grid-cols-2">
-          {payload.contextSections.length === 0 ? (
-            <p className="text-sm text-[var(--color-text-secondary)]">
-              No extra clinical context is included for this date range.
+      <Card className={PREVIEW_CARD_CLASS} style={PREVIEW_CARD_STYLE}>
+        <CardContent className="space-y-3 p-4 md:p-5">
+          <div>
+            <p className="text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-[var(--color-text)] md:text-[0.74rem]">
+              Clinical context
             </p>
-          ) : (
-            payload.contextSections.map((section) => (
-              <SectionCard key={section.title} section={section} />
-            ))
-          )}
+            <p className="mt-1 text-[0.74rem] leading-snug text-[var(--color-text-secondary)] md:text-[0.82rem]">
+              A preview of the context sections included in the PDF.
+            </p>
+          </div>
+          <div className="grid gap-3 md:grid-cols-2">
+            {payload.contextSections.length === 0 ? (
+              <p className="text-sm text-[var(--color-text-secondary)]">
+                No extra clinical context is included for this date range.
+              </p>
+            ) : (
+              payload.contextSections.map((section) => (
+                <SectionCard key={section.title} section={section} />
+              ))
+            )}
+          </div>
         </CardContent>
       </Card>
 
-      <Card className="border-[var(--color-border-strong)] bg-[var(--color-bg-elevated)]">
-        <CardHeader>
-          <CardTitle>Appendix Preview</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          {payload.timeline.slice(0, 6).map((row) => (
-            <TimelineRow key={`${row.dateTime}-${row.eventType}-${row.details}`} row={row} />
-          ))}
+      <Card className={PREVIEW_CARD_CLASS} style={PREVIEW_CARD_STYLE}>
+        <CardContent className="space-y-3 p-4 md:p-5">
+          <div>
+            <p className="text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-[var(--color-text)] md:text-[0.74rem]">
+              Timeline appendix
+            </p>
+            <p className="mt-1 text-[0.74rem] leading-snug text-[var(--color-text-secondary)] md:text-[0.82rem]">
+              The first entries from the detailed event log.
+            </p>
+          </div>
+          <div className="space-y-2">
+            {payload.timeline.slice(0, 6).map((row) => (
+              <TimelineRow key={`${row.dateTime}-${row.eventType}-${row.details}`} row={row} />
+            ))}
+          </div>
         </CardContent>
       </Card>
     </div>
