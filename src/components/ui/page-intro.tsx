@@ -16,7 +16,7 @@ export function PageIntro({ eyebrow, title, description, meta, action, className
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
           <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--color-text-soft)]">{eyebrow}</p>
-          <h2 className="mt-2 font-[var(--font-display)] text-[2.35rem] font-semibold leading-[0.96] tracking-[-0.04em] text-[var(--color-text)]">
+          <h2 className="mt-2 text-[2.35rem] font-semibold leading-[0.96] tracking-[-0.04em] text-[var(--color-text)]">
             {title}
           </h2>
           {description && (

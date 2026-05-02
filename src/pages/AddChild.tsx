@@ -64,7 +64,7 @@ export function AddChild() {
     >
       <Header showBackButton fallbackTo="/settings" />
 
-      <h2 className="font-[var(--font-display)] text-2xl font-bold text-[var(--color-text)] mb-2">
+      <h2 className="text-2xl font-bold text-[var(--color-text)] mb-2">
         Add a child
       </h2>
       <p className="text-[var(--color-text-secondary)] mb-6">

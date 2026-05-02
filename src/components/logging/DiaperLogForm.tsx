@@ -62,7 +62,7 @@ export function DiaperLogForm({
         <LogSuccess />
       ) : (
         <form onSubmit={(event: FormEvent) => { event.preventDefault(); void handleSubmit(); }} className="px-5 pb-8">
-          <h2 className="mb-5 text-center font-[var(--font-display)] text-lg font-semibold text-[var(--color-text)]">
+          <h2 className="mb-5 text-center text-lg font-semibold text-[var(--color-text)]">
             Log a diaper
           </h2>
 

@@ -5,6 +5,8 @@ SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 REPO_DIR=$(CDPATH= cd -- "$SCRIPT_DIR/.." && pwd)
 APPLE_DIR="$REPO_DIR/src-tauri/gen/apple"
 TAURI_DIR="$REPO_DIR/src-tauri"
+IOS_INFO_PLIST="$APPLE_DIR/tiny-tummy_iOS/Info.plist"
+LOCAL_NETWORK_REASON="Tiny Tummy connects to the Vite dev server on your Mac when running iOS development builds with hot reload."
 
 CONFIGURATION_VALUE=${CONFIGURATION:-}
 SDKROOT_VALUE=${SDKROOT:-}
@@ -69,6 +71,30 @@ copy_frontend_assets() {
     rm -rf "$BUNDLE_ASSETS_DIR"
     mkdir -p "$BUNDLE_ASSETS_DIR"
     cp -R "$REPO_DIR/dist/." "$BUNDLE_ASSETS_DIR/"
+  fi
+}
+
+sync_generated_ios_info_plist() {
+  [ -f "$IOS_INFO_PLIST" ] || return 0
+  [ -x /usr/libexec/PlistBuddy ] || return 0
+
+  if /usr/libexec/PlistBuddy -c "Print :NSLocalNetworkUsageDescription" "$IOS_INFO_PLIST" >/dev/null 2>&1; then
+    /usr/libexec/PlistBuddy -c "Set :NSLocalNetworkUsageDescription $LOCAL_NETWORK_REASON" "$IOS_INFO_PLIST" >/dev/null
+  else
+    /usr/libexec/PlistBuddy -c "Add :NSLocalNetworkUsageDescription string $LOCAL_NETWORK_REASON" "$IOS_INFO_PLIST" >/dev/null
+  fi
+}
+
+clean_tauri_crate_artifacts() {
+  target_dir="$TAURI_DIR/target/$RUST_TARGET/$CONFIGURATION_VALUE"
+  [ -d "$target_dir" ] || return 0
+
+  rm -f "$target_dir/libtiny_tummy_lib.a" "$target_dir/libtiny_tummy_lib.d"
+  if [ -d "$target_dir/deps" ]; then
+    find "$target_dir/deps" -maxdepth 1 -type f -name "*tiny_tummy_lib*" -delete
+  fi
+  if [ -d "$target_dir/incremental" ]; then
+    find "$target_dir/incremental" -maxdepth 1 -type d -name "tiny_tummy_lib-*" -exec rm -rf {} +
   fi
 }
 
@@ -156,6 +182,11 @@ export PATH
 export CARGO_HOME="${CARGO_HOME:-${HOME:-}/.cargo}"
 export RUSTUP_HOME="${RUSTUP_HOME:-${HOME:-}/.rustup}"
 
+# Xcode installs should use bundled frontend assets. Hot reload still goes
+# through `cargo tauri ios dev --device`, which provides the dev server.
+export TAURI_CONFIG='{"build":{"devUrl":null}}'
+
+sync_generated_ios_info_plist
 copy_frontend_assets
 
 XCRUN_BIN=$(command_path xcrun)
@@ -177,17 +208,18 @@ case "$SDKROOT_VALUE" in
     ;;
 esac
 
-# Xcode-driven iOS debug builds still compile with Tauri's `cfg(dev)`.
-# Force the mobile build to use bundled assets instead of a localhost dev server.
-export TAURI_CONFIG='{"build":{"devUrl":null}}'
-
 CARGO_BIN=$(command_path cargo)
 [ -n "$CARGO_BIN" ] || fail "cargo is required but was not found in PATH"
 
 OUTPUT_DIR="$APPLE_DIR/Externals/$ARCH_DIR/$CONFIGURATION_VALUE"
 mkdir -p "$OUTPUT_DIR"
 
-BUILD_ARGS="--manifest-path $TAURI_DIR/Cargo.toml --target $RUST_TARGET --lib --crate-type staticlib"
+# Tauri embeds `TAURI_CONFIG` and dependency feature flags into this crate at
+# compile time. Cargo does not always notice when only those inputs change, so
+# remove this package's iOS artifacts before rebuilding to avoid stale loaders.
+clean_tauri_crate_artifacts
+
+BUILD_ARGS="--manifest-path $TAURI_DIR/Cargo.toml --target $RUST_TARGET --lib --crate-type staticlib --features tauri/custom-protocol"
 if [ "$CONFIGURATION_VALUE" = "release" ]; then
   # shellcheck disable=SC2086
   "$CARGO_BIN" rustc $BUILD_ARGS --release

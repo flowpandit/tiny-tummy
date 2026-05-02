@@ -1,6 +1,5 @@
 import { useMemo } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
-import { useActiveChild, useChildActions, useChildren } from "../contexts/ChildContext";
+import { useActiveChild } from "../contexts/ChildContext";
 import { usePoopLogs } from "../hooks/usePoopLogs";
 import { useDiaperLogs } from "../hooks/useDiaperLogs";
 import { useFeedingLogs } from "../hooks/useFeedingLogs";
@@ -8,31 +7,35 @@ import { useSleepLogs } from "../hooks/useSleepLogs";
 import { useAlerts } from "../hooks/useAlerts";
 import { useEpisodes } from "../hooks/useEpisodes";
 import { useSymptoms } from "../hooks/useSymptoms";
-import { useEliminationPreference } from "../hooks/useEliminationPreference";
 import { useChildWorkflowActions } from "../hooks/useChildWorkflowActions";
 import { useHomePageState } from "../hooks/useHomePageState";
-import { useHomeBreastfeedingState } from "../hooks/useHomeBreastfeedingState";
-import { useHomeStickyChildBar } from "../hooks/useHomeStickyChildBar";
 import { useHomeEffects } from "../hooks/useHomeEffects";
 import { buildChildDailySummary } from "../lib/child-summary";
-import { buildHomeSleepSummary } from "../lib/home-insights";
+import { buildHomeAssistantModel } from "../lib/home-insights";
 import { HomeTopSection } from "../components/home/HomeTopSection";
 import { RecentActivity } from "../components/home/RecentActivity";
 import { CareToolsSection } from "../components/care/CareToolsSection";
 import { HomeQuickActions } from "../components/home/HomeQuickActions";
 import { HomeSheets } from "../components/home/HomeSheets";
 import { AlertBanner } from "../components/dashboard/AlertBanner";
-import { NoLogsYet } from "../components/home/NoLogsYet";
-import { CompactChildNav } from "../components/layout/CompactChildNav";
+import { HomeActionBottleIcon, HomeActionSleepIcon } from "../components/ui/icons";
+
+function RecommendationBottleArt() {
+  return (
+    <div className="pointer-events-none absolute bottom-2 right-20 hidden h-24 w-24 rotate-12 md:block" aria-hidden="true">
+      <svg viewBox="0 0 96 96" className="h-full w-full">
+        <path d="M41 19h18c3 0 5 2 5 5v9H36v-9c0-3 2-5 5-5Z" fill="#fb8b55" />
+        <path d="M44 9c7 2 13 7 14 14H42c0-6 0-10 2-14Z" fill="#f47a43" />
+        <path d="M33 32h34c5 0 9 4 9 9v36c0 7-5 12-12 12H36c-7 0-12-5-12-12V41c0-5 4-9 9-9Z" fill="#fff8ed" stroke="#ded8df" strokeWidth="4" />
+        <path d="M36 42h28M36 56h20M36 70h26" stroke="#bfb8d3" strokeWidth="3" strokeLinecap="round" />
+        <path d="M33 32h34v13H33z" fill="#d8d0ff" opacity=".72" />
+      </svg>
+    </div>
+  );
+}
 
 export function Home() {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const navigateWithOrigin = (path: string) => navigate(path, { state: { origin: location.pathname } });
   const activeChild = useActiveChild();
-  const children = useChildren();
-  const { setActiveChildId } = useChildActions();
-  const { experience } = useEliminationPreference(activeChild);
   const { logs, lastRealPoop, refresh: refreshLogs } = usePoopLogs(activeChild?.id ?? null);
   const {
     logs: diaperLogs,
@@ -45,10 +48,6 @@ export function Home() {
   const { alerts, refresh: refreshAlerts, dismiss } = useAlerts(activeChild?.id ?? null);
   const { refreshChildAlerts, syncChildReminders, runPostLogActions } = useChildWorkflowActions(activeChild, refreshAlerts);
   const homeState = useHomePageState();
-  const hasDiaperLogs = diaperLogs.length > 0;
-  const hasLogs = experience.mode === "diaper" ? hasDiaperLogs : logs.length > 0;
-  const { activeBreastfeedingSide } = useHomeBreastfeedingState(activeChild, refreshFeedingLogs);
-  const { avatarAnchorRef, showStickyChildBar } = useHomeStickyChildBar(activeChild, hasLogs);
 
   useHomeEffects({
     activeChild,
@@ -80,7 +79,6 @@ export function Home() {
     closeFeedingForm,
     closePoopForm,
     openDiaperForm,
-    openEpisodeSheet,
     openFeedingForm,
     openPoopForm,
     setEditingDiaper,
@@ -120,104 +118,98 @@ export function Home() {
   const handleSleepLogged = async () => {
     await refreshSleepLogs();
   };
-  const sleepSummary = useMemo(() => buildHomeSleepSummary(sleepLogs), [sleepLogs]);
 
-  if (!activeChild) return null;
+  const summary = activeChild
+    ? buildChildDailySummary({
+      poopLogs: logs,
+      diaperLogs,
+      feedingLogs,
+      alerts,
+      activeEpisode,
+      episodeEvents,
+      symptomLogs,
+    })
+    : null;
+  const assistantModel = useMemo(() => {
+    if (!activeChild || !summary) return null;
 
-  const summary = buildChildDailySummary({
-    poopLogs: logs,
-    diaperLogs,
-    feedingLogs,
-    alerts,
-    activeEpisode,
-    episodeEvents,
-    symptomLogs,
-  });
-  const lastFeed = summary.lastFeed;
-  const showBreastfeedAction = activeChild.feeding_type === "breast" || activeChild.feeding_type === "mixed";
-  const episodeActionLabel = activeEpisode ? "Add episode update" : "Start episode";
-  const otherChildren = children.filter((child) => child.id !== activeChild.id);
-  const eliminationActionLabel = experience.mode === "diaper" ? "Log diaper" : "Log poop";
-  const handleOpenBreastfeedAction = () => {
-    if (showBreastfeedAction) {
-      navigateWithOrigin("/breastfeed");
-      return;
-    }
-    navigateWithOrigin("/feed");
-  };
+    return buildHomeAssistantModel({
+      child: activeChild,
+      summary,
+      poopLogs: logs,
+      diaperLogs,
+      feedingLogs,
+      sleepLogs,
+      alerts,
+    });
+  }, [activeChild, alerts, diaperLogs, feedingLogs, logs, sleepLogs, summary]);
+
+  if (!activeChild || !summary || !assistantModel) return null;
+
+  const recommendationIcon = assistantModel.recommendation.accent === "sleep"
+    ? <HomeActionSleepIcon className="h-6 w-6 text-[var(--color-home-recommendation-sleep-icon)] md:h-8 md:w-8" />
+    : <HomeActionBottleIcon className="h-6 w-6 text-[var(--color-home-recommendation-feed-icon)] md:h-8 md:w-8" />;
 
   return (
-    <div className="flex flex-col gap-3 pb-2 pt-0.5">
+    <div className="flex flex-col gap-3 pb-3 pt-0 md:gap-7 md:pb-4 md:pt-0.5">
       <AlertBanner alerts={alerts} onDismiss={dismiss} />
-      {hasLogs && (
-        <div
-          className={`pointer-events-none fixed inset-x-0 z-30 transition-all duration-200 ${showStickyChildBar ? "translate-y-0 opacity-100" : "-translate-y-4 opacity-0"}`}
-          style={{
-            top: 0,
-            height: "calc(var(--safe-area-top) + 74px)",
-            background: "var(--gradient-home-sticky-overlay)",
-            backdropFilter: "blur(24px) saturate(1.02)",
-            WebkitBackdropFilter: "blur(24px) saturate(1.02)",
-          }}
-        >
-          <div
-            className="mx-auto flex max-w-[600px] items-center justify-between gap-3 bg-transparent px-4 py-3"
-            style={{ marginTop: "calc(var(--safe-area-top) + 16px)" }}
-          >
-            <CompactChildNav
-              activeChild={activeChild}
-              otherChildren={otherChildren}
-              onSelectChild={setActiveChildId}
-              className="flex w-full items-center justify-between gap-3"
-            />
-          </div>
-        </div>
-      )}
-
-      {hasLogs ? (
-        <HomeTopSection
-          activeChild={activeChild}
-          summary={summary}
-          sleepSummaryLabel={sleepSummary.label}
-          sleepSummaryHoursValue={sleepSummary.hoursValue}
-          sleepNapCount={sleepSummary.napCount}
-          avatarAnchorRef={avatarAnchorRef}
-          otherChildren={otherChildren}
-          onSelectChild={setActiveChildId}
-        />
-      ) : (
-        <NoLogsYet
-          childName={activeChild.name}
-          onLogFirst={() => experience.mode === "diaper" ? openDiaperForm({ diaper_type: "wet", urine_color: "normal" }) : openPoopForm()}
-        />
-      )}
-
-      <HomeQuickActions
-        activeBreastfeedingSide={activeBreastfeedingSide}
-        canOpenBreastfeedAction={showBreastfeedAction || Boolean(lastFeed)}
-        eliminationActionLabel={eliminationActionLabel}
-        episodeActionLabel={episodeActionLabel}
-        showBreastfeedAction={showBreastfeedAction}
-        onLogElimination={() => experience.mode === "diaper" ? openDiaperForm({ diaper_type: "wet", urine_color: "normal" }) : openPoopForm()}
-        onLogFeed={() => openFeedingForm()}
-        onOpenBreastfeed={handleOpenBreastfeedAction}
-        onOpenSleep={() => setSleepSheetOpen(true)}
-        onOpenEpisode={() => openEpisodeSheet(activeEpisode ? "update" : "start")}
-        onOpenSymptom={() => setSymptomSheetOpen(true)}
+      <HomeTopSection
+        status={assistantModel.status}
+        insights={assistantModel.insights}
       />
 
-      {(logs.length > 0 || feedingLogs.length > 0) && (
-        <RecentActivity
-          poopLogs={experience.mode === "diaper" ? [] : logs}
-          diaperLogs={experience.mode === "diaper" ? diaperLogs : []}
-          feedingLogs={feedingLogs}
-          onEditPoop={setEditingPoop}
-          onEditDiaper={setEditingDiaper}
-          onEditMeal={setEditingMeal}
-        />
-      )}
+      <HomeQuickActions
+        onLogDiaper={() => openDiaperForm({ diaper_type: "wet", urine_color: "normal" })}
+        onLogPoop={() => openPoopForm()}
+        onLogFeed={() => openFeedingForm()}
+        onOpenSleep={() => setSleepSheetOpen(true)}
+      />
 
-      <CareToolsSection />
+      <div className="px-4 md:px-10">
+        <div
+          className="relative flex min-h-[82px] items-center gap-3 overflow-hidden rounded-[18px] border px-3.5 py-3 shadow-[0_16px_34px_rgba(211,174,103,0.1)] md:min-h-[154px] md:gap-4 md:rounded-[28px] md:px-8 md:py-5"
+          style={{
+            background: "var(--gradient-home-recommendation)",
+            borderColor: "var(--color-home-recommendation-border)",
+          }}
+        >
+          <div className="absolute right-[92px] top-5 text-lg text-[var(--color-home-recommendation-star)] md:right-[250px] md:top-7 md:text-2xl">✦</div>
+          <div className="absolute bottom-4 right-[52px] text-2xl text-[var(--color-home-recommendation-star)] md:bottom-7 md:right-[192px] md:text-3xl">✦</div>
+          <RecommendationBottleArt />
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full shadow-[var(--shadow-inner)] md:h-14 md:w-14" style={{ background: "var(--color-home-recommendation-icon-surface)" }}>
+            {recommendationIcon}
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-[0.64rem] font-semibold uppercase tracking-[0.16em] text-[var(--color-home-recommendation-label)] md:text-[0.85rem]">
+              Recommended next
+            </p>
+            <p className="mt-1 text-[0.92rem] font-semibold leading-tight tracking-[-0.03em] text-[var(--color-text)] md:mt-1.5 md:text-[1.45rem]">
+              {assistantModel.recommendation.title}
+            </p>
+            <p className="mt-1 text-[0.76rem] leading-snug text-[var(--color-text-secondary)] md:mt-2 md:text-[1.06rem] md:leading-relaxed">
+              {assistantModel.recommendation.detail}
+            </p>
+          </div>
+          <button
+            type="button"
+            aria-label="Open recommendation"
+            className="relative z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[1.6rem] leading-none shadow-[0_10px_28px_rgba(145,112,79,0.14)] md:h-14 md:w-14 md:text-[2rem]"
+            style={{
+              background: "var(--color-home-recommendation-button-bg)",
+              color: "var(--color-home-recommendation-button-text)",
+            }}
+          >
+            ›
+          </button>
+        </div>
+      </div>
+
+      <RecentActivity
+        timeline={assistantModel.timeline}
+        glanceStats={assistantModel.glanceStats}
+      />
+
+      <CareToolsSection className="px-4 md:px-10" palette="soft" />
 
       <HomeSheets
         activeChildId={activeChild.id}

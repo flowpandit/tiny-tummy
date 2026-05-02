@@ -196,7 +196,7 @@ export function Report() {
 
           <Card className="mb-4">
             <CardContent className="py-4">
-              <p className="font-[var(--font-display)] text-lg font-semibold text-[var(--color-text)]">{patientSummary.title}</p>
+              <p className="text-lg font-semibold text-[var(--color-text)]">{patientSummary.title}</p>
               <p className="mt-1 text-sm text-[var(--color-text-secondary)]">{patientSummary.subtitle}</p>
               <p className="mt-3 text-xs text-[var(--color-muted)]">
                 {patientSummary.detail}

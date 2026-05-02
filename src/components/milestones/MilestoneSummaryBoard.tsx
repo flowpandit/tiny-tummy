@@ -83,7 +83,7 @@ export function MilestoneSummaryBoard({
               className="h-20 w-20 border-2 border-white/70"
             />
           </div>
-          <h1 className="mt-5 font-[var(--font-display)] text-[2.2rem] font-semibold tracking-[-0.04em] text-[var(--color-text)]">
+          <h1 className="mt-5 text-[2.2rem] font-semibold tracking-[-0.04em] text-[var(--color-text)]">
             {child.name}&apos;s Journey
           </h1>
           <p className="mx-auto mt-2 max-w-[28ch] text-sm leading-relaxed text-[var(--color-text-secondary)]">

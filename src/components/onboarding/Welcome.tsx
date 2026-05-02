@@ -10,7 +10,7 @@ export function Welcome({ onNext }: WelcomeProps) {
     <div className="flex flex-col items-center justify-center min-h-screen px-8 text-center">
       <Logo className="w-40 h-40 mb-6" />
 
-      <h1 className="font-[var(--font-display)] text-3xl font-bold text-[var(--color-text)] mb-3">
+      <h1 className="text-3xl font-bold text-[var(--color-text)] mb-3">
         Tiny Tummy
       </h1>
       <p className="text-[var(--color-text-secondary)] text-lg mb-2">

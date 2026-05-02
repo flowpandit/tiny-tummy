@@ -29,7 +29,7 @@ export function SectionHeading({
             {eyebrow}
           </p>
         )}
-        <h3 className="mt-1 font-[var(--font-display)] text-[2rem] font-semibold tracking-[-0.03em] text-[var(--color-text)]">
+        <h3 className="mt-1 text-[2rem] font-semibold tracking-[-0.03em] text-[var(--color-text)]">
           {title}
         </h3>
         {description && (
@@ -66,7 +66,7 @@ export function CompactPageHeader<TValue extends string | number>({
             {eyebrow}
           </p>
         )}
-        <h2 className="mt-2 font-[var(--font-display)] text-2xl text-[var(--color-text)] sm:text-3xl">
+        <h2 className="mt-2 text-2xl text-[var(--color-text)] sm:text-3xl">
           {title}
         </h2>
       </div>

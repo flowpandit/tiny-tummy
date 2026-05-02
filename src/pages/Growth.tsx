@@ -217,7 +217,7 @@ export function Growth() {
                 <div className="relative flex items-start justify-between gap-3 px-1">
                   <div className="min-w-0">
                     <p className="text-[11px] uppercase tracking-[0.18em] text-[var(--color-text-soft)]">Narrative overview</p>
-                    <p className="mt-2 max-w-[12ch] font-[var(--font-display)] text-[2.1rem] font-semibold leading-[0.96] tracking-[-0.04em] text-[var(--color-text)]">
+                    <p className="mt-2 max-w-[12ch] text-[2.1rem] font-semibold leading-[0.96] tracking-[-0.04em] text-[var(--color-text)]">
                       {growthStoryHeadline}
                     </p>
                     <p className="mt-3 max-w-[40ch] text-[14px] leading-relaxed text-[var(--color-text-secondary)]">
@@ -266,7 +266,7 @@ export function Growth() {
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--color-text-soft)]">Current growth read</p>
-                  <p className="mt-2 font-[var(--font-display)] text-[2rem] font-semibold leading-[0.98] tracking-[-0.04em] text-[var(--color-text)]">
+                  <p className="mt-2 text-[2rem] font-semibold leading-[0.98] tracking-[-0.04em] text-[var(--color-text)]">
                     {growthStatusHeadline}
                   </p>
                   <p className="mt-2 max-w-[42ch] text-[13px] leading-relaxed text-[var(--color-text-secondary)]">
@@ -312,7 +312,7 @@ export function Growth() {
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--color-text-soft)]">Latest growth read</p>
-                      <p className="mt-2 font-[var(--font-display)] text-[1.7rem] font-semibold leading-[1] tracking-[-0.03em] text-[var(--color-text)]">
+                      <p className="mt-2 text-[1.7rem] font-semibold leading-[1] tracking-[-0.03em] text-[var(--color-text)]">
                         {latest ? formatGrowthSummary(latest, unitSystem) : "No current growth read"}
                       </p>
                       <p className="mt-1 text-xs leading-relaxed text-[var(--color-text-secondary)]">
@@ -438,7 +438,7 @@ export function Growth() {
             <CardHeader>
               <div>
                 <div className="flex items-center gap-3">
-                  <h3 className="font-[var(--font-display)] text-2xl font-semibold tracking-[-0.02em] text-[var(--color-text)]">
+                  <h3 className="text-2xl font-semibold tracking-[-0.02em] text-[var(--color-text)]">
                     Measurement history
                   </h3>
                 </div>

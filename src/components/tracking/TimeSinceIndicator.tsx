@@ -45,7 +45,7 @@ export function TimeSinceIndicator({ timestamp, status = "unknown", gradient }: 
       <div className="relative z-10 flex flex-col items-center justify-center">
         {time ? (
           <>
-            <span className="text-[1.7rem] font-bold text-[var(--color-text)]" style={{ fontFamily: "var(--font-display)" }}>
+            <span className="text-[1.7rem] font-bold text-[var(--color-text)]">
               {time.value}
             </span>
             <span className="text-xs text-[var(--color-text-secondary)]">{time.unit}</span>

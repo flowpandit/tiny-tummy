@@ -11,7 +11,7 @@ export function LoggingFormHeader({
 }) {
   return (
     <div className="mb-4 flex items-center justify-between gap-3">
-      <h2 className={cn("font-[var(--font-display)] text-lg font-semibold", isNight ? "text-slate-100" : "text-[var(--color-text)]")}>
+      <h2 className={cn("text-lg font-semibold", isNight ? "text-slate-100" : "text-[var(--color-text)]")}>
         {title}
       </h2>
     </div>

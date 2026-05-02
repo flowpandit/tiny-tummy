@@ -1,122 +1,83 @@
 import { motion } from "framer-motion";
-import {
-  HomeActionBottleIcon,
-  HomeActionBreastfeedIcon,
-  HomeActionDiaperIcon,
-  HomeActionEpisodeIcon,
-  HomeActionSleepIcon,
-  HomeActionSymptomIcon,
-} from "../ui/icons";
+import { HomeActionBottleIcon, HomeActionDiaperIcon, HomeActionSleepIcon, PoopIcon } from "../ui/icons";
 
 interface HomeQuickActionsProps {
-  activeBreastfeedingSide: "left" | "right" | null;
-  canOpenBreastfeedAction: boolean;
-  eliminationActionLabel: string;
-  episodeActionLabel: string;
-  showBreastfeedAction: boolean;
-  onLogElimination: () => void;
+  onLogDiaper: () => void;
+  onLogPoop: () => void;
   onLogFeed: () => void;
-  onOpenBreastfeed: () => void;
   onOpenSleep: () => void;
-  onOpenEpisode: () => void;
-  onOpenSymptom: () => void;
 }
 
+const ACTIONS = [
+  {
+    id: "diaper",
+    label: "Log diaper",
+    background: "var(--gradient-home-action-diaper)",
+    icon: <HomeActionDiaperIcon className="h-6 w-6 text-[var(--color-home-action-diaper-icon)] md:h-8 md:w-8" />,
+    text: "text-[var(--color-home-action-diaper-text)]",
+  },
+  {
+    id: "poop",
+    label: "Log poop",
+    background: "var(--gradient-home-action-poop)",
+    icon: <PoopIcon className="h-6 w-6 md:h-8 md:w-8" color="var(--color-home-action-poop-icon)" />,
+    text: "text-[var(--color-home-action-poop-text)]",
+  },
+  {
+    id: "feed",
+    label: "Log feed",
+    background: "var(--gradient-home-action-feed)",
+    icon: <HomeActionBottleIcon className="h-6 w-6 text-[var(--color-home-action-feed-icon)] md:h-8 md:w-8" />,
+    text: "text-[var(--color-home-action-feed-text)]",
+  },
+  {
+    id: "sleep",
+    label: "Log sleep",
+    background: "var(--gradient-home-action-sleep)",
+    icon: <HomeActionSleepIcon className="h-6 w-6 text-[var(--color-home-action-sleep-icon)] md:h-8 md:w-8" />,
+    text: "text-[var(--color-home-action-sleep-text)]",
+  },
+] as const;
+
 export function HomeQuickActions({
-  activeBreastfeedingSide,
-  canOpenBreastfeedAction,
-  eliminationActionLabel,
-  episodeActionLabel,
-  showBreastfeedAction,
-  onLogElimination,
+  onLogDiaper,
+  onLogPoop,
   onLogFeed,
-  onOpenBreastfeed,
   onOpenSleep,
-  onOpenEpisode,
-  onOpenSymptom,
 }: HomeQuickActionsProps) {
+  const actions = {
+    diaper: onLogDiaper,
+    poop: onLogPoop,
+    feed: onLogFeed,
+    sleep: onOpenSleep,
+  };
+
   return (
-    <div className="px-4 pt-1">
-      <div className="grid grid-cols-3 gap-2.5">
-        <motion.button
-          whileTap={{ scale: 0.98 }}
-          onClick={onLogElimination}
-          className="flex h-[64px] flex-col items-center justify-center rounded-[14px] px-1.5 py-1 text-center text-white shadow-[var(--shadow-medium)] transition-colors hover:brightness-[1.02]"
-          style={{ background: "var(--gradient-home-action-primary)" }}
-        >
-          <span className="flex h-4 w-4 items-center justify-center">
-            <HomeActionDiaperIcon className="h-4 w-4" />
-          </span>
-          <p className="mt-1 text-[0.74rem] font-semibold leading-none">{eliminationActionLabel}</p>
-        </motion.button>
-        <motion.button
-          whileTap={{ scale: 0.98 }}
-          onClick={onLogFeed}
-          className="flex h-[64px] flex-col items-center justify-center rounded-[14px] px-1.5 py-1 text-center shadow-[var(--shadow-medium)] transition-colors hover:brightness-[1.02]"
-          style={{ background: "var(--gradient-home-action-feed)" }}
-        >
-          <span className="flex h-4 w-4 items-center justify-center text-[var(--color-text)]">
-            <HomeActionBottleIcon className="h-4 w-4" />
-          </span>
-          <p className="mt-1 text-[0.74rem] font-semibold leading-none text-[var(--color-text)]">Log feed</p>
-        </motion.button>
-        <motion.button
-          whileTap={{ scale: 0.98 }}
-          onClick={onOpenBreastfeed}
-          disabled={!canOpenBreastfeedAction}
-          className="flex h-[64px] flex-col items-center justify-center rounded-[14px] px-1.5 py-1 text-center shadow-[var(--shadow-medium)] transition-colors hover:brightness-[1.02]"
-          style={{ background: "var(--gradient-home-action-breastfeed)" }}
-        >
-          <span className="flex h-4 w-4 items-center justify-center text-[var(--color-text)]">
-            <HomeActionBreastfeedIcon className="h-4 w-4" />
-          </span>
-          <div className="mt-1 flex items-center gap-0.5">
-            <p className="text-[0.74rem] font-semibold leading-none text-[var(--color-text)]">
-              {showBreastfeedAction ? "Breastfeed" : "Repeat last feed"}
+    <div className="px-4 pt-0 md:px-10 md:pt-1">
+      <div className="flex items-center justify-between gap-3 px-3 md:px-0">
+        <p className="text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-[var(--color-text)] md:text-[0.82rem]">
+          Quick actions
+        </p>
+      </div>
+
+      <div className="mt-2.5 grid grid-cols-4 gap-2 md:mt-4 md:gap-6">
+        {ACTIONS.map((action) => (
+          <motion.button
+            key={action.id}
+            type="button"
+            whileTap={{ scale: 0.98 }}
+            onClick={actions[action.id]}
+            className="flex h-[66px] flex-col items-center justify-center gap-1.5 rounded-[14px] border border-[var(--color-home-card-border)] text-center shadow-[0_12px_26px_rgba(187,144,108,0.08)] transition-transform hover:-translate-y-0.5 md:h-[160px] md:gap-5 md:rounded-[22px]"
+            style={{ background: action.background }}
+          >
+            <div className="flex h-6 w-6 items-center justify-center md:h-11 md:w-11">
+              {action.icon}
+            </div>
+            <p className={`text-[0.68rem] font-semibold tracking-[-0.02em] md:text-[1.2rem] ${action.text}`}>
+              {action.label}
             </p>
-            {showBreastfeedAction && activeBreastfeedingSide && (
-              <span
-                className="inline-flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-[var(--color-surface-strong)] px-0.5 text-[0.52rem] font-bold text-[var(--color-primary)]"
-                aria-label={activeBreastfeedingSide === "left" ? "Left breastfeeding timer running" : "Right breastfeeding timer running"}
-              >
-                {activeBreastfeedingSide === "left" ? "L" : "R"}
-              </span>
-            )}
-          </div>
-        </motion.button>
-        <motion.button
-          whileTap={{ scale: 0.98 }}
-          onClick={onOpenSleep}
-          className="flex h-[64px] flex-col items-center justify-center rounded-[14px] px-1.5 py-1 text-center shadow-[var(--shadow-medium)] transition-colors hover:brightness-[1.02]"
-          style={{ background: "var(--gradient-home-action-sleep)" }}
-        >
-          <span className="flex h-4 w-4 items-center justify-center text-[var(--color-text)]">
-            <HomeActionSleepIcon className="h-4 w-4" />
-          </span>
-          <p className="mt-1 text-[0.74rem] font-semibold leading-none text-[var(--color-text)]">Log sleep</p>
-        </motion.button>
-        <motion.button
-          whileTap={{ scale: 0.98 }}
-          onClick={onOpenEpisode}
-          className="flex h-[64px] flex-col items-center justify-center rounded-[14px] px-1.5 py-1 text-center text-white shadow-[var(--shadow-medium)] transition-colors hover:brightness-[1.02]"
-          style={{ background: "var(--gradient-home-action-episode)" }}
-        >
-          <span className="flex h-4 w-4 items-center justify-center">
-            <HomeActionEpisodeIcon className="h-4 w-4" />
-          </span>
-          <p className="mt-1 text-[0.74rem] font-semibold leading-none">{episodeActionLabel}</p>
-        </motion.button>
-        <motion.button
-          whileTap={{ scale: 0.98 }}
-          onClick={onOpenSymptom}
-          className="flex h-[64px] flex-col items-center justify-center rounded-[14px] px-1.5 py-1 text-center text-white shadow-[var(--shadow-medium)] transition-colors hover:brightness-[1.02]"
-          style={{ background: "var(--gradient-home-action-symptom)" }}
-        >
-          <span className="flex h-4 w-4 items-center justify-center">
-            <HomeActionSymptomIcon className="h-4 w-4" />
-          </span>
-          <p className="mt-1 text-[0.74rem] font-semibold leading-none">Log symptom</p>
-        </motion.button>
+          </motion.button>
+        ))}
       </div>
     </div>
   );

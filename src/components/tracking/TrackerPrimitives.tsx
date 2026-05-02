@@ -43,7 +43,6 @@ export function TrackerMetricRing({
               "font-bold text-[var(--color-text)]",
               isSmall ? "text-[1.05rem]" : "text-[1.45rem]",
             )}
-            style={{ fontFamily: "var(--font-display)" }}
           >
             {value}
           </span>

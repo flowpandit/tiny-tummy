@@ -93,12 +93,15 @@ test("CompactChildNav supports child switching and optional back navigation", ()
       calls.push("back");
     },
     renderAvatar,
+    trailing: React.createElement("button", { type: "button", "aria-label": "Notifications" }, "Alerts"),
   }));
 
   fireEvent.click(screen.getByRole("button", { name: "Go back" }));
   fireEvent.click(screen.getByRole("button", { name: "Switch to Noah" }));
 
   assert.ok(screen.getByText("Mila"));
+  assert.ok(screen.getByRole("button", { name: "Notifications" }));
+  assert.equal(screen.queryByText("5.2 kg"), null);
   assert.deepEqual(calls, ["back", "child-2"]);
 });
 

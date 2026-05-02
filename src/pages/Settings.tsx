@@ -33,7 +33,7 @@ export function Settings() {
   return (
     <div className="mt-8 px-4 md:px-6 lg:px-8">
       <div className="mb-6">
-        <h1 className="font-[var(--font-display)] text-3xl font-bold tracking-[-0.04em] text-[var(--color-text)]">
+        <h1 className="text-3xl font-bold tracking-[-0.04em] text-[var(--color-text)]">
           Settings
         </h1>
       </div>

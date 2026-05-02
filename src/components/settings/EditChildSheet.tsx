@@ -72,7 +72,7 @@ export function EditChildSheet({
   return (
     <Sheet open={open} onClose={onClose}>
       <div className="px-5 pb-8">
-        <h2 className="mb-5 text-center font-[var(--font-display)] text-lg font-semibold text-[var(--color-text)]">
+        <h2 className="mb-5 text-center text-lg font-semibold text-[var(--color-text)]">
           Edit {child.name}
         </h2>
 

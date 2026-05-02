@@ -52,7 +52,7 @@ export function EpisodeSheet({
       <div className="px-5 pb-8">
         {!activeEpisode ? (
           <form onSubmit={(e: FormEvent) => { e.preventDefault(); void handleCreateEpisode(); }}>
-            <h2 className="mb-2 text-center font-[var(--font-display)] text-lg font-semibold text-[var(--color-text)]">
+            <h2 className="mb-2 text-center text-lg font-semibold text-[var(--color-text)]">
               Start Episode
             </h2>
             <p className="mb-5 text-center text-sm text-[var(--color-text-secondary)]">
@@ -118,7 +118,7 @@ export function EpisodeSheet({
             <div>
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <h2 className="font-[var(--font-display)] text-lg font-semibold text-[var(--color-text)]">
+                  <h2 className="text-lg font-semibold text-[var(--color-text)]">
                     {initialMode === "update" ? "Add Episode Update" : "Manage Episode"}
                   </h2>
                   <p className="mt-1 text-sm text-[var(--color-text-secondary)]">

@@ -421,7 +421,7 @@ export function ScenicHero({
           <div className="w-full px-4 md:px-6 lg:px-8">
             <div className="flex items-start justify-between gap-4">
               <div className="min-w-0 max-w-[18rem] md:max-w-[23rem] lg:max-w-[25rem]">
-                <h1 className="font-[var(--font-display)] text-[2.05rem] font-extrabold leading-[1.1] tracking-[-0.05em] text-[var(--color-hero-title)] md:text-[2.5rem] lg:text-[2.8rem]">
+                <h1 className="text-[2.05rem] font-extrabold leading-[1.1] tracking-[-0.05em] text-[var(--color-hero-title)] md:text-[2.5rem] lg:text-[2.8rem]">
                   {title}
                 </h1>
                 <p className="mt-2 text-[0.98rem] leading-tight tracking-[-0.02em] text-[var(--color-text)] md:text-[1.08rem]">

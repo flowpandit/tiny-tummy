@@ -36,7 +36,7 @@ export function AddChildStep({ onChildCreated, createChildAction }: AddChildStep
 
   return (
     <div className="flex flex-col min-h-screen px-6 pt-12">
-      <h2 className="font-[var(--font-display)] text-2xl font-bold text-[var(--color-text)] mb-2">
+      <h2 className="text-2xl font-bold text-[var(--color-text)] mb-2">
         Tell us about your baby
       </h2>
       <p className="text-[var(--color-text-secondary)] mb-8">

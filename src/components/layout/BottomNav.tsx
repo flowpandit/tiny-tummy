@@ -2,11 +2,10 @@ import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useActiveChild, useChildActions } from "../../contexts/ChildContext";
 import { useUpdateChildFeedingTypeAction } from "../../hooks/useSettingsActions";
-import { useEliminationPreference } from "../../hooks/useEliminationPreference";
 import { useDbClient } from "../../contexts/DatabaseContext";
 import { cn } from "../../lib/cn";
 import { Button } from "../ui/button";
-import { HomeActionBreastfeedIcon, HomeToolHistoryIcon } from "../ui/icons";
+import { HomeActionBottleIcon, HomeActionBreastfeedIcon, HomeActionDiaperIcon, HomeToolHistoryIcon } from "../ui/icons";
 import { combineLocalDateAndTimeToUtcIso, getAgeInMonthsFromDob, getCurrentLocalDate, getCurrentLocalTime } from "../../lib/utils";
 
 const iconClassName = "h-5 w-5";
@@ -23,47 +22,25 @@ const NAV_ITEMS = [
     ),
   },
   {
-    path: "/poop",
-    label: "Poop",
-    matches: (pathname: string) => pathname === "/poop",
-    icon: (active: boolean) => (
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill={active ? "currentColor" : "none"} stroke="currentColor" strokeWidth={active ? 0 : 1.5} className={iconClassName}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M12 3.75c.87 0 1.601.61 1.789 1.423.152.656.514 1.243 1.029 1.671A4.86 4.86 0 0 1 18 10.5c0 3.314-2.686 6-6 6s-6-2.686-6-6a4.86 4.86 0 0 1 3.182-4.556 3.01 3.01 0 0 0 1.029-1.671A1.835 1.835 0 0 1 12 3.75Z" />
-        <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 19.5c.73.477 1.601.75 2.55.75.949 0 1.82-.273 2.55-.75" />
-      </svg>
-    ),
+    path: "/diaper",
+    label: "Diaper",
+    matches: (pathname: string) => pathname === "/diaper",
+    icon: () => <HomeActionDiaperIcon className={iconClassName} />,
   },
   {
     path: "/feed",
     label: "Feed",
     matches: (pathname: string) => pathname === "/feed",
-    icon: (active: boolean) => (
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill={active ? "currentColor" : "none"} stroke="currentColor" strokeWidth={1.6} className={iconClassName}>
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          d="M5 10.5c0 3.866 3.134 7 7 7s7-3.134 7-7H5Z"
-          fill={active ? "currentColor" : "none"}
-        />
-        <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 10.5c.473-2.09 2.333-3.75 4.5-3.75 2.167 0 4.027 1.66 4.5 3.75" />
-        <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 19.5h7.5" />
-      </svg>
-    ),
+    icon: () => <HomeActionBottleIcon className={iconClassName} />,
   },
   {
     path: "/sleep",
     label: "Sleep",
     matches: (pathname: string) => pathname === "/sleep",
     icon: (active: boolean) => (
-      active ? (
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className={iconClassName}>
-          <path d="M21.752 15.002A9.718 9.718 0 0 1 18 15.75C12.615 15.75 8.25 11.385 8.25 6c0-1.293.252-2.527.71-3.657A9.753 9.753 0 0 0 2.25 12c0 5.385 4.365 9.75 9.75 9.75a9.753 9.753 0 0 0 9.752-6.748Z" />
-        </svg>
-      ) : (
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} className={iconClassName}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M21 12.79A9 9 0 1 1 11.21 3c-.12.64-.21 1.3-.21 2a9 9 0 0 0 10 7.79Z" />
-        </svg>
-      )
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill={active ? "currentColor" : "none"} stroke="currentColor" strokeWidth={active ? 0 : 1.5} className={iconClassName}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M21 12.79A9 9 0 1 1 11.21 3c-.12.64-.21 1.3-.21 2a9 9 0 0 0 10 7.79Z" />
+      </svg>
     ),
   },
   {
@@ -83,10 +60,17 @@ const NAV_ITEMS = [
       || pathname === "/all-kids"
     ),
     icon: (active: boolean) => (
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill={active ? "currentColor" : "none"} stroke="currentColor" strokeWidth={active ? 0 : 1.5} className={iconClassName}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 0 1 1.37.49l1.296 2.247a1.125 1.125 0 0 1-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 0 1 0 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 0 1-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 0 1-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 0 1-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 0 1-1.369-.49l-1.297-2.247a1.125 1.125 0 0 1 .26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 0 1 0-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 0 1-.26-1.43l1.297-2.247a1.125 1.125 0 0 1 1.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.28Z" />
-        <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
-      </svg>
+      <>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className={cn(iconClassName, "md:hidden")}>
+          <circle cx="5.5" cy="12" r="1.8" />
+          <circle cx="12" cy="12" r="1.8" />
+          <circle cx="18.5" cy="12" r="1.8" />
+        </svg>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill={active ? "currentColor" : "none"} stroke="currentColor" strokeWidth={active ? 0 : 1.5} className={cn(iconClassName, "hidden md:block")}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 0 1 1.37.49l1.296 2.247a1.125 1.125 0 0 1-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 0 1 0 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 0 1-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 0 1-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 0 1-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 0 1-1.369-.49l-1.297-2.247a1.125 1.125 0 0 1 .26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 0 1 0-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 0 1-.26-1.43l1.297-2.247a1.125 1.125 0 0 1 1.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.28Z" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+        </svg>
+      </>
     ),
   },
 ];
@@ -98,7 +82,6 @@ export function BottomNav() {
   const activeChild = useActiveChild();
   const { refreshChildren } = useChildActions();
   const updateChildFeedingType = useUpdateChildFeedingTypeAction(refreshChildren);
-  const { experience } = useEliminationPreference(activeChild);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [showFeedingTransitionConfirm, setShowFeedingTransitionConfirm] = useState(false);
   const [isUpdatingFeedingType, setIsUpdatingFeedingType] = useState(false);
@@ -125,15 +108,6 @@ export function BottomNav() {
 
   const navItems = useMemo(
     () => NAV_ITEMS.map((item) => {
-      if (item.path === "/poop") {
-        return {
-          ...item,
-          path: experience.route,
-          label: experience.navLabel,
-          matches: (pathname: string) => pathname === "/poop" || pathname === "/diaper",
-        };
-      }
-
       if (item.path === "/feed") {
         return {
           ...item,
@@ -150,7 +124,7 @@ export function BottomNav() {
 
       return item;
     }),
-    [experience.navLabel, experience.route, feedNavLabel, feedNavPath, isBreastOnly],
+    [feedNavLabel, feedNavPath, isBreastOnly],
   );
 
   const handleFeedTransitionConfirm = async () => {
@@ -230,13 +204,16 @@ export function BottomNav() {
       )}
       <nav
         className={cn(
-          "fixed bottom-0 left-0 right-0 z-30 px-3 transition-all duration-200 md:px-6",
+          "fixed bottom-0 left-0 right-0 z-30 transition-all duration-200 md:px-6",
+          "px-3 pb-[calc(var(--safe-area-bottom)+5px)] md:pb-[max(10px,calc(var(--safe-area-bottom)-28px))]",
           isSheetOpen ? "pointer-events-none translate-y-6 opacity-0" : "translate-y-0 opacity-100",
         )}
-        style={{ paddingBottom: "calc(var(--safe-area-bottom) + 8px)" }}
       >
         <div
-          className="mx-auto flex h-[78px] max-w-[720px] items-center justify-around rounded-[28px] border border-[var(--color-border)] px-2 shadow-[var(--shadow-lg)] backdrop-blur-[20px]"
+          className={cn(
+            "mx-auto flex max-w-[720px] items-center justify-around border border-[var(--color-border)] shadow-[var(--shadow-lg)] backdrop-blur-[20px] md:h-[96px] md:max-w-[860px] md:rounded-[34px]",
+            "h-[64px] rounded-[24px] px-1.5",
+          )}
           style={{ background: "var(--color-nav-surface)" }}
         >
           {navItems.map((item) => {
@@ -246,7 +223,8 @@ export function BottomNav() {
                 key={item.path}
                 onClick={() => handleNavPress(item.path)}
                 className={cn(
-                  "relative flex h-[64px] min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-[20px] cursor-pointer transition-all duration-200",
+                  "relative flex min-w-0 flex-1 cursor-pointer flex-col items-center justify-center transition-all duration-200 md:h-[76px] md:gap-2 md:rounded-[28px]",
+                  "h-[52px] gap-0.5 rounded-[18px]",
                   isActive
                     ? "text-[var(--color-primary)] shadow-[var(--shadow-soft)]"
                     : "text-[var(--color-nav-inactive)] hover:text-[var(--color-nav-inactive-hover)]",
@@ -256,14 +234,14 @@ export function BottomNav() {
               >
                 <span
                   className={cn(
-                    "absolute left-1/2 top-1.5 h-1 w-8 -translate-x-1/2 rounded-full transition-opacity duration-200",
+                    "absolute left-1/2 top-1.5 hidden h-1 w-8 -translate-x-1/2 rounded-full transition-opacity duration-200",
                     isActive ? "bg-[var(--color-nav-active-indicator)] opacity-100" : "opacity-0",
                   )}
                 />
-                <span className="flex h-6 w-6 items-center justify-center">
+                <span className="flex h-5 w-5 scale-90 items-center justify-center">
                   {item.icon(isActive)}
                 </span>
-                <span className="max-w-full truncate px-1 text-[10px] font-semibold tracking-[0.01em]">{item.label}</span>
+                <span className="max-w-full truncate px-1 text-[9px] font-semibold tracking-[0.01em] md:text-[0.92rem]">{item.label}</span>
               </button>
             );
           })}

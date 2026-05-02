@@ -65,7 +65,7 @@ export function BreastSideButton({
       </div>
 
       <div className="px-0.5 pb-0 pt-1 text-center">
-        <p className="font-[var(--font-display)] text-[2.55rem] font-semibold tracking-[-0.06em] leading-none text-[var(--color-text)]">
+        <p className="text-[2.55rem] font-semibold tracking-[-0.06em] leading-none text-[var(--color-text)]">
           {formatBreastfeedingClock(durationMs)}
         </p>
         <p className="mt-2 text-[0.82rem] leading-tight text-[var(--color-text-secondary)]">

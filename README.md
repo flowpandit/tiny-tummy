@@ -279,6 +279,10 @@ Once configured in Xcode, you can also run future builds from the CLI:
 cargo tauri ios dev --device
 ```
 
+Use `cargo tauri ios dev --device` when you want iOS hot reload. This path uses the Vite dev server from `build.devUrl`; for a physical iPad/iPhone, Tauri rewrites `localhost` to your Mac's network address and Vite listens on that address via `TAURI_DEV_HOST`.
+
+Use Xcode's Play button when you want a self-contained device install without hot reload. The Xcode pre-build script runs `scripts/build-rust-ios.sh`, copies the latest `dist` assets, and forces Tauri's `devUrl` to `null` for that build so the app does not try to reach the Vite server.
+
 #### iPad/iPhone Deployment Workflow (Recommended)
 
 To ensure the latest frontend changes and database optimizations are correctly installed on your physical device:
@@ -297,6 +301,8 @@ To ensure the latest frontend changes and database optimizations are correctly i
    ```
 4. **Clean Build Folder**: In Xcode, go to **Product > Clean Build Folder** (or `Cmd + Shift + K`). This is critical for clearing cached assets and ensuring the new SQLite WAL mode is active.
 5. **Run**: Select your iPad/iPhone as the target and hit **Play**.
+
+If you see a local-network error while intentionally using hot reload, allow Tiny Tummy in iOS Settings > Privacy & Security > Local Network and restart the app. If you see that error while using the Xcode bundled-assets workflow, clean the build folder and reinstall the app so Xcode stops launching an older dev-server build.
 
 #### Enforcing Portrait Orientation
 

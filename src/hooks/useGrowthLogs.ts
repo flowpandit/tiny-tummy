@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import type { GrowthEntry } from "../lib/types";
 import { useDbClient } from "../contexts/DatabaseContext";
+import { GROWTH_LOGS_CHANGED_EVENT } from "../lib/growth-events";
 
 export function useGrowthLogs(childId: string | null) {
   const db = useDbClient();
@@ -37,13 +38,26 @@ export function useGrowthLogs(childId: string | null) {
     if (requestId === requestIdRef.current) {
       setIsLoading(false);
     }
-  }, [childId]);
+  }, [childId, db]);
 
   useEffect(() => {
     setLogs([]);
     setLatest(null);
     setIsLoading(Boolean(childId));
     void refresh();
+  }, [childId, refresh]);
+
+  useEffect(() => {
+    if (!childId || typeof window === "undefined") return;
+
+    const handleGrowthLogsChanged = (event: Event) => {
+      if (!(event instanceof CustomEvent)) return;
+      if (event.detail?.childId !== childId) return;
+      void refresh();
+    };
+
+    window.addEventListener(GROWTH_LOGS_CHANGED_EVENT, handleGrowthLogsChanged);
+    return () => window.removeEventListener(GROWTH_LOGS_CHANGED_EVENT, handleGrowthLogsChanged);
   }, [childId, refresh]);
 
   return { logs, latest, isLoading, refresh };

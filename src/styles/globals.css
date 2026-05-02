@@ -14,14 +14,15 @@ body,
 :root {
   --safe-area-top: 0px;
   --safe-area-bottom: 0px;
+  --app-shell-bottom-padding: calc(var(--safe-area-bottom) + 76px);
 }
 
 body {
-  font-family: var(--font-body);
+  @apply font-sans;
   font-size: 16px;
   line-height: 1.5;
   color: var(--color-text);
-  background: linear-gradient(180deg, #fcf6eb 0%, #fbf5ea 58%, #f7efe1 100%);
+  background: var(--gradient-app-bg);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   -webkit-text-size-adjust: 100%;
@@ -35,6 +36,12 @@ body {
   }
 }
 
+@media (min-width: 768px) {
+  :root {
+    --app-shell-bottom-padding: calc(var(--safe-area-bottom) + 132px);
+  }
+}
+
 #root {
   display: flex;
   flex-direction: column;
@@ -44,8 +51,7 @@ body {
 
 /* Tailwind v4 theme extension */
 @theme {
-  --font-display: 'Lora', Georgia, serif;
-  --font-body: 'Raleway', system-ui, sans-serif;
+  --font-sans: 'Inter', system-ui, sans-serif;
 
   --color-primary: #5f4a3c;
   --color-primary-hover: #49372d;

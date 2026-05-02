@@ -38,7 +38,7 @@ function StartupSetupScreen({ loadingParts, loadingForMs }: { loadingParts: stri
             <span className="block h-full w-full animate-ping rounded-full bg-[var(--color-primary)] opacity-35" />
           </span>
         </div>
-        <h1 className="font-[var(--font-display)] text-2xl font-semibold tracking-[-0.03em]">
+        <h1 className="text-2xl font-semibold tracking-[-0.03em]">
           Setting up Tiny Tummy
         </h1>
         <p className="mt-3 max-w-[18rem] text-sm leading-6 text-[var(--color-text-secondary)]">

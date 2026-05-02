@@ -14,6 +14,10 @@ export default defineConfig(async () => ({
     __APP_VERSION__: JSON.stringify(process.env.npm_package_version || "0.1.0"),
   },
 
+  optimizeDeps: {
+    entries: ["index.html"],
+  },
+
   build: {
     cssCodeSplit: false,
     modulePreload: false,

@@ -248,7 +248,7 @@ export function Feed() {
             <CardHeader>
               <div>
                 <div className="flex items-center gap-3">
-                  <h3 className="font-[var(--font-display)] text-2xl font-semibold tracking-[-0.02em] text-[var(--color-text)]">
+                  <h3 className="text-2xl font-semibold tracking-[-0.02em] text-[var(--color-text)]">
                     Week entries
                   </h3>
                   <TrackerWeekRangePill label={formatWeekLabel(startDate, endDate)} animateKey={weekOffset} />

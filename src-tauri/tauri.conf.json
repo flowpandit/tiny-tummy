@@ -32,7 +32,8 @@
       "icons/icon.ico"
     ],
     "iOS": {
-      "developmentTeam": "GY2TR322AP"
+      "developmentTeam": "GY2TR322AP",
+      "infoPlist": "Info.ios.plist"
     }
   }
 }

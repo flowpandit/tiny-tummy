@@ -42,7 +42,7 @@ export function ReportPreview({ payload }: ReportPreviewProps) {
                   <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--color-text-soft)]">
                     Tiny Tummy
                   </p>
-                  <h3 className="font-[var(--font-display)] text-[1.9rem] font-semibold leading-none tracking-[-0.04em] text-[var(--color-text)]">
+                  <h3 className="text-[1.9rem] font-semibold leading-none tracking-[-0.04em] text-[var(--color-text)]">
                     {payload.title}
                   </h3>
                 </div>
@@ -129,7 +129,7 @@ function StatCard({ stat }: { stat: ReportPdfStat }) {
       <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--color-text-soft)]">
         {stat.label}
       </p>
-      <p className="mt-2 font-[var(--font-display)] text-[1.55rem] font-semibold leading-none text-[var(--color-text)]">
+      <p className="mt-2 text-[1.55rem] font-semibold leading-none text-[var(--color-text)]">
         {stat.value}
       </p>
       {stat.detail && (
@@ -145,7 +145,7 @@ function SummaryCard({ card }: { card: ReportPdfSummaryCard }) {
       <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--color-text-soft)]">
         {card.title}
       </p>
-      <p className="mt-2 font-[var(--font-display)] text-[1.45rem] font-semibold leading-tight text-[var(--color-text)]">
+      <p className="mt-2 text-[1.45rem] font-semibold leading-tight text-[var(--color-text)]">
         {card.value}
       </p>
       <p className="mt-2 text-sm leading-relaxed text-[var(--color-text-secondary)]">{card.detail}</p>
