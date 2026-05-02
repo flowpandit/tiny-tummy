@@ -1,45 +1,37 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useDbClient } from "../contexts/DatabaseContext";
 import { getSleepTimerSettingKey, parseSleepTimerSession, type SleepTimerSession } from "../lib/sleep-timer";
 import type { Child } from "../lib/types";
+import { useVisibilityRefresh } from "./useVisibilityRefresh";
 
 export function useSleepTimerPreview(activeChild: Child | null, refreshKey: unknown) {
   const db = useDbClient();
   const [timerSession, setTimerSession] = useState<SleepTimerSession | null>(null);
   const [tick, setTick] = useState(Date.now());
 
-  useEffect(() => {
+  const refreshTimerSession = useCallback(async () => {
     if (!activeChild) {
       setTimerSession(null);
+      setTick(Date.now());
       return;
     }
 
-    let cancelled = false;
-    const refreshTimerSession = () => {
-      db.getSetting(getSleepTimerSettingKey(activeChild.id))
-        .then((raw) => {
-          if (!cancelled) {
-            setTimerSession(parseSleepTimerSession(raw));
-            setTick(Date.now());
-          }
-        })
-        .catch(() => {
-          if (!cancelled) {
-            setTimerSession(null);
-            setTick(Date.now());
-          }
-        });
-    };
+    try {
+      const raw = await db.getSetting(getSleepTimerSettingKey(activeChild.id));
+      setTimerSession(parseSleepTimerSession(raw));
+    } catch {
+      setTimerSession(null);
+    }
+    setTick(Date.now());
+  }, [activeChild, db]);
 
-    refreshTimerSession();
-    window.addEventListener("focus", refreshTimerSession);
-    document.addEventListener("visibilitychange", refreshTimerSession);
-    return () => {
-      cancelled = true;
-      window.removeEventListener("focus", refreshTimerSession);
-      document.removeEventListener("visibilitychange", refreshTimerSession);
-    };
-  }, [activeChild, refreshKey]);
+  useEffect(() => {
+    void refreshTimerSession();
+  }, [refreshKey, refreshTimerSession]);
+
+  useVisibilityRefresh(() => {
+    void refreshTimerSession();
+  }, Boolean(activeChild));
 
   useEffect(() => {
     if (!timerSession) return;
@@ -47,5 +39,5 @@ export function useSleepTimerPreview(activeChild: Child | null, refreshKey: unkn
     return () => window.clearInterval(interval);
   }, [timerSession]);
 
-  return { timerSession, tick };
+  return { timerSession, tick, refreshTimerSession };
 }

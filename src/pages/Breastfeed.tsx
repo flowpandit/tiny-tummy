@@ -251,7 +251,7 @@ export function Breastfeed() {
               </section>
             )}
 
-            <CareToolsSection className="px-1" />
+            <CareToolsSection className="px-1" palette="soft" />
           </>
         )}
       </div>

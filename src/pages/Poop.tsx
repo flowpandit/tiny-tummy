@@ -276,7 +276,7 @@ export function Poop() {
 
         <PoopRecentHistorySection recentHistory={recentHistory} />
 
-        <CareToolsSection className="px-0" />
+        <CareToolsSection className="px-0" palette="soft" />
 
         <LogForm
           open={logFormOpen}

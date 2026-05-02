@@ -9,6 +9,8 @@ import { usePhotoField } from "../src/hooks/usePhotoField.ts";
 import { useVisibilityRefresh } from "../src/hooks/useVisibilityRefresh.ts";
 import { useChildWorkflowActions } from "../src/hooks/useChildWorkflowActions.ts";
 import { useSleepLogSheetState } from "../src/hooks/useSleepLogSheetState.ts";
+import { useSleepQuickTimer } from "../src/hooks/useSleepQuickTimer.ts";
+import { getSleepTimerSettingKey } from "../src/lib/sleep-timer.ts";
 import type { Child } from "../src/lib/types.ts";
 
 afterEach(() => {
@@ -337,6 +339,104 @@ test("useSleepLogSheetState blocks future manual sleep logs", async () => {
   } finally {
     Date.now = realDateNow;
   }
+});
+
+test("useSleepQuickTimer starts a nap timer from the quick action", async () => {
+  const settings = new Map<string, string>();
+  const success: string[] = [];
+  const errors: string[] = [];
+  const dbClient = {
+    getSetting: async (key: string) => settings.get(key) ?? "",
+    setSetting: async (key: string, value: string) => {
+      settings.set(key, value);
+    },
+    createSleepLog: async () => {},
+  } as unknown as DbClient;
+  const wrapper = ({ children }: { children: React.ReactNode }) => (
+    React.createElement(DatabaseProvider, { client: dbClient }, children)
+  );
+
+  const { result } = renderHook(() => useSleepQuickTimer({
+    activeChild: child,
+    onLogged: () => {},
+    onError: (message) => {
+      errors.push(message);
+    },
+    onSuccess: (message) => {
+      success.push(message);
+    },
+  }), { wrapper });
+
+  await waitFor(() => {
+    assert.equal(result.current.timerSession, null);
+  });
+
+  await act(async () => {
+    await result.current.handleStartNapTimer();
+  });
+
+  await waitFor(() => {
+    assert.equal(result.current.timerSession?.sleepType, "nap");
+  });
+
+  const rawSession = settings.get(getSleepTimerSettingKey(child.id));
+  assert.ok(rawSession);
+  assert.equal(JSON.parse(rawSession).sleepType, "nap");
+  assert.deepEqual(success, ["Nap timer started."]);
+  assert.deepEqual(errors, []);
+});
+
+test("useSleepQuickTimer stops the timer and saves a sleep log", async () => {
+  const timerKey = getSleepTimerSettingKey(child.id);
+  const settings = new Map<string, string>([
+    [timerKey, JSON.stringify({ sleepType: "nap", startedAt: "2000-01-01T10:00:00", notes: "" })],
+  ]);
+  const createSleepLogCalls: Array<Record<string, unknown>> = [];
+  const success: string[] = [];
+  const errors: string[] = [];
+  let loggedCount = 0;
+  const dbClient = {
+    getSetting: async (key: string) => settings.get(key) ?? "",
+    setSetting: async (key: string, value: string) => {
+      settings.set(key, value);
+    },
+    createSleepLog: async (input: Record<string, unknown>) => {
+      createSleepLogCalls.push(input);
+    },
+  } as unknown as DbClient;
+  const wrapper = ({ children }: { children: React.ReactNode }) => (
+    React.createElement(DatabaseProvider, { client: dbClient }, children)
+  );
+
+  const { result } = renderHook(() => useSleepQuickTimer({
+    activeChild: child,
+    onLogged: () => {
+      loggedCount += 1;
+    },
+    onError: (message) => {
+      errors.push(message);
+    },
+    onSuccess: (message) => {
+      success.push(message);
+    },
+  }), { wrapper });
+
+  await waitFor(() => {
+    assert.equal(result.current.timerSession?.sleepType, "nap");
+  });
+
+  await act(async () => {
+    await result.current.handleStopAndSaveTimer();
+  });
+
+  assert.equal(createSleepLogCalls.length, 1);
+  assert.equal(createSleepLogCalls[0]?.child_id, child.id);
+  assert.equal(createSleepLogCalls[0]?.sleep_type, "nap");
+  assert.equal(createSleepLogCalls[0]?.started_at, "2000-01-01T10:00:00");
+  assert.equal(settings.get(timerKey), "");
+  assert.equal(loggedCount, 1);
+  assert.deepEqual(success, ["Sleep entry saved."]);
+  assert.deepEqual(errors, []);
 });
 
 test("useVisibilityRefresh does not subscribe when disabled", () => {

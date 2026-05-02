@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { sleepSceneArt } from "../../assets/illustrations";
 import { formatElapsedSince, type SleepAssistantCopy, type SleepGlanceStat, type WakeWindowProgress } from "../../lib/sleep-view-model";
 import type { SleepEntry } from "../../lib/types";
+import { CareToolsSection } from "../care/CareToolsSection";
 import { Button } from "../ui/button";
 import { HomeActionSleepIcon } from "../ui/icons";
 import { SleepRecentHistorySection } from "./SleepRecentHistorySection";
@@ -203,6 +204,7 @@ function QuickActionButton({
   tone,
   icon,
   onClick,
+  disabled = false,
 }: {
   title: string;
   detail: string;
@@ -210,6 +212,7 @@ function QuickActionButton({
   tone: "sleep" | "active" | "manual";
   icon: ReactNode;
   onClick: () => void;
+  disabled?: boolean;
 }) {
   const background = tone === "sleep"
     ? "var(--gradient-home-action-sleep)"
@@ -221,12 +224,18 @@ function QuickActionButton({
     : tone === "active"
       ? "#ff6d35"
       : "#4b8df7";
+  const badgeColor = tone === "sleep"
+    ? "var(--color-home-action-sleep-icon)"
+    : tone === "active"
+      ? "#ff5f2a"
+      : "#4b8df7";
 
   return (
     <button
       type="button"
       onClick={onClick}
-      className="flex min-h-[126px] flex-col items-center justify-center gap-2 rounded-[16px] border border-[var(--color-home-card-border)] px-3 text-center shadow-[0_12px_26px_rgba(187,144,108,0.08)] transition-transform hover:-translate-y-0.5 active:scale-[0.98] md:min-h-[124px] md:flex-row md:justify-start md:gap-5 md:rounded-[20px] md:px-6 md:text-left"
+      disabled={disabled}
+      className={`flex min-h-[126px] flex-col items-center justify-center gap-2 rounded-[16px] border border-[var(--color-home-card-border)] px-3 text-center shadow-[0_12px_26px_rgba(187,144,108,0.08)] transition-transform hover:-translate-y-0.5 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-70 disabled:hover:translate-y-0 md:min-h-[124px] md:flex-row md:justify-start md:gap-5 md:rounded-[20px] md:px-6 md:text-left`}
       style={{ background }}
     >
       <span
@@ -243,7 +252,7 @@ function QuickActionButton({
           {detail}
         </span>
         {badge && (
-          <span className="mt-1 block text-[0.82rem] font-medium leading-tight text-[#ff5f2a] md:text-[0.92rem]">
+          <span className="mt-1 block text-[0.82rem] font-medium leading-tight md:text-[0.92rem]" style={{ color: badgeColor }}>
             {badge}
           </span>
         )}
@@ -256,10 +265,18 @@ function QuickActions({
   hasTimerSession,
   onOpenTimerSheet,
   onOpenManualSheet,
+  onStartSleepTimer,
+  onStopSleepTimer,
+  timerClock,
+  isTimerActionPending,
 }: {
   hasTimerSession: boolean;
   onOpenTimerSheet: () => void;
   onOpenManualSheet: () => void;
+  onStartSleepTimer: () => void;
+  onStopSleepTimer: () => void;
+  timerClock: string | null;
+  isTimerActionPending: boolean;
 }) {
   return (
     <section className="px-4 md:px-10">
@@ -267,18 +284,21 @@ function QuickActions({
       <div className="mt-3 grid grid-cols-3 gap-3 md:mt-4 md:gap-5">
         <QuickActionButton
           title="Start sleep"
-          detail="Begin a nap or night sleep"
+          detail={hasTimerSession ? "Timer running" : "Start nap timer"}
+          badge={hasTimerSession ? timerClock ?? "00:00" : undefined}
           tone="sleep"
           icon={<HomeActionSleepIcon className="h-7 w-7" />}
-          onClick={onOpenTimerSheet}
+          onClick={hasTimerSession ? onOpenTimerSheet : onStartSleepTimer}
+          disabled={isTimerActionPending}
         />
         <QuickActionButton
           title="End sleep"
-          detail={hasTimerSession ? "Stop ongoing sleep session" : "Open the sleep timer"}
+          detail={hasTimerSession ? "Stop and save sleep" : "Start timer first"}
           badge={hasTimerSession ? "Active" : undefined}
           tone="active"
           icon={<StopIcon className="h-7 w-7" />}
-          onClick={onOpenTimerSheet}
+          onClick={onStopSleepTimer}
+          disabled={isTimerActionPending}
         />
         <QuickActionButton
           title="Log sleep manually"
@@ -472,6 +492,10 @@ export function SleepOverviewBoard({
   glanceStats,
   onOpenTimerSheet,
   onOpenManualSheet,
+  onStartSleepTimer,
+  onStopSleepTimer,
+  timerClock,
+  isTimerActionPending,
   onEditSleep,
 }: {
   childName: string;
@@ -484,6 +508,10 @@ export function SleepOverviewBoard({
   glanceStats: SleepGlanceStat[];
   onOpenTimerSheet: () => void;
   onOpenManualSheet: () => void;
+  onStartSleepTimer: () => void;
+  onStopSleepTimer: () => void;
+  timerClock: string | null;
+  isTimerActionPending: boolean;
   onEditSleep: (entry: SleepEntry) => void;
 }) {
   return (
@@ -510,6 +538,10 @@ export function SleepOverviewBoard({
         hasTimerSession={Boolean(timerSessionSummary)}
         onOpenTimerSheet={onOpenTimerSheet}
         onOpenManualSheet={onOpenManualSheet}
+        onStartSleepTimer={onStartSleepTimer}
+        onStopSleepTimer={onStopSleepTimer}
+        timerClock={timerClock}
+        isTimerActionPending={isTimerActionPending}
       />
       <SleepWindowCard
         childName={childName}
@@ -525,6 +557,7 @@ export function SleepOverviewBoard({
           <SleepInsightCard copy={assistantCopy} />
         </div>
       </div>
+      <CareToolsSection className="px-4 md:px-10" palette="soft" />
     </div>
   );
 }

@@ -264,7 +264,7 @@ export function Feed() {
           </Card>
         )}
 
-        <CareToolsSection className="px-1" />
+        <CareToolsSection className="px-1" palette="soft" />
 
         <DietLogForm
           open={formOpen}

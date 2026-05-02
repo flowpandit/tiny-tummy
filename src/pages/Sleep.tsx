@@ -1,14 +1,15 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useActiveChild } from "../contexts/ChildContext";
-import { useSleepTimerPreview } from "../hooks/useSleepTimerPreview";
+import { useSleepQuickTimer } from "../hooks/useSleepQuickTimer";
 import { useSleepLogs } from "../hooks/useSleepLogs";
 import { formatLocalDateKey } from "../lib/stats";
 import { timeSince } from "../lib/utils";
-import { formatSleepTimerClock, formatSleepTimerSummary, getSleepTimerElapsedMs } from "../lib/sleep-timer";
+import { formatSleepTimerSummary } from "../lib/sleep-timer";
 import { EditSleepSheet } from "../components/sleep/EditSleepSheet";
 import { SleepLogSheet } from "../components/sleep/SleepLogSheet";
 import { SleepOverviewBoard } from "../components/sleep/SleepOverviewBoard";
+import { useToast } from "../components/ui/toast";
 import type { SleepEntry, SleepType } from "../lib/types";
 import {
   buildSleepAssistantCopy,
@@ -28,12 +29,29 @@ export function Sleep() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const activeChild = useActiveChild();
+  const { showError, showSuccess } = useToast();
   const { logs, refresh } = useSleepLogs(activeChild?.id ?? null, 200);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [sheetMode, setSheetMode] = useState<"manual" | "timer">("manual");
   const [sheetSleepType, setSheetSleepType] = useState<SleepType>("nap");
   const [editingSleep, setEditingSleep] = useState<SleepEntry | null>(null);
-  const { timerSession, tick } = useSleepTimerPreview(activeChild, sheetOpen);
+  const handleLogged = useCallback(async () => {
+    await refresh();
+  }, [refresh]);
+  const {
+    timerSession,
+    timerElapsedMs,
+    timerClock,
+    isSubmitting: isTimerActionPending,
+    handleStartNapTimer,
+    handleStopAndSaveTimer,
+  } = useSleepQuickTimer({
+    activeChild,
+    refreshKey: sheetOpen,
+    onLogged: handleLogged,
+    onError: showError,
+    onSuccess: showSuccess,
+  });
   const completedLogs = useMemo(() => getCompletedSleepLogs(logs), [logs]);
 
   const todayKey = getTodayKey();
@@ -90,10 +108,6 @@ export function Sleep() {
     setSheetOpen(true);
   };
 
-  const handleLogged = async () => {
-    await refresh();
-  };
-
   return (
     <>
       <SleepOverviewBoard
@@ -104,13 +118,17 @@ export function Sleep() {
         wakeWindowProgress={wakeWindowProgress}
         timerSessionSummary={timerSession ? {
           label: timerSession.sleepType === "night" ? "Night timer running" : "Nap timer running",
-          clock: formatSleepTimerClock(getSleepTimerElapsedMs(timerSession, tick)),
-          summary: `Started ${timeSince(timerSession.startedAt)} · ${formatSleepTimerSummary(getSleepTimerElapsedMs(timerSession, tick))}`,
+          clock: timerClock ?? "00:00",
+          summary: `Started ${timeSince(timerSession.startedAt)} · ${formatSleepTimerSummary(timerElapsedMs)}`,
         } : null}
         sleepLogs={completedLogs}
         glanceStats={glanceStats}
         onOpenTimerSheet={openTimerSheet}
         onOpenManualSheet={openManualSheet}
+        onStartSleepTimer={() => { void handleStartNapTimer(); }}
+        onStopSleepTimer={() => { void handleStopAndSaveTimer(); }}
+        timerClock={timerClock}
+        isTimerActionPending={isTimerActionPending}
         onEditSleep={setEditingSleep}
       />
 

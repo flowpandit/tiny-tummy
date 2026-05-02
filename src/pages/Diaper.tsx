@@ -207,7 +207,7 @@ export function Diaper() {
                   selectedPatternLog={selectedPatternLog}
                   onToggleLog={(logId) => setSelectedPatternLogId((current) => (current === logId ? null : logId))}
                 />
-                <CareToolsSection className="px-0" />
+                <CareToolsSection className="px-0" palette="soft" />
               </div>
             )}
           </div>
