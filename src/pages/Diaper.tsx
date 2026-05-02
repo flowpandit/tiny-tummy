@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useActiveChild } from "../contexts/ChildContext";
 import { useDiaperLogs } from "../hooks/useDiaperLogs";
 import { useSymptoms } from "../hooks/useSymptoms";
@@ -34,6 +34,7 @@ import {
 
 export function Diaper() {
   const navigate = useNavigate();
+  const location = useLocation();
   const activeChild = useActiveChild();
   const { experience, isLoading: isEliminationPreferenceLoading } = useEliminationPreference(activeChild);
   const { logs, lastDiaper, lastWetDiaper, lastDirtyDiaper, refresh } = useDiaperLogs(activeChild?.id ?? null);
@@ -54,12 +55,16 @@ export function Diaper() {
     }),
     [],
   );
+  const allowSettingsAlternate = location.state
+    && typeof location.state === "object"
+    && "allowSettingsAlternate" in location.state
+    && (location.state as { allowSettingsAlternate?: boolean }).allowSettingsAlternate === true;
 
   useEffect(() => {
-    if (!isEliminationPreferenceLoading && experience.mode === "poop") {
+    if (!allowSettingsAlternate && !isEliminationPreferenceLoading && experience.mode === "poop") {
       navigate("/poop", { replace: true });
     }
-  }, [experience.mode, isEliminationPreferenceLoading, navigate]);
+  }, [allowSettingsAlternate, experience.mode, isEliminationPreferenceLoading, navigate]);
 
   const todayKey = getDayKey();
   const { todayLogs, wetCount: todayWetCount, dirtyCount: todayDirtyCount, mixedCount: todayMixedCount } = useMemo(
@@ -101,7 +106,7 @@ export function Diaper() {
 
   if (!activeChild) return null;
   if (isEliminationPreferenceLoading) return null;
-  if (experience.mode === "poop") return null;
+  if (!allowSettingsAlternate && experience.mode === "poop") return null;
   const child = activeChild;
   const wetPrediction = getPrediction(logs, child.date_of_birth, "wet");
   const dirtyPrediction = getPrediction(logs, child.date_of_birth, "dirty");

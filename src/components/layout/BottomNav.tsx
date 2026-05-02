@@ -110,6 +110,12 @@ export function BottomNav({ eliminationExperience }: BottomNavProps) {
   const isFeedingTransitionEligible = isBreastOnly && Boolean(activeChild) && getAgeInMonthsFromDob(activeChild.date_of_birth) >= 6;
   const feedNavPath = isBreastOnly ? "/breastfeed" : "/feed";
   const feedNavLabel = "Feed";
+  const isSettingsAlternateRoute = location.state
+    && typeof location.state === "object"
+    && "origin" in location.state
+    && "allowSettingsAlternate" in location.state
+    && (location.state as { origin?: string; allowSettingsAlternate?: boolean }).origin === "/settings"
+    && (location.state as { origin?: string; allowSettingsAlternate?: boolean }).allowSettingsAlternate === true;
 
   const navItems = useMemo(
     () => NAV_ITEMS.map((item) => {
@@ -236,7 +242,9 @@ export function BottomNav({ eliminationExperience }: BottomNavProps) {
           style={{ background: "var(--color-nav-surface)" }}
         >
           {navItems.map((item) => {
-            const isActive = item.matches(location.pathname);
+            const isActive = isSettingsAlternateRoute
+              ? item.path === "/settings"
+              : item.matches(location.pathname);
             return (
               <button
                 key={item.path}

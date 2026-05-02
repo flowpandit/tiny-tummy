@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useActiveChild } from "../contexts/ChildContext";
 import { usePoopLogs } from "../hooks/usePoopLogs";
 import { useFeedingLogs } from "../hooks/useFeedingLogs";
@@ -42,6 +42,7 @@ import {
 
 export function Poop() {
   const navigate = useNavigate();
+  const location = useLocation();
   const activeChild = useActiveChild();
   const { experience, isLoading: isEliminationPreferenceLoading } = useEliminationPreference(activeChild);
   const { showError, showSuccess } = useToast();
@@ -59,12 +60,16 @@ export function Poop() {
   const [editingPoop, setEditingPoop] = useState<PoopEntry | null>(null);
   const [poopPresetSheetOpen, setPoopPresetSheetOpen] = useState(false);
   const [statusExpanded, setStatusExpanded] = useState(false);
+  const allowSettingsAlternate = location.state
+    && typeof location.state === "object"
+    && "allowSettingsAlternate" in location.state
+    && (location.state as { allowSettingsAlternate?: boolean }).allowSettingsAlternate === true;
 
   useEffect(() => {
-    if (!isEliminationPreferenceLoading && experience.mode === "diaper") {
+    if (!allowSettingsAlternate && !isEliminationPreferenceLoading && experience.mode === "diaper") {
       navigate("/diaper", { replace: true });
     }
-  }, [experience.mode, isEliminationPreferenceLoading, navigate]);
+  }, [allowSettingsAlternate, experience.mode, isEliminationPreferenceLoading, navigate]);
 
   useEffect(() => {
     if (!activeChild) {
@@ -210,7 +215,7 @@ export function Poop() {
 
   if (!activeChild) return null;
   if (isEliminationPreferenceLoading) return null;
-  if (experience.mode === "diaper") return null;
+  if (!allowSettingsAlternate && experience.mode === "diaper") return null;
 
   return (
     <PageBody className="-mt-8 space-y-0 px-0 py-0">

@@ -71,13 +71,13 @@ export function AppShell() {
   const originPath = location.state && typeof location.state === "object" && "origin" in location.state
     ? (location.state as { origin?: string }).origin
     : undefined;
+  const allowSettingsAlternate = location.state
+    && typeof location.state === "object"
+    && "allowSettingsAlternate" in location.state
+    && (location.state as { allowSettingsAlternate?: boolean }).allowSettingsAlternate === true;
   const showHeader = Boolean(activeChild);
-  const headerFallbackTo = location.pathname === "/breastfeed" && originPath
-    ? originPath
-    : headerBackFallbackByPath[location.pathname];
-  const showHeaderBackButton = location.pathname === "/breastfeed"
-    ? Boolean(originPath)
-    : Boolean(headerFallbackTo);
+  const headerFallbackTo = originPath ?? headerBackFallbackByPath[location.pathname];
+  const showHeaderBackButton = Boolean(headerFallbackTo);
   const { experience: eliminationExperience } = useEliminationPreference(activeChild);
   const isBreastOnly = activeChild?.feeding_type === "breast";
   const isFeedingTransitionEligible = isBreastOnly && Boolean(activeChild) && getAgeInMonthsFromDob(activeChild.date_of_birth) >= 6;
@@ -170,10 +170,10 @@ export function AppShell() {
       return;
     }
 
-    if (location.pathname !== feedNavPath) {
+    if (!allowSettingsAlternate && location.pathname !== feedNavPath) {
       navigate(feedNavPath, { replace: true });
     }
-  }, [feedNavPath, location.pathname, navigate]);
+  }, [allowSettingsAlternate, feedNavPath, location.pathname, navigate]);
 
   const getSwipeTarget = (direction: "previous" | "next") => {
     if (!canSwipeBetweenBottomRoutes) return null;
