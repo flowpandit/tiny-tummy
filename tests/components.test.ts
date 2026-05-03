@@ -9,6 +9,7 @@ import { LoggingFieldGroup, LoggingFormHeader, LoggingPresetNotice } from "../sr
 import { NormalRangeIntro } from "../src/components/onboarding/NormalRangeIntro.tsx";
 import { SleepRecentHistorySection } from "../src/components/sleep/SleepRecentHistorySection.tsx";
 import { MilestoneRecentActivitySection } from "../src/components/milestones/MilestoneRecentActivitySection.tsx";
+import { GuidanceHubView } from "../src/pages/Guidance.tsx";
 import { formatLocalDateKey } from "../src/lib/utils.ts";
 import type { Child } from "../src/lib/types.ts";
 
@@ -133,6 +134,30 @@ test("NormalRangeIntro loads the normal-range copy and finishes onboarding", asy
   await waitFor(() => {
     assert.deepEqual(calls, ["finish", "navigate:/"]);
   });
+});
+
+test("Guidance hub stays scannable and opens topic details", () => {
+  render(React.createElement(GuidanceHubView));
+
+  assert.ok(screen.getByText("Trusted, pediatric-backed guidance to help you make confident choices."));
+  assert.ok(screen.getByRole("button", { name: /When to call the doctor/i }));
+  assert.ok(screen.getByText("Starting solids? Expect changes"));
+  assert.ok(screen.getByText("Symptoms and episodes"));
+  assert.equal(screen.queryByText("Use Log symptom for one thing you noticed, like a fever reading, cough, rash, vomit, or unusual stool."), null);
+
+  fireEvent.click(screen.getByRole("button", { name: /Symptoms and episodes/i }));
+
+  assert.ok(screen.getByText("What to know"));
+  assert.ok(screen.getByText("Use Log symptom for one thing you noticed, like a fever reading, cough, rash, vomit, or unusual stool."));
+  assert.ok(screen.getByText("When to act"));
+});
+
+test("Guidance hub can open symptoms and episodes directly", () => {
+  render(React.createElement(GuidanceHubView, { initialTopicId: "symptoms-and-episodes" }));
+
+  assert.ok(screen.getByText("What to know"));
+  assert.ok(screen.getByText("Use Log symptom for one thing you noticed, like a fever reading, cough, rash, vomit, or unusual stool."));
+  assert.equal(screen.queryByText("Starting solids? Expect changes"), null);
 });
 
 test("SleepRecentHistorySection renders recent logs and forwards edit clicks", () => {

@@ -275,7 +275,18 @@ export function HealthQuickActionsCard({
   return (
     <Card className="overflow-hidden rounded-[18px] border shadow-[var(--shadow-home-card)] backdrop-blur-sm md:rounded-[24px]" style={healthCardStyle}>
       <CardContent className="p-4 md:p-5">
-        <SectionHeader title="Quick actions" />
+        <SectionHeader
+          title="Quick actions"
+          action={(
+            <Link
+              to="/guidance"
+              state={{ guidanceTopicId: "symptoms-and-episodes", origin: "/health" }}
+              className="inline-flex min-h-8 items-center rounded-full bg-[var(--color-surface-tint)] px-3 text-[0.72rem] font-semibold text-[var(--color-text-secondary)] transition-opacity hover:opacity-75"
+            >
+              Help choosing
+            </Link>
+          )}
+        />
         <div className="mt-3 grid gap-3 md:grid-cols-2">
           {actions.map((action) => (
             <button
