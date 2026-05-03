@@ -27,10 +27,10 @@ function SummaryStat({
   label: string;
 }) {
   return (
-    <div className="flex min-w-0 flex-col items-center justify-center text-center">
-      <div className="flex min-w-0 items-center justify-center gap-1.5">
-        {icon}
-        <span className="max-w-full truncate text-[1.02rem] font-semibold leading-none tracking-[-0.04em] text-[var(--color-text)] md:text-[1.15rem]">
+    <div className="flex min-w-0 max-w-full flex-col items-center justify-center text-center">
+      <div className="flex w-full min-w-0 items-center justify-center gap-1.5 overflow-hidden">
+        <span className="shrink-0">{icon}</span>
+        <span className="min-w-0 max-w-full truncate text-[0.98rem] font-semibold leading-none tracking-[-0.035em] text-[var(--color-text)] md:text-[1.08rem]">
           {value}
         </span>
       </div>
@@ -50,6 +50,9 @@ function getTimingLabel(dueRisk: FeedRisk) {
 function getShortFeedLabel(label: string) {
   if (label === "No mix yet") return "None";
   if (label === "Breast milk") return "Breast";
+  if (label === "Breastfeed") return "Breast";
+  if (label === "Bottle feed") return "Bottle";
+  if (label === "Formula feed") return "Formula";
   return label;
 }
 
@@ -84,7 +87,7 @@ export function FeedTodaySummaryCard({
         <p className="text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-[var(--color-text)] md:text-[0.74rem]">
           Today&apos;s summary
         </p>
-        <div className="mt-4 grid grid-cols-4 gap-1.5 md:mt-6 md:gap-3">
+        <div className="mt-4 grid grid-cols-4 gap-1 md:mt-6 md:gap-2">
           <SummaryStat
             icon={<HomeActionBottleIcon className="h-5 w-5 text-[#13a970]" />}
             value={todayFeedCount}

@@ -11,6 +11,7 @@ import { useChildWorkflowActions } from "../src/hooks/useChildWorkflowActions.ts
 import { useSleepLogSheetState } from "../src/hooks/useSleepLogSheetState.ts";
 import { useSleepQuickTimer } from "../src/hooks/useSleepQuickTimer.ts";
 import { useDietLogFormState } from "../src/hooks/useDietLogFormState.ts";
+import { useHomePageState } from "../src/hooks/useHomePageState.ts";
 import { getSleepTimerSettingKey } from "../src/lib/sleep-timer.ts";
 import type { Child } from "../src/lib/types.ts";
 
@@ -77,6 +78,28 @@ test("useLoggingSheetLifecycle closes immediately and schedules a reset", () => 
     window.setTimeout = originalSetTimeout;
     window.clearTimeout = originalClearTimeout;
   }
+});
+
+test("useHomePageState keeps sheet callbacks stable while opening health sheets", () => {
+  const { result } = renderHook(() => useHomePageState());
+  const closeEpisodeSheet = result.current.closeEpisodeSheet;
+  const openEpisodeSheet = result.current.openEpisodeSheet;
+
+  act(() => {
+    result.current.openEpisodeSheet("start");
+  });
+
+  assert.equal(result.current.episodeSheetOpen, true);
+  assert.equal(result.current.episodeSheetMode, "start");
+  assert.equal(result.current.closeEpisodeSheet, closeEpisodeSheet);
+  assert.equal(result.current.openEpisodeSheet, openEpisodeSheet);
+
+  act(() => {
+    result.current.setSymptomSheetOpen(true);
+  });
+
+  assert.equal(result.current.symptomSheetOpen, true);
+  assert.equal(result.current.closeEpisodeSheet, closeEpisodeSheet);
 });
 
 test("useLoggingSheetLifecycle runs logged success flow and clears pending timers on unmount", async () => {
