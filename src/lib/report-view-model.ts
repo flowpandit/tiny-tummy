@@ -38,8 +38,18 @@ export function getReportDateRangeFromLatestActivity(latestActivity: string | nu
   };
 }
 
-export function hasReportableTimeline(reportData: ReportData | null) {
-  return Boolean(reportData && reportData.timeline.length > 0);
+export function hasReportableData(reportData: ReportData | null) {
+  if (!reportData) return false;
+
+  return [
+    reportData.logs,
+    reportData.feedingLogs,
+    reportData.growthLogs,
+    reportData.symptomLogs,
+    reportData.milestoneLogs,
+    reportData.episodeGroups,
+    reportData.timeline,
+  ].some((items) => items.length > 0);
 }
 
 export function getReportSaveLabel(isAndroid: boolean) {

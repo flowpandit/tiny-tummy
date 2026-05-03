@@ -15,17 +15,24 @@ import {
   buildReportPatientSummary,
   getReportSaveHelpText,
   getReportSaveLabel,
-  hasReportableTimeline,
+  hasReportableData,
 } from "../lib/report-view-model";
 import { useToast } from "../components/ui/toast";
-import { generateReportPdf, openPdfFromDownloads, savePdfToDownloads } from "../lib/tauri";
+import {
+  generateReportPdf,
+  openPdfFromDownloads,
+  savePdfToDownloads,
+  sharePdfReport,
+} from "../lib/tauri";
 import { loadAvatarDataUrl } from "../lib/photos";
 
 export function Report() {
   const activeChild = useActiveChild();
   const { unitSystem } = useUnits();
   const { showError, showSuccess } = useToast();
-  const isAndroid = platform() === "android";
+  const currentPlatform = platform();
+  const isAndroid = currentPlatform === "android";
+  const isIos = currentPlatform === "ios";
   const [savedAndroidReport, setSavedAndroidReport] = useState<{ fileName: string; uri: string } | null>(null);
   const [isAutoSavingReport, setIsAutoSavingReport] = useState(false);
   const {
@@ -75,7 +82,7 @@ export function Report() {
 
   const saveAndroidReportToDownloads = async (data = reportData) => {
     if (!data) return null;
-    if (!hasReportableTimeline(data)) return null;
+    if (!hasReportableData(data)) return null;
 
     const encodedPdf = await createEncodedReportPdf(data);
     if (!encodedPdf) return null;
@@ -91,7 +98,7 @@ export function Report() {
       setSavedAndroidReport(null);
       const data = await handleGenerate();
 
-      if (!isAndroid || !data || !hasReportableTimeline(data)) {
+      if (!isAndroid || !data || !hasReportableData(data)) {
         return;
       }
 
@@ -107,7 +114,7 @@ export function Report() {
 
   const handleSaveReport = async () => {
     if (!reportData) return;
-    if (!hasReportableTimeline(reportData)) {
+    if (!hasReportableData(reportData)) {
       showError("No reportable data exists in the selected date range.");
       return;
     }
@@ -120,6 +127,11 @@ export function Report() {
 
       const encodedPdf = await createEncodedReportPdf(reportData);
       if (!encodedPdf) return;
+
+      if (isIos) {
+        await sharePdfReport(buildPdfFileName(), encodedPdf);
+        return;
+      }
 
       const pdfBytes = decodeBase64(encodedPdf);
       const targetPath = await save({
@@ -140,7 +152,7 @@ export function Report() {
       showSuccess("PDF report saved successfully.");
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      showError(`Could not generate the PDF report: ${message}`);
+      showError(`Export failed: ${message}`);
     }
   };
 
@@ -165,12 +177,16 @@ export function Report() {
   };
 
   const patientSummary = buildReportPatientSummary(activeChild, startDate, endDate);
-  const hasGeneratedTimeline = hasReportableTimeline(reportData);
+  const hasGeneratedReportData = hasReportableData(reportData);
   const reportActionLabel = isAndroid && savedAndroidReport
     ? "Open PDF report"
+    : isIos
+      ? "Share PDF report"
     : getReportSaveLabel(isAndroid);
   const reportActionHelpText = isAndroid && savedAndroidReport
     ? "Report saved to Downloads. Tap to open it."
+    : isIos
+      ? "Opens the iOS share sheet so you can save to Files, open in Books, or share."
     : getReportSaveHelpText(isAndroid);
 
   return (
@@ -204,7 +220,7 @@ export function Report() {
               title={patientSummary.title}
               subtitle={patientSummary.subtitle}
               detail={patientSummary.detail}
-              hasReportableData={hasGeneratedTimeline}
+              hasReportableData={hasGeneratedReportData}
               saveLabel={reportActionLabel}
               saveHelpText={reportActionHelpText}
               onSave={handleReportCardAction}

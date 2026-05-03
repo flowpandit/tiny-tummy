@@ -7,7 +7,7 @@ import {
   getReportDateRangeFromLatestActivity,
   getReportSaveHelpText,
   getReportSaveLabel,
-  hasReportableTimeline,
+  hasReportableData,
 } from "../src/lib/report-view-model.ts";
 import { formatLocalDateKey } from "../src/lib/utils.ts";
 import type { Child } from "../src/lib/types.ts";
@@ -46,10 +46,35 @@ test("derives the report range from the latest activity day", () => {
   assert.equal(getReportDateRangeFromLatestActivity(null), null);
 });
 
-test("detects whether report data has timeline content", () => {
-  assert.equal(hasReportableTimeline(null), false);
-  assert.equal(hasReportableTimeline({ timeline: [] } as never), false);
-  assert.equal(hasReportableTimeline({ timeline: [{ id: "event-1" }] } as never), true);
+test("detects whether report data has exportable clinical content", () => {
+  assert.equal(hasReportableData(null), false);
+  assert.equal(hasReportableData({
+    logs: [],
+    feedingLogs: [],
+    growthLogs: [],
+    symptomLogs: [],
+    milestoneLogs: [],
+    episodeGroups: [],
+    timeline: [],
+  } as never), false);
+  assert.equal(hasReportableData({
+    logs: [],
+    feedingLogs: [{ id: "feed-1" }],
+    growthLogs: [],
+    symptomLogs: [],
+    milestoneLogs: [],
+    episodeGroups: [],
+    timeline: [],
+  } as never), true);
+  assert.equal(hasReportableData({
+    logs: [],
+    feedingLogs: [],
+    growthLogs: [],
+    symptomLogs: [],
+    milestoneLogs: [],
+    episodeGroups: [],
+    timeline: [{ id: "event-1" }],
+  } as never), true);
 });
 
 test("uses platform-specific save labels and help text", () => {

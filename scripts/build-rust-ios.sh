@@ -6,6 +6,8 @@ REPO_DIR=$(CDPATH= cd -- "$SCRIPT_DIR/.." && pwd)
 APPLE_DIR="$REPO_DIR/src-tauri/gen/apple"
 TAURI_DIR="$REPO_DIR/src-tauri"
 IOS_INFO_PLIST="$APPLE_DIR/tiny-tummy_iOS/Info.plist"
+IOS_PLUGIN_TEMPLATE="$TAURI_DIR/ios-templates/BillingPlugin.swift"
+IOS_PLUGIN_TARGET="$APPLE_DIR/Sources/tiny-tummy/BillingPlugin.swift"
 LOCAL_NETWORK_REASON="Tiny Tummy connects to the Vite dev server on your Mac when running iOS development builds with hot reload."
 
 CONFIGURATION_VALUE=${CONFIGURATION:-}
@@ -83,6 +85,13 @@ sync_generated_ios_info_plist() {
   else
     /usr/libexec/PlistBuddy -c "Add :NSLocalNetworkUsageDescription string $LOCAL_NETWORK_REASON" "$IOS_INFO_PLIST" >/dev/null
   fi
+}
+
+sync_generated_ios_plugin_sources() {
+  [ -f "$IOS_PLUGIN_TEMPLATE" ] || return 0
+
+  mkdir -p "$(dirname "$IOS_PLUGIN_TARGET")"
+  cp -f "$IOS_PLUGIN_TEMPLATE" "$IOS_PLUGIN_TARGET"
 }
 
 clean_tauri_crate_artifacts() {
@@ -187,6 +196,7 @@ export RUSTUP_HOME="${RUSTUP_HOME:-${HOME:-}/.rustup}"
 export TAURI_CONFIG='{"build":{"devUrl":null}}'
 
 sync_generated_ios_info_plist
+sync_generated_ios_plugin_sources
 copy_frontend_assets
 
 XCRUN_BIN=$(command_path xcrun)

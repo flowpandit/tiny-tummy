@@ -81,3 +81,10 @@ export async function savePdfToDownloads(fileName: string, base64Data: string): 
 export async function openPdfFromDownloads(uri: string): Promise<void> {
   return await invoke("open_pdf_from_downloads", { uri });
 }
+
+export async function sharePdfReport(fileName: string, base64Data: string): Promise<void> {
+  return await invoke("share_pdf_report", {
+    fileName,
+    base64Data,
+  });
+}

@@ -1,6 +1,7 @@
 mod billing;
 mod downloads;
 mod engine;
+mod report_export;
 mod report_pdf;
 mod statusbar;
 
@@ -170,6 +171,7 @@ pub fn run() {
         .plugin(tauri_plugin_os::init())
         .plugin(billing::init())
         .plugin(downloads::init())
+        .plugin(report_export::init())
         .plugin(statusbar::init())
         .invoke_handler(tauri::generate_handler![
             billing::billing_purchase_premium,
@@ -182,6 +184,7 @@ pub fn run() {
             generate_report_pdf,
             downloads::open_pdf_from_downloads,
             downloads::save_pdf_to_downloads,
+            report_export::share_pdf_report,
             statusbar::set_status_bar_style,
         ])
         .run(tauri::generate_context!())
