@@ -45,6 +45,8 @@ export interface HomeRecommendationCard {
 
 export interface HomeTimelineItem {
   id: string;
+  sourceId: string;
+  kind: "feed" | "diaper" | "poop";
   timeLabel: string;
   title: string;
   detail: string;
@@ -320,6 +322,8 @@ function buildTimeline(poops: PoopEntry[], diapers: DiaperEntry[], feedings: Fee
       logged_at: entry.logged_at,
       item: {
         id: `poop-${entry.id}`,
+        sourceId: entry.id,
+        kind: "poop" as const,
         timeLabel: formatClock(entry.logged_at),
         title: "Poop",
         detail: [
@@ -337,6 +341,8 @@ function buildTimeline(poops: PoopEntry[], diapers: DiaperEntry[], feedings: Fee
       logged_at: entry.logged_at,
       item: {
         id: `diaper-${entry.id}`,
+        sourceId: entry.id,
+        kind: "diaper" as const,
         timeLabel: formatClock(entry.logged_at),
         title: getDiaperTypeLabel(entry.diaper_type),
         detail: [getUrineColorLabel(entry.urine_color), entry.notes].filter(Boolean).join(" • ") || "Logged",
@@ -351,6 +357,8 @@ function buildTimeline(poops: PoopEntry[], diapers: DiaperEntry[], feedings: Fee
       logged_at: entry.logged_at,
       item: {
         id: `feed-${entry.id}`,
+        sourceId: entry.id,
+        kind: "feed" as const,
         timeLabel: formatClock(entry.logged_at),
         title: getFeedingEntryPrimaryLabel(entry),
         detail: getFeedingEntryDetailParts(entry).join(" • ") || "Logged",

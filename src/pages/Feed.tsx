@@ -262,8 +262,8 @@ export function Feed() {
             entry={editingMeal}
             open={!!editingMeal}
             onClose={() => setEditingMeal(null)}
-            onSaved={() => { void handleRefresh(); }}
-            onDeleted={() => { void handleRefresh(); }}
+            onSaved={() => { setEditingMeal(null); void handleRefresh(); }}
+            onDeleted={() => { setEditingMeal(null); void handleRefresh(); }}
           />
         )}
 

@@ -5,6 +5,7 @@ import type { HomeGlanceStat, HomeTimelineItem } from "../../lib/home-insights";
 interface RecentActivityProps {
   timeline: HomeTimelineItem[];
   glanceStats: HomeGlanceStat[];
+  onTimelineItemSelect: (item: HomeTimelineItem) => void;
 }
 
 function TimelineIcon({ accent }: { accent: HomeTimelineItem["accent"] }) {
@@ -76,7 +77,7 @@ function glanceAccentStyles(accent: HomeGlanceStat["accent"]) {
   return "var(--gradient-home-glance-diaper)";
 }
 
-export function RecentActivity({ timeline, glanceStats }: RecentActivityProps) {
+export function RecentActivity({ timeline, glanceStats, onTimelineItemSelect }: RecentActivityProps) {
   const navigate = useNavigate();
 
   return (
@@ -110,7 +111,13 @@ export function RecentActivity({ timeline, glanceStats }: RecentActivityProps) {
               const isLast = index === timeline.length - 1;
 
               return (
-                <div key={item.id} className="flex gap-2.5 md:gap-5">
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => onTimelineItemSelect(item)}
+                  className="flex w-full gap-2.5 text-left md:gap-5"
+                  aria-label={`Edit ${item.title}`}
+                >
                   <div className="flex w-[76px] shrink-0 items-start gap-2.5 md:w-[112px] md:gap-3">
                     <div className="mt-1.5 flex flex-col items-center self-stretch md:mt-2">
                       <span
@@ -149,7 +156,7 @@ export function RecentActivity({ timeline, glanceStats }: RecentActivityProps) {
                       />
                     )}
                   </div>
-                </div>
+                </button>
               );
             })}
           </div>

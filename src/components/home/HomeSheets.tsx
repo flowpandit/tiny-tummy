@@ -137,8 +137,8 @@ export function HomeSheets({
           entry={editingPoop}
           open={!!editingPoop}
           onClose={() => onEditPoop(null)}
-          onSaved={() => { refreshLogs(); refreshFeedingLogs(); }}
-          onDeleted={() => { refreshLogs(); refreshFeedingLogs(); }}
+          onSaved={() => { onEditPoop(null); refreshLogs(); refreshFeedingLogs(); }}
+          onDeleted={() => { onEditPoop(null); refreshLogs(); refreshFeedingLogs(); }}
         />
       )}
       {editingDiaper && (
@@ -157,8 +157,8 @@ export function HomeSheets({
           entry={editingMeal}
           open={!!editingMeal}
           onClose={() => onEditMeal(null)}
-          onSaved={() => { refreshLogs(); refreshFeedingLogs(); }}
-          onDeleted={() => { refreshLogs(); refreshFeedingLogs(); }}
+          onSaved={() => { onEditMeal(null); refreshLogs(); refreshFeedingLogs(); }}
+          onDeleted={() => { onEditMeal(null); refreshLogs(); refreshFeedingLogs(); }}
         />
       )}
     </>

@@ -13,7 +13,7 @@ import { useEliminationPreference } from "../hooks/useEliminationPreference";
 import { useHomePageState } from "../hooks/useHomePageState";
 import { useHomeEffects } from "../hooks/useHomeEffects";
 import { buildChildDailySummary } from "../lib/child-summary";
-import { buildHomeAssistantModel, type HomeInsightCard } from "../lib/home-insights";
+import { buildHomeAssistantModel, type HomeInsightCard, type HomeTimelineItem } from "../lib/home-insights";
 import { HomeTopSection } from "../components/home/HomeTopSection";
 import { RecentActivity } from "../components/home/RecentActivity";
 import { CareToolsSection } from "../components/care/CareToolsSection";
@@ -194,6 +194,23 @@ export function Home() {
     navigate(eliminationExperience.route);
   };
 
+  const handleTimelineItemSelect = (item: HomeTimelineItem) => {
+    if (item.kind === "poop") {
+      const log = logs.find((entry) => entry.id === item.sourceId);
+      if (log) setEditingPoop(log);
+      return;
+    }
+
+    if (item.kind === "diaper") {
+      const log = diaperLogs.find((entry) => entry.id === item.sourceId);
+      if (log) setEditingDiaper(log);
+      return;
+    }
+
+    const log = feedingLogs.find((entry) => entry.id === item.sourceId);
+    if (log) setEditingMeal(log);
+  };
+
   const recommendationIcon = assistantModel.recommendation.accent === "sleep"
     ? <HomeActionSleepIcon className="h-6 w-6 text-[var(--color-home-recommendation-sleep-icon)] md:h-8 md:w-8" />
     : <HomeActionBottleIcon className="h-6 w-6 text-[var(--color-home-recommendation-feed-icon)] md:h-8 md:w-8" />;
@@ -267,6 +284,7 @@ export function Home() {
       <RecentActivity
         timeline={assistantModel.timeline}
         glanceStats={assistantModel.glanceStats}
+        onTimelineItemSelect={handleTimelineItemSelect}
       />
 
       <CareToolsSection className="px-4 md:px-10" palette="soft" />
