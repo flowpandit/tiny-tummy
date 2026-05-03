@@ -16,7 +16,7 @@ import { useActiveChild } from "../contexts/ChildContext";
 import { useUnits } from "../contexts/UnitsContext";
 import { useEpisodes } from "../hooks/useEpisodes";
 import { useSymptoms } from "../hooks/useSymptoms";
-import { buildHealthTimeline } from "../lib/health-view-model";
+import { buildHealthInsight, buildHealthTimeline } from "../lib/health-view-model";
 import type { Episode } from "../lib/types";
 
 export function Health() {
@@ -57,6 +57,14 @@ export function Health() {
       limit: 4,
     }),
     [events, recentEpisodes, symptomLogs, temperatureUnit],
+  );
+  const healthInsight = useMemo(
+    () => buildHealthInsight({
+      symptomLogs,
+      activeEpisodes,
+      temperatureUnit,
+    }),
+    [activeEpisodes, symptomLogs, temperatureUnit],
   );
   const selectedEpisode = selectedEpisodeId
     ? activeEpisodes.find((episode) => episode.id === selectedEpisodeId) ?? null
@@ -122,7 +130,11 @@ export function Health() {
           />
         </div>
 
-        <HealthInsightCard childName={activeChild.name} />
+        <HealthInsightCard
+          insight={healthInsight}
+          onLogSymptom={() => setSymptomSheetOpen(true)}
+          onStartEpisode={startEpisode}
+        />
 
         <HealthRecentHistoryCard items={healthHistory} />
       </div>

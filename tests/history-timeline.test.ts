@@ -94,6 +94,33 @@ function createSleepEntry(startedAt: string, endedAt: string): SleepEntry {
   };
 }
 
+function createSymptomEntry(id: string, loggedAt: string, episodeId: string | null = null): SymptomEntry {
+  return {
+    id,
+    child_id: "child-1",
+    episode_id: episodeId,
+    symptom_type: "cough_congestion",
+    severity: "moderate",
+    temperature_c: null,
+    logged_at: loggedAt,
+    notes: null,
+    created_at: loggedAt,
+  };
+}
+
+function createEpisodeEvent(id: string, loggedAt: string, episodeId = "episode-1"): EpisodeEvent {
+  return {
+    id,
+    episode_id: episodeId,
+    child_id: "child-1",
+    event_type: "symptom",
+    title: "Cough / Congestion · Moderate",
+    notes: null,
+    logged_at: loggedAt,
+    created_at: loggedAt,
+  };
+}
+
 test("filters out poop logs already linked from diaper logs", () => {
   const diaperLogs = [createDiaperEntry("diaper-1", "2026-04-14T09:00:00", "poop-1")];
   const poopLogs = [
@@ -193,6 +220,36 @@ test("groups UTC-backed timeline events by the local day instead of the raw ISO 
   assert.deepEqual(
     grouped.get("2026-04-24")?.map((event) => event.kind),
     ["sleep", "diaper", "meal"],
+  );
+});
+
+test("groups linked symptoms without duplicating their episode event in global history", () => {
+  const loggedAt = "2026-05-03T09:47:00.000Z";
+  const symptomLogs = [createSymptomEntry("symptom-1", loggedAt, "episode-1")];
+  const episodeEvents = [
+    createEpisodeEvent("event-linked", loggedAt),
+    {
+      ...createEpisodeEvent("event-progress", "2026-05-03T10:15:00.000Z"),
+      event_type: "progress" as const,
+      title: "Settled after fluids",
+    },
+  ];
+
+  const grouped = groupTimelineByDay({
+    diaperLogs: [],
+    poopLogs: [],
+    feedingLogs: [],
+    sleepLogs: [],
+    symptomLogs,
+    growthLogs: [],
+    milestoneLogs: [],
+    episodes: [],
+    episodeEvents,
+  });
+
+  assert.deepEqual(
+    grouped.get(formatLocalDateKey(new Date(loggedAt)))?.map((event) => `${event.kind}:${event.entry.id}`),
+    ["symptom:symptom-1", "episode_event:event-progress"],
   );
 });
 

@@ -150,6 +150,19 @@ export function getVisiblePoopLogs(diaperLogs: DiaperEntry[], poopLogs: PoopEntr
   return poopLogs.filter((log) => !linkedPoopIds.has(log.id));
 }
 
+function getVisibleEpisodeEvents(symptomLogs: SymptomEntry[], episodeEvents: EpisodeEvent[]): EpisodeEvent[] {
+  const linkedSymptomKeys = new Set(
+    symptomLogs
+      .filter((symptom) => symptom.episode_id)
+      .map((symptom) => `${symptom.episode_id}:${symptom.logged_at}`),
+  );
+
+  return episodeEvents.filter((event) => {
+    if (event.event_type !== "symptom") return true;
+    return !linkedSymptomKeys.has(`${event.episode_id}:${event.logged_at}`);
+  });
+}
+
 export function groupTimelineByDay({
   diaperLogs,
   poopLogs,
@@ -182,7 +195,7 @@ export function groupTimelineByDay({
     ...growthLogs.map((entry) => ({ kind: "growth" as const, entry })),
     ...milestoneLogs.map((entry) => ({ kind: "milestone" as const, entry })),
     ...episodes.map((entry) => ({ kind: "episode" as const, entry })),
-    ...episodeEvents.map((entry) => ({ kind: "episode_event" as const, entry })),
+    ...getVisibleEpisodeEvents(symptomLogs, episodeEvents).map((entry) => ({ kind: "episode_event" as const, entry })),
   ];
 
   const grouped = new Map<string, TimelineEvent[]>();

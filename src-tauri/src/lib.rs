@@ -152,6 +152,12 @@ pub fn run() {
             sql: include_str!("../migrations/010_child_sex.sql"),
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 11,
+            description: "add symptom temperature",
+            sql: include_str!("../migrations/011_symptom_temperature.sql"),
+            kind: MigrationKind::Up,
+        },
     ];
 
     tauri::Builder::default()

@@ -15,6 +15,8 @@ import {
 import {
   formatHealthStartedLine,
   getSymptomDisplayDetail,
+  type HealthInsightModel,
+  type HealthInsightTone,
   type HealthTimelineItem,
   type HealthTimelineTone,
 } from "../../lib/health-view-model";
@@ -111,10 +113,6 @@ function HistoryLink({ children = "View all" }: { children?: ReactNode }) {
   );
 }
 
-function getPossessiveName(name: string) {
-  return name.endsWith("s") ? `${name}'` : `${name}'s`;
-}
-
 function getTimelineToneStyles(tone: HealthTimelineTone) {
   if (tone === "fever" || tone === "episode") {
     return {
@@ -141,6 +139,31 @@ function getTimelineToneStyles(tone: HealthTimelineTone) {
     dot: "#8ecfb0",
     surface: "rgba(235, 249, 240, 0.92)",
     text: "var(--color-healthy)",
+  };
+}
+
+function getHealthInsightToneStyles(tone: HealthInsightTone) {
+  if (tone === "alert") {
+    return {
+      text: "var(--color-alert)",
+      accent: "rgba(255, 231, 226, 0.96)",
+    };
+  }
+  if (tone === "caution") {
+    return {
+      text: "#f26f1d",
+      accent: "rgba(255, 239, 228, 0.96)",
+    };
+  }
+  if (tone === "info") {
+    return {
+      text: "var(--color-info)",
+      accent: "rgba(237, 244, 255, 0.96)",
+    };
+  }
+  return {
+    text: "var(--color-healthy)",
+    accent: "rgba(235, 249, 240, 0.96)",
   };
 }
 
@@ -392,10 +415,36 @@ export function HealthRecentSymptomsCard({
 }
 
 export function HealthInsightCard({
-  childName,
+  insight,
+  onLogSymptom,
+  onStartEpisode,
 }: {
-  childName: string;
+  insight: HealthInsightModel;
+  onLogSymptom: () => void;
+  onStartEpisode: () => void;
 }) {
+  const tone = getHealthInsightToneStyles(insight.tone);
+  const action = insight.action === "history" ? (
+    <Link
+      to="/history"
+      state={{ origin: "/health" }}
+      className="mt-4 inline-flex items-center gap-1.5 text-[0.78rem] font-semibold transition-opacity hover:opacity-75 md:text-[0.84rem]"
+      style={{ color: tone.text }}
+    >
+      {insight.actionLabel}
+      <ChevronDownIcon />
+    </Link>
+  ) : (
+    <button
+      type="button"
+      onClick={insight.action === "episode" ? onStartEpisode : onLogSymptom}
+      className="mt-4 inline-flex min-h-9 items-center rounded-full px-3.5 text-[0.78rem] font-semibold transition-opacity hover:opacity-75 md:text-[0.84rem]"
+      style={{ background: tone.accent, color: tone.text }}
+    >
+      {insight.actionLabel}
+    </button>
+  );
+
   return (
     <Card
       className="relative overflow-hidden rounded-[18px] border shadow-[var(--shadow-home-card)] backdrop-blur-sm md:rounded-[24px]"
@@ -406,24 +455,20 @@ export function HealthInsightCard({
     >
       <ShieldArt />
       <CardContent className="relative p-4 pr-24 md:p-5 md:pr-36">
-        <p className="flex items-center gap-1.5 text-[0.72rem] font-semibold leading-tight text-[var(--color-healthy)] md:text-[0.78rem]">
+        <p
+          className="flex items-center gap-1.5 text-[0.72rem] font-semibold leading-tight md:text-[0.78rem]"
+          style={{ color: tone.text }}
+        >
           <HealthShieldIcon className="h-4 w-4" />
-          Health insights
+          {insight.eyebrow}
         </p>
         <p className="mt-3 max-w-[42ch] text-[0.96rem] font-semibold leading-tight text-[var(--color-text)] md:text-[1.06rem]">
-          Great job staying on top of {getPossessiveName(childName)} health.
+          {insight.title}
         </p>
         <p className="mt-2 max-w-[44ch] text-[0.78rem] leading-snug text-[var(--color-text-secondary)] md:text-[0.86rem]">
-          Continue logging symptoms and episodes to help spot patterns early.
+          {insight.description}
         </p>
-        <Link
-          to="/history"
-          state={{ origin: "/health" }}
-          className="mt-4 inline-flex items-center gap-1.5 text-[0.78rem] font-semibold text-[var(--color-healthy)] transition-opacity hover:opacity-75 md:text-[0.84rem]"
-        >
-          See more
-          <ChevronDownIcon />
-        </Link>
+        {action}
       </CardContent>
     </Card>
   );

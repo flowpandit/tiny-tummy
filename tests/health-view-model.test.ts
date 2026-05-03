@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
+  buildHealthInsight,
   buildHealthTimeline,
   formatHealthDateTime,
   formatHealthElapsedDuration,
@@ -18,6 +19,80 @@ test("formats compact health date and duration labels", () => {
     formatHealthStartedLine(startedAt, referenceDate, { locale: "en-AU", timeZone: "UTC" }),
     "Started 3 May at 10:02 am \u00b7 1d 2h",
   );
+});
+
+test("buildHealthInsight explains empty symptom state", () => {
+  const insight = buildHealthInsight({
+    symptomLogs: [],
+    activeEpisodes: [],
+    temperatureUnit: "celsius",
+    referenceDate: new Date("2026-05-03T12:00:00.000Z"),
+  });
+
+  assert.equal(insight.action, "symptom");
+  assert.match(insight.description, /health timeline/i);
+});
+
+test("buildHealthInsight prioritizes active episodes", () => {
+  const episode: Episode = {
+    id: "episode-1",
+    child_id: "child-1",
+    episode_type: "fever_illness",
+    status: "active",
+    started_at: "2026-05-03T10:02:00.000Z",
+    ended_at: null,
+    summary: "Fever, low appetite",
+    outcome: null,
+    created_at: "2026-05-03T10:02:00.000Z",
+    updated_at: "2026-05-03T10:02:00.000Z",
+  };
+  const linkedSymptom: SymptomEntry = {
+    id: "symptom-1",
+    child_id: "child-1",
+    episode_id: "episode-1",
+    symptom_type: "fever",
+    severity: "moderate",
+    temperature_c: 38.2,
+    logged_at: "2026-05-03T11:15:00.000Z",
+    notes: "Warm after nap",
+    created_at: "2026-05-03T11:15:00.000Z",
+  };
+
+  const insight = buildHealthInsight({
+    symptomLogs: [linkedSymptom],
+    activeEpisodes: [episode],
+    temperatureUnit: "celsius",
+    referenceDate: new Date("2026-05-03T12:00:00.000Z"),
+  });
+
+  assert.equal(insight.action, "episode");
+  assert.equal(insight.tone, "caution");
+  assert.match(insight.description, /1 symptom entry/i);
+});
+
+test("buildHealthInsight escalates recent severe symptoms into episode help", () => {
+  const severeSymptom: SymptomEntry = {
+    id: "symptom-1",
+    child_id: "child-1",
+    episode_id: null,
+    symptom_type: "dehydration_concern",
+    severity: "severe",
+    temperature_c: null,
+    logged_at: "2026-05-03T11:15:00.000Z",
+    notes: "Fewer wet diapers",
+    created_at: "2026-05-03T11:15:00.000Z",
+  };
+
+  const insight = buildHealthInsight({
+    symptomLogs: [severeSymptom],
+    activeEpisodes: [],
+    temperatureUnit: "celsius",
+    referenceDate: new Date("2026-05-03T12:00:00.000Z"),
+  });
+
+  assert.equal(insight.tone, "alert");
+  assert.equal(insight.action, "episode");
+  assert.match(insight.title, /marked severe/i);
 });
 
 test("builds a sorted health timeline and de-duplicates linked symptom episode events", () => {
