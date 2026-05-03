@@ -21,15 +21,21 @@ import {
   getVisiblePoopLogs,
   groupTimelineByDay,
   hasHistoryEntries,
+  summarizeTimelineEvents,
 } from "../src/lib/history-timeline.ts";
 import { formatLocalDateKey } from "../src/lib/utils.ts";
 
-function createDiaperEntry(id: string, loggedAt: string, linkedPoopLogId: string | null = null): DiaperEntry {
+function createDiaperEntry(
+  id: string,
+  loggedAt: string,
+  linkedPoopLogId: string | null = null,
+  diaperType: DiaperEntry["diaper_type"] = "dirty",
+): DiaperEntry {
   return {
     id,
     child_id: "child-1",
     logged_at: loggedAt,
-    diaper_type: "dirty",
+    diaper_type: diaperType,
     urine_color: null,
     stool_type: null,
     color: null,
@@ -42,7 +48,7 @@ function createDiaperEntry(id: string, loggedAt: string, linkedPoopLogId: string
   };
 }
 
-function createPoopEntry(id: string, loggedAt: string): PoopEntry {
+function createPoopEntry(id: string, loggedAt: string, isNoPoop = 0): PoopEntry {
   return {
     id,
     child_id: "child-1",
@@ -50,11 +56,29 @@ function createPoopEntry(id: string, loggedAt: string): PoopEntry {
     stool_type: null,
     color: null,
     size: null,
-    is_no_poop: 0,
+    is_no_poop: isNoPoop,
     notes: null,
     photo_path: null,
     created_at: loggedAt,
     updated_at: loggedAt,
+  };
+}
+
+function createFeedingEntry(id: string, loggedAt: string): FeedingEntry {
+  return {
+    id,
+    child_id: "child-1",
+    logged_at: loggedAt,
+    food_type: "formula",
+    food_name: null,
+    amount_ml: 120,
+    duration_minutes: null,
+    breast_side: null,
+    bottle_content: "formula",
+    reaction_notes: null,
+    is_constipation_support: 0,
+    notes: null,
+    created_at: loggedAt,
   };
 }
 
@@ -181,6 +205,26 @@ test("formats sleep durations using hours and minutes", () => {
     formatHistorySleepDuration(createSleepEntry("2026-04-14T06:00:00", "2026-04-14T06:45:00")),
     "45m",
   );
+});
+
+test("summarizes timeline events for the lightweight history overview", () => {
+  const summary = summarizeTimelineEvents([
+    { kind: "meal", entry: createFeedingEntry("feed-1", "2026-04-14T06:30:00") },
+    { kind: "sleep", entry: createSleepEntry("2026-04-14T07:00:00", "2026-04-14T08:00:00") },
+    { kind: "diaper", entry: createDiaperEntry("dirty-1", "2026-04-14T08:30:00") },
+    { kind: "diaper", entry: createDiaperEntry("wet-1", "2026-04-14T09:30:00", null, "wet") },
+    { kind: "poop", entry: createPoopEntry("poop-1", "2026-04-14T10:30:00") },
+    { kind: "poop", entry: createPoopEntry("no-poop-1", "2026-04-14T11:30:00", 1) },
+  ]);
+
+  assert.deepEqual(summary, {
+    feeds: 1,
+    poops: 2,
+    sleep: 1,
+    diapers: 2,
+    other: 1,
+    total: 6,
+  });
 });
 
 test("builds history ranges and display slices from grouped data", () => {

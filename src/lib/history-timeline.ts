@@ -23,10 +23,19 @@ export type TimelineEvent =
   | { kind: "episode_event"; entry: EpisodeEvent };
 
 export const HISTORY_RANGE_OPTIONS = [
-  { label: "7 days", value: 7 },
-  { label: "14 days", value: 14 },
-  { label: "30 days", value: 30 },
+  { label: "7d", value: 7 },
+  { label: "14d", value: 14 },
+  { label: "30d", value: 30 },
 ] as const;
+
+export type TimelineEventSummary = {
+  feeds: number;
+  poops: number;
+  sleep: number;
+  diapers: number;
+  other: number;
+  total: number;
+};
 
 export function formatHistoryTime(dateStr: string): string {
   return new Date(dateStr).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
@@ -86,6 +95,50 @@ export function getEventTimestamp(event: TimelineEvent): string {
     case "episode":
       return event.entry.started_at;
   }
+}
+
+export function summarizeTimelineEvents(events: TimelineEvent[]): TimelineEventSummary {
+  return events.reduce<TimelineEventSummary>((summary, event) => {
+    summary.total += 1;
+
+    switch (event.kind) {
+      case "meal":
+        summary.feeds += 1;
+        break;
+      case "sleep":
+        summary.sleep += 1;
+        break;
+      case "diaper":
+        summary.diapers += 1;
+        if (event.entry.diaper_type === "dirty" || event.entry.diaper_type === "mixed") {
+          summary.poops += 1;
+        }
+        break;
+      case "poop":
+        if (event.entry.is_no_poop === 1) {
+          summary.other += 1;
+        } else {
+          summary.poops += 1;
+        }
+        break;
+      case "symptom":
+      case "growth":
+      case "milestone":
+      case "episode":
+      case "episode_event":
+        summary.other += 1;
+        break;
+    }
+
+    return summary;
+  }, {
+    feeds: 0,
+    poops: 0,
+    sleep: 0,
+    diapers: 0,
+    other: 0,
+    total: 0,
+  });
 }
 
 export function getVisiblePoopLogs(diaperLogs: DiaperEntry[], poopLogs: PoopEntry[]): PoopEntry[] {
