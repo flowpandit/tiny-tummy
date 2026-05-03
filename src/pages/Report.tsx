@@ -9,9 +9,7 @@ import { CareToolsSection } from "../components/care/CareToolsSection";
 import { ScenicHero } from "../components/layout/ScenicHero";
 import { ReportComposerCard } from "../components/report/ReportComposerCard";
 import { PageBody } from "../components/ui/page-layout";
-import { ReportPreview } from "../components/report/ReportPreview";
 import { ReportReadyCard } from "../components/report/ReportReadyCard";
-import { Button } from "../components/ui/button";
 import { buildReportPdfPayload } from "../lib/report-pdf";
 import {
   buildReportPatientSummary,
@@ -29,6 +27,7 @@ export function Report() {
   const { showError, showSuccess } = useToast();
   const isAndroid = platform() === "android";
   const [savedAndroidReport, setSavedAndroidReport] = useState<{ fileName: string; uri: string } | null>(null);
+  const [isAutoSavingReport, setIsAutoSavingReport] = useState(false);
   const {
     today,
     startDate,
@@ -53,7 +52,60 @@ export function Report() {
     return bytes;
   };
 
-  const handlePrint = async () => {
+  const buildPdfFileName = () => {
+    const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+    return `tiny-tummy-pediatrician-report-${startDate}-to-${endDate}-${timestamp}.pdf`;
+  };
+
+  const createEncodedReportPdf = async (data = reportData) => {
+    if (!data) return null;
+
+    const childAvatarDataUrl = await loadAvatarDataUrl(activeChild.id).catch(() => null);
+    return await generateReportPdf(
+      buildReportPdfPayload({
+        child: activeChild,
+        startDate,
+        endDate,
+        data,
+        unitSystem,
+        childAvatarDataUrl,
+      }),
+    );
+  };
+
+  const saveAndroidReportToDownloads = async (data = reportData) => {
+    if (!data) return null;
+    if (!hasReportableTimeline(data)) return null;
+
+    const encodedPdf = await createEncodedReportPdf(data);
+    if (!encodedPdf) return null;
+
+    const savedReport = await savePdfToDownloads(buildPdfFileName(), encodedPdf);
+    setSavedAndroidReport(savedReport);
+    showSuccess("Report saved to Downloads.");
+    return savedReport;
+  };
+
+  const handleGenerateReport = async () => {
+    try {
+      setSavedAndroidReport(null);
+      const data = await handleGenerate();
+
+      if (!isAndroid || !data || !hasReportableTimeline(data)) {
+        return;
+      }
+
+      setIsAutoSavingReport(true);
+      await saveAndroidReportToDownloads(data);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      showError(`Could not generate the PDF report: ${message}`);
+    } finally {
+      setIsAutoSavingReport(false);
+    }
+  };
+
+  const handleSaveReport = async () => {
     if (!reportData) return;
     if (!hasReportableTimeline(reportData)) {
       showError("No reportable data exists in the selected date range.");
@@ -61,31 +113,17 @@ export function Report() {
     }
 
     try {
-      setSavedAndroidReport(null);
-      const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-      const fileName = `tiny-tummy-pediatrician-report-${startDate}-to-${endDate}-${timestamp}.pdf`;
-      const childAvatarDataUrl = await loadAvatarDataUrl(activeChild.id).catch(() => null);
-      const encodedPdf = await generateReportPdf(
-        buildReportPdfPayload({
-          child: activeChild,
-          startDate,
-          endDate,
-          data: reportData,
-          unitSystem,
-          childAvatarDataUrl,
-        }),
-      );
-
       if (isAndroid) {
-        const savedReport = await savePdfToDownloads(fileName, encodedPdf);
-        setSavedAndroidReport(savedReport);
-        showSuccess("Report saved to Downloads.");
+        await saveAndroidReportToDownloads(reportData);
         return;
       }
 
+      const encodedPdf = await createEncodedReportPdf(reportData);
+      if (!encodedPdf) return;
+
       const pdfBytes = decodeBase64(encodedPdf);
       const targetPath = await save({
-        defaultPath: fileName,
+        defaultPath: buildPdfFileName(),
         filters: [
           {
             name: "PDF report",
@@ -117,17 +155,23 @@ export function Report() {
     }
   };
 
+  const handleReportCardAction = () => {
+    if (isAndroid && savedAndroidReport) {
+      void handleOpenSavedAndroidReport();
+      return;
+    }
+
+    void handleSaveReport();
+  };
+
   const patientSummary = buildReportPatientSummary(activeChild, startDate, endDate);
-  const reportPreviewPayload = reportData
-    ? buildReportPdfPayload({
-      child: activeChild,
-      startDate,
-      endDate,
-      data: reportData,
-      unitSystem,
-    })
-    : null;
   const hasGeneratedTimeline = hasReportableTimeline(reportData);
+  const reportActionLabel = isAndroid && savedAndroidReport
+    ? "Open PDF report"
+    : getReportSaveLabel(isAndroid);
+  const reportActionHelpText = isAndroid && savedAndroidReport
+    ? "Report saved to Downloads. Tap to open it."
+    : getReportSaveHelpText(isAndroid);
 
   return (
     <PageBody className="-mt-8 space-y-0 px-0 py-0">
@@ -144,11 +188,11 @@ export function Report() {
           today={today}
           startDate={startDate}
           endDate={endDate}
-          isGenerating={isGenerating}
+          isGenerating={isGenerating || isAutoSavingReport}
           options={options}
           onStartDateChange={setStartDate}
           onEndDateChange={setEndDate}
-          onGenerate={handleGenerate}
+          onGenerate={() => { void handleGenerateReport(); }}
           onToggleOption={toggleOption}
         />
       </div>
@@ -161,36 +205,11 @@ export function Report() {
               subtitle={patientSummary.subtitle}
               detail={patientSummary.detail}
               hasReportableData={hasGeneratedTimeline}
-              saveLabel={getReportSaveLabel(isAndroid)}
-              saveHelpText={getReportSaveHelpText(isAndroid)}
-              onSave={handlePrint}
+              saveLabel={reportActionLabel}
+              saveHelpText={reportActionHelpText}
+              onSave={handleReportCardAction}
             />
 
-            {isAndroid && savedAndroidReport && (
-              <div className="rounded-[18px] border border-[var(--color-home-card-border)] bg-[var(--color-surface-strong)] p-4 shadow-[var(--shadow-soft)]">
-                <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold text-[var(--color-text)]">
-                      Report saved to Downloads.
-                    </p>
-                    <p className="mt-1 truncate text-xs text-[var(--color-text-secondary)]">
-                      {savedAndroidReport.fileName}
-                    </p>
-                  </div>
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    size="sm"
-                    className="shrink-0"
-                    onClick={handleOpenSavedAndroidReport}
-                  >
-                    Open PDF
-                  </Button>
-                </div>
-              </div>
-            )}
-
-            {reportPreviewPayload && hasGeneratedTimeline && <ReportPreview payload={reportPreviewPayload} />}
           </>
         )}
 

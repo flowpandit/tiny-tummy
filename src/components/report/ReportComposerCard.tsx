@@ -40,7 +40,7 @@ export function ReportComposerCard({
               Report setup
             </p>
             <p className="mt-1 max-w-[46ch] text-[0.74rem] leading-snug text-[var(--color-text-secondary)] md:text-[0.82rem]">
-              Pick the range and context to include in the PDF preview.
+              Pick the range and context to include in the PDF report.
             </p>
           </div>
           <Button
