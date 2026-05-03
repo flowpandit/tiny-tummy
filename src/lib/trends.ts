@@ -11,7 +11,7 @@ import type {
   PoopEntry,
   SleepEntry,
 } from "./types";
-import { formatLocalDateKey, isOnLocalDay, timeSince, timeSinceDetailed } from "./utils";
+import { formatLocalDateKey, getLocalDateKeyFromValue, isOnLocalDay, timeSince, timeSinceDetailed } from "./utils";
 
 export type TrendsTab = "overview" | "feed" | "sleep" | "diaper" | "poop";
 export type TrendTone = "default" | "info" | "healthy" | "cta";
@@ -285,7 +285,7 @@ function buildFeedChartData(logs: FeedingEntry[], days: number): TrendBarDatum[]
   const counts = new Map<string, number>();
 
   for (const log of predictableLogs) {
-    const dayKey = log.logged_at.split("T")[0];
+    const dayKey = getLocalDateKeyFromValue(log.logged_at);
     counts.set(dayKey, (counts.get(dayKey) ?? 0) + 1);
   }
 

@@ -31,9 +31,9 @@ import {
   getFeedMixSnapshot,
   getFeedPrediction,
   getPredictionRingDisplay,
-  getPredictableFeedLogs,
   getTodayIntakeRingDisplay,
   getTrackedMl,
+  getUnifiedFeedTimeline,
 } from "../lib/feed-insights";
 
 
@@ -72,20 +72,20 @@ export function Feed() {
     }
   }, [searchParams]);
 
-  const predictableLogs = useMemo(() => getPredictableFeedLogs(logs), [logs]);
-  const lastFeed = predictableLogs[0] ?? null;
+  const feedTimeline = useMemo(() => getUnifiedFeedTimeline(logs), [logs]);
+  const lastFeed = feedTimeline[0] ?? null;
   const todayKey = getCurrentLocalDate();
   const todayLogs = useMemo(
     () => logs.filter((log) => isOnLocalDay(log.logged_at, todayKey)),
     [logs, todayKey],
   );
-  const todayPredictableLogs = useMemo(
-    () => predictableLogs.filter((log) => isOnLocalDay(log.logged_at, todayKey)),
-    [predictableLogs, todayKey],
+  const todayFeedTimeline = useMemo(
+    () => feedTimeline.filter((log) => isOnLocalDay(log.logged_at, todayKey)),
+    [feedTimeline, todayKey],
   );
   const todayFeedCount = useMemo(
-    () => todayPredictableLogs.length,
-    [todayPredictableLogs],
+    () => todayFeedTimeline.length,
+    [todayFeedTimeline],
   );
   const todayTrackedMl = useMemo(
     () => getTrackedMl(todayLogs),
@@ -114,14 +114,14 @@ export function Feed() {
     () => logs.filter((log) => weekDateKeys.has(getLocalDateKeyFromValue(log.logged_at))),
     [logs, weekDateKeys],
   );
-  const weeklyPredictableLogs = useMemo(
-    () => getPredictableFeedLogs(weekLogs),
+  const weeklyFeedTimeline = useMemo(
+    () => getUnifiedFeedTimeline(weekLogs),
     [weekLogs],
   );
 
   const filledWeek = useMemo(() => {
     const counts = new Map<string, number>();
-    for (const log of weeklyPredictableLogs) {
+    for (const log of weeklyFeedTimeline) {
       const key = getLocalDateKeyFromValue(log.logged_at);
       counts.set(key, (counts.get(key) ?? 0) + 1);
     }
@@ -130,13 +130,13 @@ export function Feed() {
       ...day,
       count: counts.get(day.date) ?? 0,
     }));
-  }, [emptyWeek, weeklyPredictableLogs]);
+  }, [emptyWeek, weeklyFeedTimeline]);
 
   const baseline = useMemo(
     () => getFeedBaseline(activeChild?.date_of_birth ?? getCurrentLocalDate(), activeChild?.feeding_type ?? "mixed"),
     [activeChild],
   );
-  const prediction = useMemo(() => getFeedPrediction(logs, baseline), [baseline, logs]);
+  const prediction = useMemo(() => getFeedPrediction(feedTimeline, baseline), [baseline, feedTimeline]);
   const hoursSinceLastFeed = lastFeed ? (Date.now() - new Date(lastFeed.logged_at).getTime()) / 3600000 : null;
   const baselineComparison = useMemo(() => getBaselineComparison(hoursSinceLastFeed, baseline), [baseline, hoursSinceLastFeed]);
   const dueRisk = useMemo(
@@ -153,14 +153,14 @@ export function Feed() {
     [todayFeedCount, todayTrackedMl, unitSystem],
   );
   const feedMix = useMemo(() => getFeedMixSnapshot(weekLogs), [weekLogs]);
-  const todayFeedMix = useMemo(() => getFeedMixSnapshot(todayPredictableLogs), [todayPredictableLogs]);
+  const todayFeedMix = useMemo(() => getFeedMixSnapshot(todayFeedTimeline), [todayFeedTimeline]);
   const weekTrackedMl = useMemo(() => getTrackedMl(weekLogs), [weekLogs]);
   const recentHistory = useMemo(() => logs.slice(0, 3), [logs]);
 
   if (!activeChild) return null;
 
   const showBreastfeedAction = activeChild?.feeding_type === "breast" || activeChild?.feeding_type === "mixed";
-  const weekSummary = buildFeedWeekSummary(weeklyPredictableLogs, unitSystem, weekTrackedMl);
+  const weekSummary = buildFeedWeekSummary(weeklyFeedTimeline, unitSystem, weekTrackedMl);
 
   const handleRefresh = async () => {
     await refresh();

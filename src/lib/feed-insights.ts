@@ -50,6 +50,8 @@ export interface FeedMixSnapshot {
   chips: string[];
 }
 
+export const FEED_PREDICTION_FALLBACK = "Log feeds to predict next feeding time";
+
 function getAgeDays(dateOfBirth: string): number {
   const [year, month, day] = dateOfBirth.split("-").map(Number);
   const birth = new Date(year, (month || 1) - 1, day || 1);
@@ -103,8 +105,23 @@ export function getFeedBaseline(dateOfBirth: string, feedingType: FeedingType): 
   };
 }
 
+function getFeedTimestamp(log: FeedingEntry): number {
+  const timestamp = new Date(log.logged_at).getTime();
+  return Number.isFinite(timestamp) ? timestamp : 0;
+}
+
+export function isFeedTimelineEntry(log: FeedingEntry): boolean {
+  return log.food_type !== "pumping";
+}
+
+export function getUnifiedFeedTimeline(logs: FeedingEntry[]): FeedingEntry[] {
+  return logs
+    .filter(isFeedTimelineEntry)
+    .sort((left, right) => getFeedTimestamp(right) - getFeedTimestamp(left));
+}
+
 export function getPredictableFeedLogs(logs: FeedingEntry[]): FeedingEntry[] {
-  return logs.filter((log) => log.food_type !== "pumping");
+  return getUnifiedFeedTimeline(logs);
 }
 
 export function getTrackedMl(logs: FeedingEntry[]): number {

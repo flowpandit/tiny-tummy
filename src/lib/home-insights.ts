@@ -1,6 +1,6 @@
 import { diaperIncludesStool, getDiaperTypeLabel, getUrineColorLabel } from "./diaper";
 import { getFeedingEntryDetailParts, getFeedingEntryPrimaryLabel } from "./feeding";
-import { getFeedBaseline, getFeedPrediction } from "./feed-insights";
+import { FEED_PREDICTION_FALLBACK, getFeedBaseline, getFeedPrediction, getUnifiedFeedTimeline } from "./feed-insights";
 import { BITSS_TYPES } from "./constants";
 import { formatLocalDateKey, getAgeLabelFromDob, isOnLocalDay, timeSince } from "./utils";
 import { formatSleepDuration, getCompletedSleepLogs, getDurationMinutes, getSleepPrediction, getWakeBaseline } from "./sleep-insights";
@@ -263,7 +263,8 @@ function buildRecommendation(input: {
   sleepLogs: SleepEntry[];
   includeHydration: boolean;
 }): HomeRecommendationCard {
-  const feedPrediction = getFeedPrediction(input.feedLogs, getFeedBaseline(input.child.date_of_birth, input.child.feeding_type));
+  const feedTimeline = getUnifiedFeedTimeline(input.feedLogs);
+  const feedPrediction = getFeedPrediction(feedTimeline, getFeedBaseline(input.child.date_of_birth, input.child.feeding_type));
   const sleepPrediction = getSleepPrediction(input.sleepLogs, getWakeBaseline(input.child.date_of_birth));
   const pronoun = getPronoun(input.child.sex);
 
@@ -279,6 +280,14 @@ function buildRecommendation(input: {
     return {
       title: `Log next feed ${formatSleepWindow(feedPrediction.predictedAt).toLowerCase()}`,
       detail: `${pronoun} usually feeds around this time.`,
+      accent: "feed",
+    };
+  }
+
+  if (feedTimeline.length === 0) {
+    return {
+      title: FEED_PREDICTION_FALLBACK,
+      detail: "Breastfeeds and bottle feeds will shape the next window.",
       accent: "feed",
     };
   }
@@ -427,7 +436,8 @@ export function buildHomeAssistantModel(input: {
 }): HomeAssistantModel {
   const dayKey = formatLocalDateKey(input.now ?? new Date());
   const includeHydration = input.includeHydration ?? true;
-  const feedPrediction = getFeedPrediction(input.feedingLogs, getFeedBaseline(input.child.date_of_birth, input.child.feeding_type));
+  const feedTimeline = getUnifiedFeedTimeline(input.feedingLogs);
+  const feedPrediction = getFeedPrediction(feedTimeline, getFeedBaseline(input.child.date_of_birth, input.child.feeding_type));
   const sleepPrediction = getSleepPrediction(input.sleepLogs, getWakeBaseline(input.child.date_of_birth));
   const status = buildStatusMessage({
     child: input.child,

@@ -4,6 +4,7 @@ import { InsetPanel } from "../ui/page-layout";
 import { TrackerMetricPanel } from "../tracking/TrackerPrimitives";
 import { HomeActionBottleIcon } from "../ui/icons";
 import {
+  FEED_PREDICTION_FALLBACK,
   formatFeedBaselineRange,
   formatPredictionRange,
   formatPredictionRelative,
@@ -87,7 +88,7 @@ function NextLikelyTile({ prediction }: { prediction: FeedPrediction | null }) {
         {getPredictionHeadline(prediction)}
       </p>
       <p className="mt-1 text-[0.68rem] leading-snug text-[var(--color-text-secondary)] md:text-[0.72rem]">
-        {prediction ? getPredictionDescription(prediction) : "A couple of logs will personalize the next window."}
+        {prediction ? getPredictionDescription(prediction) : FEED_PREDICTION_FALLBACK}
       </p>
     </div>
   );
@@ -294,7 +295,7 @@ export function FeedStatusCard({
                           {getPredictionHeadline(prediction)}
                         </p>
                         <p className="mt-1 text-xs leading-relaxed text-[var(--color-text-secondary)]">
-                          {prediction ? getPredictionDescription(prediction) : "Needs at least two logged feeds to estimate a rhythm."}
+                          {prediction ? getPredictionDescription(prediction) : FEED_PREDICTION_FALLBACK}
                         </p>
                       </div>
                       {prediction && (

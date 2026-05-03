@@ -1,8 +1,13 @@
 import { Link } from "react-router-dom";
-import { breastfeedIcon } from "../../assets/icons";
-import { getBreastHistorySummary, getBreastHistoryTone, getRecentHistoryDayLabel } from "../../lib/breastfeed-insights";
-import type { FeedingEntry } from "../../lib/types";
+import {
+  getBreastfeedContextHistorySummary,
+  getBreastfeedContextHistoryTitle,
+  getBreastHistoryTone,
+  getRecentHistoryDayLabel,
+} from "../../lib/breastfeed-insights";
+import type { FeedingEntry, UnitSystem } from "../../lib/types";
 import { Card, CardContent } from "../ui/card";
+import { HomeActionBottleIcon, HomeActionBreastfeedIcon, MealIcon } from "../ui/icons";
 
 function formatHistoryTimeLabel(loggedAt: string) {
   const timestamp = new Date(loggedAt).getTime();
@@ -16,7 +21,54 @@ function formatHistoryTimeLabel(loggedAt: string) {
   return dayLabel;
 }
 
-export function BreastfeedRecentHistorySection({ logs }: { logs: FeedingEntry[] }) {
+function getFeedContextTone(log: FeedingEntry) {
+  if (log.food_type === "breast_milk" && log.breast_side) {
+    const breastTone = getBreastHistoryTone(log.breast_side);
+    return {
+      ...breastTone,
+      color: breastTone.dot,
+    };
+  }
+
+  if (log.food_type === "solids" || log.food_type === "other") {
+    return {
+      mirrored: false,
+      bg: "rgba(255, 239, 228, 0.98)",
+      dot: "#a86235",
+      color: "#a86235",
+    };
+  }
+
+  if (log.food_type === "water") {
+    return {
+      mirrored: false,
+      bg: "rgba(234, 239, 255, 0.98)",
+      dot: "#6f8df0",
+      color: "#6f8df0",
+    };
+  }
+
+  return {
+    mirrored: false,
+    bg: "rgba(223, 248, 236, 0.95)",
+    dot: "#13a970",
+    color: "#13a970",
+  };
+}
+
+function FeedContextIcon({ log, color }: { log: FeedingEntry; color: string }) {
+  if (log.food_type === "breast_milk" && log.breast_side) {
+    return <HomeActionBreastfeedIcon className="h-4.5 w-4.5" />;
+  }
+
+  if (log.food_type === "solids" || log.food_type === "other") {
+    return <MealIcon className="h-4.5 w-4.5" color={color} />;
+  }
+
+  return <HomeActionBottleIcon className="h-4.5 w-4.5" />;
+}
+
+export function BreastfeedRecentHistorySection({ logs, unitSystem }: { logs: FeedingEntry[]; unitSystem: UnitSystem }) {
   return (
     <Card
       className="h-full overflow-hidden rounded-[18px] border shadow-[var(--shadow-home-card)] backdrop-blur-sm md:rounded-[24px]"
@@ -28,7 +80,7 @@ export function BreastfeedRecentHistorySection({ logs }: { logs: FeedingEntry[] 
       <CardContent className="p-4 md:p-5">
         <div className="flex items-center justify-between gap-3">
           <p className="text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-[var(--color-text)] md:text-[0.74rem]">
-            Recent history
+            Recent feeds
           </p>
           <Link
             to="/history"
@@ -40,10 +92,10 @@ export function BreastfeedRecentHistorySection({ logs }: { logs: FeedingEntry[] 
         <div className="mt-3">
           {logs.length === 0 ? (
             <div className="rounded-[16px] bg-[var(--color-home-empty-surface)] px-4 py-5 text-center text-[0.78rem] leading-snug text-[var(--color-text-secondary)]">
-              Recent breastfeeding sessions will appear here.
+              Recent feeds will appear here.
             </div>
           ) : logs.map((log, index) => {
-            const tone = getBreastHistoryTone(log.breast_side);
+            const tone = getFeedContextTone(log);
             const isLast = index === logs.length - 1;
             return (
               <div key={log.id} className="relative flex items-center gap-2.5 py-2 md:gap-3">
@@ -58,30 +110,22 @@ export function BreastfeedRecentHistorySection({ logs }: { logs: FeedingEntry[] 
                     {formatHistoryTimeLabel(log.logged_at)}
                   </p>
                 </div>
-                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[var(--color-text)] md:h-9 md:w-9" style={{ background: tone.bg }}>
-                  <span
-                    aria-hidden="true"
-                    className="inline-block h-4.5 w-4.5"
-                    style={{
-                      backgroundColor: "var(--color-text)",
-                      transform: tone.mirrored ? "scaleX(-1)" : undefined,
-                      WebkitMaskImage: `url(${breastfeedIcon})`,
-                      WebkitMaskRepeat: "no-repeat",
-                      WebkitMaskPosition: "center",
-                      WebkitMaskSize: "contain",
-                      maskImage: `url(${breastfeedIcon})`,
-                      maskRepeat: "no-repeat",
-                      maskPosition: "center",
-                      maskSize: "contain",
-                    }}
-                  />
+                <span
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full md:h-9 md:w-9"
+                  style={{
+                    background: tone.bg,
+                    color: tone.color,
+                    transform: tone.mirrored ? "scaleX(-1)" : undefined,
+                  }}
+                >
+                  <FeedContextIcon log={log} color={tone.color} />
                 </span>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-[0.78rem] font-semibold leading-tight text-[var(--color-text)] md:text-[0.86rem]">
-                    Breastfeeding
+                    {getBreastfeedContextHistoryTitle(log)}
                   </p>
                   <p className="mt-0.5 truncate text-[0.68rem] leading-tight text-[var(--color-text-secondary)] md:text-[0.74rem]">
-                    {getBreastHistorySummary(log)}
+                    {getBreastfeedContextHistorySummary(log, unitSystem)}
                   </p>
                 </div>
                 {!isLast && (

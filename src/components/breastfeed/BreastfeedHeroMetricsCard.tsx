@@ -2,6 +2,13 @@ import type { ReactNode } from "react";
 import { breastfeedIcon } from "../../assets/icons";
 import { cn } from "../../lib/cn";
 import type { DurationRingDisplay } from "../../lib/breastfeed-insights";
+import {
+  FEED_PREDICTION_FALLBACK,
+  formatPredictionRange,
+  getPredictionHeadline,
+  type FeedPrediction,
+} from "../../lib/feed-insights";
+import { HomeActionBottleIcon } from "../ui/icons";
 
 function BreastIcon({ mirrored = false, color = "#de5c9f" }: { mirrored?: boolean; color?: string }) {
   return (
@@ -68,14 +75,39 @@ function HeroMetric({
   );
 }
 
+function NextFeedRow({ prediction }: { prediction: FeedPrediction | null }) {
+  return (
+    <div className="mt-3 flex min-w-0 items-center gap-3 border-t border-[var(--color-home-divider)] px-1.5 pt-3 md:mt-4 md:px-3 md:pt-4">
+      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--color-tracker-art-surface)] text-[var(--color-healthy)] md:h-12 md:w-12">
+        <HomeActionBottleIcon className="h-5 w-5" />
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-[var(--color-text-soft)] md:text-[0.74rem]">
+          Next feed
+        </p>
+        <p className="mt-0.5 truncate text-[1rem] font-semibold leading-tight tracking-[-0.03em] text-[var(--color-text)] md:text-[1.16rem]">
+          {prediction ? getPredictionHeadline(prediction) : FEED_PREDICTION_FALLBACK}
+        </p>
+        {prediction && (
+          <p className="mt-0.5 truncate text-[0.76rem] leading-tight text-[var(--color-text-secondary)] md:text-[0.84rem]">
+            {formatPredictionRange(prediction)}
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export function BreastfeedHeroMetricsCard({
   className,
   left24h,
+  nextFeed,
   right24h,
   total24h,
 }: {
   className?: string;
   left24h: DurationRingDisplay;
+  nextFeed: FeedPrediction | null;
   right24h: DurationRingDisplay;
   total24h: DurationRingDisplay;
 }) {
@@ -113,6 +145,7 @@ export function BreastfeedHeroMetricsCard({
           label="Right 24h"
         />
       </div>
+      <NextFeedRow prediction={nextFeed} />
     </div>
   );
 }

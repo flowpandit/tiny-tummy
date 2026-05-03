@@ -14,18 +14,26 @@ import {
   combineLocalDateAndTimeToUtcIso,
   getCurrentLocalDate,
   getCurrentLocalTime,
-  generateId,
-  nowISO,
+  isOnLocalDay,
 } from "../lib/utils";
+import {
+  buildFeedPatternNarrative,
+  getBaselineComparison,
+  getDueRisk,
+  getFeedBaseline,
+  getFeedMixSnapshot,
+  getFeedPrediction,
+  getTrackedMl,
+  getUnifiedFeedTimeline,
+} from "../lib/feed-insights";
 import { useDbClient } from "../contexts/DatabaseContext";
 import type { BreastSide, Child, FeedingEntry } from "../lib/types";
 
 type SessionDurations = Record<"left" | "right", number>;
+const FEED_CONTEXT_LOG_LIMIT = 100;
 
-function getBreastfeedingHistoryRows(feedingLogs: FeedingEntry[], limit: number) {
-  return feedingLogs
-    .filter((log) => log.food_type === "breast_milk" && (log.breast_side === "left" || log.breast_side === "right" || log.breast_side === "both"))
-    .slice(0, limit);
+function getBreastfeedingContextRows(feedingLogs: FeedingEntry[], limit: number) {
+  return getUnifiedFeedTimeline(feedingLogs).slice(0, limit);
 }
 
 export function useBreastfeedingTimerState({
@@ -84,7 +92,7 @@ export function useBreastfeedingTimerState({
     Promise.all([
       db.getSetting(getBreastfeedingSessionSettingKey(activeChild.id)),
       db.getSetting(getBreastfeedingLastSideSettingKey(activeChild.id)),
-      db.getFeedingLogs(activeChild.id, 32),
+      db.getFeedingLogs(activeChild.id, FEED_CONTEXT_LOG_LIMIT),
     ]).then(([sessionRaw, savedSide, feedingLogs]) => {
       if (cancelled) return;
 
@@ -101,7 +109,7 @@ export function useBreastfeedingTimerState({
       setActiveSide(restoredSession.activeSide);
       setActiveStartedAt(restoredSession.activeStartedAt);
       setLastUsedSide(nextLastUsedSide);
-      setRecentHistory(getBreastfeedingHistoryRows(feedingLogs, 32));
+      setRecentHistory(getBreastfeedingContextRows(feedingLogs, FEED_CONTEXT_LOG_LIMIT));
       setTick(Date.now());
     }).catch(() => {
       if (!cancelled) {
@@ -120,8 +128,8 @@ export function useBreastfeedingTimerState({
 
   const refreshRecentBreastHistory = useCallback(async () => {
     if (!activeChild) return;
-    const feedingLogs = await db.getFeedingLogs(activeChild.id, 32);
-    setRecentHistory(getBreastfeedingHistoryRows(feedingLogs, 32));
+    const feedingLogs = await db.getFeedingLogs(activeChild.id, FEED_CONTEXT_LOG_LIMIT);
+    setRecentHistory(getBreastfeedingContextRows(feedingLogs, FEED_CONTEXT_LOG_LIMIT));
   }, [activeChild]);
 
   const persistSession = useCallback(async (session: BreastfeedingSessionState) => {
@@ -208,7 +216,7 @@ export function useBreastfeedingTimerState({
         .join(" • ");
       const breastSide = sidesUsed.length === 2 ? "both" : sidesUsed[0];
 
-      await db.createFeedingLog({
+      const createdEntry = await db.createFeedingLog({
         child_id: activeChild.id,
         logged_at: combineLocalDateAndTimeToUtcIso(getCurrentLocalDate(), getCurrentLocalTime()),
         food_type: "breast_milk",
@@ -231,22 +239,7 @@ export function useBreastfeedingTimerState({
       await persistSession(clearedSession);
 
       // Manually update the local history state immediately for a snappy UI
-      const newEntry: FeedingEntry = {
-        id: generateId(), // Temporary ID for UI
-        child_id: activeChild.id,
-        logged_at: combineLocalDateAndTimeToUtcIso(getCurrentLocalDate(), getCurrentLocalTime()),
-        food_type: "breast_milk",
-        duration_minutes: getRoundedDurationMinutes(totalDurationMs),
-        breast_side: breastSide,
-        notes: `Timed breastfeeding session • ${sideBreakdown}`,
-        food_name: null,
-        amount_ml: null,
-        bottle_content: null,
-        reaction_notes: null,
-        is_constipation_support: 0,
-        created_at: nowISO(),
-      };
-      setRecentHistory((prev) => [newEntry, ...prev].slice(0, 30));
+      setRecentHistory((prev) => getUnifiedFeedTimeline([createdEntry, ...prev]).slice(0, FEED_CONTEXT_LOG_LIMIT));
       setIsSaving(false);
 
       onSuccess("Breastfeeding session saved.");
@@ -308,21 +301,57 @@ export function useBreastfeedingTimerState({
   ), [activeSide, activeStartedAt, durations.right, tick]);
   const totalDuration = leftDuration + rightDuration;
   const suggestedStartSide = useMemo(() => getOppositeBreastSide(lastUsedSide), [lastUsedSide]);
-  const displayRecentHistory = useMemo(() => recentHistory.slice(0, 3), [recentHistory]);
+  const feedTimeline = useMemo(() => getUnifiedFeedTimeline(recentHistory), [recentHistory]);
+  const latestFeed = feedTimeline[0] ?? null;
+  const todayFeedCount = useMemo(() => {
+    const todayKey = getCurrentLocalDate();
+    return feedTimeline.filter((log) => isOnLocalDay(log.logged_at, todayKey)).length;
+  }, [feedTimeline]);
+  const feedBaseline = useMemo(
+    () => activeChild ? getFeedBaseline(activeChild.date_of_birth, activeChild.feeding_type) : null,
+    [activeChild],
+  );
+  const feedPrediction = useMemo(
+    () => feedBaseline ? getFeedPrediction(feedTimeline, feedBaseline) : null,
+    [feedBaseline, feedTimeline],
+  );
+  const hoursSinceLatestFeed = latestFeed ? (Date.now() - new Date(latestFeed.logged_at).getTime()) / 3600000 : null;
+  const feedBaselineComparison = useMemo(
+    () => feedBaseline ? getBaselineComparison(hoursSinceLatestFeed, feedBaseline) : null,
+    [feedBaseline, hoursSinceLatestFeed],
+  );
+  const feedDueRisk = useMemo(
+    () => feedBaseline ? getDueRisk(hoursSinceLatestFeed, feedBaseline, feedPrediction, todayFeedCount) : null,
+    [feedBaseline, feedPrediction, hoursSinceLatestFeed, todayFeedCount],
+  );
+  const recentWeekFeedTimeline = useMemo(() => {
+    const cutoff = Date.now() - (7 * 24 * 60 * 60 * 1000);
+    return feedTimeline.filter((log) => new Date(log.logged_at).getTime() >= cutoff);
+  }, [feedTimeline]);
+  const feedMix = useMemo(() => getFeedMixSnapshot(recentWeekFeedTimeline), [recentWeekFeedTimeline]);
+  const feedNarrative = useMemo(
+    () => feedBaseline && feedBaselineComparison && feedDueRisk
+      ? buildFeedPatternNarrative({
+        baseline: feedBaseline,
+        baselineComparison: feedBaselineComparison,
+        dueRisk: feedDueRisk,
+        prediction: feedPrediction,
+      })
+      : null,
+    [feedBaseline, feedBaselineComparison, feedDueRisk, feedPrediction],
+  );
+  const feedWeekTrackedMl = useMemo(() => getTrackedMl(recentWeekFeedTimeline), [recentWeekFeedTimeline]);
+  const displayRecentHistory = useMemo(() => feedTimeline.slice(0, 3), [feedTimeline]);
   const patternLogs = useMemo(() => {
     const cutoff = Date.now() - (24 * 60 * 60 * 1000);
-    return recentHistory
-      .filter((log) => {
-        if (log.food_type !== "breast_milk") return false;
-        if (log.breast_side !== "left" && log.breast_side !== "right" && log.breast_side !== "both") return false;
-        return new Date(log.logged_at).getTime() >= cutoff;
-      })
+    return feedTimeline
+      .filter((log) => new Date(log.logged_at).getTime() >= cutoff)
       .sort((left, right) => new Date(left.logged_at).getTime() - new Date(right.logged_at).getTime());
-  }, [recentHistory]);
+  }, [feedTimeline]);
 
   const last24hDurations = useMemo(() => {
     const cutoff = Date.now() - (24 * 60 * 60 * 1000);
-    const logs = recentHistory.filter((log) => {
+    const logs = feedTimeline.filter((log) => {
       if (log.food_type !== "breast_milk") return false;
       const side = log.breast_side;
       if (side !== "left" && side !== "right" && side !== "both") return false;
@@ -345,7 +374,7 @@ export function useBreastfeedingTimerState({
     }
 
     return { left, right };
-  }, [recentHistory]);
+  }, [feedTimeline]);
 
   const last24hLeftDuration = last24hDurations.left + leftDuration;
   const last24hRightDuration = last24hDurations.right + rightDuration;
@@ -360,6 +389,13 @@ export function useBreastfeedingTimerState({
     activeSide,
     canShowSolidTransition: activeChild?.feeding_type === "breast",
     displayRecentHistory,
+    feedBaseline,
+    feedBaselineComparison,
+    feedDueRisk,
+    feedMix,
+    feedNarrative,
+    feedPrediction,
+    feedWeekTrackedMl,
     handleConfirmSolidTransition,
     handleFeedLogged,
     handlePause,

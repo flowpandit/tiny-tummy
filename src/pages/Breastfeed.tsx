@@ -5,6 +5,7 @@ import { BreastfeedPatternCard } from "../components/breastfeed/BreastfeedPatter
 import { BreastfeedQuickTimerCard } from "../components/breastfeed/BreastfeedQuickTimerCard";
 import { BreastfeedRecentHistorySection } from "../components/breastfeed/BreastfeedRecentHistorySection";
 import { BreastfeedTodaySummaryCard } from "../components/breastfeed/BreastfeedTodaySummaryCard";
+import { FeedStatusCard } from "../components/feed/FeedStatusCard";
 import { Button } from "../components/ui/button";
 import { CareToolsSection } from "../components/care/CareToolsSection";
 import { ScenicHero } from "../components/layout/ScenicHero";
@@ -12,6 +13,7 @@ import { InsetPanel, PageBody } from "../components/ui/page-layout";
 import { DietLogForm } from "../components/logging/DietLogForm";
 import { useToast } from "../components/ui/toast";
 import { useActiveChild, useChildActions } from "../contexts/ChildContext";
+import { useUnits } from "../contexts/UnitsContext";
 import { useBreastfeedingTimerState } from "../hooks/useBreastfeedingTimerState";
 import { useChildWorkflowActions } from "../hooks/useChildWorkflowActions";
 import { getDurationRingDisplay } from "../lib/breastfeed-insights";
@@ -21,18 +23,27 @@ export function Breastfeed() {
   const navigate = useNavigate();
   const activeChild = useActiveChild();
   const { refreshChildren } = useChildActions();
+  const { unitSystem } = useUnits();
   const { showError, showSuccess } = useToast();
   const { runPostLogActions } = useChildWorkflowActions(activeChild);
   const [selectedPatternLogId, setSelectedPatternLogId] = useState<string | null>(null);
   const [showTransitionConfirm, setShowTransitionConfirm] = useState(false);
   const [feedingFormOpen, setFeedingFormOpen] = useState(false);
   const [feedingDraft, setFeedingDraft] = useState<Partial<FeedingLogDraft> | null>(null);
+  const [feedStatusExpanded, setFeedStatusExpanded] = useState(false);
   const supportsBreastfeeding = activeChild?.feeding_type === "breast" || activeChild?.feeding_type === "mixed";
   const patternSectionRef = useRef<HTMLDivElement | null>(null);
   const {
     activeSide,
     canShowSolidTransition,
     displayRecentHistory,
+    feedBaseline,
+    feedBaselineComparison,
+    feedDueRisk,
+    feedMix,
+    feedNarrative,
+    feedPrediction,
+    feedWeekTrackedMl,
     handleConfirmSolidTransition,
     handleFeedLogged,
     handlePause,
@@ -158,6 +169,7 @@ export function Breastfeed() {
         <BreastfeedHeroMetricsCard
           className="-mt-36 md:-mt-32"
           left24h={left24hRing}
+          nextFeed={feedPrediction}
           right24h={right24hRing}
           total24h={total24hRing}
         />
@@ -195,13 +207,29 @@ export function Breastfeed() {
                 suggestedStartSide={suggestedStartSide}
               />
 
-              <BreastfeedRecentHistorySection logs={displayRecentHistory} />
+              {feedBaseline && feedBaselineComparison && feedDueRisk && feedNarrative && (
+                <FeedStatusCard
+                  baseline={feedBaseline}
+                  baselineComparison={feedBaselineComparison}
+                  dueRisk={feedDueRisk}
+                  feedMix={feedMix}
+                  narrative={feedNarrative}
+                  prediction={feedPrediction}
+                  statusExpanded={feedStatusExpanded}
+                  unitSystem={unitSystem}
+                  weekTrackedMl={feedWeekTrackedMl}
+                  onToggleExpanded={() => setFeedStatusExpanded((current) => !current)}
+                />
+              )}
             </div>
+
+            <BreastfeedRecentHistorySection logs={displayRecentHistory} unitSystem={unitSystem} />
 
             <div ref={patternSectionRef}>
               <BreastfeedPatternCard
                 patternLogs={patternLogs}
                 selectedPatternLog={selectedPatternLog}
+                unitSystem={unitSystem}
                 onToggleLog={(logId) => setSelectedPatternLogId((current) => (current === logId ? null : logId))}
               />
             </div>
