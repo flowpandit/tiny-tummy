@@ -53,9 +53,11 @@ test("buildHealthInsight prioritizes active episodes", () => {
     symptom_type: "fever",
     severity: "moderate",
     temperature_c: 38.2,
+    temperature_method: null,
     logged_at: "2026-05-03T11:15:00.000Z",
     notes: "Warm after nap",
     created_at: "2026-05-03T11:15:00.000Z",
+    updated_at: "2026-05-03T11:15:00.000Z",
   };
 
   const insight = buildHealthInsight({
@@ -78,9 +80,11 @@ test("buildHealthInsight escalates recent severe symptoms into episode help", ()
     symptom_type: "dehydration_concern",
     severity: "severe",
     temperature_c: null,
+    temperature_method: null,
     logged_at: "2026-05-03T11:15:00.000Z",
     notes: "Fewer wet diapers",
     created_at: "2026-05-03T11:15:00.000Z",
+    updated_at: "2026-05-03T11:15:00.000Z",
   };
 
   const insight = buildHealthInsight({
@@ -115,9 +119,11 @@ test("builds a sorted health timeline and de-duplicates linked symptom episode e
     symptom_type: "fever",
     severity: "moderate",
     temperature_c: 38.2,
+    temperature_method: null,
     logged_at: "2026-05-03T11:15:00.000Z",
     notes: "Warm after nap",
     created_at: "2026-05-03T11:15:00.000Z",
+    updated_at: "2026-05-03T11:15:00.000Z",
   };
   const linkedEpisodeEvent: EpisodeEvent = {
     id: "event-1",
@@ -128,6 +134,8 @@ test("builds a sorted health timeline and de-duplicates linked symptom episode e
     notes: "Warm after nap",
     logged_at: "2026-05-03T11:15:00.000Z",
     created_at: "2026-05-03T11:15:00.000Z",
+    source_kind: "symptom",
+    source_id: "symptom-1",
   };
   const progressEvent: EpisodeEvent = {
     id: "event-2",
@@ -138,6 +146,8 @@ test("builds a sorted health timeline and de-duplicates linked symptom episode e
     notes: null,
     logged_at: "2026-05-03T12:00:00.000Z",
     created_at: "2026-05-03T12:00:00.000Z",
+    source_kind: null,
+    source_id: null,
   };
 
   const timeline = buildHealthTimeline({
@@ -150,7 +160,7 @@ test("builds a sorted health timeline and de-duplicates linked symptom episode e
   assert.deepEqual(timeline.map((item) => item.title), [
     "Settled after fluids",
     "Fever",
-    "Fever / Illness started",
+    "Fever / illness started",
   ]);
   assert.equal(timeline[1]?.detail, "38.2 \u00b0C \u00b7 Warm after nap");
 });

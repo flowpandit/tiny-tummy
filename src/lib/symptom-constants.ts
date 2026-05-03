@@ -1,4 +1,4 @@
-import type { SymptomSeverity, SymptomType } from "./types";
+import type { SymptomSeverity, SymptomType, TemperatureMethod } from "./types";
 
 export const SYMPTOM_TYPES: { value: SymptomType; label: string; description: string }[] = [
   {
@@ -47,6 +47,11 @@ export const SYMPTOM_TYPES: { value: SymptomType; label: string; description: st
     description: "Loose, watery, or unusually frequent stools.",
   },
   {
+    value: "poop_concern",
+    label: "Poop Concern",
+    description: "Unusual stool, stool changes, or poop details you want to review later.",
+  },
+  {
     value: "blood_concern",
     label: "Blood Concern",
     description: "Concern about blood in stool or around the bottom.",
@@ -69,12 +74,26 @@ export const SYMPTOM_SEVERITIES: { value: SymptomSeverity; label: string }[] = [
   { value: "severe", label: "Severe" },
 ];
 
+export const TEMPERATURE_METHODS: { value: TemperatureMethod; label: string }[] = [
+  { value: "rectal", label: "Rectal" },
+  { value: "forehead", label: "Forehead / temporal" },
+  { value: "ear", label: "Ear" },
+  { value: "armpit", label: "Armpit" },
+  { value: "oral", label: "Oral" },
+  { value: "other", label: "Other" },
+];
+
 export function getSymptomTypeLabel(type: SymptomType): string {
   return SYMPTOM_TYPES.find((item) => item.value === type)?.label ?? type;
 }
 
 export function getSymptomSeverityLabel(severity: SymptomSeverity): string {
   return SYMPTOM_SEVERITIES.find((item) => item.value === severity)?.label ?? severity;
+}
+
+export function getTemperatureMethodLabel(method: TemperatureMethod | null): string | null {
+  if (!method) return null;
+  return TEMPERATURE_METHODS.find((item) => item.value === method)?.label ?? method;
 }
 
 export function getSymptomSeverityBadgeVariant(severity: SymptomSeverity): "default" | "caution" | "alert" {

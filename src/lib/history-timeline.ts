@@ -159,6 +159,7 @@ function getVisibleEpisodeEvents(symptomLogs: SymptomEntry[], episodeEvents: Epi
 
   return episodeEvents.filter((event) => {
     if (event.event_type !== "symptom") return true;
+    if (event.source_kind === "symptom") return false;
     return !linkedSymptomKeys.has(`${event.episode_id}:${event.logged_at}`);
   });
 }

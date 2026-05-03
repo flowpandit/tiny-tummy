@@ -7,12 +7,12 @@ export const EPISODE_TYPES: {
 }[] = [
   {
     value: "fever_illness",
-    label: "Fever / Illness",
+    label: "Fever / illness",
     description: "Track temperature, symptoms, fluids, medicine, and recovery.",
   },
   {
     value: "stomach_bug",
-    label: "Stomach Bug",
+    label: "Stomach upset",
     description: "Track vomiting, diarrhoea, appetite, fluids, and progress.",
   },
   {
@@ -22,17 +22,17 @@ export const EPISODE_TYPES: {
   },
   {
     value: "rash_skin",
-    label: "Rash / Skin",
+    label: "Rash / skin",
     description: "Track rash changes, discomfort, medicine, and notes.",
   },
   {
     value: "medication_reaction",
-    label: "Medication / Reaction",
+    label: "Medicine / reaction concern",
     description: "Track medicine timing, symptoms, and possible reactions.",
   },
   {
     value: "constipation",
-    label: "Constipation",
+    label: "Constipation concern",
     description: "Track hard stools, straining, hydration, and what you tried.",
   },
   {
@@ -42,7 +42,7 @@ export const EPISODE_TYPES: {
   },
   {
     value: "other",
-    label: "Other",
+    label: "Other health concern",
     description: "Track any health concern across multiple updates.",
   },
 ];

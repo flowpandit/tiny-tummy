@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useActiveChild } from "../contexts/ChildContext";
 import { usePoopLogs } from "../hooks/usePoopLogs";
@@ -157,6 +157,12 @@ export function Home() {
     closeEpisodeSheet();
   };
 
+  useEffect(() => {
+    setSelectedEpisodeId(null);
+    closeEpisodeSheet();
+    setSymptomSheetOpen(false);
+  }, [activeChild?.id, closeEpisodeSheet, setSymptomSheetOpen]);
+
   const summary = activeChild
     ? buildChildDailySummary({
       poopLogs: logs,
@@ -291,7 +297,10 @@ export function Home() {
 
       <HomeSheets
         activeChildId={activeChild.id}
+        activeChildName={activeChild.name}
+        activeChildDateOfBirth={activeChild.date_of_birth}
         activeEpisode={sheetEpisode}
+        activeEpisodes={activeEpisodes}
         diaperDraft={diaperDraft}
         diaperFormOpen={diaperFormOpen}
         editingDiaper={editingDiaper}
@@ -305,6 +314,7 @@ export function Home() {
         logFormOpen={logFormOpen}
         poopDraft={poopDraft}
         sleepSheetOpen={sleepSheetOpen}
+        symptomLogs={symptomLogs}
         symptomSheetOpen={symptomSheetOpen}
         onCloseDiaperForm={closeDiaperForm}
         onCloseEpisodeSheet={handleCloseEpisodeSheet}

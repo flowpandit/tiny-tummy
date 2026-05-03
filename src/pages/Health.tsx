@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ScenicHero } from "../components/layout/ScenicHero";
 import { EpisodeSheet } from "../components/episodes/EpisodeSheet";
 import { SymptomSheet } from "../components/symptoms/SymptomSheet";
@@ -72,6 +72,12 @@ export function Health() {
   const sheetEpisode = episodeSheetMode === "start" ? null : selectedEpisode ?? activeEpisode;
   const sheetEvents = sheetEpisode ? activeEpisodeEventsById[sheetEpisode.id] ?? [] : events;
 
+  useEffect(() => {
+    setSymptomSheetOpen(false);
+    setEpisodeSheetOpen(false);
+    setSelectedEpisodeId(null);
+  }, [activeChild?.id]);
+
   if (!activeChild) return null;
 
   const refreshHealth = async () => {
@@ -143,7 +149,11 @@ export function Health() {
         open={symptomSheetOpen}
         onClose={() => setSymptomSheetOpen(false)}
         childId={activeChild.id}
+        childName={activeChild.name}
+        childDateOfBirth={activeChild.date_of_birth}
         activeEpisode={activeEpisode}
+        activeEpisodes={activeEpisodes}
+        recentSymptoms={symptomLogs}
         onLogged={refreshHealth}
       />
       <EpisodeSheet
@@ -155,6 +165,7 @@ export function Health() {
         childId={activeChild.id}
         activeEpisode={sheetEpisode}
         events={sheetEvents}
+        recentSymptoms={symptomLogs}
         initialMode={episodeSheetMode}
         onUpdated={refreshHealth}
       />

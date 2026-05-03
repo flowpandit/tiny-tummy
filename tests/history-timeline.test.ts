@@ -102,9 +102,11 @@ function createSymptomEntry(id: string, loggedAt: string, episodeId: string | nu
     symptom_type: "cough_congestion",
     severity: "moderate",
     temperature_c: null,
+    temperature_method: null,
     logged_at: loggedAt,
     notes: null,
     created_at: loggedAt,
+    updated_at: loggedAt,
   };
 }
 
@@ -118,6 +120,8 @@ function createEpisodeEvent(id: string, loggedAt: string, episodeId = "episode-1
     notes: null,
     logged_at: loggedAt,
     created_at: loggedAt,
+    source_kind: null,
+    source_id: null,
   };
 }
 

@@ -106,9 +106,11 @@ export interface SymptomEntry {
   symptom_type: SymptomType;
   severity: SymptomSeverity;
   temperature_c: number | null;
+  temperature_method: TemperatureMethod | null;
   logged_at: string;
   notes: string | null;
   created_at: string;
+  updated_at: string;
 }
 
 export type SymptomType =
@@ -123,9 +125,18 @@ export type SymptomType =
   | "blood_concern"
   | "dehydration_concern"
   | "diarrhoea"
+  | "poop_concern"
   | "other";
 
 export type SymptomSeverity = "mild" | "moderate" | "severe";
+
+export type TemperatureMethod =
+  | "rectal"
+  | "forehead"
+  | "ear"
+  | "armpit"
+  | "oral"
+  | "other";
 
 export interface GrowthEntry {
   id: string;
@@ -263,6 +274,8 @@ export interface EpisodeEvent {
   notes: string | null;
   logged_at: string;
   created_at: string;
+  source_kind: string | null;
+  source_id: string | null;
 }
 
 export type EpisodeEventType =

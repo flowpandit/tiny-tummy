@@ -1,5 +1,5 @@
 import { getEpisodeEventTypeLabel, getEpisodeTypeLabel } from "./episode-constants";
-import { getSymptomSeverityLabel, getSymptomTypeLabel } from "./symptom-constants";
+import { getSymptomSeverityLabel, getSymptomTypeLabel, getTemperatureMethodLabel } from "./symptom-constants";
 import type { Episode, EpisodeEvent, SymptomEntry, TemperatureUnit } from "./types";
 import { formatTemperatureValue } from "./units";
 
@@ -78,6 +78,7 @@ export function formatHealthStartedLine(
 export function getSymptomDisplayDetail(symptom: SymptomEntry, temperatureUnit: TemperatureUnit): string {
   const parts = [
     symptom.temperature_c !== null ? formatTemperatureValue(symptom.temperature_c, temperatureUnit) : null,
+    getTemperatureMethodLabel(symptom.temperature_method),
     symptom.notes,
   ].filter(Boolean);
 
@@ -257,7 +258,7 @@ export function buildHealthTimeline({
   }));
 
   const eventItems: HealthTimelineItem[] = episodeEvents
-    .filter((event) => !(event.event_type === "symptom" && linkedSymptomKeys.has(`${event.episode_id}:${event.logged_at}`)))
+    .filter((event) => !(event.event_type === "symptom" && (event.source_kind === "symptom" || linkedSymptomKeys.has(`${event.episode_id}:${event.logged_at}`))))
     .map((event) => ({
       id: `episode-event-${event.id}`,
       kind: "episode_event",

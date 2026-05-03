@@ -6,11 +6,14 @@ import { DatePicker } from "../ui/date-picker";
 import { TimePicker } from "../ui/time-picker";
 import { Card, CardContent } from "../ui/card";
 import { useToast } from "../ui/toast";
+import { useUnits } from "../../contexts/UnitsContext";
 import { useEpisodeSheetState } from "../../hooks/useEpisodeSheetState";
 import { cn } from "../../lib/cn";
 import { EPISODE_EVENT_TYPES, EPISODE_TYPES, getEpisodeEventTypeLabel, getEpisodeTypeLabel } from "../../lib/episode-constants";
+import { getSymptomSeverityLabel, getSymptomTypeLabel } from "../../lib/symptom-constants";
+import { formatTemperatureValue } from "../../lib/units";
 import { formatDate, getCurrentLocalDate } from "../../lib/utils";
-import type { Episode, EpisodeEvent, EpisodeType } from "../../lib/types";
+import type { Episode, EpisodeEvent, EpisodeType, SymptomEntry } from "../../lib/types";
 
 function getEpisodeBadgeVariant(episodeType: EpisodeType) {
   if (episodeType === "fever_illness" || episodeType === "stomach_bug" || episodeType === "vomiting" || episodeType === "medication_reaction") return "alert";
@@ -23,6 +26,7 @@ interface EpisodeSheetProps extends SheetVisibilityProps {
   childId: string;
   activeEpisode: Episode | null;
   events: EpisodeEvent[];
+  recentSymptoms?: SymptomEntry[];
   onUpdated: () => Promise<void> | void;
   initialMode?: "default" | "start" | "update";
 }
@@ -33,21 +37,40 @@ export function EpisodeSheet({
   childId,
   activeEpisode,
   events,
+  recentSymptoms = [],
   onUpdated,
   initialMode = "default",
 }: EpisodeSheetProps) {
   const { showError, showSuccess } = useToast();
+  const { temperatureUnit } = useUnits();
   const {
     episodeType, setEpisodeType, episodeDate, setEpisodeDate, episodeTime, setEpisodeTime, summary, setSummary,
     eventType, setEventType, eventDate, setEventDate, eventTime, setEventTime, eventTitle, setEventTitle,
     eventNotes, setEventNotes, resolutionDate, setResolutionDate, resolutionTime, setResolutionTime, outcome,
-    setOutcome, isSubmitting, isAddingEvent, isResolving, eventTitleRef, handleCreateEpisode, handleAddEvent,
-    handleResolveEpisode,
+    setOutcome, linkedRecentSymptomIds, setLinkedRecentSymptomIds, isSubmitting, isAddingEvent, isResolving,
+    currentEpisode, eventTitleRef, handleCreateEpisode, handleAddEvent, handleResolveEpisode,
   } = useEpisodeSheetState({
-    open, childId, activeEpisode, initialMode, onUpdated, onClose,
+    open, childId, activeEpisode, initialMode, recentSymptoms, temperatureUnit, onUpdated, onClose,
     onError: showError, onSuccess: showSuccess,
   });
-  const isStartingEpisode = initialMode === "start" || !activeEpisode;
+  const isStartingEpisode = (initialMode === "start" || !currentEpisode) && !currentEpisode;
+  const linkableRecentSymptoms = recentSymptoms
+    .filter((symptom) => {
+      if (symptom.episode_id) return false;
+      const loggedAt = new Date(symptom.logged_at).getTime();
+      return Number.isFinite(loggedAt) && Date.now() - loggedAt <= 24 * 60 * 60 * 1000;
+    })
+    .slice(0, 4);
+  const linkedSymptomCount = currentEpisode
+    ? recentSymptoms.filter((symptom) => symptom.episode_id === currentEpisode.id).length
+    : 0;
+  const visibleEvents = currentEpisode
+    ? events.filter((event) => event.episode_id === currentEpisode.id)
+    : events;
+  const latestUpdate = visibleEvents[0] ?? null;
+  const isResolved = currentEpisode?.status === "resolved";
+
+  if (!isStartingEpisode && !currentEpisode) return null;
 
   return (
     <Sheet open={open} onClose={onClose}>
@@ -55,7 +78,7 @@ export function EpisodeSheet({
         {isStartingEpisode ? (
           <form onSubmit={(e: FormEvent) => { e.preventDefault(); void handleCreateEpisode(); }}>
             <h2 className="mb-2 text-center text-lg font-semibold text-[var(--color-text)]">
-              Start Episode
+              Start episode
             </h2>
             <p className="mb-5 text-center text-sm text-[var(--color-text-secondary)]">
               Track a health concern across multiple days instead of scattered notes.
@@ -109,10 +132,54 @@ export function EpisodeSheet({
                   className="w-full resize-none rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm text-[var(--color-text)] outline-none transition-colors focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20"
                 />
               </div>
+
+              {linkableRecentSymptoms.length > 0 && (
+                <div className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3">
+                  <p className="text-sm font-medium text-[var(--color-text)]">Link recent symptoms</p>
+                  <p className="mt-1 text-xs leading-relaxed text-[var(--color-text-secondary)]">
+                    Optional. Add recent standalone symptoms so the episode starts with useful context.
+                  </p>
+                  <div className="mt-3 flex flex-col gap-2">
+                    {linkableRecentSymptoms.map((symptom) => {
+                      const selected = linkedRecentSymptomIds.includes(symptom.id);
+                      const detail = [
+                        getSymptomSeverityLabel(symptom.severity),
+                        symptom.temperature_c !== null ? formatTemperatureValue(symptom.temperature_c, temperatureUnit) : null,
+                        formatDate(symptom.logged_at),
+                      ].filter(Boolean).join(" · ");
+
+                      return (
+                        <button
+                          key={symptom.id}
+                          type="button"
+                          onClick={() => setLinkedRecentSymptomIds((current) => (
+                            selected
+                              ? current.filter((id) => id !== symptom.id)
+                              : [...current, symptom.id]
+                          ))}
+                          className={cn(
+                            "rounded-[var(--radius-md)] border px-3 py-2 text-left transition-colors",
+                            selected
+                              ? "border-[var(--color-primary)] bg-[var(--color-primary)]/10"
+                              : "border-[var(--color-border)] bg-[var(--color-surface-strong)]",
+                          )}
+                        >
+                          <span className="block text-sm font-medium text-[var(--color-text)]">
+                            {getSymptomTypeLabel(symptom.symptom_type)}
+                          </span>
+                          <span className="mt-0.5 block text-xs text-[var(--color-text-secondary)]">
+                            {detail}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
 
             <Button type="submit" variant="cta" size="lg" className="mt-6 w-full" disabled={!episodeType || isSubmitting}>
-              {isSubmitting ? "Starting..." : "Start Episode"}
+              {isSubmitting ? "Starting..." : "Start episode"}
             </Button>
           </form>
         ) : (
@@ -121,7 +188,7 @@ export function EpisodeSheet({
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <h2 className="text-lg font-semibold text-[var(--color-text)]">
-                    {initialMode === "update" ? "Add Episode Update" : "Manage Episode"}
+                    {initialMode === "update" ? "Add episode update" : "Manage episode"}
                   </h2>
                   <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
                     {initialMode === "update"
@@ -129,8 +196,8 @@ export function EpisodeSheet({
                       : "Keep a clean timeline of what changed and what helped."}
                   </p>
                 </div>
-                <Badge variant={getEpisodeBadgeVariant(activeEpisode.episode_type)}>
-                  {getEpisodeTypeLabel(activeEpisode.episode_type)}
+                <Badge variant={getEpisodeBadgeVariant(currentEpisode.episode_type)}>
+                  {getEpisodeTypeLabel(currentEpisode.episode_type)}
                 </Badge>
               </div>
             </div>
@@ -138,16 +205,20 @@ export function EpisodeSheet({
             <Card>
               <CardContent className="py-4">
                 <p className="text-sm font-medium text-[var(--color-text)]">
-                  Started {formatDate(activeEpisode.started_at)}
+                  Started {formatDate(currentEpisode.started_at)}
                 </p>
-                {activeEpisode.summary && (
+                {currentEpisode.summary && (
                   <p className="mt-2 text-sm leading-relaxed text-[var(--color-text-secondary)]">
-                    {activeEpisode.summary}
+                    {currentEpisode.summary}
                   </p>
                 )}
+                <p className="mt-2 text-xs leading-relaxed text-[var(--color-text-soft)]">
+                  {[`${linkedSymptomCount} linked symptom${linkedSymptomCount === 1 ? "" : "s"}`, latestUpdate ? `Latest: ${latestUpdate.title}` : null].filter(Boolean).join(" · ")}
+                </p>
               </CardContent>
             </Card>
 
+            {!isResolved && (
             <form onSubmit={(e: FormEvent) => { e.preventDefault(); void handleAddEvent(); }} className="flex flex-col gap-4">
               <div>
                 <label className="mb-2 block text-sm font-medium text-[var(--color-text)]">
@@ -220,23 +291,24 @@ export function EpisodeSheet({
                 className="w-full"
                 disabled={(!eventTitle.trim() && !eventNotes.trim()) || !eventType || isAddingEvent}
               >
-                {isAddingEvent ? "Saving..." : "Add Update"}
+                {isAddingEvent ? "Saving..." : "Add update"}
               </Button>
             </form>
+            )}
 
             <div>
               <p className="mb-2 text-sm font-medium text-[var(--color-text)]">Episode timeline</p>
-              {events.length === 0 ? (
+              {visibleEvents.length === 0 ? (
                 <Card>
                   <CardContent className="py-4">
                     <p className="text-sm text-[var(--color-text-secondary)]">
-                      No updates yet. Add symptoms, temperature, hydration, medicine, foods, or progress notes here.
+                      No updates yet. Add symptoms, temperature, fluids, food, medicine, or progress as things change.
                     </p>
                   </CardContent>
                 </Card>
               ) : (
                 <div className="flex flex-col gap-2">
-                  {events.map((event) => (
+                  {visibleEvents.map((event) => (
                     <Card key={event.id}>
                       <CardContent className="py-4">
                         <div className="flex items-start justify-between gap-3">
@@ -259,10 +331,25 @@ export function EpisodeSheet({
               )}
             </div>
 
+            {isResolved ? (
+              <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
+                <p className="text-sm font-medium text-[var(--color-text)]">
+                  Resolved {currentEpisode.ended_at ? formatDate(currentEpisode.ended_at) : ""}
+                </p>
+                <p className="mt-1 text-xs text-[var(--color-text-secondary)]">
+                  Resolved episodes stay read-only here so the timeline remains clear.
+                </p>
+                {currentEpisode.outcome && (
+                  <p className="mt-3 text-sm leading-relaxed text-[var(--color-text-secondary)]">
+                    {currentEpisode.outcome}
+                  </p>
+                )}
+              </div>
+            ) : (
             <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
               <p className="text-sm font-medium text-[var(--color-text)]">Resolve episode</p>
               <p className="mt-1 text-xs text-[var(--color-text-secondary)]">
-                Add the outcome when things settle down so the story is complete.
+                Add what changed so the story is complete for later.
               </p>
 
               <div className="mt-4 grid grid-cols-2 gap-2">
@@ -285,9 +372,10 @@ export function EpisodeSheet({
               </div>
 
               <Button variant="cta" className="mt-4 w-full" onClick={handleResolveEpisode} disabled={isResolving}>
-                {isResolving ? "Resolving..." : "Resolve Episode"}
+                {isResolving ? "Resolving..." : "Resolve episode"}
               </Button>
             </div>
+            )}
           </div>
         )}
       </div>

@@ -1,7 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { buildReportPdfPayload } from "../src/lib/report-pdf.ts";
-import type { Child } from "../src/lib/types.ts";
+import { buildReportData } from "../src/lib/reporting.ts";
+import type { Child, Episode, EpisodeEvent, SymptomEntry } from "../src/lib/types.ts";
 import type { ReportData } from "../src/lib/reporting.ts";
 
 const child: Child = {
@@ -113,4 +114,59 @@ test("buildReportPdfPayload returns branded white-report sections", () => {
   assert.ok(payload.summaryCards.length >= 4);
   assert.equal(payload.charts[0]?.title, "Daily stool output");
   assert.ok(payload.charts.some((chart) => chart.kind === "bar"));
+});
+
+test("report data links symptom context and de-duplicates generated episode symptom events", () => {
+  const episode: Episode = {
+    id: "episode-1",
+    child_id: child.id,
+    episode_type: "fever_illness",
+    status: "active",
+    started_at: "2026-04-12T08:30:00",
+    ended_at: null,
+    summary: "Fever started overnight",
+    outcome: null,
+    created_at: "2026-04-12T08:30:00",
+    updated_at: "2026-04-12T08:30:00",
+  };
+  const symptom: SymptomEntry = {
+    id: "symptom-1",
+    child_id: child.id,
+    episode_id: episode.id,
+    symptom_type: "fever",
+    severity: "moderate",
+    temperature_c: 38.2,
+    temperature_method: "rectal",
+    logged_at: "2026-04-12T09:00:00",
+    notes: "Warm after nap",
+    created_at: "2026-04-12T09:00:00",
+    updated_at: "2026-04-12T09:00:00",
+  };
+  const generatedEvent: EpisodeEvent = {
+    id: "event-1",
+    episode_id: episode.id,
+    child_id: child.id,
+    event_type: "symptom",
+    title: "Fever · Moderate · 38.2 °C",
+    notes: "Warm after nap",
+    logged_at: symptom.logged_at,
+    created_at: symptom.logged_at,
+    source_kind: "symptom",
+    source_id: symptom.id,
+  };
+
+  const data = buildReportData({
+    logs: [],
+    feedingLogs: [],
+    growthLogs: [],
+    episodes: [episode],
+    episodeEvents: [generatedEvent],
+    symptomLogs: [symptom],
+    milestoneLogs: [],
+  }, "2026-04-12", "2026-04-12");
+
+  assert.deepEqual(data.timeline.map((row) => row.eventType), ["Symptom", "Episode"]);
+  assert.match(data.timeline[0]?.details ?? "", /Rectal/);
+  assert.match(data.timeline[0]?.details ?? "", /In Fever \/ illness/);
+  assert.equal(data.contextSections.find((section) => section.title === "Episode Context")?.rows[0]?.detail?.includes("1 linked symptom"), true);
 });

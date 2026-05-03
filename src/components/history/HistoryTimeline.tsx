@@ -6,7 +6,7 @@ import { getEpisodeEventTypeLabel, getEpisodeTypeLabel } from "../../lib/episode
 import { getFeedingEntryDetailParts, getFeedingEntryPrimaryLabel, getFeedingEntrySecondaryText } from "../../lib/feeding";
 import { getMilestoneTypeLabel } from "../../lib/milestone-constants";
 import { loadPhoto } from "../../lib/photos";
-import { getSymptomSeverityLabel, getSymptomTypeLabel } from "../../lib/symptom-constants";
+import { getSymptomSeverityLabel, getSymptomTypeLabel, getTemperatureMethodLabel } from "../../lib/symptom-constants";
 import { cn } from "../../lib/cn";
 import {
   formatHistoryDateTime,
@@ -411,18 +411,19 @@ function SleepItem({ entry, onTap }: { entry: SleepEntry; onTap: () => void }) {
   );
 }
 
-function SymptomItem({ entry, temperatureUnit }: { entry: SymptomEntry; temperatureUnit: TemperatureUnit }) {
+function SymptomItem({ entry, temperatureUnit, onTap }: { entry: SymptomEntry; temperatureUnit: TemperatureUnit; onTap: () => void }) {
   const temperatureLabel = entry.temperature_c !== null
     ? formatTemperatureValue(entry.temperature_c, temperatureUnit)
     : null;
 
   return (
     <BaseItem
+      onTap={onTap}
       tone="symptom"
       icon={<SymptomGlyph />}
       time={formatHistoryTime(entry.logged_at)}
       title={getSymptomTypeLabel(entry.symptom_type)}
-      subtitle={[getSymptomSeverityLabel(entry.severity), temperatureLabel, entry.notes, entry.episode_id ? "linked to episode" : null].filter(Boolean).join(" · ")}
+      subtitle={[getSymptomSeverityLabel(entry.severity), temperatureLabel, getTemperatureMethodLabel(entry.temperature_method), entry.notes, entry.episode_id ? "in episode" : null].filter(Boolean).join(" · ")}
       tagLabel="symptom"
     />
   );
@@ -454,13 +455,14 @@ function MilestoneItem({ entry }: { entry: MilestoneEntry }) {
   );
 }
 
-function EpisodeItem({ entry }: { entry: Episode }) {
+function EpisodeItem({ entry, onTap }: { entry: Episode; onTap: () => void }) {
   const statusText = entry.status === "resolved"
     ? `Resolved ${entry.ended_at ? formatHistoryDateTime(entry.ended_at) : ""}`.trim()
     : "Active episode";
 
   return (
     <BaseItem
+      onTap={onTap}
       tone="episode"
       icon={<EpisodeGlyph />}
       time={formatHistoryTime(entry.started_at)}
@@ -471,9 +473,10 @@ function EpisodeItem({ entry }: { entry: Episode }) {
   );
 }
 
-function EpisodeEventItem({ entry }: { entry: EpisodeEvent }) {
+function EpisodeEventItem({ entry, onTap }: { entry: EpisodeEvent; onTap: () => void }) {
   return (
     <BaseItem
+      onTap={onTap}
       tone="episode"
       icon={<EpisodeGlyph />}
       time={formatHistoryTime(entry.logged_at)}
@@ -494,6 +497,8 @@ function renderEventItem({
   onEditPoop,
   onEditMeal,
   onEditSleep,
+  onEditSymptom,
+  onOpenEpisode,
   unitSystem,
   temperatureUnit,
 }: {
@@ -506,6 +511,8 @@ function renderEventItem({
   onEditPoop: (entry: PoopEntry) => void;
   onEditMeal: (entry: FeedingEntry) => void;
   onEditSleep: (entry: SleepEntry) => void;
+  onEditSymptom: (entry: SymptomEntry) => void;
+  onOpenEpisode: (episodeId: string) => void;
   unitSystem: "metric" | "imperial";
   temperatureUnit: TemperatureUnit;
 }) {
@@ -519,15 +526,15 @@ function renderEventItem({
     case "sleep":
       return <SwipeableItem onDelete={() => onDeleteSleep(event.entry.id)}><SleepItem entry={event.entry} onTap={() => onEditSleep(event.entry)} /></SwipeableItem>;
     case "symptom":
-      return <SymptomItem entry={event.entry} temperatureUnit={temperatureUnit} />;
+      return <SymptomItem entry={event.entry} temperatureUnit={temperatureUnit} onTap={() => onEditSymptom(event.entry)} />;
     case "growth":
       return <GrowthItem entry={event.entry} unitSystem={unitSystem} />;
     case "milestone":
       return <MilestoneItem entry={event.entry} />;
     case "episode":
-      return <EpisodeItem entry={event.entry} />;
+      return <EpisodeItem entry={event.entry} onTap={() => onOpenEpisode(event.entry.id)} />;
     case "episode_event":
-      return <EpisodeEventItem entry={event.entry} />;
+      return <EpisodeEventItem entry={event.entry} onTap={() => onOpenEpisode(event.entry.episode_id)} />;
   }
 }
 
@@ -584,6 +591,8 @@ function DayCard({
   onEditPoop,
   onEditMeal,
   onEditSleep,
+  onEditSymptom,
+  onOpenEpisode,
   unitSystem,
   temperatureUnit,
 }: {
@@ -599,6 +608,8 @@ function DayCard({
   onEditPoop: (entry: PoopEntry) => void;
   onEditMeal: (entry: FeedingEntry) => void;
   onEditSleep: (entry: SleepEntry) => void;
+  onEditSymptom: (entry: SymptomEntry) => void;
+  onOpenEpisode: (episodeId: string) => void;
   unitSystem: "metric" | "imperial";
   temperatureUnit: TemperatureUnit;
 }) {
@@ -657,6 +668,8 @@ function DayCard({
                       onEditPoop,
                       onEditMeal,
                       onEditSleep,
+                      onEditSymptom,
+                      onOpenEpisode,
                       unitSystem,
                       temperatureUnit,
                     })}
@@ -725,6 +738,8 @@ export function HistoryTimeline({
   onEditMeal,
   onEditPoop,
   onEditSleep,
+  onEditSymptom,
+  onOpenEpisode,
   onSetExpandedDay,
   unitSystem,
   temperatureUnit,
@@ -739,6 +754,8 @@ export function HistoryTimeline({
   onEditMeal: (entry: FeedingEntry) => void;
   onEditPoop: (entry: PoopEntry) => void;
   onEditSleep: (entry: SleepEntry) => void;
+  onEditSymptom: (entry: SymptomEntry) => void;
+  onOpenEpisode: (episodeId: string) => void;
   onSetExpandedDay: (date: string | null) => void;
   unitSystem: "metric" | "imperial";
   temperatureUnit: TemperatureUnit;
@@ -760,6 +777,8 @@ export function HistoryTimeline({
           onEditPoop={onEditPoop}
           onEditMeal={onEditMeal}
           onEditSleep={onEditSleep}
+          onEditSymptom={onEditSymptom}
+          onOpenEpisode={onOpenEpisode}
           unitSystem={unitSystem}
           temperatureUnit={temperatureUnit}
         />

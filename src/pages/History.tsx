@@ -8,6 +8,8 @@ import { EditPoopSheet } from "../components/logging/EditPoopSheet";
 import { EditMealSheet } from "../components/logging/EditMealSheet";
 import { EditDiaperSheet } from "../components/logging/EditDiaperSheet";
 import { EditSleepSheet } from "../components/sleep/EditSleepSheet";
+import { EpisodeSheet } from "../components/episodes/EpisodeSheet";
+import { SymptomSheet } from "../components/symptoms/SymptomSheet";
 import { HistoryTimeline, HistoryTodayOverview } from "../components/history/HistoryTimeline";
 import { cn } from "../lib/cn";
 import {
@@ -19,9 +21,11 @@ import {
 } from "../lib/history-timeline";
 import type {
   DiaperEntry,
+  Episode,
   FeedingEntry,
   PoopEntry,
   SleepEntry,
+  SymptomEntry,
 } from "../lib/types";
 
 function HistoryRangeSelector({
@@ -63,7 +67,12 @@ export function History() {
   const [editingPoop, setEditingPoop] = useState<PoopEntry | null>(null);
   const [editingMeal, setEditingMeal] = useState<FeedingEntry | null>(null);
   const [editingSleep, setEditingSleep] = useState<SleepEntry | null>(null);
+  const [editingSymptom, setEditingSymptom] = useState<SymptomEntry | null>(null);
+  const [selectedEpisode, setSelectedEpisode] = useState<Episode | null>(null);
   const {
+    episodes,
+    episodeEvents,
+    symptomLogs,
     grouped,
     hasAnyLogs,
     isLoading,
@@ -83,10 +92,22 @@ export function History() {
   const overviewTitle = searchDate && searchDate !== today
     ? `${formatHistoryDayHeader(searchDate)} overview`
     : "Today overview";
+  const selectedEpisodeEvents = selectedEpisode
+    ? episodeEvents.filter((event) => event.episode_id === selectedEpisode.id)
+    : [];
 
   useEffect(() => {
     if (searchDate) setExpandedDay(searchDate);
   }, [searchDate]);
+
+  useEffect(() => {
+    setEditingDiaper(null);
+    setEditingPoop(null);
+    setEditingMeal(null);
+    setEditingSleep(null);
+    setEditingSymptom(null);
+    setSelectedEpisode(null);
+  }, [activeChild?.id]);
 
   if (!activeChild) return null;
 
@@ -168,6 +189,11 @@ export function History() {
           onEditPoop={setEditingPoop}
           onEditMeal={setEditingMeal}
           onEditSleep={setEditingSleep}
+          onEditSymptom={setEditingSymptom}
+          onOpenEpisode={(episodeId) => {
+            const episode = episodes.find((item) => item.id === episodeId) ?? null;
+            setSelectedEpisode(episode);
+          }}
           onSetExpandedDay={setExpandedDay}
           unitSystem={unitSystem}
           temperatureUnit={temperatureUnit}
@@ -212,6 +238,34 @@ export function History() {
           onClose={() => setEditingSleep(null)}
           onSaved={() => { void refreshHistory(); }}
           onDeleted={() => { void refreshHistory(); }}
+        />
+      )}
+      {editingSymptom && (
+        <SymptomSheet
+          key={editingSymptom.id}
+          entry={editingSymptom}
+          open={!!editingSymptom}
+          onClose={() => setEditingSymptom(null)}
+          childId={activeChild.id}
+          childName={activeChild.name}
+          childDateOfBirth={activeChild.date_of_birth}
+          episodeChoices={episodes}
+          recentSymptoms={symptomLogs}
+          onLogged={() => { void refreshHistory(); }}
+          onDeleted={() => { setEditingSymptom(null); void refreshHistory(); }}
+        />
+      )}
+      {selectedEpisode && (
+        <EpisodeSheet
+          key={selectedEpisode.id}
+          open={!!selectedEpisode}
+          onClose={() => setSelectedEpisode(null)}
+          childId={activeChild.id}
+          activeEpisode={selectedEpisode}
+          events={selectedEpisodeEvents}
+          recentSymptoms={symptomLogs}
+          initialMode="default"
+          onUpdated={() => { void refreshHistory(); }}
         />
       )}
     </div>

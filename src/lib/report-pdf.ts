@@ -133,6 +133,10 @@ function buildSummaryCards(data: ReportData): ReportPdfSummaryCard[] {
   ].filter(Boolean);
 
   const latestMilestone = data.milestoneLogs[0] ?? null;
+  const severeSymptomCount = data.symptomLogs.filter((log) => log.severity === "severe").length;
+  const linkedSymptomCount = data.activeEpisodeGroup
+    ? data.symptomLogs.filter((log) => log.episode_id === data.activeEpisodeGroup?.episode.id).length
+    : 0;
   const symptomTone = data.symptomLogs.some((log) => log.severity === "severe")
     ? "alert"
     : data.activeEpisodeGroup
@@ -158,9 +162,12 @@ function buildSummaryCards(data: ReportData): ReportPdfSummaryCard[] {
         ? getEpisodeTypeLabel(data.activeEpisodeGroup.episode.episode_type)
         : `${data.symptomLogs.length} symptom${data.symptomLogs.length === 1 ? "" : "s"}`,
       detail: data.activeEpisodeGroup
-        ? `${data.activeEpisodeGroup.events.length} episode update${data.activeEpisodeGroup.events.length === 1 ? "" : "s"} in range`
+        ? [
+            `${linkedSymptomCount} linked symptom${linkedSymptomCount === 1 ? "" : "s"}`,
+            `${data.activeEpisodeGroup.events.length} episode update${data.activeEpisodeGroup.events.length === 1 ? "" : "s"} in range`,
+          ].join(" · ")
         : data.symptomLogs.length > 0
-          ? "Review symptom details on the next page"
+          ? `${severeSymptomCount} severe · ${data.episodeGroups.length} episode${data.episodeGroups.length === 1 ? "" : "s"}`
           : "No symptom or episode activity logged",
       tone: symptomTone,
     },
