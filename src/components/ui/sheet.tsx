@@ -9,6 +9,8 @@ export interface SheetVisibilityProps {
   onClose: () => void;
 }
 
+const SHEET_MAX_HEIGHT = "min(78dvh, calc(100dvh - var(--safe-area-top) - 104px))";
+
 interface SheetProps extends SheetVisibilityProps {
   children: ReactNode;
   className?: string;
@@ -84,9 +86,13 @@ function SheetContent({
 
     if (lockCount === 0) {
       body.dataset.sheetBodyOverflow = body.style.overflow;
+      body.dataset.sheetBodyOverscrollBehavior = body.style.overscrollBehavior;
       html.dataset.sheetHtmlOverflow = html.style.overflow;
+      html.dataset.sheetHtmlOverscrollBehavior = html.style.overscrollBehavior;
       body.style.overflow = "hidden";
+      body.style.overscrollBehavior = "none";
       html.style.overflow = "hidden";
+      html.style.overscrollBehavior = "none";
 
       if (scrollRoot instanceof HTMLElement) {
         scrollRoot.dataset.sheetOverflow = scrollRoot.style.overflow;
@@ -102,9 +108,13 @@ function SheetContent({
 
       if (nextLockCount === 0) {
         body.style.overflow = body.dataset.sheetBodyOverflow ?? "";
+        body.style.overscrollBehavior = body.dataset.sheetBodyOverscrollBehavior ?? "";
         html.style.overflow = html.dataset.sheetHtmlOverflow ?? "";
+        html.style.overscrollBehavior = html.dataset.sheetHtmlOverscrollBehavior ?? "";
         delete body.dataset.sheetBodyOverflow;
+        delete body.dataset.sheetBodyOverscrollBehavior;
         delete html.dataset.sheetHtmlOverflow;
+        delete html.dataset.sheetHtmlOverscrollBehavior;
 
         if (scrollRoot instanceof HTMLElement) {
           scrollRoot.style.overflow = scrollRoot.dataset.sheetOverflow ?? "";
@@ -127,6 +137,7 @@ function SheetContent({
           "fixed inset-0 z-40",
           effectiveTone === "night" ? "bg-[#020617]/75" : "bg-black/40",
         )}
+        data-sheet-root="true"
         style={{ opacity: backdropOpacity }}
         onClick={onClose}
       />
@@ -143,11 +154,12 @@ function SheetContent({
           "fixed bottom-0 left-0 right-0 z-50 rounded-t-[var(--radius-lg)] shadow-[var(--shadow-lg)] transform-gpu will-change-transform",
           className,
         )}
+        data-sheet-root="true"
       >
         <motion.div
-          style={{ y: dragY }}
+          style={{ y: dragY, maxHeight: SHEET_MAX_HEIGHT }}
           className={cn(
-            "max-h-[85vh] flex flex-col rounded-t-[var(--radius-lg)]",
+            "flex flex-col rounded-t-[var(--radius-lg)]",
             effectiveTone === "night"
               ? "border border-slate-700/70 bg-[#0f172a] text-slate-100"
               : "border border-[var(--color-border)] bg-[var(--color-surface-strong)]",
@@ -170,7 +182,11 @@ function SheetContent({
             <div className={cn("w-10 h-1 rounded-full", effectiveTone === "night" ? "bg-slate-500" : "bg-[var(--color-muted)]")} />
           </motion.div>
           {/* Scrollable content */}
-          <div className="flex-1 overflow-y-auto overscroll-contain min-h-0">
+          <div
+            className="min-h-0 flex-1 overflow-y-auto overscroll-none"
+            data-no-page-swipe="true"
+            style={{ WebkitOverflowScrolling: "touch" }}
+          >
             {children}
           </div>
         </motion.div>

@@ -10,6 +10,7 @@ import { NormalRangeIntro } from "../src/components/onboarding/NormalRangeIntro.
 import { SleepRecentHistorySection } from "../src/components/sleep/SleepRecentHistorySection.tsx";
 import { MilestoneRecentActivitySection } from "../src/components/milestones/MilestoneRecentActivitySection.tsx";
 import { GuidanceHubView } from "../src/pages/Guidance.tsx";
+import { isSheetGestureLocked } from "../src/lib/sheet-gesture-lock.ts";
 import { formatLocalDateKey } from "../src/lib/utils.ts";
 import type { Child } from "../src/lib/types.ts";
 
@@ -105,6 +106,22 @@ test("CompactChildNav supports child switching and optional back navigation", ()
   assert.ok(screen.getByRole("button", { name: "Notifications" }));
   assert.equal(screen.queryByText("5.2 kg"), null);
   assert.deepEqual(calls, ["back", "child-2"]);
+});
+
+test("AppShell page gestures are locked while a sheet is open", () => {
+  const previousLockCount = document.body.dataset.sheetLockCount;
+  delete document.body.dataset.sheetLockCount;
+
+  assert.equal(isSheetGestureLocked(), false);
+
+  document.body.dataset.sheetLockCount = "1";
+  assert.equal(isSheetGestureLocked(), true);
+
+  if (previousLockCount === undefined) {
+    delete document.body.dataset.sheetLockCount;
+  } else {
+    document.body.dataset.sheetLockCount = previousLockCount;
+  }
 });
 
 test("NormalRangeIntro loads the normal-range copy and finishes onboarding", async () => {

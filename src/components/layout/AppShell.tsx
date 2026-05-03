@@ -6,6 +6,7 @@ import { useEliminationPreference } from "../../hooks/useEliminationPreference";
 import { Header } from "./Header";
 import { BottomNav } from "./BottomNav";
 import { getAgeInMonthsFromDob } from "../../lib/utils";
+import { isSheetGestureLocked } from "../../lib/sheet-gesture-lock";
 
 const SWIPE_MIN_DISTANCE = 72;
 const SWIPE_DIRECTION_LOCK_RATIO = 1.2;
@@ -22,6 +23,7 @@ const INTERACTIVE_SELECTOR = [
   "[role='button']",
   "[role='link']",
   "[role='slider']",
+  "[data-sheet-root='true']",
   "[data-no-page-swipe='true']",
 ].join(", ");
 
@@ -184,6 +186,7 @@ export function AppShell() {
   };
 
   const handlePointerDown = (event: React.PointerEvent<HTMLElement>) => {
+    if (isSheetGestureLocked()) return;
     if (!canSwipeBetweenBottomRoutes || event.pointerType === "mouse" || pendingSwipePath) return;
 
     const target = event.target;
@@ -292,6 +295,7 @@ export function AppShell() {
   };
 
   const handleTouchStart = (event: React.TouchEvent<HTMLElement>) => {
+    if (isSheetGestureLocked()) return;
     if (!canPullToRefresh || pendingSwipePath) return;
 
     const target = event.target;
