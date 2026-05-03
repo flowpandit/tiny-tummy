@@ -1,6 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { getBreastfeedingNextSideReason, getSuggestedBreastStartSide } from "../src/lib/breastfeeding.ts";
+import {
+  formatActiveBreastfeedingInsightDetail,
+  getBreastfeedingNextSideReason,
+  getSuggestedBreastStartSide,
+} from "../src/lib/breastfeeding.ts";
 
 test("breastfeeding suggestion starts the next feed on the last used side", () => {
   assert.equal(getSuggestedBreastStartSide("left"), "left");
@@ -24,4 +28,9 @@ test("breastfeeding next side reason falls back while timing a side", () => {
     getBreastfeedingNextSideReason("right", "right"),
     "Tiny Tummy will remember the last side after you save a session.",
   );
+});
+
+test("active breastfeeding insight detail shows timer and side", () => {
+  assert.equal(formatActiveBreastfeedingInsightDetail(93000, "right"), "1m 33s · Right side");
+  assert.equal(formatActiveBreastfeedingInsightDetail(12 * 60000, "left"), "12m · Left side");
 });

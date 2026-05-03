@@ -34,6 +34,26 @@ export function formatBreastfeedingSummary(totalMs: number): string {
   return `${minutes}m ${seconds}s`;
 }
 
+export function formatBreastfeedingInsightElapsed(totalMs: number): string {
+  const totalMinutes = Math.max(0, Math.floor(totalMs / 60000));
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+
+  if (hours === 0) {
+    return `${totalMinutes} min`;
+  }
+
+  if (minutes === 0) {
+    return `${hours} hr`;
+  }
+
+  return `${hours} hr ${minutes} min`;
+}
+
+export function formatActiveBreastfeedingInsightDetail(totalMs: number, activeSide: BreastTimerSide): string {
+  return `${formatBreastfeedingSummary(totalMs)} · ${activeSide === "left" ? "Left" : "Right"} side`;
+}
+
 export function getSuggestedBreastStartSide(lastUsedSide: BreastSide | null): BreastTimerSide | null {
   if (lastUsedSide === "left" || lastUsedSide === "right") return lastUsedSide;
   return null;

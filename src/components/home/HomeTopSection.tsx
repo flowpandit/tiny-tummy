@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { HomeActionSleepIcon, PoopIcon } from "../ui/icons";
+import { HomeActionBottleIcon, HomeActionSleepIcon, PoopIcon } from "../ui/icons";
 import { type HomeInsightCard, type HomeStatusMessage } from "../../lib/home-insights";
 
 interface HomeTopSectionProps {
@@ -21,6 +21,10 @@ function InsightIcon({ accent }: { accent: HomeInsightCard["accent"] }) {
         <path d="M12 3.5c-1.79 2.34-5.5 6.63-5.5 10.09A5.5 5.5 0 0 0 12 19.09a5.5 5.5 0 0 0 5.5-5.5C17.5 10.13 13.79 5.84 12 3.5Z" stroke="currentColor" strokeWidth="1.8" />
       </svg>
     );
+  }
+
+  if (accent === "feed") {
+    return <HomeActionBottleIcon className="h-4 w-4 text-[var(--color-home-action-feed-icon)] md:h-5 md:w-5" />;
   }
 
   return <HomeActionSleepIcon className="h-4 w-4 text-[var(--color-home-sleep-icon)] md:h-5 md:w-5" />;
@@ -56,6 +60,14 @@ function insightAccentStyles(accent: HomeInsightCard["accent"]) {
       iconSurface: "var(--color-home-hydration-surface)",
       labelClassName: "text-[var(--color-home-hydration-label)]",
       valueClassName: "text-[var(--color-home-hydration-value)]",
+    };
+  }
+
+  if (accent === "feed") {
+    return {
+      iconSurface: "var(--color-home-hydration-surface)",
+      labelClassName: "text-[var(--color-home-action-feed-text)]",
+      valueClassName: "text-[var(--color-home-action-feed-icon)]",
     };
   }
 
@@ -102,7 +114,11 @@ export function HomeTopSection({
   onInsightSelect,
   onInsightAction,
 }: HomeTopSectionProps) {
-  const insightsGridClassName = insights.length >= 3 ? "md:grid-cols-3" : "md:grid-cols-2";
+  const usesWrappedGrid = insights.length >= 4;
+  const insightsGridClassName = usesWrappedGrid ? "md:grid-cols-2 xl:grid-cols-4" : insights.length >= 3 ? "md:grid-cols-3" : "md:grid-cols-2";
+  const insightItemClassName = usesWrappedGrid
+    ? "border-b border-[var(--color-home-divider)] py-2 first:pt-0 last:border-b-0 last:pb-0 md:border-b-0 md:py-0"
+    : "border-b border-[var(--color-home-divider)] py-2 first:pt-0 last:border-b-0 last:pb-0 md:border-b-0 md:border-r md:py-0 md:pr-6 md:last:border-r-0 md:last:pr-0";
 
   return (
     <section className="relative px-4 pt-1 md:px-10 md:pt-0">
@@ -162,7 +178,7 @@ export function HomeTopSection({
               const hasAction = Boolean(insight.actionLabel && onInsightAction);
 
               return (
-                <div key={insight.id} className="border-b border-[var(--color-home-divider)] py-2 first:pt-0 last:border-b-0 last:pb-0 md:border-b-0 md:border-r md:py-0 md:pr-6 md:last:border-r-0 md:last:pr-0">
+                <div key={insight.id} className={insightItemClassName}>
                   <div className="flex min-w-0 items-center gap-2">
                     <button
                       type="button"

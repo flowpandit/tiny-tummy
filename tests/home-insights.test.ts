@@ -1,6 +1,12 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { buildActiveSleepInsight, buildHomeAssistantModel, elevateActiveSleepInsight } from "../src/lib/home-insights.ts";
+import {
+  buildActiveBreastfeedingInsight,
+  buildActiveSleepInsight,
+  buildHomeAssistantModel,
+  elevateActiveFeedInsight,
+  elevateActiveSleepInsight,
+} from "../src/lib/home-insights.ts";
 import type { ChildDailySummary } from "../src/lib/child-summary.ts";
 import { FEED_PREDICTION_FALLBACK } from "../src/lib/feed-insights.ts";
 import type { Child, FeedingEntry, SleepEntry } from "../src/lib/types.ts";
@@ -45,7 +51,7 @@ test("home insights can omit hydration for children using poop tracking", () => 
     now: new Date("2026-05-03T10:00:00.000Z"),
   });
 
-  assert.deepEqual(model.insights.map((insight) => insight.id), ["poop", "sleep"]);
+  assert.deepEqual(model.insights.map((insight) => insight.id), ["poop", "feed", "sleep"]);
   assert.notEqual(model.recommendation.accent, "hydration");
 });
 
@@ -62,7 +68,69 @@ test("home insights include hydration when diaper tracking is active", () => {
     now: new Date("2026-05-03T10:00:00.000Z"),
   });
 
-  assert.deepEqual(model.insights.map((insight) => insight.id), ["poop", "hydration", "sleep"]);
+  assert.deepEqual(model.insights.map((insight) => insight.id), ["poop", "hydration", "feed", "sleep"]);
+});
+
+test("home feed insight falls back when there is not enough feed data", () => {
+  const model = buildHomeAssistantModel({
+    child,
+    summary,
+    poopLogs: [],
+    diaperLogs: [],
+    feedingLogs: [],
+    sleepLogs: [],
+    alerts: [],
+    includeHydration: false,
+    now: new Date("2026-05-03T10:00:00.000Z"),
+  });
+
+  const feedInsight = model.insights.find((insight) => insight.id === "feed");
+
+  assert.equal(feedInsight?.value, "Log feeds to start predicting feeding times");
+});
+
+test("home feed insight uses the unified feed prediction", () => {
+  const recentBottle = createFeed({
+    id: "bottle-1",
+    logged_at: new Date(Date.now() - (60 * 60 * 1000)).toISOString(),
+    food_type: "bottle",
+    amount_ml: 110,
+    bottle_content: "breast_milk",
+  });
+
+  const model = buildHomeAssistantModel({
+    child,
+    summary,
+    poopLogs: [],
+    diaperLogs: [],
+    feedingLogs: [recentBottle],
+    sleepLogs: [],
+    alerts: [],
+    includeHydration: false,
+    now: new Date(),
+  });
+
+  const feedInsight = model.insights.find((insight) => insight.id === "feed");
+
+  assert.equal(feedInsight?.value, "Next feed");
+  assert.match(feedInsight?.detail ?? "", /Usually feeds around this time/);
+});
+
+test("active breastfeeding insight replaces the next feed insight", () => {
+  const activeFeed = buildActiveBreastfeedingInsight({
+    childName: "Mira",
+    activeSide: "left",
+    elapsedMs: 12 * 60 * 1000,
+  });
+  const elevated = elevateActiveFeedInsight([
+    { id: "poop", label: "Poop", value: "1 today", detail: "Keep an eye on it", accent: "poop" },
+    { id: "feed", label: "Next feed", value: "Next feed", detail: "In ~25m", accent: "feed" },
+    { id: "sleep", label: "Next sleep", value: "Next sleep", detail: "In ~2h", accent: "sleep" },
+  ], activeFeed);
+
+  assert.equal(activeFeed.value, "Mira is feeding");
+  assert.equal(activeFeed.detail, "12 min · Left side");
+  assert.deepEqual(elevated.map((insight) => insight.id), ["feed-active", "poop", "sleep"]);
 });
 
 test("active sleep insight elevates sleep with live timer copy", () => {

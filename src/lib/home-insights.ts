@@ -5,6 +5,7 @@ import { BITSS_TYPES } from "./constants";
 import { formatLocalDateKey, getAgeLabelFromDob, isOnLocalDay, timeSince } from "./utils";
 import { formatSleepDuration, getClassifiedSleepLogs, getDurationMinutes, getSleepPrediction, getWakeBaseline } from "./sleep-insights";
 import { formatSleepTimerInsightElapsed } from "./sleep-timer";
+import { type BreastTimerSide, formatBreastfeedingInsightElapsed } from "./breastfeeding";
 import type {
   Alert,
   Child,
@@ -35,7 +36,7 @@ export interface HomeInsightCard {
   label: string;
   value: string;
   detail: string;
-  accent: "poop" | "hydration" | "sleep";
+  accent: "poop" | "hydration" | "feed" | "sleep";
   actionLabel?: string;
   actionAriaLabel?: string;
   actionDisabled?: boolean;
@@ -260,6 +261,43 @@ function buildSleepInsight(child: Child, sleepLogs: SleepEntry[]): HomeInsightCa
   };
 }
 
+function buildFeedInsight(child: Child, feedLogs: FeedingEntry[]): HomeInsightCard {
+  const feedTimeline = getUnifiedFeedTimeline(feedLogs);
+  const feedPrediction = getFeedPrediction(feedTimeline, getFeedBaseline(child.date_of_birth, child.feeding_type));
+
+  if (feedPrediction) {
+    return {
+      id: "feed",
+      label: "Next feed",
+      value: "Next feed",
+      detail: `${formatSleepWindow(feedPrediction.predictedAt)} · Usually feeds around this time`,
+      accent: "feed",
+    };
+  }
+
+  return {
+    id: "feed",
+    label: "Feed",
+    value: "Log feeds to start predicting feeding times",
+    detail: "Breast, bottle, and meals all count.",
+    accent: "feed",
+  };
+}
+
+export function buildActiveBreastfeedingInsight(input: {
+  childName: string;
+  activeSide: BreastTimerSide;
+  elapsedMs: number;
+}): HomeInsightCard {
+  return {
+    id: "feed-active",
+    label: "Active feed",
+    value: `${input.childName} is feeding`,
+    detail: `${formatBreastfeedingInsightElapsed(input.elapsedMs)} · ${input.activeSide === "left" ? "Left" : "Right"} side`,
+    accent: "feed",
+  };
+}
+
 export function buildActiveSleepInsight(input: {
   childName: string;
   startedAt: string;
@@ -281,6 +319,11 @@ export function buildActiveSleepInsight(input: {
 export function elevateActiveSleepInsight(insights: HomeInsightCard[], activeSleepInsight: HomeInsightCard | null): HomeInsightCard[] {
   if (!activeSleepInsight) return insights;
   return [activeSleepInsight, ...insights.filter((insight) => insight.accent !== "sleep")];
+}
+
+export function elevateActiveFeedInsight(insights: HomeInsightCard[], activeFeedInsight: HomeInsightCard | null): HomeInsightCard[] {
+  if (!activeFeedInsight) return insights;
+  return [activeFeedInsight, ...insights.filter((insight) => insight.accent !== "feed")];
 }
 
 function buildRecommendation(input: {
@@ -500,6 +543,7 @@ export function buildHomeAssistantModel(input: {
     insights: [
       buildPoopInsight(input.summary, input.poopLogs, input.diaperLogs, dayKey),
       includeHydration ? buildHydrationInsight(input.summary) : null,
+      buildFeedInsight(input.child, input.feedingLogs),
       buildSleepInsight(input.child, classifiedSleepLogs),
     ].filter((insight): insight is HomeInsightCard => insight !== null),
     recommendation: buildRecommendation({

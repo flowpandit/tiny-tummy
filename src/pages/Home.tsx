@@ -6,6 +6,7 @@ import { useDiaperLogs } from "../hooks/useDiaperLogs";
 import { useFeedingLogs } from "../hooks/useFeedingLogs";
 import { useSleepLogs } from "../hooks/useSleepLogs";
 import { useSleepQuickTimer } from "../hooks/useSleepQuickTimer";
+import { useBreastfeedingSessionPreview } from "../hooks/useBreastfeedingSessionPreview";
 import { useAlerts } from "../hooks/useAlerts";
 import { useEpisodes } from "../hooks/useEpisodes";
 import { useSymptoms } from "../hooks/useSymptoms";
@@ -15,8 +16,10 @@ import { useHomePageState } from "../hooks/useHomePageState";
 import { useHomeEffects } from "../hooks/useHomeEffects";
 import { buildChildDailySummary } from "../lib/child-summary";
 import {
+  buildActiveBreastfeedingInsight,
   buildActiveSleepInsight,
   buildHomeAssistantModel,
+  elevateActiveFeedInsight,
   elevateActiveSleepInsight,
   type HomeInsightCard,
   type HomeTimelineItem,
@@ -154,6 +157,10 @@ export function Home() {
     onError: showError,
     onSuccess: showSuccess,
   });
+  const {
+    activeSide: activeBreastfeedingSide,
+    elapsedMs: activeBreastfeedingElapsedMs,
+  } = useBreastfeedingSessionPreview(activeChild, feedingFormOpen);
 
   const selectedEpisode = selectedEpisodeId
     ? activeEpisodes.find((episode) => episode.id === selectedEpisodeId) ?? null
@@ -210,24 +217,53 @@ export function Home() {
     });
   }, [activeChild, alerts, diaperLogs, eliminationExperience.mode, feedingLogs, logs, sleepLogs, summary]);
   const displayedInsights = useMemo(() => {
-    if (!activeChild || !assistantModel || !sleepTimerSession) {
+    if (!activeChild || !assistantModel) {
       return assistantModel?.insights ?? [];
     }
 
-    return elevateActiveSleepInsight(
-      assistantModel.insights,
-      buildActiveSleepInsight({
+    const sleepInsight = sleepTimerSession
+      ? buildActiveSleepInsight({
         childName: activeChild.name,
         startedAt: sleepTimerSession.startedAt,
         elapsedMs: sleepTimerElapsedMs,
         actionDisabled: isSleepTimerActionPending,
-      }),
+      })
+      : null;
+    const feedInsight = activeBreastfeedingSide
+      ? buildActiveBreastfeedingInsight({
+        childName: activeChild.name,
+        activeSide: activeBreastfeedingSide,
+        elapsedMs: activeBreastfeedingElapsedMs,
+      })
+      : null;
+
+    return elevateActiveFeedInsight(
+      elevateActiveSleepInsight(assistantModel.insights, sleepInsight),
+      feedInsight,
     );
-  }, [activeChild, assistantModel, isSleepTimerActionPending, sleepTimerElapsedMs, sleepTimerSession]);
+  }, [
+    activeBreastfeedingElapsedMs,
+    activeBreastfeedingSide,
+    activeChild,
+    assistantModel,
+    isSleepTimerActionPending,
+    sleepTimerElapsedMs,
+    sleepTimerSession,
+  ]);
 
   if (!activeChild || !summary || !assistantModel) return null;
 
   const handleInsightSelect = (insight: HomeInsightCard) => {
+    if (insight.id === "feed-active") {
+      navigate("/breastfeed");
+      return;
+    }
+
+    if (insight.accent === "feed") {
+      navigate("/feed");
+      return;
+    }
+
     if (insight.accent === "sleep") {
       navigate("/sleep");
       return;

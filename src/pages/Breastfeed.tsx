@@ -167,10 +167,13 @@ export function Breastfeed() {
 
       <div className="px-4 md:px-10">
         <BreastfeedHeroMetricsCard
+          activeSide={activeSide}
           className="-mt-36 md:-mt-32"
+          childName={activeChild.name}
           left24h={left24hRing}
           nextFeed={feedPrediction}
           right24h={right24hRing}
+          totalDuration={totalDuration}
           total24h={total24hRing}
         />
       </div>
