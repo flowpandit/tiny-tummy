@@ -2,6 +2,26 @@ import type { SymptomSeverity, SymptomType } from "./types";
 
 export const SYMPTOM_TYPES: { value: SymptomType; label: string; description: string }[] = [
   {
+    value: "fever",
+    label: "Fever",
+    description: "Raised temperature, chills, or feeling unusually hot.",
+  },
+  {
+    value: "cough_congestion",
+    label: "Cough / Congestion",
+    description: "Coughing, runny nose, blocked nose, or noisy breathing.",
+  },
+  {
+    value: "low_appetite",
+    label: "Low Appetite",
+    description: "Less interest in feeds, food, or fluids than usual.",
+  },
+  {
+    value: "low_energy",
+    label: "Low Energy",
+    description: "Sleepier, quieter, clingier, or less playful than usual.",
+  },
+  {
     value: "straining",
     label: "Straining",
     description: "Working hard to poop or looking uncomfortable during a bowel movement.",
@@ -9,17 +29,22 @@ export const SYMPTOM_TYPES: { value: SymptomType; label: string; description: st
   {
     value: "pain",
     label: "Pain",
-    description: "Crying, obvious discomfort, or pain around the tummy or when pooping.",
+    description: "Crying, obvious discomfort, tummy pain, or pain when pooping.",
   },
   {
     value: "rash",
     label: "Rash",
-    description: "New rash or irritation that feels relevant to the current bowel pattern.",
+    description: "New rash, irritation, or skin changes worth tracking.",
   },
   {
     value: "vomiting",
     label: "Vomiting",
     description: "Vomiting or repeated spit-up that feels worth tracking in context.",
+  },
+  {
+    value: "diarrhoea",
+    label: "Diarrhoea",
+    description: "Loose, watery, or unusually frequent stools.",
   },
   {
     value: "blood_concern",
@@ -30,6 +55,11 @@ export const SYMPTOM_TYPES: { value: SymptomType; label: string; description: st
     value: "dehydration_concern",
     label: "Dehydration Concern",
     description: "Worry about low fluids, dry mouth, fewer wet nappies, or lethargy.",
+  },
+  {
+    value: "other",
+    label: "Other",
+    description: "Something else you want to keep in the health timeline.",
   },
 ];
 

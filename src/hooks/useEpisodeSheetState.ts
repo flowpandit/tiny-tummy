@@ -5,8 +5,10 @@ import type { Episode, EpisodeEventType, EpisodeType } from "../lib/types";
 
 function getDefaultEventTitle(eventType: EpisodeEventType): string {
   if (eventType === "symptom") return "Symptom update";
+  if (eventType === "temperature") return "Temperature update";
   if (eventType === "hydration") return "Hydration update";
   if (eventType === "food") return "Food update";
+  if (eventType === "medication") return "Medication update";
   if (eventType === "intervention") return "Intervention update";
   return "Progress update";
 }

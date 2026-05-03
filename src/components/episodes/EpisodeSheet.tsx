@@ -13,6 +13,7 @@ import { formatDate, getCurrentLocalDate } from "../../lib/utils";
 import type { Episode, EpisodeEvent, EpisodeType } from "../../lib/types";
 
 function getEpisodeBadgeVariant(episodeType: EpisodeType) {
+  if (episodeType === "fever_illness" || episodeType === "stomach_bug" || episodeType === "vomiting" || episodeType === "medication_reaction") return "alert";
   if (episodeType === "constipation") return "caution";
   if (episodeType === "diarrhoea") return "alert";
   return "info";
@@ -57,7 +58,7 @@ export function EpisodeSheet({
               Start Episode
             </h2>
             <p className="mb-5 text-center text-sm text-[var(--color-text-secondary)]">
-              Track a problem across multiple days instead of scattered notes.
+              Track a health concern across multiple days instead of scattered notes.
             </p>
 
             <div className="flex flex-col gap-5">
@@ -103,7 +104,7 @@ export function EpisodeSheet({
                   id="episode-summary"
                   value={summary}
                   onChange={(e) => setSummary(e.target.value)}
-                  placeholder="e.g. Hard stools and straining since starting more solids."
+                  placeholder="e.g. Fever started overnight with lower appetite."
                   rows={3}
                   className="w-full resize-none rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm text-[var(--color-text)] outline-none transition-colors focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20"
                 />
@@ -181,7 +182,7 @@ export function EpisodeSheet({
                   type="text"
                   value={eventTitle}
                   onChange={(e) => setEventTitle(e.target.value)}
-                  placeholder="e.g. Tried pears, passed small hard stool, gave extra water"
+                  placeholder="e.g. Temperature lower, gave medicine, drank more fluids"
                   className="h-11 w-full rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 text-sm text-[var(--color-text)] outline-none transition-colors focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20"
                 />
                 <p className="mt-1 text-xs text-[var(--color-text-soft)]">
@@ -229,7 +230,7 @@ export function EpisodeSheet({
                 <Card>
                   <CardContent className="py-4">
                     <p className="text-sm text-[var(--color-text-secondary)]">
-                      No updates yet. Add symptoms, hydration, foods, or progress notes here.
+                      No updates yet. Add symptoms, temperature, hydration, medicine, foods, or progress notes here.
                     </p>
                   </CardContent>
                 </Card>
@@ -277,7 +278,7 @@ export function EpisodeSheet({
                   id="episode-outcome"
                   value={outcome}
                   onChange={(e) => setOutcome(e.target.value)}
-                  placeholder="e.g. Softer stool after pears and extra water."
+                  placeholder="e.g. Fever settled, appetite back, no new symptoms."
                   rows={3}
                   className="w-full resize-none rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-strong)] px-3 py-2 text-sm text-[var(--color-text)] outline-none transition-colors focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20"
                 />

@@ -13,7 +13,7 @@ import { FieldLabel } from "../ui/field";
 import { TimePicker } from "../ui/time-picker";
 import { useToast } from "../ui/toast";
 import { Avatar } from "../child/Avatar";
-import { HomeActionBottleIcon, HomeActionBreastfeedIcon, HomeActionDiaperIcon, PoopIcon } from "../ui/icons";
+import { HomeActionBottleIcon, HomeActionBreastfeedIcon, HomeActionDiaperIcon, HomeActionSymptomIcon, PoopIcon } from "../ui/icons";
 import { CHILD_SEX_OPTIONS, FEEDING_TYPES } from "../../lib/constants";
 import { getAgeLabelFromDob } from "../../lib/utils";
 import {
@@ -28,7 +28,7 @@ import {
   getAllowedEliminationViewPreferences,
   type EliminationViewPreference,
 } from "../../lib/diaper";
-import type { Child, UnitSystem } from "../../lib/types";
+import type { Child, TemperatureUnit, UnitSystem } from "../../lib/types";
 
 const THEME_OPTIONS: { value: "system" | "light" | "dark"; label: string }[] = [
   { value: "system", label: "System" },
@@ -39,6 +39,11 @@ const THEME_OPTIONS: { value: "system" | "light" | "dark"; label: string }[] = [
 const UNIT_SYSTEM_OPTIONS: { value: UnitSystem; label: string }[] = [
   { value: "metric", label: "Metric" },
   { value: "imperial", label: "Imperial" },
+];
+
+const TEMPERATURE_UNIT_OPTIONS: { value: TemperatureUnit; label: string }[] = [
+  { value: "celsius", label: "°C" },
+  { value: "fahrenheit", label: "°F" },
 ];
 
 const ELIMINATION_VIEW_OPTIONS: { value: EliminationViewPreference; label: string }[] = [
@@ -59,7 +64,7 @@ function formatScheduleTime(value: string) {
   return `${displayHour}:${minute.toString().padStart(2, "0")} ${suffix}`;
 }
 
-type SettingsListIcon = "diaper" | "poop" | "feed" | "breastfeed" | "guidance" | "about";
+type SettingsListIcon = "diaper" | "poop" | "feed" | "breastfeed" | "health" | "guidance" | "about";
 
 function SettingsListIcon({ icon }: { icon: SettingsListIcon }) {
   const commonProps = {
@@ -76,6 +81,7 @@ function SettingsListIcon({ icon }: { icon: SettingsListIcon }) {
   if (icon === "poop") return <PoopIcon className="h-5 w-5" />;
   if (icon === "feed") return <HomeActionBottleIcon className="h-5 w-5" />;
   if (icon === "breastfeed") return <HomeActionBreastfeedIcon className="h-5 w-5" />;
+  if (icon === "health") return <HomeActionSymptomIcon className="h-5 w-5" />;
 
   if (icon === "guidance") {
     return (
@@ -340,7 +346,7 @@ export function NotificationSection({ children }: { children: Child[] }) {
 
 export function ThemeSection({ child }: { child: Child | null }) {
   const { mode, setMode, nightModeEnabled, setNightModeEnabled, nightModeStart, nightModeEnd, setNightModeSchedule } = useTheme();
-  const { unitSystem, setUnitSystem } = useUnits();
+  const { unitSystem, temperatureUnit, setUnitSystem, setTemperatureUnit } = useUnits();
   const { preference: eliminationPreference, setPreference } = useEliminationPreference(child);
   const eliminationOptions = ELIMINATION_VIEW_OPTIONS.filter((option) => getAllowedEliminationViewPreferences(child).includes(option.value));
   const eliminationGridClassName = eliminationOptions.length === 2 ? "grid-cols-2" : "grid-cols-3";
@@ -373,6 +379,23 @@ export function ThemeSection({ child }: { child: Child | null }) {
                   value={unitSystem}
                   onChange={(value) => setUnitSystem(value as UnitSystem)}
                   options={UNIT_SYSTEM_OPTIONS}
+                  className="w-full"
+                  gridClassName="grid-cols-2"
+                  size="sm"
+                  variant="settings"
+                />
+              )}
+            />
+          </div>
+
+          <div className="border-t border-[var(--color-border)]">
+            <SettingsControlRow
+              label="Temperature"
+              control={(
+                <SegmentedControl
+                  value={temperatureUnit}
+                  onChange={(value) => setTemperatureUnit(value as TemperatureUnit)}
+                  options={TEMPERATURE_UNIT_OPTIONS}
                   className="w-full"
                   gridClassName="grid-cols-2"
                   size="sm"
@@ -486,6 +509,7 @@ export function RecordsSupportSection() {
   }> = [
     alternateEliminationRow,
     alternateFeedRow,
+    { title: "Health", icon: "health", onClick: () => navigate("/health", { state: { origin: "/settings" } }) },
     { title: "Support & Guidance", icon: "guidance", onClick: () => navigate("/guidance") },
     {
       title: `About Tiny Tummy v${__APP_VERSION__}`,

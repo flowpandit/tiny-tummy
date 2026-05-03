@@ -7,6 +7,7 @@ export async function createSymptomLog(input: {
   episode_id?: string | null;
   symptom_type: string;
   severity: string;
+  temperature_c?: number | null;
   logged_at: string;
   notes?: string | null;
 }): Promise<SymptomEntry> {
@@ -16,14 +17,15 @@ export async function createSymptomLog(input: {
 
   await conn.execute(
     `INSERT INTO symptom_logs (
-      id, child_id, episode_id, symptom_type, severity, logged_at, notes, created_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      id, child_id, episode_id, symptom_type, severity, temperature_c, logged_at, notes, created_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       id,
       input.child_id,
       input.episode_id ?? null,
       input.symptom_type,
       input.severity,
+      input.temperature_c ?? null,
       input.logged_at,
       input.notes ?? null,
       now,
@@ -36,6 +38,7 @@ export async function createSymptomLog(input: {
     episode_id: input.episode_id ?? null,
     symptom_type: input.symptom_type as SymptomEntry["symptom_type"],
     severity: input.severity as SymptomEntry["severity"],
+    temperature_c: input.temperature_c ?? null,
     logged_at: input.logged_at,
     notes: input.notes ?? null,
     created_at: now,

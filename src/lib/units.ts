@@ -1,6 +1,7 @@
-import type { FeedingEntry, GrowthEntry, UnitSystem } from "./types";
+import type { FeedingEntry, GrowthEntry, TemperatureUnit, UnitSystem } from "./types";
 
 export const UNIT_SYSTEM_SETTING_KEY = "unit_system";
+export const TEMPERATURE_UNIT_SETTING_KEY = "temperature_unit";
 
 const ML_PER_FLUID_OUNCE = 29.5735295625;
 const LB_PER_KG = 2.2046226218;
@@ -64,6 +65,14 @@ export function getVolumeUnitLabel(unitSystem: UnitSystem): "ml" | "oz" {
   return unitSystem === "imperial" ? "oz" : "ml";
 }
 
+export function getDefaultTemperatureUnit(unitSystem: UnitSystem): TemperatureUnit {
+  return unitSystem === "imperial" ? "fahrenheit" : "celsius";
+}
+
+export function getTemperatureUnitLabel(temperatureUnit: TemperatureUnit): "°C" | "°F" {
+  return temperatureUnit === "fahrenheit" ? "°F" : "°C";
+}
+
 export function getGrowthUnitLabel(metric: GrowthMetricKey, unitSystem: UnitSystem): "kg" | "cm" | "lb" | "in" {
   if (metric === "weight_kg") {
     return unitSystem === "imperial" ? "lb" : "kg";
@@ -77,6 +86,41 @@ export function volumeMlToDisplay(ml: number, unitSystem: UnitSystem): number {
 
 export function volumeDisplayToMl(value: number, unitSystem: UnitSystem): number {
   return unitSystem === "imperial" ? value * ML_PER_FLUID_OUNCE : value;
+}
+
+export function temperatureCelsiusToDisplay(celsius: number, temperatureUnit: TemperatureUnit): number {
+  return temperatureUnit === "fahrenheit" ? (celsius * 9 / 5) + 32 : celsius;
+}
+
+export function temperatureDisplayToCelsius(value: number, temperatureUnit: TemperatureUnit): number {
+  return temperatureUnit === "fahrenheit" ? (value - 32) * 5 / 9 : value;
+}
+
+export function formatTemperatureValue(
+  celsius: number | null,
+  temperatureUnit: TemperatureUnit,
+  options: {
+    includeUnit?: boolean;
+    maximumFractionDigits?: number;
+    minimumFractionDigits?: number;
+  } = {},
+): string {
+  if (celsius === null) return "—";
+
+  const value = temperatureCelsiusToDisplay(celsius, temperatureUnit);
+  const formatted = formatNumber(value, {
+    maximumFractionDigits: options.maximumFractionDigits ?? 1,
+    minimumFractionDigits: options.minimumFractionDigits ?? 1,
+  });
+
+  return options.includeUnit === false ? formatted : `${formatted} ${getTemperatureUnitLabel(temperatureUnit)}`;
+}
+
+export function parseTemperatureInputToCelsius(input: string, temperatureUnit: TemperatureUnit): number | null {
+  if (!input.trim()) return null;
+  const parsed = Number.parseFloat(input);
+  if (!Number.isFinite(parsed) || parsed <= 0) return null;
+  return Math.round(temperatureDisplayToCelsius(parsed, temperatureUnit) * 10) / 10;
 }
 
 export function formatVolumeValue(

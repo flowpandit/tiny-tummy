@@ -5,6 +5,7 @@ import { DatePicker } from "../ui/date-picker";
 import { TimePicker } from "../ui/time-picker";
 import { Badge } from "../ui/badge";
 import { useToast } from "../ui/toast";
+import { useUnits } from "../../contexts/UnitsContext";
 import { cn } from "../../lib/cn";
 import { useSymptomSheetState } from "../../hooks/useSymptomSheetState";
 import { getEpisodeTypeLabel } from "../../lib/episode-constants";
@@ -14,6 +15,7 @@ import {
   SYMPTOM_SEVERITIES,
   SYMPTOM_TYPES,
 } from "../../lib/symptom-constants";
+import { getTemperatureUnitLabel } from "../../lib/units";
 import { getCurrentLocalDate } from "../../lib/utils";
 import type { Episode } from "../../lib/types";
 
@@ -31,10 +33,12 @@ export function SymptomSheet({
   onLogged,
 }: SymptomSheetProps) {
   const { showError, showSuccess } = useToast();
+  const { temperatureUnit } = useUnits();
   const {
     symptomType, setSymptomType, severity, setSeverity, logDate, setLogDate, logTime, setLogTime,
-    notes, setNotes, linkToEpisode, setLinkToEpisode, isSubmitting, handleSubmit,
-  } = useSymptomSheetState({ open, childId, activeEpisode, onLogged, onClose, onError: showError, onSuccess: showSuccess });
+    temperature, setTemperature, notes, setNotes, linkToEpisode, setLinkToEpisode, isSubmitting, handleSubmit,
+  } = useSymptomSheetState({ open, childId, activeEpisode, temperatureUnit, onLogged, onClose, onError: showError, onSuccess: showSuccess });
+  const temperatureLabel = getTemperatureUnitLabel(temperatureUnit);
 
   return (
     <Sheet open={open} onClose={onClose}>
@@ -43,7 +47,7 @@ export function SymptomSheet({
           Log symptom
         </h2>
         <p className="mb-5 text-center text-sm text-[var(--color-text-secondary)]">
-          Capture symptoms that matter for bowel patterns, reports, and doctor visits.
+          Capture symptoms, severity, and notes for the health timeline.
         </p>
 
         <div className="flex flex-col gap-5">
@@ -103,6 +107,32 @@ export function SymptomSheet({
               <TimePicker value={logTime} onChange={setLogTime} />
             </div>
           </div>
+
+          {symptomType === "fever" && (
+            <div>
+              <label htmlFor="symptom-temperature" className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">
+                Temperature
+              </label>
+              <div className="relative">
+                <input
+                  id="symptom-temperature"
+                  type="number"
+                  inputMode="decimal"
+                  step="0.1"
+                  value={temperature}
+                  onChange={(event) => setTemperature(event.target.value)}
+                  placeholder={temperatureUnit === "fahrenheit" ? "100.4" : "38.0"}
+                  className="h-11 w-full rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 pr-14 text-sm text-[var(--color-text)] outline-none transition-colors focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20"
+                />
+                <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-sm font-semibold text-[var(--color-text-secondary)]">
+                  {temperatureLabel}
+                </span>
+              </div>
+              <p className="mt-1 text-xs text-[var(--color-text-soft)]">
+                Uses your Settings temperature preference.
+              </p>
+            </div>
+          )}
 
           <div>
             <label htmlFor="symptom-notes" className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">

@@ -18,6 +18,7 @@ import { Diaper } from "./pages/Diaper";
 import { Feed } from "./pages/Feed";
 import { Dashboard } from "./pages/Dashboard";
 import { Growth } from "./pages/Growth";
+import { Health } from "./pages/Health";
 import { Sleep } from "./pages/Sleep";
 import { Milestones } from "./pages/Milestones";
 import { Breastfeed } from "./pages/Breastfeed";
@@ -155,6 +156,7 @@ function AppRoutes() {
         <Route path="/history" element={<History />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/growth" element={<Growth />} />
+        <Route path="/health" element={<Health />} />
         <Route path="/sleep" element={<Sleep />} />
         <Route path="/milestones" element={<Milestones />} />
         <Route path="/breastfeed" element={<Breastfeed />} />

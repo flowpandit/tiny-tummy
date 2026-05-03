@@ -4,7 +4,7 @@ import { getEpisodeTypeLabel } from "./episode-constants";
 import { getFeedingEntryDisplayLabel } from "./feeding";
 import { getMilestoneTypeLabel } from "./milestone-constants";
 import { getSymptomSeverityLabel, getSymptomTypeLabel } from "./symptom-constants";
-import { formatGrowthValue, formatVolumeValue, volumeMlToDisplay } from "./units";
+import { formatGrowthValue, formatTemperatureValue, formatVolumeValue, getDefaultTemperatureUnit, volumeMlToDisplay } from "./units";
 import * as db from "./db";
 import type {
   Episode,
@@ -496,7 +496,10 @@ function buildContextSections(input: {
       rows: input.symptomLogs.slice(0, 6).map((log) => ({
         title: getSymptomTypeLabel(log.symptom_type),
         meta: `${getSymptomSeverityLabel(log.severity)} · ${formatDate(log.logged_at)}`,
-        detail: log.notes ?? undefined,
+        detail: [
+          log.temperature_c !== null ? formatTemperatureValue(log.temperature_c, getDefaultTemperatureUnit(input.unitSystem)) : null,
+          log.notes,
+        ].filter(Boolean).join(" • ") || undefined,
       })),
     });
   }
@@ -620,7 +623,11 @@ function buildTimeline(input: {
         sortAt: log.logged_at,
         dateTime: formatDate(log.logged_at),
         eventType: "Symptom",
-        details: `${getSymptomTypeLabel(log.symptom_type)} · ${getSymptomSeverityLabel(log.severity)}`,
+        details: [
+          getSymptomTypeLabel(log.symptom_type),
+          getSymptomSeverityLabel(log.severity),
+          log.temperature_c !== null ? formatTemperatureValue(log.temperature_c, getDefaultTemperatureUnit(input.unitSystem)) : null,
+        ].filter(Boolean).join(" · "),
         note: input.options.includeNotes ? log.notes ?? undefined : undefined,
       });
     }

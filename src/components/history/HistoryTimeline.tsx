@@ -15,7 +15,7 @@ import {
   formatHistoryTime,
   type TimelineEvent,
 } from "../../lib/history-timeline";
-import { formatGrowthSummary as formatGrowthSummaryWithUnits } from "../../lib/units";
+import { formatGrowthSummary as formatGrowthSummaryWithUnits, formatTemperatureValue } from "../../lib/units";
 import { Badge } from "../ui/badge";
 import { MealIcon, NoPoopIcon, PoopIcon } from "../ui/icons";
 import { diaperDirtyIcon, diaperMixedIcon, diaperWetIcon } from "../../assets/icons";
@@ -29,6 +29,7 @@ import type {
   PoopEntry,
   SleepEntry,
   SymptomEntry,
+  TemperatureUnit,
 } from "../../lib/types";
 
 function PhotoThumbnail({ photoPath }: { photoPath: string }) {
@@ -280,8 +281,11 @@ function SleepItem({ entry, onTap }: { entry: SleepEntry; onTap: () => void }) {
   );
 }
 
-function SymptomItem({ entry }: { entry: SymptomEntry }) {
+function SymptomItem({ entry, temperatureUnit }: { entry: SymptomEntry; temperatureUnit: TemperatureUnit }) {
   const symptomTone = { bg: "color-mix(in srgb, var(--color-caution) 18%, transparent)", fg: "var(--color-caution)" };
+  const temperatureLabel = entry.temperature_c !== null
+    ? formatTemperatureValue(entry.temperature_c, temperatureUnit)
+    : null;
 
   return (
     <BaseItem
@@ -292,7 +296,7 @@ function SymptomItem({ entry }: { entry: SymptomEntry }) {
       )}
       time={formatHistoryTime(entry.logged_at)}
       title={getSymptomTypeLabel(entry.symptom_type)}
-      subtitle={[entry.notes, entry.episode_id ? "linked to episode" : null].filter(Boolean).join(" • ")}
+      subtitle={[temperatureLabel, entry.notes, entry.episode_id ? "linked to episode" : null].filter(Boolean).join(" • ")}
       tail={<Badge className="min-h-0 px-2.5 py-[0.33rem] text-[0.74rem]" variant={getSymptomSeverityBadgeVariant(entry.severity)}>{getSymptomSeverityLabel(entry.severity)}</Badge>}
     />
   );
@@ -386,6 +390,7 @@ function DayCard({
   onEditMeal,
   onEditSleep,
   unitSystem,
+  temperatureUnit,
 }: {
   date: string;
   events: TimelineEvent[];
@@ -400,6 +405,7 @@ function DayCard({
   onEditMeal: (entry: FeedingEntry) => void;
   onEditSleep: (entry: SleepEntry) => void;
   unitSystem: "metric" | "imperial";
+  temperatureUnit: TemperatureUnit;
 }) {
   const diaperCount = events.filter((event) => event.kind === "diaper").length;
   const poopCount = events.filter((event) => event.kind === "poop" && event.entry.is_no_poop === 0).length;
@@ -467,7 +473,7 @@ function DayCard({
                   case "sleep":
                     return <div key={`sleep-wrap-${event.entry.id}`} className="border-t border-[var(--color-border)]/45 first:border-t-0"><SwipeableItem onDelete={() => onDeleteSleep(event.entry.id)}><SleepItem entry={event.entry} onTap={() => onEditSleep(event.entry)} /></SwipeableItem></div>;
                   case "symptom":
-                    return <div key={`symptom-${event.entry.id}`} className="border-t border-[var(--color-border)]/45 first:border-t-0"><SymptomItem entry={event.entry} /></div>;
+                    return <div key={`symptom-${event.entry.id}`} className="border-t border-[var(--color-border)]/45 first:border-t-0"><SymptomItem entry={event.entry} temperatureUnit={temperatureUnit} /></div>;
                   case "growth":
                     return <div key={`growth-${event.entry.id}`} className="border-t border-[var(--color-border)]/45 first:border-t-0"><GrowthItem entry={event.entry} unitSystem={unitSystem} /></div>;
                   case "milestone":
@@ -499,6 +505,7 @@ export function HistoryTimeline({
   onEditSleep,
   onSetExpandedDay,
   unitSystem,
+  temperatureUnit,
 }: {
   displayDays: Array<[string, TimelineEvent[]]>;
   expandedDay: string | null;
@@ -512,6 +519,7 @@ export function HistoryTimeline({
   onEditSleep: (entry: SleepEntry) => void;
   onSetExpandedDay: (date: string | null) => void;
   unitSystem: "metric" | "imperial";
+  temperatureUnit: TemperatureUnit;
 }) {
   return (
     <div className="flex flex-col gap-2">
@@ -531,6 +539,7 @@ export function HistoryTimeline({
           onEditMeal={onEditMeal}
           onEditSleep={onEditSleep}
           unitSystem={unitSystem}
+          temperatureUnit={temperatureUnit}
         />
       ))}
     </div>

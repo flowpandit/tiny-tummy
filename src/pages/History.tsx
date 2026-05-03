@@ -24,7 +24,7 @@ import type {
 
 export function History() {
   const activeChild = useActiveChild();
-  const { unitSystem } = useUnits();
+  const { unitSystem, temperatureUnit } = useUnits();
   const [expandedDay, setExpandedDay] = useState<string | null>(null);
   const [searchDate, setSearchDate] = useState<string | null>(null);
   const [quickRangeDays, setQuickRangeDays] = useState<7 | 14 | 30>(7);
@@ -124,6 +124,7 @@ export function History() {
           onEditSleep={setEditingSleep}
           onSetExpandedDay={setExpandedDay}
           unitSystem={unitSystem}
+          temperatureUnit={temperatureUnit}
         />
       )}
 

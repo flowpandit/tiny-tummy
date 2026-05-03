@@ -63,6 +63,7 @@ export function AppShell() {
   );
   const headerBackFallbackByPath: Record<string, string> = {
     "/dashboard": "/",
+    "/health": "/settings",
     "/growth": "/settings",
     "/guidance": "/settings",
     "/milestones": "/settings",

@@ -217,6 +217,7 @@ export function Home() {
       <HomeHealthActions
         onLogSymptoms={() => setSymptomSheetOpen(true)}
         onOpenEpisode={handleStartEpisode}
+        onOpenHealth={() => navigate("/health", { state: { origin: "/" } })}
       />
 
       <HomeActiveEpisodes

@@ -3,6 +3,7 @@ import { HomeActionEpisodeIcon, HomeActionSymptomIcon } from "../ui/icons";
 interface HomeHealthActionsProps {
   onLogSymptoms: () => void;
   onOpenEpisode: () => void;
+  onOpenHealth: () => void;
 }
 
 const HEALTH_ACTIONS = [
@@ -29,6 +30,7 @@ const HEALTH_ACTIONS = [
 export function HomeHealthActions({
   onLogSymptoms,
   onOpenEpisode,
+  onOpenHealth,
 }: HomeHealthActionsProps) {
   const handlers = {
     symptoms: onLogSymptoms,
@@ -37,9 +39,18 @@ export function HomeHealthActions({
 
   return (
     <section className="px-4 pt-0 md:px-10 md:pt-1">
-      <p className="px-3 text-[0.8rem] font-semibold uppercase tracking-[0.16em] text-[var(--color-text)] md:px-0 md:text-[0.85rem]">
-        Health
-      </p>
+      <div className="flex items-center justify-between gap-3 px-3 md:px-0">
+        <p className="text-[0.8rem] font-semibold uppercase tracking-[0.16em] text-[var(--color-text)] md:text-[0.85rem]">
+          Health
+        </p>
+        <button
+          type="button"
+          onClick={onOpenHealth}
+          className="text-[0.78rem] font-semibold text-[var(--color-primary)] md:text-[0.9rem]"
+        >
+          View all ›
+        </button>
+      </div>
 
       <div className="mt-2.5 grid grid-cols-2 gap-2 md:mt-4 md:gap-6">
         {HEALTH_ACTIONS.map((action) => (
