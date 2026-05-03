@@ -10,6 +10,7 @@ import { useVisibilityRefresh } from "../src/hooks/useVisibilityRefresh.ts";
 import { useChildWorkflowActions } from "../src/hooks/useChildWorkflowActions.ts";
 import { useSleepLogSheetState } from "../src/hooks/useSleepLogSheetState.ts";
 import { useSleepQuickTimer } from "../src/hooks/useSleepQuickTimer.ts";
+import { useDietLogFormState } from "../src/hooks/useDietLogFormState.ts";
 import { getSleepTimerSettingKey } from "../src/lib/sleep-timer.ts";
 import type { Child } from "../src/lib/types.ts";
 
@@ -225,6 +226,54 @@ test("usePhotoField revokes the active preview on unmount", async () => {
   } finally {
     globalThis.URL = originalUrl;
   }
+});
+
+test("useDietLogFormState saves optional breastfeed amount", async () => {
+  const createdLogs: Array<{ amount_ml?: number | null; food_type?: string; duration_minutes?: number | null }> = [];
+  const dbClient = {
+    createDietLog: async (input: { amount_ml?: number | null; food_type?: string; duration_minutes?: number | null }) => {
+      createdLogs.push(input);
+    },
+  } as unknown as DbClient;
+  const calls: string[] = [];
+
+  const wrapper = ({ children }: { children: React.ReactNode }) => (
+    React.createElement(DatabaseProvider, { client: dbClient }, children)
+  );
+
+  const { result } = renderHook(() => useDietLogFormState({
+    open: true,
+    childId: "child-1",
+    unitSystem: "metric",
+    initialDraft: {
+      food_type: "breast_milk",
+      amount_ml: "125",
+      duration_minutes: "12",
+      breast_side: "left",
+    },
+    onLogged: () => {
+      calls.push("logged");
+    },
+    onClose: () => {
+      calls.push("close");
+    },
+    onError: (message) => {
+      calls.push(`error:${message}`);
+    },
+  }), { wrapper });
+
+  await waitFor(() => {
+    assert.equal(result.current.foodType, "breast_milk");
+  });
+
+  await act(async () => {
+    await result.current.handleSubmit();
+  });
+
+  assert.equal(createdLogs[0]?.food_type, "breast_milk");
+  assert.equal(createdLogs[0]?.amount_ml, 125);
+  assert.equal(createdLogs[0]?.duration_minutes, 12);
+  assert.deepEqual(calls, ["logged", "close"]);
 });
 
 test("useVisibilityRefresh subscribes to focus and visibility events and cleans up on unmount", async () => {
