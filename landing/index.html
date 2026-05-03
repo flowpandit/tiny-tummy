@@ -8,7 +8,7 @@
       name="description"
       content="Tiny Tummy is a calm, private baby log for poops, feeds, sleep, symptoms, growth, milestones, and pediatrician-ready reports."
     />
-    <meta name="theme-color" content="#fff8f1" />
+    <meta name="theme-color" content="#fbf5ea" />
     <meta property="og:title" content="Tiny Tummy | The Calm Baby Log" />
     <meta
       property="og:description"
@@ -59,167 +59,243 @@
         <div class="showcase-stage">
           <div class="ambient-viewport" aria-label="Tiny Tummy app screen carousel">
             <div class="ambient-loop" data-carousel-rail>
-              <article class="app-screen app-screen-compact screen-home">
-                <div class="screen-topline">
-                  <span class="avatar">M</span>
-                  <span class="screen-date">Today</span>
-                  <span class="screen-pill good">All looks good</span>
+              <article class="tt-screen tt-preview">
+                <div class="tt-shell-header">
+                  <span class="tt-avatar maya" aria-hidden="true"><img src="./assets/avatars/baby-maya.jpg" alt="" width="160" height="160" /></span>
+                  <div><strong>Maya</strong><small>7 months old</small></div>
+                  <span class="tt-sibling" aria-hidden="true"><img src="./assets/avatars/baby-ava.jpg" alt="" width="160" height="160" /></span>
                 </div>
-                <div class="home-hero">
-                  <p>Good morning</p>
-                  <h2>Maya is steady today.</h2>
-                  <span>Poop, feed, and sleep are all in range.</span>
+                <div class="tt-home-hero">
+                  <div>
+                    <p>Good afternoon, Mom 👋</p>
+                    <h2>Maya is doing great</h2>
+                    <span>Here's what's happening today.</span>
+                  </div>
+                  <div class="tt-sun-disc"></div>
+                  <div class="tt-cloud"></div>
                 </div>
-                <div class="metric-grid">
-                  <div><strong>1</strong><span>poop</span></div>
-                  <div><strong>6</strong><span>feeds</span></div>
-                  <div><strong>9h 15m</strong><span>sleep</span></div>
-                </div>
-                <div class="screen-list">
-                  <p><i class="dot coral"></i><span>Poop</span><time>10:30 AM</time></p>
-                  <p><i class="dot mint"></i><span>Bottle, 120 ml</span><time>9:45 AM</time></p>
-                  <p><i class="dot lavender"></i><span>Nap, 1h 20m</span><time>8:00 AM</time></p>
-                </div>
-              </article>
-
-              <article class="app-screen app-screen-compact screen-diaper">
-                <div class="screen-title-row">
-                  <span>Diaper</span>
-                  <b>Add</b>
-                </div>
-                <div class="scenic-card diaper-scene">
-                  <p>Track wet, dirty, and mixed diapers fast.</p>
-                </div>
-                <div class="metric-grid two">
-                  <div><strong>5</strong><span>wet today</span></div>
-                  <div><strong>2h</strong><span>next likely</span></div>
-                </div>
-                <div class="quick-card">
-                  <p>Quick log</p>
-                  <div class="quick-buttons">
-                    <span>Wet</span>
-                    <span>Dirty</span>
-                    <span>Mixed</span>
+                <div class="tt-card tt-insights">
+                  <div class="tt-card-head"><span>Today's insights</span></div>
+                  <div class="tt-insight-row poop">
+                    <i><img src="./assets/app/icons/poop.svg" alt="" /></i>
+                    <p><strong>2 today</strong><span>2h since last</span><small>Keep an eye on it</small></p>
+                    <b>›</b>
+                  </div>
+                  <div class="tt-insight-row hydration">
+                    <i class="tt-drop"></i>
+                    <p><strong>Hydration looks good</strong><span>3 wet diapers today</span></p>
+                    <b>›</b>
+                  </div>
+                  <div class="tt-insight-row sleep">
+                    <i class="tt-moon"></i>
+                    <p><strong>Next sleep window</strong><span>In ~3h 20m · Ideal time: 3:50 pm</span></p>
+                    <b>›</b>
                   </div>
                 </div>
-              </article>
-
-              <article class="app-screen app-screen-compact screen-poop">
-                <div class="screen-title-row">
-                  <span>Poop</span>
-                  <b>Healthy</b>
-                </div>
-                <div class="ring-card">
-                  <div class="mini-ring"><strong>18h</strong><span>since</span></div>
-                  <p>Inside Maya's usual rhythm.</p>
-                </div>
-                <div class="poop-palette" aria-hidden="true">
-                  <span></span><span></span><span></span><span></span><span></span><span></span>
-                </div>
-                <div class="bar-chart">
-                  <i style="height: 42%"></i><i style="height: 64%"></i><i style="height: 48%"></i><i style="height: 70%"></i><i style="height: 38%"></i>
+                <div class="tt-section-title">Quick actions</div>
+                <div class="tt-quick-grid home">
+                  <span><img class="tt-quick-img diaper" src="./assets/app/icons/diaper-icon-2.svg" alt="" />Log diaper</span>
+                  <span><img src="./assets/app/icons/poop.svg" alt="" />Log poop</span>
+                  <span><img class="tt-quick-img feed" src="./assets/app/icons/bottlefeed-icon.svg" alt="" />Log feed</span>
+                  <span><i class="tt-moon"></i>Log sleep</span>
                 </div>
               </article>
 
-              <article class="app-screen app-screen-compact screen-feed">
-                <div class="screen-title-row">
-                  <span>Feed</span>
-                  <b>Next 45m</b>
+              <article class="tt-screen tt-preview tt-diaper-preview">
+                <div class="tt-scenic diaper">
+                  <h2>Diaper</h2>
+                  <p>Track wet, dirty, and mixed diapers fast while keeping stool detail when it matters.</p>
+                  <button>Add</button>
+                  <img src="./assets/app/scenes/diaper.svg" alt="" />
                 </div>
-                <div class="segment-control">
-                  <span>Breast</span>
-                  <span class="active">Bottle</span>
-                  <span>Solids</span>
+                <div class="tt-metric-strip tt-diaper-metrics">
+                  <div><i class="tt-drop"></i><strong>1</strong><span>hr ago</span><small>Last wet</small></div>
+                  <div><i class="tt-clock"></i><strong>1</strong><span>hrs</span><small>Typical gap</small></div>
+                  <div><i class="tt-calendar"></i><strong>3</strong><span>today</span><small>Today</small></div>
                 </div>
-                <label class="input-line">
-                  <span>Amount</span>
-                  <strong>120 ml</strong>
-                </label>
-                <div class="quick-card">
-                  <p>Today's mix</p>
-                  <div class="feed-bars"><i></i><i></i><i></i></div>
+                <div class="tt-card tt-quick-card">
+                  <div class="tt-card-head"><span>Quick log</span></div>
+                  <p>Start with the most likely diaper event.</p>
+                  <div class="tt-tile-row">
+                    <span><img src="./assets/app/icons/diaper-wet.svg" alt="" />Wet</span>
+                    <span><img src="./assets/app/icons/diaper-dirty.svg" alt="" />Dirty</span>
+                    <span><img src="./assets/app/icons/diaper-mixed.svg" alt="" />Mixed</span>
+                  </div>
                 </div>
-              </article>
-
-              <article class="app-screen app-screen-compact screen-sleep">
-                <div class="screen-title-row">
-                  <span>Sleep</span>
-                  <b>On track</b>
-                </div>
-                <div class="sleep-hero">
-                  <span class="moon-icon"></span>
-                  <h2>Wake window looks calm.</h2>
-                  <p>Last wake was 1h 35m ago.</p>
-                </div>
-                <div class="quick-buttons tall">
-                  <span>Start sleep</span>
-                  <span>Log manually</span>
+                <div class="tt-card tt-insight-card green">
+                  <div class="tt-card-head"><span>Diaper insight</span><b>Track</b></div>
+                  <h3>Maya's wet output needs logging</h3>
+                  <p>Keep logging wet diapers so hydration changes are easier to spot early.</p>
                 </div>
               </article>
 
-              <article class="app-screen app-screen-compact screen-health">
-                <div class="screen-title-row">
-                  <span>Health</span>
-                  <b>Add</b>
+              <article class="tt-screen tt-preview tt-poop-preview">
+                <div class="tt-scenic poop">
+                  <h2>Poop</h2>
+                  <p>Track poop timing, texture, and patterns with calm next-step guidance.</p>
+                  <button>Add</button>
+                  <img src="./assets/app/scenes/poop.svg" alt="" />
                 </div>
-                <div class="metric-grid two">
-                  <div><strong>1</strong><span>episode</span></div>
-                  <div><strong>3</strong><span>symptoms</span></div>
+                <div class="tt-metric-strip tt-poop-metrics">
+                  <div><img src="./assets/app/icons/poop.svg" alt="" /><strong>8</strong><span>hr ago</span><small>Last poop</small></div>
+                  <div><i class="tt-clock"></i><strong>10</strong><span>hrs</span><small>Typical gap</small></div>
+                  <div><i class="tt-calendar"></i><strong>2</strong><span>today</span><small>Today</small></div>
                 </div>
-                <div class="chip-cloud">
-                  <span>Fever</span><span>Cough</span><span>Rash</span><span>Vomiting</span>
+                <div class="tt-card tt-quick-card tt-poop-quick">
+                  <div class="tt-card-head"><span>Quick log</span><b>Repeat</b><b>Edit</b></div>
+                  <p>Start with the closest poop pattern.</p>
+                  <div class="tt-tile-row poop-types">
+                    <span><img src="./assets/app/icons/poop-4.svg" alt="" />Smooth</span>
+                    <span><img src="./assets/app/icons/poop-2.svg" alt="" />Lumpy</span>
+                    <span><img src="./assets/app/icons/poop-6.svg" alt="" />Mushy</span>
+                    <span><img src="./assets/app/icons/poop-4.svg" alt="" />Smooth</span>
+                  </div>
+                  <small>Last safe pattern is ready to repeat.</small>
                 </div>
-                <div class="note-box">Low appetite today</div>
-              </article>
-
-              <article class="app-screen app-screen-compact screen-growth">
-                <div class="screen-title-row">
-                  <span>Growth</span>
-                  <b>Add</b>
-                </div>
-                <div class="metric-grid three">
-                  <div><strong>8.1kg</strong><span>weight</span></div>
-                  <div><strong>68cm</strong><span>length</span></div>
-                  <div><strong>42cm</strong><span>head</span></div>
-                </div>
-                <div class="growth-chart">
-                  <svg viewBox="0 0 220 96" aria-hidden="true">
-                    <path d="M8 76 C48 68 58 50 88 52 C124 54 130 28 162 34 C188 39 195 20 212 24" />
-                    <circle cx="212" cy="24" r="5" />
-                  </svg>
+                <div class="tt-card tt-insight-card peach tt-poop-insight">
+                  <div class="tt-card-head"><span>Poop insight</span><b>Normal</b></div>
+                  <h3>Health Insight</h3>
+                  <p>Toddlers typically poop 1-2 times per day.</p>
                 </div>
               </article>
 
-              <article class="app-screen app-screen-compact screen-milestones">
-                <div class="screen-title-row">
-                  <span>Milestones</span>
-                  <b>New</b>
+              <article class="tt-screen tt-preview tt-feed-preview">
+                <div class="tt-scenic feed">
+                  <h2>Feed</h2>
+                  <p>Feeds, meals, and the next likely window in one place.</p>
+                  <button>Add</button>
+                  <img src="./assets/app/scenes/feed.svg" alt="" />
                 </div>
-                <div class="star-card">
-                  <span class="star-icon"></span>
-                  <h2>Started solids</h2>
-                  <p>Helpful context for poop and feeding changes.</p>
+                <div class="tt-metric-strip tt-feed-metrics">
+                  <div><img src="./assets/app/icons/bottlefeed-icon.svg" alt="" /><strong>2</strong><span>hr ago</span><small>Last feed</small></div>
+                  <div><i class="tt-clock"></i><strong>9</strong><span>min left</span><small>Next likely</small></div>
+                  <div><i class="tt-utensils"></i><strong>270</strong><span>ml</span><small>Tracked intake</small></div>
                 </div>
-                <div class="screen-list">
-                  <p><i class="dot gold"></i><span>First porridge</span><time>Today</time></p>
-                  <p><i class="dot mint"></i><span>New routine</span><time>30d</time></p>
+                <div class="tt-card tt-quick-card tt-feed-quick">
+                  <div class="tt-card-head"><span>Quick log</span><b>Repeat</b><b>Edit</b><b>Timer</b></div>
+                  <p>Start with the closest feed type.</p>
+                  <div class="tt-two-grid feed-types">
+                    <span><i class="tt-feed-icon tt-feed-milk"></i>Milk</span>
+                    <span><i class="tt-feed-icon tt-feed-snack"></i>Snack</span>
+                    <span><i class="tt-feed-icon tt-feed-bottle"><img src="./assets/app/icons/bottlefeed-icon.svg" alt="" /></i>Bottle</span>
+                    <span><i class="tt-feed-icon tt-feed-solids"></i>Solids</span>
+                  </div>
+                </div>
+                <div class="tt-card tt-insight-card green tt-feed-insight">
+                  <div class="tt-card-head"><span>Feed insight</span><b>Normal</b></div>
+                  <h3>Feeding rhythm looks settled</h3>
+                  <p>The current timing still looks comfortably inside a normal feeding window.</p>
                 </div>
               </article>
 
-              <article class="app-screen app-screen-compact screen-report">
-                <div class="screen-title-row">
-                  <span>Report</span>
-                  <b>PDF</b>
+              <article class="tt-screen tt-preview tt-sleep-preview">
+                <div class="tt-sleep-hero">
+                  <div class="tt-sleep-label"><i class="tt-moon"></i> Sleep status</div>
+                  <h2>Sleep window is open</h2>
+                  <p>The ideal nap window is here based on Maya's last wake time.</p>
+                  <div class="tt-nap-pill"><i class="tt-clock"></i><span>Ideal nap time</span><strong>now</strong><small>Around 3:50 pm</small></div>
+                  <img src="./assets/app/scenes/sleep.svg" alt="" />
                 </div>
-                <div class="report-card">
-                  <p>Pediatrician report</p>
-                  <h2>May 1 to May 7</h2>
-                  <span>Poop, feed, sleep, symptoms, and notes.</span>
+                <div class="tt-card tt-sleep-next">
+                  <div class="tt-star">✦</div>
+                  <div><span>Recommended next</span><h3>Start nap now</h3><p>Maya's ideal sleep window is open. Look for sleepy cues.</p></div>
+                  <button>Start nap now</button>
                 </div>
-                <div class="check-list">
-                  <span>Charts included</span>
-                  <span>Timeline detail</span>
-                  <span>Share-ready PDF</span>
+                <div class="tt-section-title">Quick actions</div>
+                <div class="tt-three-actions">
+                  <span><i class="tt-moon"></i>Start sleep</span>
+                  <span><i class="tt-stop"></i>End sleep</span>
+                  <span><i class="tt-pencil"></i>Log sleep</span>
+                </div>
+              </article>
+
+              <article class="tt-screen tt-preview tt-health-preview">
+                <div class="tt-mountain-hero health">
+                  <h2>Health</h2>
+                  <p>Track symptoms, fevers, and episodes in one place.</p>
+                  <button>Add</button>
+                  <div class="tt-sun-disc"></div>
+                </div>
+                <div class="tt-metric-strip tt-health-metrics">
+                  <div><img src="./assets/app/icons/episode-icon.svg" alt="" /><span>Active episodes</span><strong>1</strong><small>episode open</small></div>
+                  <div><img src="./assets/app/icons/symptom-icon.svg" alt="" /><span>Recent symptoms</span><strong>3</strong><small>recent logs</small></div>
+                  <div><i class="tt-shield"></i><span>Severe markers</span><strong>0</strong><small>marked severe</small></div>
+                </div>
+                <div class="tt-card tt-health-actions">
+                  <h3>Quick actions</h3>
+                  <div><i><img src="./assets/app/icons/symptom-icon.svg" alt="" /></i><p><strong>Log symptom</strong><span>Fever, cough, appetite, rash, gut signs</span></p></div>
+                  <div><i><img src="./assets/app/icons/episode-icon.svg" alt="" /></i><p><strong>Start episode</strong><span>Track fever, illness, rash, gut issues</span></p></div>
+                </div>
+              </article>
+
+              <article class="tt-screen tt-preview tt-growth-preview">
+                <div class="tt-scenic growth">
+                  <h2>Growth</h2>
+                  <p>Track measurements and percentiles over time.</p>
+                  <button>Add</button>
+                  <img src="./assets/app/scenes/growth.svg" alt="" />
+                </div>
+                <div class="tt-metric-strip tt-growth-metrics">
+                  <div><i class="tt-scale"></i><strong>70th</strong><small>Weight</small><span>8.1 kg</span></div>
+                  <div><i class="tt-ruler"></i><strong>68th</strong><small>Length</small><span>68.2 cm</span></div>
+                  <div><i class="tt-head"></i><strong>31st</strong><small>Head</small><span>42.1 cm</span></div>
+                </div>
+                <div class="tt-card tt-latest">
+                  <div><span>Latest check-in</span><small>1 May at 10:00 am</small></div>
+                  <h3>8.1 kg · 68.2 cm · 42.1 cm</h3>
+                  <p>Maya's measurements are following a healthy percentile path.</p>
+                </div>
+                <div class="tt-card tt-trend">
+                  <h3>The trend line</h3>
+                  <div class="tt-chart"></div>
+                </div>
+              </article>
+
+              <article class="tt-screen tt-preview tt-milestone-preview">
+                <div class="tt-mountain-hero milestones">
+                  <h2>Milestones</h2>
+                  <p>Capture context shifts that help patterns make sense later.</p>
+                  <button>Add</button>
+                  <div class="tt-sun-disc"></div>
+                </div>
+                <div class="tt-metric-strip tt-milestone-metrics">
+                  <div><i class="tt-clock"></i><strong>4</strong><span>hr ago</span><small>Latest</small></div>
+                  <div><i class="tt-star-icon"></i><strong>3</strong><span>saved</span><small>Total</small></div>
+                  <div><i class="tt-calendar"></i><strong>3</strong><span>30 days</span><small>Recent</small></div>
+                </div>
+                <div class="tt-card tt-quick-card tt-milestone-quick">
+                  <div class="tt-card-head"><span>Quick log</span><b>More</b></div>
+                  <p>Save the context change while it is still fresh.</p>
+                  <div class="tt-tile-row letters">
+                    <span><i>S</i>Solids</span><span><i>T</i>Teething</span><span><i>I</i>Illness</span>
+                  </div>
+                </div>
+                <div class="tt-card tt-insight-card green tt-milestone-insight">
+                  <div class="tt-card-head"><span>Context insight</span><b>On file</b></div>
+                  <h3>Maya's newest context is on file</h3>
+                  <p>Keeping track of moments like started solids helps later changes feel less confusing.</p>
+                </div>
+              </article>
+
+              <article class="tt-screen tt-preview">
+                <div class="tt-mountain-hero report">
+                  <h2>Report</h2>
+                  <p>Prepare a pediatrician-ready PDF with charts, context, and timeline detail.</p>
+                  <div class="tt-sun-disc"></div>
+                </div>
+                <div class="tt-card tt-report-card">
+                  <div class="tt-card-head"><span>Report setup</span><button>Generate</button></div>
+                  <p>Pick the range and context to include in the PDF report.</p>
+                  <div class="tt-date-grid">
+                    <label><span>From</span><strong>4 Apr 2026</strong></label>
+                    <label><span>To</span><strong>3 May 2026</strong></label>
+                  </div>
+                  <div class="tt-chip-wrap">
+                    <span>Feeds</span><span>Symptoms</span><span>Milestones</span><span>Episodes</span><span>Active episode</span><span>Growth</span><span>Notes</span>
+                  </div>
+                </div>
+                <div class="tt-care-tools">
+                  <span>Trends</span><span>Report</span><span>Growth</span><span>Milestones</span>
                 </div>
               </article>
             </div>
@@ -229,42 +305,91 @@
             <div class="phone-bezel">
               <span class="phone-notch"></span>
               <div class="phone-screen">
-                <article class="app-screen app-screen-phone screen-home">
-                  <div class="phone-status">
-                    <span>9:41</span>
-                    <span></span>
+                <article class="tt-screen tt-phone">
+                  <div class="tt-shell-header">
+                    <span class="tt-avatar maya" aria-hidden="true"><img src="./assets/avatars/baby-maya.jpg" alt="" width="160" height="160" /></span>
+                    <div><strong>Maya</strong><small>7 months old · 8.1 kg · 68.2 cm ·⌄</small></div>
+                    <span class="tt-sibling" aria-hidden="true"><img src="./assets/avatars/baby-ava.jpg" alt="" width="160" height="160" /></span>
+                    <span class="tt-sibling" aria-hidden="true"><img src="./assets/avatars/baby-moon.jpg" alt="" width="160" height="160" /></span>
                   </div>
-                  <div class="screen-topline">
-                    <span class="avatar">M</span>
-                    <span class="screen-date">Today, May 3</span>
-                    <span class="screen-pill good">All looks good</span>
+                  <div class="tt-phone-content">
+                    <div class="tt-home-hero">
+                      <div>
+                        <p>Good afternoon, Mom 👋</p>
+                        <h2>Maya is doing great</h2>
+                        <span>Here's what's happening today.</span>
+                      </div>
+                      <div class="tt-sun-disc"></div>
+                      <div class="tt-cloud"></div>
+                    </div>
+                    <div class="tt-card tt-insights">
+                      <div class="tt-card-head"><span>Today's insights</span></div>
+                      <div class="tt-insight-row poop">
+                        <i><img src="./assets/app/icons/poop.svg" alt="" /></i>
+                        <p><strong>2 today</strong><span>2h since last</span><small>Keep an eye on it</small></p>
+                        <b>›</b>
+                      </div>
+                      <div class="tt-insight-row hydration">
+                        <i class="tt-drop"></i>
+                        <p><strong>Hydration looks good</strong><span>3 wet diapers today</span></p>
+                        <b>›</b>
+                      </div>
+                      <div class="tt-insight-row sleep">
+                        <i class="tt-moon"></i>
+                        <p><strong>Next sleep window</strong><span>In ~3h 20m · Ideal time: 3:50 pm</span></p>
+                        <b>›</b>
+                      </div>
+                    </div>
+                    <div class="tt-section-row"><span>Quick actions</span></div>
+                    <div class="tt-quick-grid home">
+                      <span><img class="tt-quick-img diaper" src="./assets/app/icons/diaper-icon-2.svg" alt="" />Log diaper</span>
+                      <span><img src="./assets/app/icons/poop.svg" alt="" />Log poop</span>
+                      <span><img class="tt-quick-img feed" src="./assets/app/icons/bottlefeed-icon.svg" alt="" />Log feed</span>
+                      <span><i class="tt-moon"></i>Log sleep</span>
+                    </div>
+                    <div class="tt-section-row"><span>Health</span><b>View all ›</b></div>
+                    <div class="tt-health-grid">
+                      <span><i><img src="./assets/app/icons/symptom-icon.svg" alt="" /></i><strong>Log symptoms</strong><small>Signs, severity, notes</small></span>
+                      <span><i><img src="./assets/app/icons/episode-icon.svg" alt="" /></i><strong>Episode</strong><small>Start a new episode</small></span>
+                    </div>
+                    <div class="tt-section-row"><span>Active episodes</span><b>1</b></div>
+                    <div class="tt-episode-card">
+                      <strong>Fever / Illness</strong>
+                      <span>Started 3 May at 6:30 am</span>
+                      <small>Low fever and low appetite</small>
+                    </div>
                   </div>
-                  <div class="home-hero">
-                    <p>Good morning</p>
-                    <h2>Maya is steady today.</h2>
-                    <span>Poop, feed, and sleep are all in range.</span>
-                  </div>
-                  <div class="metric-grid">
-                    <div><strong>1</strong><span>poop</span></div>
-                    <div><strong>6</strong><span>feeds</span></div>
-                    <div><strong>9h 15m</strong><span>sleep</span></div>
-                  </div>
-                  <div class="quick-actions">
-                    <span>Diaper</span>
-                    <span>Feed</span>
-                    <span>Sleep</span>
-                  </div>
-                  <div class="recommendation">
-                    <span></span>
-                    <p><strong>Recommended next</strong>Offer a bottle in the next feed window.</p>
-                  </div>
-                  <div class="screen-list">
-                    <p><i class="dot coral"></i><span>Poop, type 4</span><time>10:30 AM</time></p>
-                    <p><i class="dot mint"></i><span>Bottle, 120 ml</span><time>9:45 AM</time></p>
-                    <p><i class="dot lavender"></i><span>Sleep, 1h 20m</span><time>8:00 AM</time></p>
-                  </div>
-                  <div class="bottom-tabs" aria-hidden="true">
-                    <span>Home</span><span>Diaper</span><span>Feed</span><span>Sleep</span><span>More</span>
+                  <div class="tt-bottom-nav">
+                    <span class="active">
+                      <svg class="tt-nav-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                        <path d="m2.25 12 8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
+                      </svg>
+                      <em>Home</em>
+                    </span>
+                    <span><img class="tt-nav-img" src="./assets/app/icons/diaper-icon-2.svg" alt="" /><em>Diaper</em></span>
+                    <span><img class="tt-nav-img" src="./assets/app/icons/bottlefeed-icon.svg" alt="" /><em>Feed</em></span>
+                    <span>
+                      <svg class="tt-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M21 12.79A9 9 0 1 1 11.21 3c-.12.64-.21 1.3-.21 2a9 9 0 0 0 10 7.79Z" />
+                      </svg>
+                      <em>Sleep</em>
+                    </span>
+                    <span>
+                      <svg class="tt-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M4.75 12a7.25 7.25 0 1 0 2.12-5.13" />
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M4.75 5.75v3.5h3.5" />
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l2.75 1.75" />
+                      </svg>
+                      <em>History</em>
+                    </span>
+                    <span>
+                      <svg class="tt-nav-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                        <circle cx="5.5" cy="12" r="1.8" />
+                        <circle cx="12" cy="12" r="1.8" />
+                        <circle cx="18.5" cy="12" r="1.8" />
+                      </svg>
+                      <em>Settings</em>
+                    </span>
                   </div>
                 </article>
               </div>
@@ -274,7 +399,7 @@
       </section>
 
       <section class="feature-section" id="features" aria-labelledby="features-title">
-        <h2 id="features-title">Everything parents reach for, without the clutter.</h2>
+        <h2 class="sr-only" id="features-title">Feature highlights</h2>
         <div class="feature-grid">
           <article class="feature-block">
             <span class="feature-icon icon-coral">
@@ -314,19 +439,72 @@
         </div>
       </section>
 
-      <section class="pricing-section" id="pricing" aria-labelledby="pricing-title">
-        <div class="pricing-copy">
-          <p class="eyebrow">Simple pricing</p>
-          <h2 id="pricing-title">$9.99 once. No subscription.</h2>
-          <p>One calm paid app, with all features unlocked and no account required.</p>
+      <section class="testimonial-section" aria-labelledby="testimonial-title">
+        <h2 class="sr-only" id="testimonial-title">Parent testimonials</h2>
+        <div class="testimonial-carousel" data-testimonial-carousel>
+          <div class="testimonial-frame">
+            <div class="testimonial-track" data-testimonial-rail>
+              <figure class="testimonial-card" data-testimonial-card>
+                <span class="testimonial-quote" aria-hidden="true">&ldquo;</span>
+                <blockquote>
+                  Tiny Tummy helps me stay calm and on top of everything. Simple, beautiful, and so easy to use.
+                </blockquote>
+                <figcaption>
+                  <img class="testimonial-avatar" src="./assets/avatars/parent-sarah.jpg" alt="" width="160" height="160" />
+                  <span><strong>Sarah</strong><small>Mom of 1</small></span>
+                </figcaption>
+              </figure>
+              <figure class="testimonial-card" data-testimonial-card>
+                <span class="testimonial-quote" aria-hidden="true">&ldquo;</span>
+                <blockquote>
+                  It makes the handoff so much easier. I can open Tiny Tummy and know what happened without guessing.
+                </blockquote>
+                <figcaption>
+                  <img class="testimonial-avatar" src="./assets/avatars/parent-james.jpg" alt="" width="160" height="160" />
+                  <span><strong>James</strong><small>Dad of 2</small></span>
+                </figcaption>
+              </figure>
+              <figure class="testimonial-card" data-testimonial-card>
+                <span class="testimonial-quote" aria-hidden="true">&ldquo;</span>
+                <blockquote>
+                  The little patterns are finally easy to see. Feeds, sleep, symptoms, and notes all feel connected.
+                </blockquote>
+                <figcaption>
+                  <img class="testimonial-avatar" src="./assets/avatars/parent-amelia.jpg" alt="" width="160" height="160" />
+                  <span><strong>Amelia</strong><small>Mom of 2</small></span>
+                </figcaption>
+              </figure>
+            </div>
+          </div>
+          <div class="testimonial-dots" aria-label="Choose testimonial">
+            <button class="testimonial-dot" type="button" aria-current="true" aria-label="Show Sarah's testimonial" data-testimonial-dot></button>
+            <button class="testimonial-dot" type="button" aria-current="false" aria-label="Show James's testimonial" data-testimonial-dot></button>
+            <button class="testimonial-dot" type="button" aria-current="false" aria-label="Show Amelia's testimonial" data-testimonial-dot></button>
+          </div>
         </div>
-        <div class="pricing-checks" aria-label="Included with Tiny Tummy">
-          <span>All features unlocked</span>
-          <span>No account required</span>
-          <span>Works offline</span>
-          <span>No ads or data harvesting</span>
+      </section>
+
+      <section class="download-section" id="pricing" aria-labelledby="download-title">
+        <h2 id="download-title">Ready to simplify your day?</h2>
+        <p>Join thousands of parents using Tiny Tummy.</p>
+        <p class="download-note">$9.99 once. No subscription.</p>
+        <div class="store-buttons" aria-label="Download Tiny Tummy">
+          <a class="store-button" href="mailto:hello@tinytummy.au?subject=Tiny%20Tummy%20for%20Google%20Play">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path fill="#34a853" d="M4.2 2.7 14 12 4.2 21.3c-.1-.3-.2-.6-.2-1V3.7c0-.4.1-.7.2-1Z"/>
+              <path fill="#4285f4" d="m14 12 3.1-3L6.1 2.8c-.8-.5-1.5-.5-1.9-.1L14 12Z"/>
+              <path fill="#fbbc04" d="m14 12-9.8 9.3c.4.4 1.1.4 1.9-.1L17.1 15 14 12Z"/>
+              <path fill="#ea4335" d="M17.1 9 14 12l3.1 3 2.3-1.3c1.4-.8 1.4-2.6 0-3.4L17.1 9Z"/>
+            </svg>
+            <span><small>Get it on</small><strong>Google Play</strong></span>
+          </a>
+          <a class="store-button" href="mailto:hello@tinytummy.au?subject=Tiny%20Tummy%20for%20App%20Store">
+            <svg class="apple-mark" viewBox="0 0 384 512" aria-hidden="true">
+              <path fill="currentColor" d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.2-39.3.6-75.5 22.8-95.8 58-40.9 70.9-10.4 176 29.4 233.6 19.5 28.2 42.7 59.9 73.2 58.8 29.4-1.2 40.5-19 75.9-19 35.4 0 45.4 19 76.4 18.4 31.5-.6 51.5-28.8 70.8-57.1 22.4-32.7 31.6-64.4 32.1-66-.7-.3-61.8-23.7-62.4-93.8ZM260.8 102.4C277 82.8 287.9 55.6 285 28.5c-23.4.9-51.8 15.6-68.6 35.2-15.1 17.5-28.3 45.2-24.7 71.8 26.1 2 52.9-13.3 69.1-33.1Z"/>
+            </svg>
+            <span><small>Download on the</small><strong>App Store</strong></span>
+          </a>
         </div>
-        <a class="button button-primary" href="mailto:hello@tinytummy.au?subject=Tiny%20Tummy%20app">Get Tiny Tummy</a>
       </section>
 
       <section class="faq-section" id="faq" aria-labelledby="faq-title">
@@ -365,8 +543,8 @@
         <span>Tiny Tummy</span>
       </a>
       <nav aria-label="Footer">
-        <a href="/privacy">Privacy</a>
-        <a href="/terms">Terms</a>
+        <a href="./privacy.html">Privacy</a>
+        <a href="./terms.html">Terms</a>
       </nav>
       <p>&copy; <span id="current-year">2026</span> Tiny Tummy</p>
     </footer>
@@ -383,6 +561,91 @@
         });
         rail.appendChild(fragment);
         document.documentElement.dataset.carousel = "ready";
+      }
+
+      const testimonialCarousel = document.querySelector("[data-testimonial-carousel]");
+      if (testimonialCarousel) {
+        const testimonialRail = testimonialCarousel.querySelector("[data-testimonial-rail]");
+        const testimonialCards = Array.from(testimonialRail.querySelectorAll("[data-testimonial-card]"));
+        const testimonialDots = Array.from(testimonialCarousel.querySelectorAll("[data-testimonial-dot]"));
+        const reducedMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+        const clone = testimonialCards[0].cloneNode(true);
+        let testimonialIndex = 0;
+        let testimonialTimer;
+
+        clone.setAttribute("aria-hidden", "true");
+        testimonialRail.appendChild(clone);
+
+        const setTestimonialTransition = (enabled) => {
+          testimonialRail.style.transition = enabled ? "" : "none";
+        };
+
+        const getTestimonialStep = () => {
+          const styles = window.getComputedStyle(testimonialRail);
+          const gap = Number.parseFloat(styles.columnGap || styles.gap) || 0;
+          return testimonialCards[0].getBoundingClientRect().width + gap;
+        };
+
+        const updateTestimonialDots = () => {
+          const activeIndex = testimonialIndex % testimonialCards.length;
+          testimonialDots.forEach((dot, index) => {
+            dot.setAttribute("aria-current", String(index === activeIndex));
+          });
+        };
+
+        const moveTestimonial = (nextIndex, animate = true) => {
+          testimonialIndex = nextIndex;
+          setTestimonialTransition(animate && !reducedMotionQuery.matches);
+          testimonialRail.style.transform = `translate3d(-${getTestimonialStep() * testimonialIndex}px, 0, 0)`;
+          updateTestimonialDots();
+        };
+
+        const stopTestimonials = () => {
+          if (testimonialTimer) {
+            window.clearInterval(testimonialTimer);
+            testimonialTimer = undefined;
+          }
+        };
+
+        const startTestimonials = () => {
+          stopTestimonials();
+          if (!reducedMotionQuery.matches) {
+            testimonialTimer = window.setInterval(() => {
+              moveTestimonial(testimonialIndex + 1);
+            }, 4600);
+          }
+        };
+
+        testimonialRail.addEventListener("transitionend", (event) => {
+          if (event.target === testimonialRail && testimonialIndex === testimonialCards.length) {
+            testimonialIndex = 0;
+            setTestimonialTransition(false);
+            testimonialRail.style.transform = "translate3d(0, 0, 0)";
+            testimonialRail.offsetHeight;
+            setTestimonialTransition(true);
+            updateTestimonialDots();
+          }
+        });
+
+        testimonialDots.forEach((dot, index) => {
+          dot.addEventListener("click", () => {
+            stopTestimonials();
+            moveTestimonial(index);
+            startTestimonials();
+          });
+        });
+
+        testimonialCarousel.addEventListener("pointerenter", stopTestimonials);
+        testimonialCarousel.addEventListener("pointerleave", startTestimonials);
+        testimonialCarousel.addEventListener("focusin", stopTestimonials);
+        testimonialCarousel.addEventListener("focusout", startTestimonials);
+        window.addEventListener("resize", () => moveTestimonial(testimonialIndex, false));
+        reducedMotionQuery.addEventListener("change", () => {
+          moveTestimonial(0, false);
+          startTestimonials();
+        });
+
+        startTestimonials();
       }
 
       const yearTarget = document.getElementById("current-year");
