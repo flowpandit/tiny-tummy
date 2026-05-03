@@ -1,8 +1,10 @@
 import type { BreastSide } from "./types";
 
+export type BreastTimerSide = Extract<BreastSide, "left" | "right">;
+
 export interface BreastfeedingSessionState {
   durations: Record<"left" | "right", number>;
-  activeSide: "left" | "right" | null;
+  activeSide: BreastTimerSide | null;
   activeStartedAt: number | null;
   lastUsedSide: BreastSide | null;
 }
@@ -32,10 +34,17 @@ export function formatBreastfeedingSummary(totalMs: number): string {
   return `${minutes}m ${seconds}s`;
 }
 
-export function getOppositeBreastSide(side: BreastSide | null): BreastSide | null {
-  if (side === "left") return "right";
-  if (side === "right") return "left";
+export function getSuggestedBreastStartSide(lastUsedSide: BreastSide | null): BreastTimerSide | null {
+  if (lastUsedSide === "left" || lastUsedSide === "right") return lastUsedSide;
   return null;
+}
+
+export function getBreastfeedingNextSideReason(lastUsedSide: BreastSide | null, activeSide: BreastTimerSide | null): string {
+  if (getSuggestedBreastStartSide(lastUsedSide) && !activeSide) {
+    return "Starting on the previously used side helps to keep milk supply balanced and prevent engorgement.";
+  }
+
+  return "Tiny Tummy will remember the last side after you save a session.";
 }
 
 export function getRoundedDurationMinutes(totalMs: number): number {

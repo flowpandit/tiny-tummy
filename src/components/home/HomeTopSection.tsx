@@ -1,7 +1,9 @@
+import type { ReactNode } from "react";
 import { HomeActionSleepIcon, PoopIcon } from "../ui/icons";
 import { type HomeInsightCard, type HomeStatusMessage } from "../../lib/home-insights";
 
 interface HomeTopSectionProps {
+  alertSlot?: ReactNode;
   status: HomeStatusMessage;
   insights: HomeInsightCard[];
   onInsightSelect: (insight: HomeInsightCard) => void;
@@ -93,6 +95,7 @@ function InsightSummaryItem({ insight }: { insight: HomeInsightCard }) {
 }
 
 export function HomeTopSection({
+  alertSlot,
   status,
   insights,
   onInsightSelect,
@@ -130,6 +133,12 @@ export function HomeTopSection({
           </div>
         </div>
       </div>
+
+      {alertSlot && (
+        <div className="mt-2">
+          {alertSlot}
+        </div>
+      )}
 
       <div className="relative">
         <div

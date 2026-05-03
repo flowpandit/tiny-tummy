@@ -6,7 +6,7 @@ import {
   formatBreastfeedingSummary,
   getEmptyBreastfeedingSession,
   getBreastfeedingLastSideSettingKey,
-  getOppositeBreastSide,
+  getSuggestedBreastStartSide,
   getRoundedDurationMinutes,
   parseBreastfeedingSession,
 } from "../lib/breastfeeding";
@@ -300,7 +300,7 @@ export function useBreastfeedingTimerState({
     activeSide === "right" && activeStartedAt ? durations.right + (tick - activeStartedAt) : durations.right
   ), [activeSide, activeStartedAt, durations.right, tick]);
   const totalDuration = leftDuration + rightDuration;
-  const suggestedStartSide = useMemo(() => getOppositeBreastSide(lastUsedSide), [lastUsedSide]);
+  const suggestedStartSide = useMemo(() => getSuggestedBreastStartSide(lastUsedSide), [lastUsedSide]);
   const feedTimeline = useMemo(() => getUnifiedFeedTimeline(recentHistory), [recentHistory]);
   const latestFeed = feedTimeline[0] ?? null;
   const todayFeedCount = useMemo(() => {

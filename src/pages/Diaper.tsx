@@ -123,12 +123,16 @@ export function Diaper() {
     });
   };
 
+  const handleAlertGuidance = () => {
+    navigate("/guidance", { state: { guidanceTopicId: "when-to-call", origin: "/diaper" } });
+  };
+
   return (
     <PageBody className="-mt-8 space-y-0 px-0 py-0">
       <ScenicHero
         child={child}
         title="Diaper"
-        description="Track wet, dirty, and mixed diapers fast while keeping stool detail when it matters."
+        description={`keep track of ${child.name}'s wet, soiled or mixed diapers`}
         action={(
           <Button variant="cta" size="sm" onClick={() => setFormOpen(true)}>
             Add
@@ -149,7 +153,7 @@ export function Diaper() {
       </div>
 
       <div className="space-y-3 px-4 py-3 md:space-y-5 md:px-10 md:py-5">
-        <AlertBanner alerts={alerts} onDismiss={dismiss} />
+        <AlertBanner alerts={alerts} onAction={handleAlertGuidance} onDismiss={dismiss} />
 
         <div className="grid gap-3 md:grid-cols-2 md:gap-4">
           <DiaperQuickLogCard

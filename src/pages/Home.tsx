@@ -217,14 +217,18 @@ export function Home() {
     if (log) setEditingMeal(log);
   };
 
+  const handleAlertGuidance = () => {
+    navigate("/guidance", { state: { guidanceTopicId: "when-to-call", origin: "/" } });
+  };
+
   const recommendationIcon = assistantModel.recommendation.accent === "sleep"
     ? <HomeActionSleepIcon className="h-6 w-6 text-[var(--color-home-recommendation-sleep-icon)] md:h-8 md:w-8" />
     : <HomeActionBottleIcon className="h-6 w-6 text-[var(--color-home-recommendation-feed-icon)] md:h-8 md:w-8" />;
 
   return (
     <div className="flex flex-col gap-3 pb-3 pt-0 md:gap-7 md:pb-4 md:pt-0.5">
-      <AlertBanner alerts={alerts} onDismiss={dismiss} />
       <HomeTopSection
+        alertSlot={<AlertBanner alerts={alerts} onAction={handleAlertGuidance} onDismiss={dismiss} />}
         status={assistantModel.status}
         insights={assistantModel.insights}
         onInsightSelect={handleInsightSelect}

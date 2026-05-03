@@ -201,6 +201,11 @@ export function Poop() {
       alerts: true,
     });
   };
+
+  const handleAlertGuidance = () => {
+    navigate("/guidance", { state: { guidanceTopicId: "when-to-call", origin: "/poop" } });
+  };
+
   const {
     quickPoopPresets,
     repeatLastPoop,
@@ -240,7 +245,7 @@ export function Poop() {
       </div>
 
       <div className="space-y-3 px-4 py-3 md:space-y-5 md:px-10 md:py-5">
-        <AlertBanner alerts={alerts} onDismiss={dismiss} />
+        <AlertBanner alerts={alerts} onAction={handleAlertGuidance} onDismiss={dismiss} />
 
         <div className="grid gap-3 md:grid-cols-2 md:gap-4">
           <PoopQuickLogCard

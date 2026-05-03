@@ -214,49 +214,49 @@ function buildGuidanceTopics(tips: GuidanceTip[]): GuidanceTopic[] {
 function getToneStyles(tone: TopicTone) {
   if (tone === "alert") {
     return {
-      surface: "rgba(255, 238, 234, 0.94)",
-      iconSurface: "rgba(255, 218, 209, 0.86)",
+      surface: "color-mix(in srgb, var(--color-alert-bg) 44%, var(--color-home-card-surface))",
+      iconSurface: "color-mix(in srgb, var(--color-alert-bg) 72%, var(--color-home-card-surface))",
       icon: "var(--color-alert)",
-      border: "rgba(235, 122, 96, 0.18)",
+      border: "color-mix(in srgb, var(--color-alert) 18%, transparent)",
     };
   }
   if (tone === "purple") {
     return {
-      surface: "rgba(246, 240, 255, 0.88)",
-      iconSurface: "rgba(233, 221, 250, 0.78)",
+      surface: "color-mix(in srgb, var(--color-home-sleep-surface) 48%, var(--color-home-card-surface))",
+      iconSurface: "color-mix(in srgb, var(--color-home-sleep-surface) 74%, var(--color-home-card-surface))",
       icon: "#9b7ac2",
-      border: "rgba(150, 115, 194, 0.12)",
+      border: "color-mix(in srgb, var(--color-home-sleep-icon) 16%, transparent)",
     };
   }
   if (tone === "amber") {
     return {
-      surface: "rgba(255, 247, 234, 0.9)",
-      iconSurface: "rgba(255, 229, 184, 0.72)",
+      surface: "color-mix(in srgb, var(--color-caution-bg) 42%, var(--color-home-card-surface))",
+      iconSurface: "color-mix(in srgb, var(--color-caution-bg) 70%, var(--color-home-card-surface))",
       icon: "#d99a2b",
-      border: "rgba(218, 161, 62, 0.14)",
+      border: "color-mix(in srgb, var(--color-caution) 16%, transparent)",
     };
   }
   if (tone === "green") {
     return {
-      surface: "rgba(240, 250, 236, 0.9)",
-      iconSurface: "rgba(219, 241, 209, 0.78)",
+      surface: "color-mix(in srgb, var(--color-healthy-bg) 44%, var(--color-home-card-surface))",
+      iconSurface: "color-mix(in srgb, var(--color-healthy-bg) 74%, var(--color-home-card-surface))",
       icon: "#82ad65",
-      border: "rgba(123, 166, 89, 0.14)",
+      border: "color-mix(in srgb, var(--color-healthy) 16%, transparent)",
     };
   }
   if (tone === "peach") {
     return {
-      surface: "rgba(255, 242, 235, 0.9)",
-      iconSurface: "rgba(255, 222, 205, 0.74)",
+      surface: "color-mix(in srgb, var(--color-surface-tint) 42%, var(--color-home-card-surface))",
+      iconSurface: "color-mix(in srgb, var(--color-surface-tint) 70%, var(--color-home-card-surface))",
       icon: "#ef8a62",
-      border: "rgba(232, 138, 96, 0.14)",
+      border: "color-mix(in srgb, var(--color-cta) 16%, transparent)",
     };
   }
   return {
-    surface: "rgba(239, 247, 255, 0.9)",
-    iconSurface: "rgba(220, 238, 255, 0.78)",
+    surface: "color-mix(in srgb, var(--color-info-bg) 42%, var(--color-home-card-surface))",
+    iconSurface: "color-mix(in srgb, var(--color-info-bg) 72%, var(--color-home-card-surface))",
     icon: "#5c9ed8",
-    border: "rgba(92, 158, 216, 0.12)",
+    border: "color-mix(in srgb, var(--color-info) 16%, transparent)",
   };
 }
 

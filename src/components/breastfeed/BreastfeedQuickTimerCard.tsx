@@ -1,7 +1,7 @@
 import { Button } from "../ui/button";
 import { Card, CardContent } from "../ui/card";
 import { BreastSideButton } from "./BreastSideButton";
-import { formatBreastfeedingSummary } from "../../lib/breastfeeding";
+import { formatBreastfeedingSummary, getBreastfeedingNextSideReason } from "../../lib/breastfeeding";
 import type { BreastSide } from "../../lib/types";
 
 function formatSideLabel(side: BreastSide | null) {
@@ -36,7 +36,6 @@ export function BreastfeedQuickTimerCard({
   onToggleRight: () => void;
 }) {
   const suggestedSideLabel = formatSideLabel(suggestedStartSide);
-  const lastSideLabel = formatSideLabel(lastUsedSide);
 
   return (
     <Card
@@ -86,9 +85,7 @@ export function BreastfeedQuickTimerCard({
             {activeSide ? `${activeSide === "left" ? "Left" : "Right"} side is running` : suggestedSideLabel ? `Start on ${suggestedSideLabel}` : "Start either side"}
           </p>
           <p className="mt-1 text-[0.68rem] leading-snug text-[var(--color-text-secondary)] md:text-[0.72rem]">
-            {lastSideLabel && !activeSide
-              ? `Last feed ended on the ${lastSideLabel} side, so the other side is usually a good place to begin.`
-              : "Tiny Tummy will remember the last side after you save a session."}
+            {getBreastfeedingNextSideReason(lastUsedSide, activeSide)}
           </p>
         </div>
 

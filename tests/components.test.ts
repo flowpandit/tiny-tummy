@@ -5,6 +5,7 @@ import "./test-dom.ts";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { CompactChildNav } from "../src/components/layout/CompactChildNav.tsx";
+import { AlertBanner } from "../src/components/dashboard/AlertBanner.tsx";
 import { LoggingFieldGroup, LoggingFormHeader, LoggingPresetNotice } from "../src/components/logging/logging-form-primitives.tsx";
 import { NormalRangeIntro } from "../src/components/onboarding/NormalRangeIntro.tsx";
 import { SleepRecentHistorySection } from "../src/components/sleep/SleepRecentHistorySection.tsx";
@@ -55,6 +56,18 @@ const recentMilestone = {
   created_at: "2026-04-17T11:30:00",
 };
 
+const urgentAlert = {
+  id: "alert-1",
+  child_id: "child-1",
+  alert_type: "red_flag_color",
+  severity: "urgent" as const,
+  title: "Red stool detected",
+  message: "Red stools may contain blood. While some foods can cause this, it's worth mentioning to your doctor.",
+  is_dismissed: 0,
+  triggered_at: "2026-04-17T11:30:00",
+  related_log_id: null,
+};
+
 function renderAvatar(child: Child) {
   return React.createElement("span", { "data-testid": `avatar-${child.id}` }, child.name.charAt(0));
 }
@@ -80,6 +93,32 @@ test("logging form primitives render their shared labels and messaging", () => {
   assert.ok(screen.getByLabelText("Mock field"));
   assert.ok(screen.getByText("Quick preset"));
   assert.ok(screen.getByText("Uses the saved diaper preset."));
+});
+
+test("AlertBanner renders important alerts as inline nudges", () => {
+  const dismissed: string[] = [];
+  const actionAlerts: string[] = [];
+  const { container } = render(React.createElement(AlertBanner, {
+    alerts: [urgentAlert],
+    onAction: (alert) => {
+      actionAlerts.push(alert.id);
+    },
+    onDismiss: (id: string) => {
+      dismissed.push(id);
+    },
+  }));
+
+  assert.ok(screen.getByText("Important"));
+  assert.ok(screen.getByText("Red stool detected"));
+  assert.ok(screen.getByText("Check with your doctor if this repeats or your baby seems unwell."));
+  assert.doesNotMatch(container.firstElementChild?.className ?? "", /\bsticky\b/);
+  assert.doesNotMatch(container.firstElementChild?.className ?? "", /\bfixed\b/);
+
+  fireEvent.click(screen.getByRole("button", { name: "What to do" }));
+  fireEvent.click(screen.getByRole("button", { name: "Dismiss important alert" }));
+
+  assert.deepEqual(actionAlerts, ["alert-1"]);
+  assert.deepEqual(dismissed, ["alert-1"]);
 });
 
 test("CompactChildNav supports child switching and optional back navigation", () => {
@@ -167,6 +206,19 @@ test("Guidance hub stays scannable and opens topic details", () => {
   assert.ok(screen.getByText("What to know"));
   assert.ok(screen.getByText("Use Log symptom for one thing you noticed, like a fever reading, cough, rash, vomit, or unusual stool."));
   assert.ok(screen.getByText("When to act"));
+});
+
+test("Guidance alert topics use theme-aware surfaces", () => {
+  const { container } = render(React.createElement(GuidanceHubView));
+  const priorityCard = screen.getByRole("button", { name: /When to call the doctor/i });
+
+  assert.match(priorityCard.getAttribute("style") ?? "", /var\(--color-alert-bg\)/);
+  assert.equal(container.querySelector("[style*='rgba(255, 238, 234']"), null);
+
+  fireEvent.click(priorityCard);
+
+  const whenToAct = screen.getByText("When to act").closest("section");
+  assert.match(whenToAct?.getAttribute("style") ?? "", /var\(--color-alert-bg\)/);
 });
 
 test("Guidance hub can open symptoms and episodes directly", () => {
