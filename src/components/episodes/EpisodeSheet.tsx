@@ -22,6 +22,9 @@ function getEpisodeBadgeVariant(episodeType: EpisodeType) {
   return "info";
 }
 
+const stickyFooterClassName = "sticky bottom-0 z-10 mt-6 border-t border-[var(--color-border)] bg-[var(--color-surface-strong)] px-5 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-3 shadow-[0_-14px_28px_rgba(15,23,42,0.08)]";
+const insetStickyFooterClassName = "sticky bottom-0 z-10 -mx-5 mt-1 border-t border-[var(--color-border)] bg-[var(--color-surface-strong)] px-5 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-3 shadow-[0_-14px_28px_rgba(15,23,42,0.08)]";
+
 interface EpisodeSheetProps extends SheetVisibilityProps {
   childId: string;
   activeEpisode: Episode | null;
@@ -74,116 +77,120 @@ export function EpisodeSheet({
 
   return (
     <Sheet open={open} onClose={onClose}>
-      <div className="px-5 pb-8">
+      <div className="min-h-full">
         {isStartingEpisode ? (
-          <form onSubmit={(e: FormEvent) => { e.preventDefault(); void handleCreateEpisode(); }}>
-            <h2 className="mb-2 text-center text-lg font-semibold text-[var(--color-text)]">
-              Start episode
-            </h2>
-            <p className="mb-5 text-center text-sm text-[var(--color-text-secondary)]">
-              Track a health concern across multiple days instead of scattered notes.
-            </p>
+          <form onSubmit={(e: FormEvent) => { e.preventDefault(); void handleCreateEpisode(); }} className="flex min-h-full flex-col">
+            <div className="px-5 pb-28">
+              <h2 className="mb-2 text-center text-lg font-semibold text-[var(--color-text)]">
+                Start episode
+              </h2>
+              <p className="mb-5 text-center text-sm text-[var(--color-text-secondary)]">
+                Track a health concern across multiple days instead of scattered notes.
+              </p>
 
-            <div className="flex flex-col gap-5">
-              <div>
-                <label className="mb-2 block text-sm font-medium text-[var(--color-text)]">
-                  Episode type
-                </label>
-                <div className="flex flex-col gap-2">
-                  {EPISODE_TYPES.map((item) => (
-                    <button
-                      key={item.value}
-                      type="button"
-                      onClick={() => setEpisodeType(item.value)}
-                      className={cn(
-                        "rounded-[var(--radius-md)] border px-4 py-3 text-left transition-colors",
-                        episodeType === item.value
-                          ? "border-[var(--color-primary)] bg-[var(--color-primary)]/10"
-                          : "border-[var(--color-border)] bg-[var(--color-surface)]",
-                      )}
-                    >
-                      <p className="text-sm font-medium text-[var(--color-text)]">{item.label}</p>
-                      <p className="mt-1 text-xs text-[var(--color-text-secondary)]">{item.description}</p>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <label className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">
-                  When did this start?
-                </label>
-                <div className="grid grid-cols-2 gap-2">
-                  <DatePicker value={episodeDate} onChange={setEpisodeDate} max={getCurrentLocalDate()} />
-                  <TimePicker value={episodeTime} onChange={setEpisodeTime} />
-                </div>
-              </div>
-
-              <div>
-                <label htmlFor="episode-summary" className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">
-                  Summary
-                </label>
-                <textarea
-                  id="episode-summary"
-                  value={summary}
-                  onChange={(e) => setSummary(e.target.value)}
-                  placeholder="e.g. Fever started overnight with lower appetite."
-                  rows={3}
-                  className="w-full resize-none rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm text-[var(--color-text)] outline-none transition-colors focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20"
-                />
-              </div>
-
-              {linkableRecentSymptoms.length > 0 && (
-                <div className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3">
-                  <p className="text-sm font-medium text-[var(--color-text)]">Link recent symptoms</p>
-                  <p className="mt-1 text-xs leading-relaxed text-[var(--color-text-secondary)]">
-                    Optional. Add recent standalone symptoms so the episode starts with useful context.
-                  </p>
-                  <div className="mt-3 flex flex-col gap-2">
-                    {linkableRecentSymptoms.map((symptom) => {
-                      const selected = linkedRecentSymptomIds.includes(symptom.id);
-                      const detail = [
-                        getSymptomSeverityLabel(symptom.severity),
-                        symptom.temperature_c !== null ? formatTemperatureValue(symptom.temperature_c, temperatureUnit) : null,
-                        formatDate(symptom.logged_at),
-                      ].filter(Boolean).join(" · ");
-
-                      return (
-                        <button
-                          key={symptom.id}
-                          type="button"
-                          onClick={() => setLinkedRecentSymptomIds((current) => (
-                            selected
-                              ? current.filter((id) => id !== symptom.id)
-                              : [...current, symptom.id]
-                          ))}
-                          className={cn(
-                            "rounded-[var(--radius-md)] border px-3 py-2 text-left transition-colors",
-                            selected
-                              ? "border-[var(--color-primary)] bg-[var(--color-primary)]/10"
-                              : "border-[var(--color-border)] bg-[var(--color-surface-strong)]",
-                          )}
-                        >
-                          <span className="block text-sm font-medium text-[var(--color-text)]">
-                            {getSymptomTypeLabel(symptom.symptom_type)}
-                          </span>
-                          <span className="mt-0.5 block text-xs text-[var(--color-text-secondary)]">
-                            {detail}
-                          </span>
-                        </button>
-                      );
-                    })}
+              <div className="flex flex-col gap-5">
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-[var(--color-text)]">
+                    Episode type
+                  </label>
+                  <div className="flex flex-col gap-2">
+                    {EPISODE_TYPES.map((item) => (
+                      <button
+                        key={item.value}
+                        type="button"
+                        onClick={() => setEpisodeType(item.value)}
+                        className={cn(
+                          "rounded-[var(--radius-md)] border px-4 py-3 text-left transition-colors",
+                          episodeType === item.value
+                            ? "border-[var(--color-primary)] bg-[var(--color-primary)]/10"
+                            : "border-[var(--color-border)] bg-[var(--color-surface)]",
+                        )}
+                      >
+                        <p className="text-sm font-medium text-[var(--color-text)]">{item.label}</p>
+                        <p className="mt-1 text-xs text-[var(--color-text-secondary)]">{item.description}</p>
+                      </button>
+                    ))}
                   </div>
                 </div>
-              )}
+
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">
+                    When did this start?
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <DatePicker value={episodeDate} onChange={setEpisodeDate} max={getCurrentLocalDate()} />
+                    <TimePicker value={episodeTime} onChange={setEpisodeTime} />
+                  </div>
+                </div>
+
+                <div>
+                  <label htmlFor="episode-summary" className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">
+                    Summary
+                  </label>
+                  <textarea
+                    id="episode-summary"
+                    value={summary}
+                    onChange={(e) => setSummary(e.target.value)}
+                    placeholder="e.g. Fever started overnight with lower appetite."
+                    rows={3}
+                    className="w-full resize-none rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm text-[var(--color-text)] outline-none transition-colors focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20"
+                  />
+                </div>
+
+                {linkableRecentSymptoms.length > 0 && (
+                  <div className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3">
+                    <p className="text-sm font-medium text-[var(--color-text)]">Link recent symptoms</p>
+                    <p className="mt-1 text-xs leading-relaxed text-[var(--color-text-secondary)]">
+                      Optional. Add recent standalone symptoms so the episode starts with useful context.
+                    </p>
+                    <div className="mt-3 flex flex-col gap-2">
+                      {linkableRecentSymptoms.map((symptom) => {
+                        const selected = linkedRecentSymptomIds.includes(symptom.id);
+                        const detail = [
+                          getSymptomSeverityLabel(symptom.severity),
+                          symptom.temperature_c !== null ? formatTemperatureValue(symptom.temperature_c, temperatureUnit) : null,
+                          formatDate(symptom.logged_at),
+                        ].filter(Boolean).join(" · ");
+
+                        return (
+                          <button
+                            key={symptom.id}
+                            type="button"
+                            onClick={() => setLinkedRecentSymptomIds((current) => (
+                              selected
+                                ? current.filter((id) => id !== symptom.id)
+                                : [...current, symptom.id]
+                            ))}
+                            className={cn(
+                              "rounded-[var(--radius-md)] border px-3 py-2 text-left transition-colors",
+                              selected
+                                ? "border-[var(--color-primary)] bg-[var(--color-primary)]/10"
+                                : "border-[var(--color-border)] bg-[var(--color-surface-strong)]",
+                            )}
+                          >
+                            <span className="block text-sm font-medium text-[var(--color-text)]">
+                              {getSymptomTypeLabel(symptom.symptom_type)}
+                            </span>
+                            <span className="mt-0.5 block text-xs text-[var(--color-text-secondary)]">
+                              {detail}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
 
-            <Button type="submit" variant="cta" size="lg" className="mt-6 w-full" disabled={!episodeType || isSubmitting}>
-              {isSubmitting ? "Starting..." : "Start episode"}
-            </Button>
+            <div className={stickyFooterClassName}>
+              <Button type="submit" variant="cta" size="lg" className="w-full" disabled={!episodeType || isSubmitting}>
+                {isSubmitting ? "Starting..." : "Start episode"}
+              </Button>
+            </div>
           </form>
         ) : (
-          <div className="flex flex-col gap-5">
+          <div className="flex flex-col gap-5 px-5 pb-8">
             <div>
               <div className="flex items-start justify-between gap-3">
                 <div>
@@ -219,80 +226,84 @@ export function EpisodeSheet({
             </Card>
 
             {!isResolved && (
-            <form onSubmit={(e: FormEvent) => { e.preventDefault(); void handleAddEvent(); }} className="flex flex-col gap-4">
-              <div>
-                <label className="mb-2 block text-sm font-medium text-[var(--color-text)]">
-                  Update type
-                </label>
-                <div className="flex flex-wrap gap-2">
-                  {EPISODE_EVENT_TYPES.map((item) => (
-                    <button
-                      key={item.value}
-                      type="button"
-                      onClick={() => setEventType(item.value)}
-                      className={cn(
-                        "h-10 rounded-[var(--radius-md)] border px-4 text-sm font-medium transition-colors",
-                        eventType === item.value
-                          ? "border-[var(--color-primary)] bg-[var(--color-primary)]/10 text-[var(--color-primary)]"
-                          : "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-secondary)]",
-                      )}
-                    >
-                      {item.label}
-                    </button>
-                  ))}
+            <form onSubmit={(e: FormEvent) => { e.preventDefault(); void handleAddEvent(); }} className="flex flex-col">
+              <div className="flex flex-col gap-4 pb-24">
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-[var(--color-text)]">
+                    Update type
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    {EPISODE_EVENT_TYPES.map((item) => (
+                      <button
+                        key={item.value}
+                        type="button"
+                        onClick={() => setEventType(item.value)}
+                        className={cn(
+                          "h-10 rounded-[var(--radius-md)] border px-4 text-sm font-medium transition-colors",
+                          eventType === item.value
+                            ? "border-[var(--color-primary)] bg-[var(--color-primary)]/10 text-[var(--color-primary)]"
+                            : "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-secondary)]",
+                        )}
+                      >
+                        {item.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label htmlFor="episode-event-title" className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">
+                    What happened?
+                  </label>
+                  <input
+                    ref={eventTitleRef}
+                    id="episode-event-title"
+                    type="text"
+                    value={eventTitle}
+                    onChange={(e) => setEventTitle(e.target.value)}
+                    placeholder="e.g. Temperature lower, gave medicine, drank more fluids"
+                    className="h-11 w-full rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 text-sm text-[var(--color-text)] outline-none transition-colors focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20"
+                  />
+                  <p className="mt-1 text-xs text-[var(--color-text-soft)]">
+                    Short title optional if you add notes below. We will fill a default label from the update type.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">
+                    When
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <DatePicker value={eventDate} onChange={setEventDate} max={getCurrentLocalDate()} />
+                    <TimePicker value={eventTime} onChange={setEventTime} />
+                  </div>
+                </div>
+
+                <div>
+                  <label htmlFor="episode-event-notes" className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">
+                    Extra notes
+                  </label>
+                  <textarea
+                    id="episode-event-notes"
+                    value={eventNotes}
+                    onChange={(e) => setEventNotes(e.target.value)}
+                    placeholder="Optional details for later."
+                    rows={2}
+                    className="w-full resize-none rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm text-[var(--color-text)] outline-none transition-colors focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20"
+                  />
                 </div>
               </div>
 
-              <div>
-                <label htmlFor="episode-event-title" className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">
-                  What happened?
-                </label>
-                <input
-                  ref={eventTitleRef}
-                  id="episode-event-title"
-                  type="text"
-                  value={eventTitle}
-                  onChange={(e) => setEventTitle(e.target.value)}
-                  placeholder="e.g. Temperature lower, gave medicine, drank more fluids"
-                  className="h-11 w-full rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 text-sm text-[var(--color-text)] outline-none transition-colors focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20"
-                />
-                <p className="mt-1 text-xs text-[var(--color-text-soft)]">
-                  Short title optional if you add notes below. We will fill a default label from the update type.
-                </p>
+              <div className={insetStickyFooterClassName}>
+                <Button
+                  type="submit"
+                  variant="primary"
+                  className="w-full"
+                  disabled={(!eventTitle.trim() && !eventNotes.trim()) || !eventType || isAddingEvent}
+                >
+                  {isAddingEvent ? "Saving..." : "Add update"}
+                </Button>
               </div>
-
-              <div>
-                <label className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">
-                  When
-                </label>
-                <div className="grid grid-cols-2 gap-2">
-                  <DatePicker value={eventDate} onChange={setEventDate} max={getCurrentLocalDate()} />
-                  <TimePicker value={eventTime} onChange={setEventTime} />
-                </div>
-              </div>
-
-              <div>
-                <label htmlFor="episode-event-notes" className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">
-                  Extra notes
-                </label>
-                <textarea
-                  id="episode-event-notes"
-                  value={eventNotes}
-                  onChange={(e) => setEventNotes(e.target.value)}
-                  placeholder="Optional details for later."
-                  rows={2}
-                  className="w-full resize-none rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm text-[var(--color-text)] outline-none transition-colors focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20"
-                />
-              </div>
-
-              <Button
-                type="submit"
-                variant="primary"
-                className="w-full"
-                disabled={(!eventTitle.trim() && !eventNotes.trim()) || !eventType || isAddingEvent}
-              >
-                {isAddingEvent ? "Saving..." : "Add update"}
-              </Button>
             </form>
             )}
 

@@ -158,6 +158,12 @@ pub fn run() {
             sql: include_str!("../migrations/011_symptom_temperature.sql"),
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 12,
+            description: "add symptom method and episode event source",
+            sql: include_str!("../migrations/012_symptom_method_and_updated_at.sql"),
+            kind: MigrationKind::Up,
+        },
     ];
 
     tauri::Builder::default()

@@ -26,6 +26,99 @@ interface GrowthTrendChartProps {
 
 const PERCENTILE_GUIDES = [3, 15, 50, 85, 97] as const;
 
+type GrowthTooltipValue = number | string | readonly (number | string)[];
+
+interface GrowthTooltipPayloadItem {
+  color?: string;
+  name?: string | number;
+  value?: GrowthTooltipValue;
+  payload?: {
+    childPercentile?: string | null;
+  };
+}
+
+interface GrowthTooltipProps {
+  active?: boolean;
+  label?: string | number;
+  payload?: GrowthTooltipPayloadItem[];
+  unit: string;
+  formatAgeLabel: (ageMonths: number) => string;
+  formatMeasurement: (value: number) => string;
+}
+
+function getNumericTooltipValue(value: GrowthTooltipValue | undefined): number | null {
+  const rawValue = Array.isArray(value) ? value[0] : value;
+  const numericValue = Number(rawValue);
+  return Number.isFinite(numericValue) ? numericValue : null;
+}
+
+function getTooltipLabel(name: string | number | undefined): string {
+  if (name === "child") return "Measurement";
+
+  const percentile = Number(String(name).replace("p", ""));
+  return Number.isFinite(percentile) ? `${formatOrdinal(percentile)} percentile` : String(name ?? "");
+}
+
+function getTooltipSortValue(name: string | number | undefined): number {
+  if (name === "child") return -1;
+
+  const percentile = Number(String(name).replace("p", ""));
+  return Number.isFinite(percentile) ? percentile : 999;
+}
+
+function GrowthTrendTooltip({
+  active,
+  label,
+  payload,
+  unit,
+  formatAgeLabel,
+  formatMeasurement,
+}: GrowthTooltipProps) {
+  if (!active || !payload?.length) return null;
+
+  const rows = payload
+    .filter((item) => getNumericTooltipValue(item.value) !== null)
+    .sort((left, right) => getTooltipSortValue(left.name) - getTooltipSortValue(right.name));
+
+  if (rows.length === 0) return null;
+
+  return (
+    <div className="max-w-[min(18rem,calc(100vw-3rem))] rounded-[var(--radius-md)] border border-[var(--color-home-card-border)] bg-[var(--color-surface)] px-3 py-2 text-[0.72rem] shadow-[var(--shadow-home-card)]">
+      <p className="font-semibold text-[var(--color-text)]">
+        Age {formatAgeLabel(Number(label))}
+      </p>
+      <div className="mt-2 flex flex-col gap-1.5">
+        {rows.map((item) => {
+          const numericValue = getNumericTooltipValue(item.value);
+          if (numericValue === null) return null;
+
+          const isMeasurement = item.name === "child";
+          const detail = isMeasurement && item.payload?.childPercentile
+            ? item.payload.childPercentile
+            : null;
+
+          return (
+            <div key={String(item.name)} className="flex items-start gap-2">
+              <span
+                className="mt-1 h-2 w-2 shrink-0 rounded-full"
+                style={{ backgroundColor: item.color ?? "var(--color-text-soft)" }}
+              />
+              <div className="min-w-0">
+                <p className="font-semibold leading-snug text-[var(--color-text)]">
+                  {getTooltipLabel(item.name)}
+                </p>
+                <p className="leading-snug text-[var(--color-text-secondary)]">
+                  {formatMeasurement(numericValue)} {unit}{detail ? ` · ${detail}` : ""}
+                </p>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export function GrowthTrendChart({
   logs,
   metric,
@@ -190,9 +283,9 @@ export function GrowthTrendChart({
 
   return (
     <div className="w-full">
-      <div className="relative h-[112px] w-full md:h-[180px]">
+      <div className="relative h-[240px] w-full sm:h-[248px] md:h-[260px]" data-no-page-swipe="true">
         <ResponsiveContainer width="100%" height="100%">
-        <LineChart data={data} margin={{ top: 12, right: 38, bottom: 2, left: -6 }}>
+        <LineChart data={data} margin={{ top: 18, right: 42, bottom: 14, left: -4 }}>
           <CartesianGrid strokeDasharray="4 8" stroke="var(--color-border)" vertical={false} />
           <XAxis
             dataKey="ageMonths"
@@ -215,21 +308,16 @@ export function GrowthTrendChart({
             tickCount={4}
           />
           <Tooltip
-            labelFormatter={(label) => `Age ${formatAgeLabel(Number(label))}`}
-            formatter={(value, name, item) => {
-              if (name === "child") {
-                return [`${value} ${unit}${item.payload.childPercentile ? ` · ${item.payload.childPercentile}` : ""}`, "Measurement"];
-              }
-
-              const percentileLabel = formatOrdinal(Number(String(name).replace("p", "")));
-              return [`${value} ${unit}`, `${percentileLabel} percentile`];
-            }}
-            contentStyle={{
-              backgroundColor: "var(--color-surface)",
-              border: "1px solid var(--color-border)",
-              borderRadius: "var(--radius-sm)",
-              fontSize: 12,
-            }}
+            content={(
+              <GrowthTrendTooltip
+                unit={unit}
+                formatAgeLabel={formatAgeLabel}
+                formatMeasurement={formatMeasurementTick}
+              />
+            )}
+            cursor={{ stroke: "var(--color-text-soft)", strokeDasharray: "3 4", strokeWidth: 1 }}
+            position={{ y: 8 }}
+            wrapperStyle={{ outline: "none", zIndex: 20 }}
           />
           <Line dataKey="p3" stroke={percentileLineColor} strokeOpacity={0.42} strokeWidth={1.4} strokeDasharray="4 5" dot={false} connectNulls isAnimationActive={false}>
             <LabelList valueAccessor={getPercentileLabelAccessor(3)} position="right" offset={4} fill="var(--color-muted)" fontSize={9} fontWeight={650} />
