@@ -557,19 +557,26 @@ export function AccessSection() {
   return (
     <section>
       <div
-        className="relative overflow-hidden rounded-[18px] border px-3.5 py-3 shadow-[0_12px_28px_rgba(213,164,84,0.1)] md:flex md:items-center md:gap-4 md:px-4"
+        className="settings-access-card relative overflow-hidden rounded-[18px] border px-3.5 py-3 shadow-[0_12px_28px_rgba(213,164,84,0.1)] md:flex md:items-center md:gap-4 md:px-4"
         style={{
           background: "linear-gradient(135deg, color-mix(in srgb, #fff7df 74%, var(--color-surface-strong)) 0%, color-mix(in srgb, #fff9ec 76%, var(--color-surface)) 100%)",
           borderColor: "color-mix(in srgb, #f4bf53 42%, var(--color-border))",
         }}
       >
+        <div
+          aria-hidden="true"
+          className="settings-access-card__dark-surface pointer-events-none absolute inset-0 hidden"
+          style={{
+            background: "linear-gradient(135deg, color-mix(in srgb, #ffd166 16%, var(--color-surface-strong)) 0%, color-mix(in srgb, var(--color-bg-elevated) 88%, #ffd166) 100%)",
+          }}
+        />
         <div className="flex items-start gap-2.5 md:flex-1 md:items-center">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#ffd166] text-white shadow-[0_10px_20px_rgba(224,158,50,0.18)] md:h-11 md:w-11">
+          <span className="settings-access-card__icon relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#ffd166] text-white shadow-[0_10px_20px_rgba(224,158,50,0.18)] md:h-11 md:w-11">
             <svg viewBox="0 0 24 24" className="h-6 w-6" fill="currentColor" aria-hidden="true">
               <path d="m12 3.4 2.36 4.78 5.27.77-3.82 3.72.9 5.25L12 15.45l-4.71 2.47.9-5.25-3.82-3.72 5.27-.77L12 3.4Z" />
             </svg>
           </span>
-          <div className="min-w-0">
+          <div className="relative min-w-0">
             <p className="text-[0.92rem] font-bold leading-tight tracking-[-0.02em] text-[var(--color-text)] md:text-[1rem]">
               {accessTitle}
             </p>
@@ -583,11 +590,11 @@ export function AccessSection() {
             )}
           </div>
         </div>
-        <div className="mt-3 flex gap-2 md:mt-0 md:shrink-0">
+        <div className="relative mt-3 flex gap-2 md:mt-0 md:shrink-0">
           <button
             type="button"
             onClick={() => navigate("/unlock")}
-            className="inline-flex h-10 flex-1 items-center justify-center gap-1.5 rounded-full border border-[#ffd6ad] bg-[var(--color-surface-strong)] px-3.5 text-[0.8rem] font-bold text-[var(--color-primary)] shadow-[var(--shadow-soft)] md:flex-none"
+            className="settings-access-card__unlock inline-flex h-10 flex-1 items-center justify-center gap-1.5 rounded-full border border-[#ffd6ad] bg-[var(--color-surface-strong)] px-3.5 text-[0.8rem] font-bold text-[var(--color-primary)] shadow-[var(--shadow-soft)] md:flex-none"
           >
             <svg viewBox="0 0 24 24" className="h-4.5 w-4.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <path d="m5 16 1.4-8 4 3.8L12 6l1.6 5.8 4-3.8L19 16H5Z" />
@@ -599,7 +606,7 @@ export function AccessSection() {
           <button
             type="button"
             onClick={() => { void handleRestore(); }}
-            className="inline-flex h-10 items-center justify-center rounded-full px-2.5 text-[0.76rem] font-semibold text-[var(--color-text-secondary)]"
+            className="settings-access-card__restore inline-flex h-10 items-center justify-center rounded-full px-2.5 text-[0.76rem] font-semibold text-[var(--color-text-secondary)]"
           >
             Restore
           </button>

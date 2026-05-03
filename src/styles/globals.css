@@ -210,6 +210,33 @@ a,
   }
 }
 
+[data-theme="dark"] .settings-access-card,
+[data-theme="night"] .settings-access-card {
+  box-shadow: 0 14px 34px rgba(5, 10, 18, 0.28);
+}
+
+[data-theme="dark"] .settings-access-card__dark-surface,
+[data-theme="night"] .settings-access-card__dark-surface {
+  display: block;
+}
+
+[data-theme="dark"] .settings-access-card__icon,
+[data-theme="night"] .settings-access-card__icon {
+  color: #1b2432;
+}
+
+[data-theme="dark"] .settings-access-card__unlock,
+[data-theme="night"] .settings-access-card__unlock {
+  border-color: rgba(255, 209, 102, 0.55);
+  background: var(--color-bg);
+  color: #ffd166;
+}
+
+[data-theme="dark"] .settings-access-card__restore,
+[data-theme="night"] .settings-access-card__restore {
+  color: rgba(255, 209, 102, 0.8);
+}
+
 /* Reduced motion — disable animations for accessibility */
 @media (prefers-reduced-motion: reduce) {
 
