@@ -139,7 +139,7 @@ export function buildSleepAssistantCopy({
     return {
       heroTitle: "Sleep timing needs a first log",
       heroDescription: `Add a nap or night sleep for ${childName} and the next wake window will appear here.`,
-      heroBadgeLabel: "Ideal nap time",
+      heroBadgeLabel: "Ideal nap time is",
       heroBadgeValue: "waiting",
       heroBadgeDetail: "Add sleep data",
       recommendationTitle: "Log a sleep to unlock timing",
@@ -154,7 +154,7 @@ export function buildSleepAssistantCopy({
     return {
       heroTitle: "Sleep window may be overdue",
       heroDescription: `${childName}'s wake stretch is past the ideal window based on the last wake time.`,
-      heroBadgeLabel: "Ideal nap time",
+      heroBadgeLabel: "Ideal nap time is",
       heroBadgeValue: formatSleepPredictionRelative(prediction, now),
       heroBadgeDetail: formatSleepPredictionClock(prediction),
       recommendationTitle: "Start sleep now",
@@ -169,7 +169,7 @@ export function buildSleepAssistantCopy({
     return {
       heroTitle: "Sleep window is open",
       heroDescription: `The ideal nap window is here based on ${childName}'s last wake time.`,
-      heroBadgeLabel: "Ideal nap time",
+      heroBadgeLabel: "Ideal nap time is",
       heroBadgeValue: formatSleepPredictionRelative(prediction, now),
       heroBadgeDetail: formatSleepPredictionClock(prediction),
       recommendationTitle: "Start nap now",
@@ -183,7 +183,7 @@ export function buildSleepAssistantCopy({
   return {
     heroTitle: "Sleep window is opening",
     heroDescription: `Ideal nap time is approaching based on ${childName}'s last wake time.`,
-    heroBadgeLabel: "Ideal nap time",
+    heroBadgeLabel: "Ideal nap time is",
     heroBadgeValue: formatSleepPredictionRelative(prediction, now),
     heroBadgeDetail: formatSleepPredictionClock(prediction),
     recommendationTitle: `Prepare for nap ${formatSleepPredictionRelative(prediction, now)}`,

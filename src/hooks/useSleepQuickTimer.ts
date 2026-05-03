@@ -7,6 +7,7 @@ import {
   getSleepTimerSettingKey,
   type SleepTimerSession,
 } from "../lib/sleep-timer";
+import { classifySleepType } from "../lib/sleep-insights";
 import type { Child } from "../lib/types";
 import { useSleepTimerPreview } from "./useSleepTimerPreview";
 
@@ -45,7 +46,7 @@ export function useSleepQuickTimer({
     try {
       await db.setSetting(getSleepTimerSettingKey(activeChild.id), JSON.stringify(nextSession));
       await refreshTimerSession();
-      onSuccess("Nap timer started.");
+      onSuccess("Sleep timer started.");
     } catch {
       onError("Could not start the sleep timer. Please try again.");
     } finally {
@@ -71,7 +72,7 @@ export function useSleepQuickTimer({
     try {
       await db.createSleepLog({
         child_id: activeChild.id,
-        sleep_type: timerSession.sleepType,
+        sleep_type: classifySleepType(timerSession.startedAt, endedAt),
         started_at: timerSession.startedAt,
         ended_at: endedAt,
         notes: timerSession.notes.trim() || null,

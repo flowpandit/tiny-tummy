@@ -5,6 +5,7 @@ import { usePoopLogs } from "../hooks/usePoopLogs";
 import { useDiaperLogs } from "../hooks/useDiaperLogs";
 import { useFeedingLogs } from "../hooks/useFeedingLogs";
 import { useSleepLogs } from "../hooks/useSleepLogs";
+import { useSleepQuickTimer } from "../hooks/useSleepQuickTimer";
 import { useAlerts } from "../hooks/useAlerts";
 import { useEpisodes } from "../hooks/useEpisodes";
 import { useSymptoms } from "../hooks/useSymptoms";
@@ -13,7 +14,13 @@ import { useEliminationPreference } from "../hooks/useEliminationPreference";
 import { useHomePageState } from "../hooks/useHomePageState";
 import { useHomeEffects } from "../hooks/useHomeEffects";
 import { buildChildDailySummary } from "../lib/child-summary";
-import { buildHomeAssistantModel, type HomeInsightCard, type HomeTimelineItem } from "../lib/home-insights";
+import {
+  buildActiveSleepInsight,
+  buildHomeAssistantModel,
+  elevateActiveSleepInsight,
+  type HomeInsightCard,
+  type HomeTimelineItem,
+} from "../lib/home-insights";
 import { HomeTopSection } from "../components/home/HomeTopSection";
 import { RecentActivity } from "../components/home/RecentActivity";
 import { CareToolsSection } from "../components/care/CareToolsSection";
@@ -23,6 +30,7 @@ import { HomeActiveEpisodes } from "../components/home/HomeActiveEpisodes";
 import { HomeSheets } from "../components/home/HomeSheets";
 import { AlertBanner } from "../components/dashboard/AlertBanner";
 import { HomeActionBottleIcon, HomeActionSleepIcon } from "../components/ui/icons";
+import { useToast } from "../components/ui/toast";
 import type { Episode } from "../lib/types";
 
 function RecommendationBottleArt() {
@@ -42,6 +50,7 @@ function RecommendationBottleArt() {
 export function Home() {
   const navigate = useNavigate();
   const activeChild = useActiveChild();
+  const { showError, showSuccess } = useToast();
   const { logs, lastRealPoop, refresh: refreshLogs } = usePoopLogs(activeChild?.id ?? null);
   const {
     logs: diaperLogs,
@@ -133,6 +142,18 @@ export function Home() {
   const handleSleepLogged = async () => {
     await refreshSleepLogs();
   };
+  const {
+    timerSession: sleepTimerSession,
+    timerElapsedMs: sleepTimerElapsedMs,
+    isSubmitting: isSleepTimerActionPending,
+    handleStopAndSaveTimer: handleStopSleepTimer,
+  } = useSleepQuickTimer({
+    activeChild,
+    refreshKey: sleepSheetOpen,
+    onLogged: handleSleepLogged,
+    onError: showError,
+    onSuccess: showSuccess,
+  });
 
   const selectedEpisode = selectedEpisodeId
     ? activeEpisodes.find((episode) => episode.id === selectedEpisodeId) ?? null
@@ -188,6 +209,21 @@ export function Home() {
       includeHydration: eliminationExperience.mode === "diaper",
     });
   }, [activeChild, alerts, diaperLogs, eliminationExperience.mode, feedingLogs, logs, sleepLogs, summary]);
+  const displayedInsights = useMemo(() => {
+    if (!activeChild || !assistantModel || !sleepTimerSession) {
+      return assistantModel?.insights ?? [];
+    }
+
+    return elevateActiveSleepInsight(
+      assistantModel.insights,
+      buildActiveSleepInsight({
+        childName: activeChild.name,
+        startedAt: sleepTimerSession.startedAt,
+        elapsedMs: sleepTimerElapsedMs,
+        actionDisabled: isSleepTimerActionPending,
+      }),
+    );
+  }, [activeChild, assistantModel, isSleepTimerActionPending, sleepTimerElapsedMs, sleepTimerSession]);
 
   if (!activeChild || !summary || !assistantModel) return null;
 
@@ -198,6 +234,11 @@ export function Home() {
     }
 
     navigate(eliminationExperience.route);
+  };
+  const handleInsightAction = (insight: HomeInsightCard) => {
+    if (insight.id === "sleep-active") {
+      void handleStopSleepTimer();
+    }
   };
 
   const handleTimelineItemSelect = (item: HomeTimelineItem) => {
@@ -210,6 +251,11 @@ export function Home() {
     if (item.kind === "diaper") {
       const log = diaperLogs.find((entry) => entry.id === item.sourceId);
       if (log) setEditingDiaper(log);
+      return;
+    }
+
+    if (item.kind === "sleep") {
+      navigate("/sleep");
       return;
     }
 
@@ -230,8 +276,9 @@ export function Home() {
       <HomeTopSection
         alertSlot={<AlertBanner alerts={alerts} onAction={handleAlertGuidance} onDismiss={dismiss} />}
         status={assistantModel.status}
-        insights={assistantModel.insights}
+        insights={displayedInsights}
         onInsightSelect={handleInsightSelect}
+        onInsightAction={handleInsightAction}
       />
 
       <HomeQuickActions

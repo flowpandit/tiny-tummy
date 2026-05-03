@@ -454,7 +454,7 @@ test("useSleepQuickTimer starts a nap timer from the quick action", async () => 
   const rawSession = settings.get(getSleepTimerSettingKey(child.id));
   assert.ok(rawSession);
   assert.equal(JSON.parse(rawSession).sleepType, "nap");
-  assert.deepEqual(success, ["Nap timer started."]);
+  assert.deepEqual(success, ["Sleep timer started."]);
   assert.deepEqual(errors, []);
 });
 

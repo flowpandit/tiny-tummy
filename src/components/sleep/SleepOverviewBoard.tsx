@@ -289,7 +289,7 @@ function QuickActions({
       <div className="mt-3 grid grid-cols-3 gap-3 md:mt-4 md:gap-5">
         <QuickActionButton
           title="Start sleep"
-          detail={hasTimerSession ? "Timer running" : "Start nap timer"}
+          detail={hasTimerSession ? "Timer running" : "Start sleep timer"}
           badge={hasTimerSession ? timerClock ?? "00:00" : undefined}
           tone="sleep"
           icon={<HomeActionSleepIcon className="h-7 w-7" />}

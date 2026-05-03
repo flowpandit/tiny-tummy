@@ -136,7 +136,7 @@ export function SleepLogSheet({
             <>
               <div className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg-elevated)] px-4 py-5 text-center">
                 <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--color-text-soft)]">
-                  {timerSession ? `${timerSession.sleepType === "night" ? "Night" : "Nap"} timer running` : "Sleep timer"}
+                  {timerSession ? "Sleep timer running" : "Sleep timer"}
                 </p>
                 <p className="mt-3 text-4xl font-semibold tracking-[-0.04em] text-[var(--color-text)]">
                   {formatSleepTimerClock(timerElapsedMs)}

@@ -7,6 +7,7 @@ interface HomeTopSectionProps {
   status: HomeStatusMessage;
   insights: HomeInsightCard[];
   onInsightSelect: (insight: HomeInsightCard) => void;
+  onInsightAction?: (insight: HomeInsightCard) => void;
 }
 
 function InsightIcon({ accent }: { accent: HomeInsightCard["accent"] }) {
@@ -65,7 +66,7 @@ function insightAccentStyles(accent: HomeInsightCard["accent"]) {
   };
 }
 
-function InsightSummaryItem({ insight }: { insight: HomeInsightCard }) {
+function InsightSummaryItem({ insight, showChevron = true }: { insight: HomeInsightCard; showChevron?: boolean }) {
   const accentStyles = insightAccentStyles(insight.accent);
 
   return (
@@ -89,7 +90,7 @@ function InsightSummaryItem({ insight }: { insight: HomeInsightCard }) {
           </p>
         )}
       </div>
-      <span className="text-[1.4rem] leading-none text-[var(--color-home-chevron)] md:hidden">›</span>
+      {showChevron && <span className="text-[1.4rem] leading-none text-[var(--color-home-chevron)] md:hidden">›</span>}
     </div>
   );
 }
@@ -99,6 +100,7 @@ export function HomeTopSection({
   status,
   insights,
   onInsightSelect,
+  onInsightAction,
 }: HomeTopSectionProps) {
   const insightsGridClassName = insights.length >= 3 ? "md:grid-cols-3" : "md:grid-cols-2";
 
@@ -156,17 +158,34 @@ export function HomeTopSection({
           </div>
 
           <div className={`mt-3 grid gap-0 md:mt-5 ${insightsGridClassName} md:gap-8`}>
-            {insights.map((insight) => (
-              <div key={insight.id} className="border-b border-[var(--color-home-divider)] py-2 first:pt-0 last:border-b-0 last:pb-0 md:border-b-0 md:border-r md:py-0 md:pr-6 md:last:border-r-0 md:last:pr-0">
-                <button
-                  type="button"
-                  className="block w-full rounded-[16px] text-left transition-opacity hover:opacity-85 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-transparent md:rounded-[22px]"
-                  onClick={() => onInsightSelect(insight)}
-                >
-                  <InsightSummaryItem insight={insight} />
-                </button>
-              </div>
-            ))}
+            {insights.map((insight) => {
+              const hasAction = Boolean(insight.actionLabel && onInsightAction);
+
+              return (
+                <div key={insight.id} className="border-b border-[var(--color-home-divider)] py-2 first:pt-0 last:border-b-0 last:pb-0 md:border-b-0 md:border-r md:py-0 md:pr-6 md:last:border-r-0 md:last:pr-0">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <button
+                      type="button"
+                      className="block min-w-0 flex-1 rounded-[16px] text-left transition-opacity hover:opacity-85 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-transparent md:rounded-[22px]"
+                      onClick={() => onInsightSelect(insight)}
+                    >
+                      <InsightSummaryItem insight={insight} showChevron={!hasAction} />
+                    </button>
+                    {hasAction && (
+                      <button
+                        type="button"
+                        aria-label={insight.actionAriaLabel ?? insight.actionLabel}
+                        disabled={insight.actionDisabled}
+                        onClick={() => onInsightAction?.(insight)}
+                        className="shrink-0 rounded-full border border-[color-mix(in_srgb,var(--color-home-sleep-icon)_22%,transparent)] bg-[color-mix(in_srgb,var(--color-home-sleep-surface)_68%,var(--color-home-card-surface))] px-3 py-2 text-[0.76rem] font-semibold text-[var(--color-home-sleep-value)] shadow-[0_8px_18px_rgba(131,102,220,0.12)] transition-opacity hover:opacity-85 disabled:cursor-not-allowed disabled:opacity-55 md:px-3.5 md:text-[0.82rem]"
+                      >
+                        {insight.actionLabel}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>

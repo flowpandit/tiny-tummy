@@ -17,6 +17,10 @@ function TimelineIcon({ accent }: { accent: HomeTimelineItem["accent"] }) {
     return <HomeActionBottleIcon className="h-3.5 w-3.5 text-[var(--color-home-action-feed-icon)] md:h-4 md:w-4" />;
   }
 
+  if (accent === "sleep") {
+    return <HomeActionSleepIcon className="h-3.5 w-3.5 text-[var(--color-home-sleep-icon)] md:h-4 md:w-4" />;
+  }
+
   return <HomeActionDiaperIcon className="h-3.5 w-3.5 text-[var(--color-info)] md:h-4 md:w-4" />;
 }
 
@@ -52,6 +56,13 @@ function timelineAccentStyles(accent: HomeTimelineItem["accent"]) {
     return {
       dot: "#51bf99",
       iconSurface: "var(--color-home-hydration-surface)",
+    };
+  }
+
+  if (accent === "sleep") {
+    return {
+      dot: "var(--color-home-sleep-icon)",
+      iconSurface: "var(--color-home-sleep-surface)",
     };
   }
 

@@ -52,6 +52,22 @@ export function formatSleepTimerSummary(totalMs: number): string {
   return `${hours}h ${minutes}m`;
 }
 
+export function formatSleepTimerInsightElapsed(totalMs: number): string {
+  const totalMinutes = Math.max(0, Math.floor(totalMs / 60000));
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+
+  if (hours === 0) {
+    return `${totalMinutes} min`;
+  }
+
+  if (minutes === 0) {
+    return `${hours} hr`;
+  }
+
+  return `${hours} hr ${minutes} min`;
+}
+
 export function getSleepTimerElapsedMs(session: SleepTimerSession, now = Date.now()): number {
   return Math.max(0, now - new Date(session.startedAt).getTime());
 }

@@ -9,6 +9,7 @@ import {
   parseSleepTimerSession,
   type SleepTimerSession,
 } from "../lib/sleep-timer";
+import { classifySleepType } from "../lib/sleep-insights";
 import { combineLocalDateAndTimeToUtcIso, formatLocalDateKey, formatLocalTimeValue } from "../lib/utils";
 
 function getDefaultManualWindow(): {
@@ -147,7 +148,7 @@ export function useSleepLogSheetState({
     try {
       await db.createSleepLog({
         child_id: childId,
-        sleep_type: timerSession.sleepType,
+        sleep_type: classifySleepType(timerSession.startedAt, endedAt),
         started_at: timerSession.startedAt,
         ended_at: endedAt,
         notes: timerSession.notes.trim() || null,

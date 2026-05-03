@@ -1,7 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
+  classifySleepType,
+  getClassifiedSleepLogs,
   getCompletedSleepLogs,
+  getDurationMinutes,
   getLastNapDisplay,
   getSleepPrediction,
   getWakeBaseline,
@@ -32,6 +35,18 @@ const futureNap: SleepEntry = {
   ended_at: "2026-04-10T13:00:00.000Z",
 };
 
+function createSleepLog(id: string, startedAt: string, endedAt: string): SleepEntry {
+  return {
+    id,
+    child_id: "child-1",
+    sleep_type: "nap",
+    started_at: startedAt,
+    ended_at: endedAt,
+    notes: null,
+    created_at: endedAt,
+  };
+}
+
 test("getCompletedSleepLogs filters out future and invalid sleep rows", () => {
   const invalidNap: SleepEntry = {
     ...pastNap,
@@ -45,6 +60,40 @@ test("getCompletedSleepLogs filters out future and invalid sleep rows", () => {
   );
 
   assert.deepEqual(completed.map((entry) => entry.id), ["sleep-past"]);
+});
+
+test("classifySleepType uses the night start window and duration threshold", () => {
+  assert.equal(classifySleepType("2026-05-01T19:00:00", "2026-05-01T22:00:00"), "night");
+  assert.equal(classifySleepType("2026-05-01T17:30:00", "2026-05-01T21:00:00"), "nap");
+  assert.equal(classifySleepType("2026-05-01T20:00:00", "2026-05-01T22:59:00"), "nap");
+});
+
+test("getClassifiedSleepLogs reclassifies long evening sleep as night sleep", () => {
+  const logs = [
+    createSleepLog("night", "2026-05-01T19:30:00", "2026-05-01T23:15:00"),
+    createSleepLog("nap", "2026-05-01T13:00:00", "2026-05-01T13:45:00"),
+  ];
+
+  const classified = getClassifiedSleepLogs(logs, new Date("2026-05-02T12:00:00").getTime());
+
+  assert.equal(classified.find((entry) => entry.id === "night")?.sleep_type, "night");
+  assert.equal(classified.find((entry) => entry.id === "nap")?.sleep_type, "nap");
+});
+
+test("getClassifiedSleepLogs merges short night interruptions into one night sleep", () => {
+  const logs = [
+    createSleepLog("segment-2", "2026-05-01T22:45:00", "2026-05-02T02:00:00"),
+    createSleepLog("segment-1", "2026-05-01T19:30:00", "2026-05-01T22:00:00"),
+  ];
+
+  const classified = getClassifiedSleepLogs(logs, new Date("2026-05-02T12:00:00").getTime());
+
+  assert.equal(classified.length, 1);
+  assert.equal(classified[0]?.sleep_type, "night");
+  assert.equal(classified[0]?.started_at, "2026-05-01T19:30:00");
+  assert.equal(classified[0]?.ended_at, "2026-05-02T02:00:00");
+  assert.equal(getDurationMinutes(classified[0]!), 345);
+  assert.deepEqual(classified[0]?.source_log_ids, ["segment-1", "segment-2"]);
 });
 
 test("sleep insights ignore future logs when picking the last nap and prediction", () => {

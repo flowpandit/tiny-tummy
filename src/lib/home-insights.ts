@@ -3,7 +3,8 @@ import { getFeedingEntryDetailParts, getFeedingEntryPrimaryLabel } from "./feedi
 import { FEED_PREDICTION_FALLBACK, getFeedBaseline, getFeedPrediction, getUnifiedFeedTimeline } from "./feed-insights";
 import { BITSS_TYPES } from "./constants";
 import { formatLocalDateKey, getAgeLabelFromDob, isOnLocalDay, timeSince } from "./utils";
-import { formatSleepDuration, getCompletedSleepLogs, getDurationMinutes, getSleepPrediction, getWakeBaseline } from "./sleep-insights";
+import { formatSleepDuration, getClassifiedSleepLogs, getDurationMinutes, getSleepPrediction, getWakeBaseline } from "./sleep-insights";
+import { formatSleepTimerInsightElapsed } from "./sleep-timer";
 import type {
   Alert,
   Child,
@@ -35,6 +36,9 @@ export interface HomeInsightCard {
   value: string;
   detail: string;
   accent: "poop" | "hydration" | "sleep";
+  actionLabel?: string;
+  actionAriaLabel?: string;
+  actionDisabled?: boolean;
 }
 
 export interface HomeRecommendationCard {
@@ -46,11 +50,11 @@ export interface HomeRecommendationCard {
 export interface HomeTimelineItem {
   id: string;
   sourceId: string;
-  kind: "feed" | "diaper" | "poop";
+  kind: "feed" | "diaper" | "poop" | "sleep";
   timeLabel: string;
   title: string;
   detail: string;
-  accent: "feed" | "diaper" | "poop";
+  accent: "feed" | "diaper" | "poop" | "sleep";
 }
 
 export interface HomeGlanceStat {
@@ -223,8 +227,8 @@ function buildHydrationInsight(summary: ChildDailySummary): HomeInsightCard {
 }
 
 function buildSleepInsight(child: Child, sleepLogs: SleepEntry[]): HomeInsightCard {
-  const sleepPrediction = getSleepPrediction(sleepLogs, getWakeBaseline(child.date_of_birth));
-  const completedSleepLogs = getCompletedSleepLogs(sleepLogs);
+  const completedSleepLogs = getClassifiedSleepLogs(sleepLogs);
+  const sleepPrediction = getSleepPrediction(completedSleepLogs, getWakeBaseline(child.date_of_birth));
   const lastSleep = completedSleepLogs[0] ?? null;
 
   if (sleepPrediction) {
@@ -254,6 +258,29 @@ function buildSleepInsight(child: Child, sleepLogs: SleepEntry[]): HomeInsightCa
     detail: "Once sleep is logged, the next window will appear here.",
     accent: "sleep",
   };
+}
+
+export function buildActiveSleepInsight(input: {
+  childName: string;
+  startedAt: string;
+  elapsedMs: number;
+  actionDisabled?: boolean;
+}): HomeInsightCard {
+  return {
+    id: "sleep-active",
+    label: "Active sleep",
+    value: `${input.childName} is sleeping`,
+    detail: `${formatSleepTimerInsightElapsed(input.elapsedMs)} · Started at ${formatClock(input.startedAt)}`,
+    accent: "sleep",
+    actionLabel: "End sleep",
+    actionAriaLabel: "End active sleep",
+    actionDisabled: input.actionDisabled,
+  };
+}
+
+export function elevateActiveSleepInsight(insights: HomeInsightCard[], activeSleepInsight: HomeInsightCard | null): HomeInsightCard[] {
+  if (!activeSleepInsight) return insights;
+  return [activeSleepInsight, ...insights.filter((insight) => insight.accent !== "sleep")];
 }
 
 function buildRecommendation(input: {
@@ -323,7 +350,7 @@ function buildRecommendation(input: {
   };
 }
 
-function buildTimeline(poops: PoopEntry[], diapers: DiaperEntry[], feedings: FeedingEntry[], dayKey: string): HomeTimelineItem[] {
+function buildTimeline(poops: PoopEntry[], diapers: DiaperEntry[], feedings: FeedingEntry[], sleeps: SleepEntry[], dayKey: string): HomeTimelineItem[] {
   const poopItems = poops
     .filter((entry) => isOnLocalDay(entry.logged_at, dayKey) && entry.is_no_poop === 0)
     .map((entry) => ({
@@ -375,7 +402,23 @@ function buildTimeline(poops: PoopEntry[], diapers: DiaperEntry[], feedings: Fee
       },
     }));
 
-  return [...poopItems, ...diaperItems, ...feedItems]
+  const sleepItems = sleeps
+    .filter((entry) => isOnLocalDay(entry.ended_at, dayKey))
+    .map((entry) => ({
+      id: `sleep-${entry.id}`,
+      logged_at: entry.ended_at,
+      item: {
+        id: `sleep-${entry.id}`,
+        sourceId: entry.id,
+        kind: "sleep" as const,
+        timeLabel: formatClock(entry.ended_at),
+        title: entry.sleep_type === "night" ? "Night sleep" : "Nap",
+        detail: formatSleepDuration(getDurationMinutes(entry)),
+        accent: "sleep" as const,
+      },
+    }));
+
+  return [...poopItems, ...diaperItems, ...feedItems, ...sleepItems]
     .sort((left, right) => new Date(left.logged_at).getTime() - new Date(right.logged_at).getTime())
     .slice(0, 4)
     .map((entry) => entry.item);
@@ -416,7 +459,7 @@ function buildGlanceStats(input: {
     {
       id: "naps",
       label: "Naps",
-      value: String(getCompletedSleepLogs(input.sleepLogs).filter((entry) => isOnLocalDay(entry.started_at, input.dayKey) && entry.sleep_type === "nap").length),
+      value: String(getClassifiedSleepLogs(input.sleepLogs).filter((entry) => isOnLocalDay(entry.started_at, input.dayKey) && entry.sleep_type === "nap").length),
       detail: "Today",
       accent: "sleep",
     },
@@ -438,7 +481,8 @@ export function buildHomeAssistantModel(input: {
   const includeHydration = input.includeHydration ?? true;
   const feedTimeline = getUnifiedFeedTimeline(input.feedingLogs);
   const feedPrediction = getFeedPrediction(feedTimeline, getFeedBaseline(input.child.date_of_birth, input.child.feeding_type));
-  const sleepPrediction = getSleepPrediction(input.sleepLogs, getWakeBaseline(input.child.date_of_birth));
+  const classifiedSleepLogs = getClassifiedSleepLogs(input.sleepLogs);
+  const sleepPrediction = getSleepPrediction(classifiedSleepLogs, getWakeBaseline(input.child.date_of_birth));
   const status = buildStatusMessage({
     child: input.child,
     alerts: input.alerts,
@@ -456,19 +500,19 @@ export function buildHomeAssistantModel(input: {
     insights: [
       buildPoopInsight(input.summary, input.poopLogs, input.diaperLogs, dayKey),
       includeHydration ? buildHydrationInsight(input.summary) : null,
-      buildSleepInsight(input.child, input.sleepLogs),
+      buildSleepInsight(input.child, classifiedSleepLogs),
     ].filter((insight): insight is HomeInsightCard => insight !== null),
     recommendation: buildRecommendation({
       child: input.child,
       summary: input.summary,
       feedLogs: input.feedingLogs,
-      sleepLogs: input.sleepLogs,
+      sleepLogs: classifiedSleepLogs,
       includeHydration,
     }),
-    timeline: buildTimeline(input.poopLogs, input.diaperLogs, input.feedingLogs, dayKey),
+    timeline: buildTimeline(input.poopLogs, input.diaperLogs, input.feedingLogs, classifiedSleepLogs, dayKey),
     glanceStats: buildGlanceStats({
       summary: input.summary,
-      sleepLogs: input.sleepLogs,
+      sleepLogs: classifiedSleepLogs,
       poopLogs: input.poopLogs,
       diaperLogs: input.diaperLogs,
       dayKey,
@@ -477,15 +521,14 @@ export function buildHomeAssistantModel(input: {
 }
 
 export function buildHomeSleepSummary(sleepLogs: SleepEntry[], now = Date.now()): HomeSleepSummary {
-  const totalMs = sleepLogs
+  const completedSleepLogs = getClassifiedSleepLogs(sleepLogs, now);
+  const totalMs = completedSleepLogs
     .filter((entry) => now - new Date(entry.started_at).getTime() < 24 * 60 * 60 * 1000)
     .reduce((sum, entry) => {
-      const end = entry.ended_at ? new Date(entry.ended_at).getTime() : now;
-      const start = new Date(entry.started_at).getTime();
-      return sum + Math.max(0, end - start);
+      return sum + getDurationMinutes(entry) * 60 * 1000;
     }, 0);
 
-  const napCount = sleepLogs.filter((entry) => entry.sleep_type === "nap").length;
+  const napCount = completedSleepLogs.filter((entry) => entry.sleep_type === "nap").length;
   const wholeHours = Math.floor(totalMs / (1000 * 60 * 60));
   const minutes = Math.round((totalMs % (1000 * 60 * 60)) / (1000 * 60));
 

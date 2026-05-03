@@ -164,6 +164,9 @@ export interface SleepEntry {
   ended_at: string;
   notes: string | null;
   created_at: string;
+  merged_duration_minutes?: number;
+  merged_segments?: Array<{ started_at: string; ended_at: string }>;
+  source_log_ids?: string[];
 }
 
 export interface SleepLogDraft {

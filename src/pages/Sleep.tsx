@@ -17,7 +17,7 @@ import {
   getWakeWindowProgress,
 } from "../lib/sleep-view-model";
 import {
-  getCompletedSleepLogs,
+  getClassifiedSleepLogs,
   formatWakeBaselineRange,
   getSleepPrediction,
   getTodayKey,
@@ -52,7 +52,7 @@ export function Sleep() {
     onError: showError,
     onSuccess: showSuccess,
   });
-  const completedLogs = useMemo(() => getCompletedSleepLogs(logs), [logs]);
+  const completedLogs = useMemo(() => getClassifiedSleepLogs(logs), [logs]);
 
   const todayKey = getTodayKey();
   const todayLogs = useMemo(() => {
@@ -117,7 +117,7 @@ export function Sleep() {
         wakeBaseline={formatWakeBaselineRange(baseline)}
         wakeWindowProgress={wakeWindowProgress}
         timerSessionSummary={timerSession ? {
-          label: timerSession.sleepType === "night" ? "Night timer running" : "Nap timer running",
+          label: "Sleep timer running",
           clock: timerClock ?? "00:00",
           summary: `Started ${timeSince(timerSession.startedAt)} · ${formatSleepTimerSummary(timerElapsedMs)}`,
         } : null}
