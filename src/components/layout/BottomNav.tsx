@@ -10,11 +10,22 @@ import { HomeActionBottleIcon, HomeActionBreastfeedIcon, HomeActionDiaperIcon, H
 import { combineLocalDateAndTimeToUtcIso, getAgeInMonthsFromDob, getCurrentLocalDate, getCurrentLocalTime } from "../../lib/utils";
 
 const iconClassName = "h-[1.35rem] w-[1.35rem] md:h-6 md:w-6";
+const navActiveColors = {
+  home: "#f26f1d",
+  diaper: "#12b879",
+  poop: "#f26f1d",
+  feed: "#13a970",
+  breastfeed: "#4f8fe8",
+  sleep: "#7c58ee",
+  history: "#5b8fd8",
+  settings: "#f26f1d",
+} as const;
 
 const NAV_ITEMS = [
   {
     path: "/",
     label: "Home",
+    activeColor: navActiveColors.home,
     matches: (pathname: string) => pathname === "/" || pathname === "/health",
     icon: (active: boolean) => (
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill={active ? "currentColor" : "none"} stroke="currentColor" strokeWidth={active ? 0 : 1.5} className={iconClassName}>
@@ -25,18 +36,21 @@ const NAV_ITEMS = [
   {
     path: "/diaper",
     label: "Diaper",
+    activeColor: navActiveColors.diaper,
     matches: (pathname: string) => pathname === "/diaper",
     icon: () => <HomeActionDiaperIcon className={iconClassName} />,
   },
   {
     path: "/feed",
     label: "Feed",
+    activeColor: navActiveColors.feed,
     matches: (pathname: string) => pathname === "/feed",
     icon: () => <HomeActionBottleIcon className={iconClassName} />,
   },
   {
     path: "/sleep",
     label: "Sleep",
+    activeColor: navActiveColors.sleep,
     matches: (pathname: string) => pathname === "/sleep",
     icon: (active: boolean) => (
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill={active ? "currentColor" : "none"} stroke="currentColor" strokeWidth={active ? 0 : 1.5} className={iconClassName}>
@@ -47,12 +61,14 @@ const NAV_ITEMS = [
   {
     path: "/history",
     label: "History",
+    activeColor: navActiveColors.history,
     matches: (pathname: string) => pathname === "/history",
     icon: () => <HomeToolHistoryIcon className={iconClassName} />,
   },
   {
     path: "/settings",
     label: "Settings",
+    activeColor: navActiveColors.settings,
     matches: (pathname: string) => (
       pathname === "/settings"
       || pathname === "/growth"
@@ -124,6 +140,7 @@ export function BottomNav({ eliminationExperience }: BottomNavProps) {
           ...item,
           path: eliminationExperience.route,
           label: eliminationExperience.navLabel,
+          activeColor: eliminationExperience.mode === "poop" ? navActiveColors.poop : navActiveColors.diaper,
           matches: (pathname: string) => pathname === "/diaper" || pathname === "/poop",
           icon: (active: boolean) => (
             eliminationExperience.mode === "poop"
@@ -138,6 +155,7 @@ export function BottomNav({ eliminationExperience }: BottomNavProps) {
           ...item,
           path: feedNavPath,
           label: feedNavLabel,
+          activeColor: isBreastOnly ? navActiveColors.breastfeed : navActiveColors.feed,
           matches: (pathname: string) => pathname === "/feed" || pathname === "/breastfeed",
           icon: (active: boolean) => (
             isBreastOnly ? (
@@ -245,6 +263,12 @@ export function BottomNav({ eliminationExperience }: BottomNavProps) {
             const isActive = isSettingsAlternateRoute
               ? item.path === "/settings"
               : item.matches(location.pathname);
+            const activeStyle = isActive
+              ? {
+                  background: "var(--gradient-nav-active)",
+                  color: item.activeColor,
+                }
+              : undefined;
             return (
               <button
                 key={item.path}
@@ -253,10 +277,10 @@ export function BottomNav({ eliminationExperience }: BottomNavProps) {
                   "relative flex min-w-0 flex-1 cursor-pointer flex-col items-center justify-center transition-all duration-200 md:h-[80px] md:gap-2 md:rounded-[28px]",
                   "h-[56px] gap-1 rounded-[18px]",
                   isActive
-                    ? "text-[var(--color-primary)] shadow-[var(--shadow-soft)]"
+                    ? "shadow-[var(--shadow-soft)]"
                     : "text-[var(--color-nav-inactive)] hover:text-[var(--color-nav-inactive-hover)]",
                 )}
-                style={isActive ? { background: "var(--gradient-nav-active)" } : undefined}
+                style={activeStyle}
                 aria-label={item.label}
               >
                 <span
@@ -264,6 +288,7 @@ export function BottomNav({ eliminationExperience }: BottomNavProps) {
                     "absolute left-1/2 top-1.5 hidden h-1 w-8 -translate-x-1/2 rounded-full transition-opacity duration-200",
                     isActive ? "bg-[var(--color-nav-active-indicator)] opacity-100" : "opacity-0",
                   )}
+                  style={isActive ? { background: item.activeColor } : undefined}
                 />
                 <span className="flex h-6 w-6 items-center justify-center md:h-7 md:w-7">
                   {item.icon(isActive)}
