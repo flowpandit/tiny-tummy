@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
+import type { NativeReportPdfPayload } from "./report-native-pdf";
 import type { GuidanceTip, HealthStatus } from "./types";
 
 export async function checkFrequencyAlert(
@@ -82,4 +83,8 @@ export async function sharePdfReport(fileName: string, base64Data: string): Prom
     fileName,
     base64Data,
   });
+}
+
+export async function generateNativeReportPdf(payload: NativeReportPdfPayload): Promise<string> {
+  return await invoke("generate_native_report_pdf", { payload });
 }

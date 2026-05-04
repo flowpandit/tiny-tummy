@@ -2,6 +2,7 @@ mod billing;
 mod downloads;
 mod engine;
 mod report_export;
+mod report_pdf;
 mod statusbar;
 
 use std::{env, fs};
@@ -189,6 +190,7 @@ pub fn run() {
             get_guidance_tips,
             downloads::open_pdf_from_downloads,
             downloads::save_pdf_to_downloads,
+            report_pdf::generate_native_report_pdf,
             report_export::share_pdf_report,
             statusbar::set_status_bar_style,
         ])

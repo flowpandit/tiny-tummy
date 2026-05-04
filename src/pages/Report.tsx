@@ -13,7 +13,10 @@ import { ReportComposerCard } from "../components/report/ReportComposerCard";
 import { PageBody } from "../components/ui/page-layout";
 import { ReportPreview } from "../components/report/ReportPreview";
 import { ReportReadyCard } from "../components/report/ReportReadyCard";
-import { renderReportPreviewToPdfBase64 } from "../lib/report-html-pdf";
+import {
+  getReportPdfRenderer,
+  renderReportPdfBase64,
+} from "../lib/report-pdf-renderer";
 import {
   buildReportPatientSummary,
   getReportSaveHelpText,
@@ -83,13 +86,27 @@ export function Report() {
     [endDate, reportKind, startDate],
   );
   const createEncodedReportPdf = useCallback(async () => {
-    const previewRoot = reportPreviewRef.current;
-    if (!previewRoot) {
-      throw new Error("Report preview is still preparing. Try again in a moment.");
+    if (!activeChild) {
+      throw new Error("No active child is selected.");
+    }
+    if (!reportData) {
+      throw new Error("Report data is still preparing. Try again in a moment.");
     }
 
-    return await renderReportPreviewToPdfBase64(previewRoot);
-  }, []);
+    const result = await renderReportPdfBase64({
+      previewRoot: reportPreviewRef.current,
+      child: activeChild,
+      startDate,
+      endDate,
+      reportData,
+      unitSystem,
+    });
+    console.info(
+      `[Tiny Tummy] ${result.renderer} PDF generated in ${Math.round(result.durationMs)}ms`,
+    );
+
+    return result.base64Data;
+  }, [activeChild, endDate, reportData, startDate, unitSystem]);
   const saveAndroidReportToDownloads = useCallback(async (data = reportData) => {
     if (!data) return null;
     if (!hasReportableData(data)) return null;
@@ -110,7 +127,9 @@ export function Report() {
     async function runPendingAndroidSave() {
       try {
         setIsAutoSavingReport(true);
-        await waitForRenderedReportPreview();
+        if (getReportPdfRenderer() === "react") {
+          await waitForRenderedReportPreview();
+        }
         if (!cancelled) {
           await saveAndroidReportToDownloads(reportData);
         }
@@ -189,7 +208,9 @@ export function Report() {
 
     try {
       setIsSavingReport(true);
-      await waitForRenderedReportPreview();
+      if (getReportPdfRenderer() === "react") {
+        await waitForRenderedReportPreview();
+      }
 
       if (isAndroid) {
         await saveAndroidReportToDownloads(reportData);
