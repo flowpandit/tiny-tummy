@@ -1,4 +1,9 @@
-import { formatLocalDateKey } from "./utils.ts";
+import { formatLocalDateKey, getLocalDateKeyFromValue } from "./utils.ts";
+import {
+  getBreastfeedContextHistorySummary,
+  getBreastfeedContextHistoryTitle,
+} from "./breastfeed-insights.ts";
+import { getFeedingEntryDetailParts, getFeedingEntryPrimaryLabel, getFeedingEntrySecondaryText } from "./feeding.ts";
 import type {
   DiaperEntry,
   Episode,
@@ -9,6 +14,7 @@ import type {
   PoopEntry,
   SleepEntry,
   SymptomEntry,
+  UnitSystem,
 } from "./types.ts";
 
 export type TimelineEvent =
@@ -23,10 +29,52 @@ export type TimelineEvent =
   | { kind: "episode_event"; entry: EpisodeEvent };
 
 export const HISTORY_RANGE_OPTIONS = [
-  { label: "7 days", value: 7 },
-  { label: "14 days", value: 14 },
-  { label: "30 days", value: 30 },
+  { label: "7d", value: 7 },
+  { label: "14d", value: 14 },
+  { label: "30d", value: 30 },
 ] as const;
+
+export type TimelineEventSummary = {
+  feeds: number;
+  poops: number;
+  sleep: number;
+  diapers: number;
+  other: number;
+  total: number;
+};
+
+export type HistoryFeedingPresentation = {
+  kind: "feed" | "breastfeed";
+  title: string;
+  subtitle: string | null;
+  tagLabel: string;
+};
+
+export function isHistoryBreastfeedEntry(entry: FeedingEntry): boolean {
+  return entry.food_type === "breast_milk"
+    && (entry.breast_side === "left" || entry.breast_side === "right" || entry.breast_side === "both");
+}
+
+export function getHistoryFeedingPresentation(entry: FeedingEntry, unitSystem: UnitSystem): HistoryFeedingPresentation {
+  if (isHistoryBreastfeedEntry(entry)) {
+    return {
+      kind: "breastfeed",
+      title: getBreastfeedContextHistoryTitle(entry),
+      subtitle: getBreastfeedContextHistorySummary(entry, unitSystem),
+      tagLabel: "breastfeed",
+    };
+  }
+
+  const detailText = getFeedingEntryDetailParts(entry, unitSystem).join(" · ");
+  const secondaryText = [detailText, getFeedingEntrySecondaryText(entry)].filter(Boolean).join(" · ");
+
+  return {
+    kind: "feed",
+    title: getFeedingEntryPrimaryLabel(entry),
+    subtitle: secondaryText || null,
+    tagLabel: "feed",
+  };
+}
 
 export function formatHistoryTime(dateStr: string): string {
   return new Date(dateStr).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
@@ -88,6 +136,50 @@ export function getEventTimestamp(event: TimelineEvent): string {
   }
 }
 
+export function summarizeTimelineEvents(events: TimelineEvent[]): TimelineEventSummary {
+  return events.reduce<TimelineEventSummary>((summary, event) => {
+    summary.total += 1;
+
+    switch (event.kind) {
+      case "meal":
+        summary.feeds += 1;
+        break;
+      case "sleep":
+        summary.sleep += 1;
+        break;
+      case "diaper":
+        summary.diapers += 1;
+        if (event.entry.diaper_type === "dirty" || event.entry.diaper_type === "mixed") {
+          summary.poops += 1;
+        }
+        break;
+      case "poop":
+        if (event.entry.is_no_poop === 1) {
+          summary.other += 1;
+        } else {
+          summary.poops += 1;
+        }
+        break;
+      case "symptom":
+      case "growth":
+      case "milestone":
+      case "episode":
+      case "episode_event":
+        summary.other += 1;
+        break;
+    }
+
+    return summary;
+  }, {
+    feeds: 0,
+    poops: 0,
+    sleep: 0,
+    diapers: 0,
+    other: 0,
+    total: 0,
+  });
+}
+
 export function getVisiblePoopLogs(diaperLogs: DiaperEntry[], poopLogs: PoopEntry[]): PoopEntry[] {
   const linkedPoopIds = new Set(
     diaperLogs
@@ -95,6 +187,20 @@ export function getVisiblePoopLogs(diaperLogs: DiaperEntry[], poopLogs: PoopEntr
       .filter((id): id is string => Boolean(id)),
   );
   return poopLogs.filter((log) => !linkedPoopIds.has(log.id));
+}
+
+function getVisibleEpisodeEvents(symptomLogs: SymptomEntry[], episodeEvents: EpisodeEvent[]): EpisodeEvent[] {
+  const linkedSymptomKeys = new Set(
+    symptomLogs
+      .filter((symptom) => symptom.episode_id)
+      .map((symptom) => `${symptom.episode_id}:${symptom.logged_at}`),
+  );
+
+  return episodeEvents.filter((event) => {
+    if (event.event_type !== "symptom") return true;
+    if (event.source_kind === "symptom") return false;
+    return !linkedSymptomKeys.has(`${event.episode_id}:${event.logged_at}`);
+  });
 }
 
 export function groupTimelineByDay({
@@ -107,6 +213,7 @@ export function groupTimelineByDay({
   milestoneLogs,
   episodes,
   episodeEvents,
+  timeZoneOffsetMinutes = new Date().getTimezoneOffset(),
 }: {
   diaperLogs: DiaperEntry[];
   poopLogs: PoopEntry[];
@@ -117,6 +224,7 @@ export function groupTimelineByDay({
   milestoneLogs: MilestoneEntry[];
   episodes: Episode[];
   episodeEvents: EpisodeEvent[];
+  timeZoneOffsetMinutes?: number;
 }): Map<string, TimelineEvent[]> {
   const all: TimelineEvent[] = [
     ...diaperLogs.map((entry) => ({ kind: "diaper" as const, entry })),
@@ -127,13 +235,13 @@ export function groupTimelineByDay({
     ...growthLogs.map((entry) => ({ kind: "growth" as const, entry })),
     ...milestoneLogs.map((entry) => ({ kind: "milestone" as const, entry })),
     ...episodes.map((entry) => ({ kind: "episode" as const, entry })),
-    ...episodeEvents.map((entry) => ({ kind: "episode_event" as const, entry })),
+    ...getVisibleEpisodeEvents(symptomLogs, episodeEvents).map((entry) => ({ kind: "episode_event" as const, entry })),
   ];
 
   const grouped = new Map<string, TimelineEvent[]>();
 
   for (const item of all) {
-    const day = getEventTimestamp(item).split("T")[0];
+    const day = getLocalDateKeyFromValue(getEventTimestamp(item), timeZoneOffsetMinutes);
     if (!grouped.has(day)) grouped.set(day, []);
     grouped.get(day)?.push(item);
   }

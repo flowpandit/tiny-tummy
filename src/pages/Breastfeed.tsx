@@ -1,16 +1,19 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { BreastSideButton } from "../components/breastfeed/BreastSideButton";
+import { BreastfeedHeroMetricsCard } from "../components/breastfeed/BreastfeedHeroMetricsCard";
 import { BreastfeedPatternCard } from "../components/breastfeed/BreastfeedPatternCard";
+import { BreastfeedQuickTimerCard } from "../components/breastfeed/BreastfeedQuickTimerCard";
 import { BreastfeedRecentHistorySection } from "../components/breastfeed/BreastfeedRecentHistorySection";
+import { BreastfeedTodaySummaryCard } from "../components/breastfeed/BreastfeedTodaySummaryCard";
+import { FeedStatusCard } from "../components/feed/FeedStatusCard";
 import { Button } from "../components/ui/button";
 import { CareToolsSection } from "../components/care/CareToolsSection";
 import { ScenicHero } from "../components/layout/ScenicHero";
 import { InsetPanel, PageBody } from "../components/ui/page-layout";
-import { TrackerMetricRing } from "../components/tracking/TrackerPrimitives";
 import { DietLogForm } from "../components/logging/DietLogForm";
 import { useToast } from "../components/ui/toast";
 import { useActiveChild, useChildActions } from "../contexts/ChildContext";
+import { useUnits } from "../contexts/UnitsContext";
 import { useBreastfeedingTimerState } from "../hooks/useBreastfeedingTimerState";
 import { useChildWorkflowActions } from "../hooks/useChildWorkflowActions";
 import { getDurationRingDisplay } from "../lib/breastfeed-insights";
@@ -20,18 +23,27 @@ export function Breastfeed() {
   const navigate = useNavigate();
   const activeChild = useActiveChild();
   const { refreshChildren } = useChildActions();
+  const { unitSystem } = useUnits();
   const { showError, showSuccess } = useToast();
   const { runPostLogActions } = useChildWorkflowActions(activeChild);
   const [selectedPatternLogId, setSelectedPatternLogId] = useState<string | null>(null);
   const [showTransitionConfirm, setShowTransitionConfirm] = useState(false);
   const [feedingFormOpen, setFeedingFormOpen] = useState(false);
   const [feedingDraft, setFeedingDraft] = useState<Partial<FeedingLogDraft> | null>(null);
+  const [feedStatusExpanded, setFeedStatusExpanded] = useState(false);
   const supportsBreastfeeding = activeChild?.feeding_type === "breast" || activeChild?.feeding_type === "mixed";
   const patternSectionRef = useRef<HTMLDivElement | null>(null);
   const {
     activeSide,
     canShowSolidTransition,
     displayRecentHistory,
+    feedBaseline,
+    feedBaselineComparison,
+    feedDueRisk,
+    feedMix,
+    feedNarrative,
+    feedPrediction,
+    feedWeekTrackedMl,
     handleConfirmSolidTransition,
     handleFeedLogged,
     handlePause,
@@ -39,6 +51,9 @@ export function Breastfeed() {
     handleStartSide,
     isSaving,
     isTransitioningToMixed,
+    last24hLeftDuration,
+    last24hRightDuration,
+    last24hTotalDuration,
     lastUsedSide,
     leftDuration,
     patternLogs,
@@ -82,12 +97,12 @@ export function Breastfeed() {
     setFeedingFormOpen(true);
   };
 
-  const currentSessionRing = getDurationRingDisplay(totalDuration, "var(--gradient-status-caution)");
-  const leftRing = getDurationRingDisplay(leftDuration, "var(--gradient-status-healthy)");
-  const rightRing = getDurationRingDisplay(rightDuration, "var(--gradient-status-head)");
+  const total24hRing = getDurationRingDisplay(last24hTotalDuration, "var(--gradient-status-caution)");
+  const left24hRing = getDurationRingDisplay(last24hLeftDuration, "var(--gradient-status-healthy)");
+  const right24hRing = getDurationRingDisplay(last24hRightDuration, "var(--gradient-status-head)");
 
   return (
-    <PageBody className="mt-0 space-y-0 px-0 py-0">
+    <PageBody className="-mt-8 space-y-0 px-0 py-0">
       {showTransitionConfirm && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/35 px-4 pb-[calc(var(--safe-area-bottom)+108px)] pt-10" onClick={() => setShowTransitionConfirm(false)}>
           <div
@@ -147,9 +162,23 @@ export function Breastfeed() {
         )}
         className="-mx-4 overflow-hidden md:-mx-6 lg:-mx-8"
         scene="breastfeed"
+        showChildInfo={false}
       />
 
-      <div className="space-y-4 px-4 py-5 md:px-6 lg:px-8">
+      <div className="px-4 md:px-10">
+        <BreastfeedHeroMetricsCard
+          activeSide={activeSide}
+          className="-mt-36 md:-mt-32"
+          childName={activeChild.name}
+          left24h={left24hRing}
+          nextFeed={feedPrediction}
+          right24h={right24hRing}
+          totalDuration={totalDuration}
+          total24h={total24hRing}
+        />
+      </div>
+
+      <div className="space-y-3 px-4 py-3 md:space-y-5 md:px-10 md:py-5">
         {!supportsBreastfeeding ? (
           <InsetPanel>
             <p className="text-sm font-medium text-[var(--color-text)]">Breastfeeding timer is hidden for this child profile.</p>
@@ -159,79 +188,51 @@ export function Breastfeed() {
           </InsetPanel>
         ) : (
           <>
-            <div className="-mt-32 relative z-10 grid grid-cols-3 gap-3 px-4 pt-4">
-              <TrackerMetricRing
-                value={leftRing.value}
-                unit={leftRing.unit}
-                label="Left total"
-                gradient={leftRing.gradient}
-              />
-              <TrackerMetricRing
-                value={currentSessionRing.value}
-                unit={currentSessionRing.unit}
-                label="Current session"
-                gradient={currentSessionRing.gradient}
-              />
-              <TrackerMetricRing
-                value={rightRing.value}
-                unit={rightRing.unit}
-                label="Right total"
-                gradient={rightRing.gradient}
-              />
-            </div>
+            <BreastfeedQuickTimerCard
+              activeSide={activeSide}
+              isSaving={isSaving}
+              lastUsedSide={lastUsedSide}
+              leftDuration={leftDuration}
+              rightDuration={rightDuration}
+              suggestedStartSide={suggestedStartSide}
+              totalDuration={totalDuration}
+              onLogOther={() => openFeedingForm()}
+              onSave={handleSave}
+              onToggleLeft={() => { void (activeSide === "left" ? handlePause() : handleStartSide("left")); }}
+              onToggleRight={() => { void (activeSide === "right" ? handlePause() : handleStartSide("right")); }}
+            />
 
-            <div className="grid grid-cols-2 gap-3">
-              <BreastSideButton
-                side="left"
-                isActive={activeSide === "left"}
-                isLastUsed={lastUsedSide === "left"}
-                durationMs={leftDuration}
-                onClick={() => { void (activeSide === "left" ? handlePause() : handleStartSide("left")); }}
+            <div className="grid gap-3 md:grid-cols-2 md:gap-4">
+              <BreastfeedTodaySummaryCard
+                last24hLeftDuration={last24hLeftDuration}
+                last24hRightDuration={last24hRightDuration}
+                last24hTotalDuration={last24hTotalDuration}
+                suggestedStartSide={suggestedStartSide}
               />
-              <BreastSideButton
-                side="right"
-                isActive={activeSide === "right"}
-                isLastUsed={lastUsedSide === "right"}
-                durationMs={rightDuration}
-                onClick={() => { void (activeSide === "right" ? handlePause() : handleStartSide("right")); }}
-              />
-            </div>
 
-            <InsetPanel className="space-y-4">
-              {lastUsedSide && !activeSide && (
-                <div className="rounded-[18px] border border-[var(--color-border)] bg-[var(--color-bg-elevated)]/72 px-4 py-3">
-                  <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--color-text-soft)]">Next suggested side</p>
-                  <p className="mt-2 text-sm font-medium text-[var(--color-text)]">
-                    Start on the {suggestedStartSide} side.
-                  </p>
-                  <p className="mt-1 text-xs leading-relaxed text-[var(--color-text-secondary)]">
-                    Last feed finished on the {lastUsedSide} side, so the {suggestedStartSide} side should be fuller.
-                  </p>
-                </div>
+              {feedBaseline && feedBaselineComparison && feedDueRisk && feedNarrative && (
+                <FeedStatusCard
+                  baseline={feedBaseline}
+                  baselineComparison={feedBaselineComparison}
+                  dueRisk={feedDueRisk}
+                  feedMix={feedMix}
+                  narrative={feedNarrative}
+                  prediction={feedPrediction}
+                  statusExpanded={feedStatusExpanded}
+                  unitSystem={unitSystem}
+                  weekTrackedMl={feedWeekTrackedMl}
+                  onToggleExpanded={() => setFeedStatusExpanded((current) => !current)}
+                />
               )}
-              <Button
-                variant="cta"
-                className="w-full"
-                onClick={handleSave}
-                disabled={totalDuration < 1000 || isSaving}
-              >
-                {isSaving ? "Saving..." : "Save breastfeeding session"}
-              </Button>
-              <Button
-                variant="secondary"
-                className="w-full"
-                onClick={() => openFeedingForm()}
-              >
-                Log bottle, formula, or other feed
-              </Button>
-            </InsetPanel>
+            </div>
 
-            {displayRecentHistory.length > 0 && <BreastfeedRecentHistorySection logs={displayRecentHistory} />}
+            <BreastfeedRecentHistorySection logs={displayRecentHistory} unitSystem={unitSystem} />
 
             <div ref={patternSectionRef}>
               <BreastfeedPatternCard
                 patternLogs={patternLogs}
                 selectedPatternLog={selectedPatternLog}
+                unitSystem={unitSystem}
                 onToggleLog={(logId) => setSelectedPatternLogId((current) => (current === logId ? null : logId))}
               />
             </div>
@@ -248,7 +249,7 @@ export function Breastfeed() {
               </section>
             )}
 
-            <CareToolsSection className="px-1" />
+            <CareToolsSection className="px-0" palette="soft" />
           </>
         )}
       </div>

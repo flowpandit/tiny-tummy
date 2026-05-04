@@ -68,8 +68,8 @@ export function ensureEssentialFeedPresets(
 export function getDefaultQuickFeedPresets(feedingType: FeedingType, unitSystem: UnitSystem = "metric"): QuickFeedPreset[] {
   const base: Array<Partial<FeedingLogDraft>> = feedingType === "breast"
     ? [
-        { food_type: "breast_milk", breast_side: "left" },
-        { food_type: "breast_milk", breast_side: "right" },
+        { food_type: "breast_milk" },
+        { food_type: "bottle", bottle_content: "breast_milk" },
         { food_type: "pumping" },
         { food_type: "bottle" },
       ]
@@ -88,10 +88,10 @@ export function getDefaultQuickFeedPresets(feedingType: FeedingType, unitSystem:
             { food_type: "other", food_name: "Snack" },
           ]
         : [
-            { food_type: "breast_milk", breast_side: "left" },
-            { food_type: "breast_milk", breast_side: "right" },
+            { food_type: "breast_milk" },
             { food_type: "bottle" },
             { food_type: "solids", food_name: "Solids" },
+            { food_type: "water" },
           ];
 
   return base.map((draft, index) => {

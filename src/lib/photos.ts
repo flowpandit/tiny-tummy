@@ -110,6 +110,18 @@ export async function loadAvatar(childId: string): Promise<string | null> {
   return URL.createObjectURL(blob);
 }
 
+export async function loadAvatarDataUrl(childId: string): Promise<string | null> {
+  const path = avatarPath(childId);
+  const fileExists = await exists(path, { baseDir: BaseDirectory.AppData });
+  if (!fileExists) return null;
+  const bytes = await readFile(path, { baseDir: BaseDirectory.AppData });
+  let binary = "";
+  for (const byte of bytes) {
+    binary += String.fromCharCode(byte);
+  }
+  return `data:image/jpeg;base64,${btoa(binary)}`;
+}
+
 export async function deleteAvatar(childId: string): Promise<void> {
   const path = avatarPath(childId);
   const fileExists = await exists(path, { baseDir: BaseDirectory.AppData });

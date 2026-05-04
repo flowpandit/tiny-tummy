@@ -22,6 +22,13 @@ export interface DiaperRingDisplay {
   gradient: string;
 }
 
+export interface DiaperNextLikelyEstimate {
+  label: string;
+  value: string;
+  detail: string;
+  tone: "wet" | "dirty" | "soon" | "baseline";
+}
+
 export interface HydrationStatus {
   tone: "healthy" | "info" | "cta";
   title: string;
@@ -34,11 +41,19 @@ export interface DiaperPatternTone {
   text: string;
 }
 
+export function getValidDiaperTimestamp(value: string): number | null {
+  const timestamp = new Date(value).getTime();
+  return Number.isNaN(timestamp) ? null : timestamp;
+}
+
 export function getDayKey(date: Date = new Date()): string {
   return formatLocalDateKey(date);
 }
 
 export function getRecentHistoryDayLabel(dateStr: string): string {
+  if (getValidDiaperTimestamp(dateStr) === null) {
+    return "Logged";
+  }
   return getRelativeDayLabel(dateStr);
 }
 
@@ -67,6 +82,92 @@ function formatRange(hours: number[]) {
   return `${(start / 24).toFixed(1)}-${(end / 24).toFixed(1)}d`;
 }
 
+function formatEstimateRangeLabel(hours: number[]) {
+  const [start, end] = hours;
+  if (end < 24) return `${Math.round(start)}-${Math.round(end)} hrs`;
+  if (start < 24) return `${Math.round(start)} hrs-${(end / 24).toFixed(1)} days`;
+  return `${(start / 24).toFixed(1)}-${(end / 24).toFixed(1)} days`;
+}
+
+function getDiaperBaselineHours(ageDays: number, type: "wet" | "dirty"): [number, number] {
+  return type === "wet"
+    ? ageDays < 14 ? [2, 4] : ageDays < 180 ? [2, 5] : ageDays < 365 ? [3, 6] : [4, 8]
+    : ageDays < 14 ? [4, 12] : ageDays < 56 ? [4, 18] : ageDays < 180 ? [8, 48] : ageDays < 365 ? [12, 36] : [18, 48];
+}
+
+function getRecentIntervals(logs: DiaperEntry[], type: "wet" | "dirty") {
+  const timestamps = getRelevantLogs(logs, type)
+    .map((log) => getValidDiaperTimestamp(log.logged_at))
+    .filter((timestamp): timestamp is number => timestamp !== null)
+    .sort((left, right) => right - left)
+    .slice(0, 8);
+
+  const intervals: number[] = [];
+  for (let index = 0; index < timestamps.length - 1; index += 1) {
+    const intervalHours = (timestamps[index] - timestamps[index + 1]) / 3600000;
+    if (intervalHours > 0 && intervalHours < 72) {
+      intervals.push(intervalHours);
+    }
+  }
+
+  return {
+    latestTimestamp: timestamps[0] ?? null,
+    intervals,
+  };
+}
+
+function formatGapLabel(hours: number) {
+  if (hours < 1) return `${Math.max(5, Math.round(hours * 60))} min`;
+  const rounded = Math.max(1, Math.round(hours));
+  return `${rounded} hr${rounded === 1 ? "" : "s"}`;
+}
+
+function formatNextLikelyValue(predictedAt: Date, referenceDate: Date) {
+  const minutesUntil = Math.round((predictedAt.getTime() - referenceDate.getTime()) / 60000);
+
+  if (minutesUntil < -30) return "likely soon";
+  if (minutesUntil <= 5) return "any time";
+  if (minutesUntil < 60) return `in ${minutesUntil} min`;
+
+  const hoursUntil = Math.round(minutesUntil / 60);
+  if (hoursUntil < 24) return `in about ${hoursUntil} hr${hoursUntil === 1 ? "" : "s"}`;
+
+  return predictedAt.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+}
+
+export function getDiaperNextLikelyEstimate(
+  logs: DiaperEntry[],
+  dateOfBirth: string,
+  type: "wet" | "dirty",
+  referenceDate = new Date(),
+): DiaperNextLikelyEstimate {
+  const ageDays = getChildAgeDays(dateOfBirth);
+  const baseline = getDiaperBaselineHours(ageDays, type);
+  const label = type === "wet" ? "Next wet" : "Next poop";
+  const fallback: DiaperNextLikelyEstimate = {
+    label,
+    value: formatEstimateRangeLabel(baseline),
+    detail: "Usual range until a few more logs personalize it.",
+    tone: "baseline",
+  };
+  const { latestTimestamp, intervals } = getRecentIntervals(logs, type);
+
+  if (latestTimestamp === null || intervals.length === 0) {
+    return fallback;
+  }
+
+  const averageHours = intervals.reduce((sum, value) => sum + value, 0) / intervals.length;
+  const predictedAt = new Date(latestTimestamp + averageHours * 3600000);
+  const minutesUntil = Math.round((predictedAt.getTime() - referenceDate.getTime()) / 60000);
+
+  return {
+    label,
+    value: formatNextLikelyValue(predictedAt, referenceDate),
+    detail: `Recent logs average about ${formatGapLabel(averageHours)} apart.`,
+    tone: minutesUntil <= 45 ? "soon" : type,
+  };
+}
+
 export function getPrediction(
   logs: DiaperEntry[],
   dateOfBirth: string,
@@ -74,9 +175,7 @@ export function getPrediction(
 ): DiaperPrediction {
   const relevant = getRelevantLogs(logs, type).slice(0, 8);
   const ageDays = getChildAgeDays(dateOfBirth);
-  const baseline = type === "wet"
-    ? ageDays < 14 ? [2, 4] : ageDays < 180 ? [2, 5] : ageDays < 365 ? [3, 6] : [4, 8]
-    : ageDays < 14 ? [4, 12] : ageDays < 56 ? [4, 18] : ageDays < 180 ? [8, 48] : ageDays < 365 ? [12, 36] : [18, 48];
+  const baseline = getDiaperBaselineHours(ageDays, type);
 
   if (relevant.length < 2) {
     return {
@@ -87,8 +186,11 @@ export function getPrediction(
 
   const intervals: number[] = [];
   for (let index = 0; index < relevant.length - 1; index += 1) {
-    const current = new Date(relevant[index].logged_at).getTime();
-    const next = new Date(relevant[index + 1].logged_at).getTime();
+    const current = getValidDiaperTimestamp(relevant[index].logged_at);
+    const next = getValidDiaperTimestamp(relevant[index + 1].logged_at);
+    if (current === null || next === null) {
+      continue;
+    }
     const intervalHours = (current - next) / 3600000;
     if (intervalHours > 0 && intervalHours < 72) {
       intervals.push(intervalHours);
@@ -113,18 +215,28 @@ export function getPrediction(
 }
 
 export function getHydrationStatus(logs: DiaperEntry[], symptomType?: string): HydrationStatus {
+  const now = Date.now();
   const wetLogs = getRelevantLogs(logs, "wet");
-  const lastWet = wetLogs[0] ?? null;
-  const todayWetCount = wetLogs.filter((log) => isOnLocalDay(log.logged_at, getDayKey())).length;
-  const recentDarkUrine = wetLogs.some((log) => (
-    log.urine_color === "dark"
-    && Date.now() - new Date(log.logged_at).getTime() < 24 * 3600000
-  ));
-  const hoursSinceWet = lastWet
-    ? (Date.now() - new Date(lastWet.logged_at).getTime()) / 3600000
-    : Number.POSITIVE_INFINITY;
+  const lastValidWetTimestamp = wetLogs.reduce<number | null>((latest, log) => {
+    const timestamp = getValidDiaperTimestamp(log.logged_at);
+    if (timestamp === null) return latest;
+    return latest === null ? timestamp : Math.max(latest, timestamp);
+  }, null);
+  const recentWetCount = wetLogs.filter((log) => {
+    const timestamp = getValidDiaperTimestamp(log.logged_at);
+    return timestamp !== null && now - timestamp < 24 * 3600000;
+  }).length;
+  const recentDarkUrine = wetLogs.some((log) => {
+    const timestamp = getValidDiaperTimestamp(log.logged_at);
+    return timestamp !== null
+      && log.urine_color === "dark"
+      && now - timestamp < 24 * 3600000;
+  });
+  const hoursSinceWet = lastValidWetTimestamp !== null
+    ? (now - lastValidWetTimestamp) / 3600000
+    : null;
 
-  if (symptomType === "dehydration_concern" || recentDarkUrine || hoursSinceWet >= 8) {
+  if (symptomType === "dehydration_concern" || recentDarkUrine || (hoursSinceWet !== null && hoursSinceWet >= 8)) {
     return {
       tone: "cta",
       title: "Hydration needs a check",
@@ -132,7 +244,7 @@ export function getHydrationStatus(logs: DiaperEntry[], symptomType?: string): H
     };
   }
 
-  if (todayWetCount < 4 || hoursSinceWet >= 5) {
+  if (recentWetCount < 4 || (hoursSinceWet !== null && hoursSinceWet >= 5)) {
     return {
       tone: "info",
       title: "Watch wet output",
@@ -226,9 +338,9 @@ export function getDiaperPatternTone(diaperType: DiaperEntry["diaper_type"]): Di
   }
   if (diaperType === "mixed") {
     return {
-      bg: "linear-gradient(135deg, color-mix(in srgb, var(--color-info) 34%, transparent) 0%, color-mix(in srgb, #c08937 34%, transparent) 100%)",
-      border: "color-mix(in srgb, #9f8dbd 48%, transparent)",
-      text: "var(--color-primary)",
+      bg: "color-mix(in srgb, #7562f2 24%, transparent)",
+      border: "color-mix(in srgb, #7562f2 46%, transparent)",
+      text: "#7562f2",
     };
   }
   return {
@@ -240,9 +352,10 @@ export function getDiaperPatternTone(diaperType: DiaperEntry["diaper_type"]): Di
 
 export function getDirtyDiaperMeta(log: DiaperEntry | null) {
   if (!log) return null;
+  const loggedAt = getValidDiaperTimestamp(log.logged_at);
 
   return {
-    timeSinceLabel: timeSince(log.logged_at),
+    timeSinceLabel: loggedAt === null ? "Recently logged" : timeSince(log.logged_at),
     stoolLabel: getStoolShortLabel(log.stool_type),
     stoolColorLabel: log.color
       ? STOOL_COLORS.find((item) => item.value === log.color)?.label ?? log.color

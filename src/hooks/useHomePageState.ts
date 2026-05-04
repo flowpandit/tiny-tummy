@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import type { DiaperEntry, DiaperLogDraft, FeedingEntry, FeedingLogDraft, PoopEntry, PoopLogDraft } from "../lib/types";
 
 export function useHomePageState() {
@@ -16,45 +16,45 @@ export function useHomePageState() {
   const [editingDiaper, setEditingDiaper] = useState<DiaperEntry | null>(null);
   const [editingMeal, setEditingMeal] = useState<FeedingEntry | null>(null);
 
-  const openPoopForm = (draft?: Partial<PoopLogDraft> | null) => {
+  const openPoopForm = useCallback((draft?: Partial<PoopLogDraft> | null) => {
     setPoopDraft(draft ?? null);
     setLogFormOpen(true);
-  };
+  }, []);
 
-  const closePoopForm = () => {
+  const closePoopForm = useCallback(() => {
     setLogFormOpen(false);
     setPoopDraft(null);
-  };
+  }, []);
 
-  const openDiaperForm = (draft?: Partial<DiaperLogDraft> | null) => {
+  const openDiaperForm = useCallback((draft?: Partial<DiaperLogDraft> | null) => {
     setDiaperDraft(draft ?? null);
     setDiaperFormOpen(true);
-  };
+  }, []);
 
-  const closeDiaperForm = () => {
+  const closeDiaperForm = useCallback(() => {
     setDiaperFormOpen(false);
     setDiaperDraft(null);
-  };
+  }, []);
 
-  const openFeedingForm = (draft?: Partial<FeedingLogDraft> | null) => {
+  const openFeedingForm = useCallback((draft?: Partial<FeedingLogDraft> | null) => {
     setFeedingDraft(draft ?? null);
     setFeedingFormOpen(true);
-  };
+  }, []);
 
-  const closeFeedingForm = () => {
+  const closeFeedingForm = useCallback(() => {
     setFeedingFormOpen(false);
     setFeedingDraft(null);
-  };
+  }, []);
 
-  const openEpisodeSheet = (mode: "default" | "start" | "update" = "default") => {
+  const openEpisodeSheet = useCallback((mode: "default" | "start" | "update" = "default") => {
     setEpisodeSheetMode(mode);
     setEpisodeSheetOpen(true);
-  };
+  }, []);
 
-  const closeEpisodeSheet = () => {
+  const closeEpisodeSheet = useCallback(() => {
     setEpisodeSheetOpen(false);
     setEpisodeSheetMode("default");
-  };
+  }, []);
 
   return {
     diaperDraft,

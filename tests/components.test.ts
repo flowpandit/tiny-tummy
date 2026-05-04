@@ -5,10 +5,14 @@ import "./test-dom.ts";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { CompactChildNav } from "../src/components/layout/CompactChildNav.tsx";
+import { AlertBanner } from "../src/components/dashboard/AlertBanner.tsx";
 import { LoggingFieldGroup, LoggingFormHeader, LoggingPresetNotice } from "../src/components/logging/logging-form-primitives.tsx";
 import { NormalRangeIntro } from "../src/components/onboarding/NormalRangeIntro.tsx";
 import { SleepRecentHistorySection } from "../src/components/sleep/SleepRecentHistorySection.tsx";
 import { MilestoneRecentActivitySection } from "../src/components/milestones/MilestoneRecentActivitySection.tsx";
+import { GuidanceHubView } from "../src/pages/Guidance.tsx";
+import { isSheetGestureLocked } from "../src/lib/sheet-gesture-lock.ts";
+import { formatLocalDateKey } from "../src/lib/utils.ts";
 import type { Child } from "../src/lib/types.ts";
 
 afterEach(() => {
@@ -52,6 +56,18 @@ const recentMilestone = {
   created_at: "2026-04-17T11:30:00",
 };
 
+const urgentAlert = {
+  id: "alert-1",
+  child_id: "child-1",
+  alert_type: "red_flag_color",
+  severity: "urgent" as const,
+  title: "Red stool detected",
+  message: "Red stools may contain blood. While some foods can cause this, it's worth mentioning to your doctor.",
+  is_dismissed: 0,
+  triggered_at: "2026-04-17T11:30:00",
+  related_log_id: null,
+};
+
 function renderAvatar(child: Child) {
   return React.createElement("span", { "data-testid": `avatar-${child.id}` }, child.name.charAt(0));
 }
@@ -79,6 +95,32 @@ test("logging form primitives render their shared labels and messaging", () => {
   assert.ok(screen.getByText("Uses the saved diaper preset."));
 });
 
+test("AlertBanner renders important alerts as inline nudges", () => {
+  const dismissed: string[] = [];
+  const actionAlerts: string[] = [];
+  const { container } = render(React.createElement(AlertBanner, {
+    alerts: [urgentAlert],
+    onAction: (alert) => {
+      actionAlerts.push(alert.id);
+    },
+    onDismiss: (id: string) => {
+      dismissed.push(id);
+    },
+  }));
+
+  assert.ok(screen.getByText("Important"));
+  assert.ok(screen.getByText("Red stool detected"));
+  assert.ok(screen.getByText("Check with your doctor if this repeats or your baby seems unwell."));
+  assert.doesNotMatch(container.firstElementChild?.className ?? "", /\bsticky\b/);
+  assert.doesNotMatch(container.firstElementChild?.className ?? "", /\bfixed\b/);
+
+  fireEvent.click(screen.getByRole("button", { name: "What to do" }));
+  fireEvent.click(screen.getByRole("button", { name: "Dismiss important alert" }));
+
+  assert.deepEqual(actionAlerts, ["alert-1"]);
+  assert.deepEqual(dismissed, ["alert-1"]);
+});
+
 test("CompactChildNav supports child switching and optional back navigation", () => {
   const calls: string[] = [];
 
@@ -93,13 +135,32 @@ test("CompactChildNav supports child switching and optional back navigation", ()
       calls.push("back");
     },
     renderAvatar,
+    trailing: React.createElement("button", { type: "button", "aria-label": "Notifications" }, "Alerts"),
   }));
 
   fireEvent.click(screen.getByRole("button", { name: "Go back" }));
   fireEvent.click(screen.getByRole("button", { name: "Switch to Noah" }));
 
   assert.ok(screen.getByText("Mila"));
+  assert.ok(screen.getByRole("button", { name: "Notifications" }));
+  assert.equal(screen.queryByText("5.2 kg"), null);
   assert.deepEqual(calls, ["back", "child-2"]);
+});
+
+test("AppShell page gestures are locked while a sheet is open", () => {
+  const previousLockCount = document.body.dataset.sheetLockCount;
+  delete document.body.dataset.sheetLockCount;
+
+  assert.equal(isSheetGestureLocked(), false);
+
+  document.body.dataset.sheetLockCount = "1";
+  assert.equal(isSheetGestureLocked(), true);
+
+  if (previousLockCount === undefined) {
+    delete document.body.dataset.sheetLockCount;
+  } else {
+    document.body.dataset.sheetLockCount = previousLockCount;
+  }
 });
 
 test("NormalRangeIntro loads the normal-range copy and finishes onboarding", async () => {
@@ -131,13 +192,57 @@ test("NormalRangeIntro loads the normal-range copy and finishes onboarding", asy
   });
 });
 
+test("Guidance hub stays scannable and opens topic details", () => {
+  render(React.createElement(GuidanceHubView));
+
+  assert.ok(screen.getByText("Trusted, pediatric-backed guidance to help you make confident choices."));
+  assert.ok(screen.getByRole("button", { name: /When to call the doctor/i }));
+  assert.ok(screen.getByText("Starting solids? Expect changes"));
+  assert.ok(screen.getByText("Symptoms and episodes"));
+  assert.equal(screen.queryByText("Use Log symptom for one thing you noticed, like a fever reading, cough, rash, vomit, or unusual stool."), null);
+
+  fireEvent.click(screen.getByRole("button", { name: /Symptoms and episodes/i }));
+
+  assert.ok(screen.getByText("What to know"));
+  assert.ok(screen.getByText("Use Log symptom for one thing you noticed, like a fever reading, cough, rash, vomit, or unusual stool."));
+  assert.ok(screen.getByText("When to act"));
+});
+
+test("Guidance alert topics use theme-aware surfaces", () => {
+  const { container } = render(React.createElement(GuidanceHubView));
+  const priorityCard = screen.getByRole("button", { name: /When to call the doctor/i });
+
+  assert.match(priorityCard.getAttribute("style") ?? "", /var\(--color-alert-bg\)/);
+  assert.equal(container.querySelector("[style*='rgba(255, 238, 234']"), null);
+
+  fireEvent.click(priorityCard);
+
+  const whenToAct = screen.getByText("When to act").closest("section");
+  assert.match(whenToAct?.getAttribute("style") ?? "", /var\(--color-alert-bg\)/);
+});
+
+test("Guidance hub can open symptoms and episodes directly", () => {
+  render(React.createElement(GuidanceHubView, { initialTopicId: "symptoms-and-episodes" }));
+
+  assert.ok(screen.getByText("What to know"));
+  assert.ok(screen.getByText("Use Log symptom for one thing you noticed, like a fever reading, cough, rash, vomit, or unusual stool."));
+  assert.equal(screen.queryByText("Starting solids? Expect changes"), null);
+});
+
 test("SleepRecentHistorySection renders recent logs and forwards edit clicks", () => {
   const edited: string[] = [];
+  const todayKey = formatLocalDateKey(new Date());
+  const todaySleepLog = {
+    ...recentSleepLog,
+    started_at: `${todayKey}T09:15:00`,
+    ended_at: `${todayKey}T10:00:00`,
+    created_at: `${todayKey}T10:00:00`,
+  };
 
   render(
     React.createElement(MemoryRouter, {},
       React.createElement(SleepRecentHistorySection, {
-        logs: [recentSleepLog],
+        logs: [todaySleepLog],
         onEdit: (entry) => {
           edited.push(entry.id);
         },
@@ -145,9 +250,10 @@ test("SleepRecentHistorySection renders recent logs and forwards edit clicks", (
     ),
   );
 
-  assert.ok(screen.getByText("Recent history"));
-  assert.ok(screen.getByText(/Nap, 45m/));
-  fireEvent.click(screen.getByRole("button", { name: /Nap, 45m/i }));
+  assert.ok(screen.getByText("Today timeline"));
+  assert.ok(screen.getByText("Nap"));
+  assert.ok(screen.getByText("45m"));
+  fireEvent.click(screen.getByRole("button", { name: /Nap.*45m/i }));
   assert.deepEqual(edited, ["sleep-1"]);
 });
 

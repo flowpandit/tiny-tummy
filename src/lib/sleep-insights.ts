@@ -1,7 +1,12 @@
 import { formatHoursCompact, formatHoursLong } from "./tracker";
-import type { HealthStatus, SleepEntry } from "./types";
+import type { HealthStatus, SleepEntry, SleepType } from "./types";
 
 export type PredictionConfidence = "low" | "medium" | "high";
+
+const NIGHT_SLEEP_START_MINUTES = 18 * 60 + 30;
+const NIGHT_SLEEP_END_MINUTES = 23 * 60;
+const MIN_NIGHT_SLEEP_DURATION_MS = 3 * 60 * 60 * 1000;
+const NIGHT_INTERRUPTION_GAP_MS = 60 * 60 * 1000;
 
 export interface WakeBaseline {
   label: string;
@@ -40,7 +45,143 @@ export interface SleepPrediction {
   adjustments: SleepAdjustment[];
 }
 
+function getValidTimestamp(value: string): number | null {
+  const timestamp = new Date(value).getTime();
+  return Number.isNaN(timestamp) ? null : timestamp;
+}
+
+function getLocalMinutesSinceMidnight(value: string): number | null {
+  const date = new Date(value);
+  const timestamp = date.getTime();
+  if (Number.isNaN(timestamp)) return null;
+  return date.getHours() * 60 + date.getMinutes();
+}
+
+function isNightSleepStart(value: string): boolean {
+  const minutes = getLocalMinutesSinceMidnight(value);
+  return minutes !== null && minutes >= NIGHT_SLEEP_START_MINUTES && minutes <= NIGHT_SLEEP_END_MINUTES;
+}
+
+function getEntryDurationMs(entry: SleepEntry): number {
+  if (typeof entry.merged_duration_minutes === "number") {
+    return Math.max(0, entry.merged_duration_minutes * 60000);
+  }
+
+  const startedAt = getValidTimestamp(entry.started_at);
+  const endedAt = getValidTimestamp(entry.ended_at);
+  if (startedAt === null || endedAt === null || endedAt <= startedAt) {
+    return 0;
+  }
+
+  return endedAt - startedAt;
+}
+
+function normalizeSleepLogType(log: SleepEntry): SleepEntry {
+  return {
+    ...log,
+    sleep_type: classifySleepType(log.started_at, log.ended_at),
+  };
+}
+
+function buildMergedNightSleep(logs: SleepEntry[], totalDurationMs: number): SleepEntry {
+  const [first] = logs;
+  const last = logs[logs.length - 1];
+
+  return {
+    ...first,
+    sleep_type: "night",
+    ended_at: last.ended_at,
+    merged_duration_minutes: Math.round(totalDurationMs / 60000),
+    merged_segments: logs.map((log) => ({
+      started_at: log.started_at,
+      ended_at: log.ended_at,
+    })),
+    source_log_ids: logs.map((log) => log.id),
+  };
+}
+
+export function getCompletedSleepLogs(logs: SleepEntry[], now = Date.now()): SleepEntry[] {
+  return logs.filter((log) => {
+    const startedAt = getValidTimestamp(log.started_at);
+    const endedAt = getValidTimestamp(log.ended_at);
+
+    if (startedAt === null || endedAt === null) {
+      return false;
+    }
+
+    return startedAt < endedAt && startedAt <= now && endedAt <= now;
+  });
+}
+
+export function classifySleepType(startedAtValue: string, endedAtValue: string): SleepType {
+  const startedAt = getValidTimestamp(startedAtValue);
+  const endedAt = getValidTimestamp(endedAtValue);
+
+  if (startedAt === null || endedAt === null || endedAt <= startedAt) {
+    return "nap";
+  }
+
+  if (endedAt - startedAt < MIN_NIGHT_SLEEP_DURATION_MS) {
+    return "nap";
+  }
+
+  return isNightSleepStart(startedAtValue) ? "night" : "nap";
+}
+
+export function getClassifiedSleepLogs(logs: SleepEntry[], now = Date.now()): SleepEntry[] {
+  const completedLogs = getCompletedSleepLogs(logs, now)
+    .sort((left, right) => new Date(left.started_at).getTime() - new Date(right.started_at).getTime());
+  const classifiedLogs: SleepEntry[] = [];
+
+  for (let index = 0; index < completedLogs.length;) {
+    const firstLog = completedLogs[index];
+    const firstStart = getValidTimestamp(firstLog.started_at);
+    const firstEnd = getValidTimestamp(firstLog.ended_at);
+
+    if (firstStart === null || firstEnd === null || !isNightSleepStart(firstLog.started_at)) {
+      classifiedLogs.push(normalizeSleepLogType(firstLog));
+      index += 1;
+      continue;
+    }
+
+    const group = [firstLog];
+    let groupEnd = firstEnd;
+    let totalDurationMs = getEntryDurationMs(firstLog);
+    index += 1;
+
+    while (index < completedLogs.length) {
+      const nextLog = completedLogs[index];
+      const nextStart = getValidTimestamp(nextLog.started_at);
+      const nextEnd = getValidTimestamp(nextLog.ended_at);
+
+      if (nextStart === null || nextEnd === null) break;
+
+      const gapMs = nextStart - groupEnd;
+      if (gapMs < 0 || gapMs > NIGHT_INTERRUPTION_GAP_MS) {
+        break;
+      }
+
+      group.push(nextLog);
+      groupEnd = nextEnd;
+      totalDurationMs += getEntryDurationMs(nextLog);
+      index += 1;
+    }
+
+    if (totalDurationMs >= MIN_NIGHT_SLEEP_DURATION_MS) {
+      classifiedLogs.push(buildMergedNightSleep(group, totalDurationMs));
+    } else {
+      classifiedLogs.push(...group.map(normalizeSleepLogType));
+    }
+  }
+
+  return classifiedLogs.sort((left, right) => new Date(right.started_at).getTime() - new Date(left.started_at).getTime());
+}
+
 export function getDurationMinutes(entry: SleepEntry): number {
+  if (typeof entry.merged_duration_minutes === "number") {
+    return Math.max(0, Math.round(entry.merged_duration_minutes));
+  }
+
   return Math.max(0, Math.round((new Date(entry.ended_at).getTime() - new Date(entry.started_at).getTime()) / 60000));
 }
 
@@ -52,13 +193,13 @@ export function formatSleepDuration(minutes: number): string {
   return `${hours}h ${remainder}m`;
 }
 
-export function getOverlapMinutesForDay(entry: SleepEntry, dayKey: string): number {
+function getOverlapMinutesForRange(startedAt: string, endedAt: string, dayKey: string): number {
   const dayStart = new Date(`${dayKey}T00:00:00`);
   const dayEnd = new Date(dayStart);
   dayEnd.setDate(dayEnd.getDate() + 1);
 
-  const start = new Date(entry.started_at);
-  const end = new Date(entry.ended_at);
+  const start = new Date(startedAt);
+  const end = new Date(endedAt);
   const overlapStart = Math.max(start.getTime(), dayStart.getTime());
   const overlapEnd = Math.min(end.getTime(), dayEnd.getTime());
 
@@ -67,6 +208,17 @@ export function getOverlapMinutesForDay(entry: SleepEntry, dayKey: string): numb
   }
 
   return Math.round((overlapEnd - overlapStart) / 60000);
+}
+
+export function getOverlapMinutesForDay(entry: SleepEntry, dayKey: string): number {
+  if (entry.merged_segments?.length) {
+    return entry.merged_segments.reduce(
+      (sum, segment) => sum + getOverlapMinutesForRange(segment.started_at, segment.ended_at, dayKey),
+      0,
+    );
+  }
+
+  return getOverlapMinutesForRange(entry.started_at, entry.ended_at, dayKey);
 }
 
 export function formatDurationRing(minutes: number): { value: string; unit: string } {
@@ -108,13 +260,14 @@ export function getLastNapDisplay(activeChildDob: string | null, logs: SleepEntr
   timestamp: string | null;
   label: string;
 } {
-  const latestNap = logs.find((log) => log.sleep_type === "nap") ?? null;
+  const completedLogs = getClassifiedSleepLogs(logs);
+  const latestNap = completedLogs.find((log) => log.sleep_type === "nap") ?? null;
   const ageDays = activeChildDob ? getAgeDays(activeChildDob) : 0;
   const shouldUseLastSleep = ageDays >= 730 || !latestNap;
 
   if (shouldUseLastSleep) {
     return {
-      timestamp: logs[0]?.ended_at ?? null,
+      timestamp: completedLogs[0]?.ended_at ?? null,
       label: "Last sleep",
     };
   }
@@ -179,7 +332,7 @@ function lowerConfidence(confidence: PredictionConfidence): PredictionConfidence
 }
 
 export function getSleepPrediction(logs: SleepEntry[], baseline: WakeBaseline): SleepPrediction | null {
-  const relevantLogs = logs.slice(0, 8);
+  const relevantLogs = getClassifiedSleepLogs(logs).slice(0, 8);
   const lastSleep = relevantLogs[0] ?? null;
   if (!lastSleep) return null;
 

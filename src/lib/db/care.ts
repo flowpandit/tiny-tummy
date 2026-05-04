@@ -1,5 +1,5 @@
 import type { Alert, GrowthEntry, MilestoneEntry, SleepEntry, SymptomEntry } from "../types";
-import { generateId, nowISO } from "../utils";
+import { generateId, getUtcIsoBoundsForLocalDateRange, nowISO } from "../utils";
 import { getDb } from "./connection";
 
 export async function createSymptomLog(input: {
@@ -7,6 +7,8 @@ export async function createSymptomLog(input: {
   episode_id?: string | null;
   symptom_type: string;
   severity: string;
+  temperature_c?: number | null;
+  temperature_method?: string | null;
   logged_at: string;
   notes?: string | null;
 }): Promise<SymptomEntry> {
@@ -16,16 +18,19 @@ export async function createSymptomLog(input: {
 
   await conn.execute(
     `INSERT INTO symptom_logs (
-      id, child_id, episode_id, symptom_type, severity, logged_at, notes, created_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      id, child_id, episode_id, symptom_type, severity, temperature_c, temperature_method, logged_at, notes, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       id,
       input.child_id,
       input.episode_id ?? null,
       input.symptom_type,
       input.severity,
+      input.temperature_c ?? null,
+      input.temperature_method ?? null,
       input.logged_at,
       input.notes ?? null,
+      now,
       now,
     ],
   );
@@ -36,10 +41,49 @@ export async function createSymptomLog(input: {
     episode_id: input.episode_id ?? null,
     symptom_type: input.symptom_type as SymptomEntry["symptom_type"],
     severity: input.severity as SymptomEntry["severity"],
+    temperature_c: input.temperature_c ?? null,
+    temperature_method: (input.temperature_method as SymptomEntry["temperature_method"] | undefined) ?? null,
     logged_at: input.logged_at,
     notes: input.notes ?? null,
     created_at: now,
+    updated_at: now,
   };
+}
+
+export async function updateSymptomLog(
+  id: string,
+  updates: {
+    episode_id?: string | null;
+    symptom_type?: string;
+    severity?: string;
+    temperature_c?: number | null;
+    temperature_method?: string | null;
+    logged_at?: string;
+    notes?: string | null;
+  },
+): Promise<void> {
+  const conn = await getDb();
+  const sets: string[] = [];
+  const params: unknown[] = [];
+
+  if (updates.episode_id !== undefined) { sets.push("episode_id = ?"); params.push(updates.episode_id); }
+  if (updates.symptom_type !== undefined) { sets.push("symptom_type = ?"); params.push(updates.symptom_type); }
+  if (updates.severity !== undefined) { sets.push("severity = ?"); params.push(updates.severity); }
+  if (updates.temperature_c !== undefined) { sets.push("temperature_c = ?"); params.push(updates.temperature_c); }
+  if (updates.temperature_method !== undefined) { sets.push("temperature_method = ?"); params.push(updates.temperature_method); }
+  if (updates.logged_at !== undefined) { sets.push("logged_at = ?"); params.push(updates.logged_at); }
+  if (updates.notes !== undefined) { sets.push("notes = ?"); params.push(updates.notes); }
+
+  if (sets.length === 0) return;
+
+  sets.push("updated_at = ?");
+  params.push(nowISO(), id);
+  await conn.execute(`UPDATE symptom_logs SET ${sets.join(", ")} WHERE id = ?`, params);
+}
+
+export async function deleteSymptomLog(id: string): Promise<void> {
+  const conn = await getDb();
+  await conn.execute("DELETE FROM symptom_logs WHERE id = ?", [id]);
 }
 
 export async function getSymptoms(
@@ -59,11 +103,12 @@ export async function getSymptomsForRange(
   endDate: string,
 ): Promise<SymptomEntry[]> {
   const conn = await getDb();
+  const { startUtcIso, endUtcIso } = getUtcIsoBoundsForLocalDateRange(startDate, endDate);
   return conn.select<SymptomEntry[]>(
     `SELECT * FROM symptom_logs
      WHERE child_id = ? AND logged_at >= ? AND logged_at <= ?
      ORDER BY logged_at DESC`,
-    [childId, startDate, endDate + "T23:59:59"],
+    [childId, startUtcIso, endUtcIso],
   );
 }
 
@@ -121,11 +166,12 @@ export async function getGrowthLogsForRange(
   endDate: string,
 ): Promise<GrowthEntry[]> {
   const conn = await getDb();
+  const { startUtcIso, endUtcIso } = getUtcIsoBoundsForLocalDateRange(startDate, endDate);
   return conn.select<GrowthEntry[]>(
     `SELECT * FROM growth_logs
      WHERE child_id = ? AND measured_at >= ? AND measured_at <= ?
      ORDER BY measured_at DESC`,
-    [childId, startDate, `${endDate}T23:59:59`],
+    [childId, startUtcIso, endUtcIso],
   );
 }
 
@@ -220,11 +266,12 @@ export async function getSleepLogsForRange(
   endDate: string,
 ): Promise<SleepEntry[]> {
   const conn = await getDb();
+  const { startUtcIso, endUtcIso } = getUtcIsoBoundsForLocalDateRange(startDate, endDate);
   return conn.select<SleepEntry[]>(
     `SELECT * FROM sleep_logs
      WHERE child_id = ? AND started_at >= ? AND started_at <= ?
      ORDER BY started_at DESC`,
-    [childId, startDate, `${endDate}T23:59:59`],
+    [childId, startUtcIso, endUtcIso],
   );
 }
 
@@ -295,11 +342,12 @@ export async function getMilestonesForRange(
   endDate: string,
 ): Promise<MilestoneEntry[]> {
   const conn = await getDb();
+  const { startUtcIso, endUtcIso } = getUtcIsoBoundsForLocalDateRange(startDate, endDate);
   return conn.select<MilestoneEntry[]>(
     `SELECT * FROM milestone_logs
      WHERE child_id = ? AND logged_at >= ? AND logged_at <= ?
      ORDER BY logged_at DESC`,
-    [childId, startDate, endDate + "T23:59:59"],
+    [childId, startUtcIso, endUtcIso],
   );
 }
 

@@ -5,6 +5,9 @@ export interface CareToolGridItem {
   label: string;
   icon: ReactNode;
   background: string;
+  color?: string;
+  textColor?: string;
+  borderColor?: string;
   to: string;
 }
 
@@ -24,13 +27,13 @@ export function CareToolGrid({
           key={item.label}
           type="button"
           onClick={() => navigate(item.to)}
-          className="flex min-h-[86px] flex-col items-start justify-between rounded-[14px] px-2.5 py-2.5 text-left text-white shadow-[var(--shadow-medium)] transition-transform hover:-translate-y-0.5"
-          style={{ background: item.background }}
+          className="flex min-h-[86px] flex-col items-center justify-center gap-2 rounded-[18px] border border-transparent px-2.5 py-2.5 text-center text-[var(--color-text)] shadow-[0_14px_28px_rgba(172,139,113,0.08)] transition-transform hover:-translate-y-0.5 md:min-h-[112px] md:gap-3 md:rounded-[20px]"
+          style={{ background: item.background, borderColor: item.borderColor }}
         >
-          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white/18">
+          <span className="flex h-7 w-7 items-center justify-center md:h-9 md:w-9" style={{ color: item.color ?? "#2fbf75" }}>
             {item.icon}
           </span>
-          <span className="text-[0.72rem] font-semibold leading-tight">{item.label}</span>
+          <span className="text-[0.9rem] font-semibold leading-tight md:text-[1.1rem]" style={{ color: item.textColor }}>{item.label}</span>
         </button>
       ))}
     </div>

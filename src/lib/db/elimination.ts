@@ -1,6 +1,6 @@
 import type { ColorCount, ConsistencyPoint, DiaperEntry, DailyFrequency, PoopEntry } from "../types";
 import { deletePhoto } from "../photos";
-import { combineLocalDateAndTimeToUtcIso, formatLocalDateKey, generateId, nowISO } from "../utils";
+import { combineLocalDateAndTimeToUtcIso, formatLocalDateKey, generateId, getUtcIsoBoundsForLocalDateRange, nowISO } from "../utils";
 import { getDb } from "./connection";
 
 export async function createPoopLog(input: {
@@ -148,6 +148,7 @@ export async function reconcileAutoNoPoopDays(childId: string): Promise<number> 
   const conn = await getDb();
   const now = nowISO();
   const todayKey = formatLocalDateKey(new Date());
+
   const redundantRows = await conn.select<{ cnt: number }[]>(
     `SELECT COUNT(*) as cnt
      FROM poop_logs
@@ -295,11 +296,12 @@ export async function getDiaperLogsForRange(
   endDate: string,
 ): Promise<DiaperEntry[]> {
   const conn = await getDb();
+  const { startUtcIso, endUtcIso } = getUtcIsoBoundsForLocalDateRange(startDate, endDate);
   return conn.select<DiaperEntry[]>(
     `SELECT * FROM diaper_logs
      WHERE child_id = ? AND logged_at >= ? AND logged_at <= ?
      ORDER BY logged_at DESC`,
-    [childId, startDate, `${endDate}T23:59:59`],
+    [childId, startUtcIso, endUtcIso],
   );
 }
 
@@ -488,10 +490,11 @@ export async function getPoopLogsForRange(
   endDate: string,
 ): Promise<PoopEntry[]> {
   const conn = await getDb();
+  const { startUtcIso, endUtcIso } = getUtcIsoBoundsForLocalDateRange(startDate, endDate);
   return conn.select<PoopEntry[]>(
     `SELECT * FROM poop_logs
      WHERE child_id = ? AND logged_at >= ? AND logged_at <= ?
      ORDER BY logged_at DESC`,
-    [childId, startDate, endDate + "T23:59:59"],
+    [childId, startUtcIso, endUtcIso],
   );
 }

@@ -7,11 +7,14 @@ import { LogForm } from "../logging/LogForm";
 import { EpisodeSheet } from "../episodes/EpisodeSheet";
 import { SymptomSheet } from "../symptoms/SymptomSheet";
 import { SleepLogSheet } from "../sleep/SleepLogSheet";
-import type { DiaperEntry, DiaperLogDraft, FeedingEntry, FeedingLogDraft, PoopEntry, PoopLogDraft, Episode, EpisodeEvent } from "../../lib/types";
+import type { DiaperEntry, DiaperLogDraft, FeedingEntry, FeedingLogDraft, PoopEntry, PoopLogDraft, Episode, EpisodeEvent, SymptomEntry } from "../../lib/types";
 
 interface HomeSheetsProps {
   activeChildId: string;
+  activeChildName: string;
+  activeChildDateOfBirth: string;
   activeEpisode: Episode | null;
+  activeEpisodes: Episode[];
   diaperDraft: Partial<DiaperLogDraft> | null;
   diaperFormOpen: boolean;
   editingDiaper: DiaperEntry | null;
@@ -25,6 +28,7 @@ interface HomeSheetsProps {
   logFormOpen: boolean;
   poopDraft: Partial<PoopLogDraft> | null;
   sleepSheetOpen: boolean;
+  symptomLogs: SymptomEntry[];
   symptomSheetOpen: boolean;
   onCloseDiaperForm: () => void;
   onCloseEpisodeSheet: () => void;
@@ -47,7 +51,10 @@ interface HomeSheetsProps {
 
 export function HomeSheets({
   activeChildId,
+  activeChildName,
+  activeChildDateOfBirth,
   activeEpisode,
+  activeEpisodes,
   diaperDraft,
   diaperFormOpen,
   editingDiaper,
@@ -61,6 +68,7 @@ export function HomeSheets({
   logFormOpen,
   poopDraft,
   sleepSheetOpen,
+  symptomLogs,
   symptomSheetOpen,
   onCloseDiaperForm,
   onCloseEpisodeSheet,
@@ -112,6 +120,7 @@ export function HomeSheets({
         childId={activeChildId}
         activeEpisode={activeEpisode}
         events={episodeEvents}
+        recentSymptoms={symptomLogs}
         onUpdated={onEpisodeUpdated}
         initialMode={episodeSheetMode}
       />
@@ -120,7 +129,11 @@ export function HomeSheets({
         open={symptomSheetOpen}
         onClose={onCloseSymptomSheet}
         childId={activeChildId}
+        childName={activeChildName}
+        childDateOfBirth={activeChildDateOfBirth}
         activeEpisode={activeEpisode}
+        activeEpisodes={activeEpisodes}
+        recentSymptoms={symptomLogs}
         onLogged={onSymptomLogged}
       />
 
@@ -137,8 +150,8 @@ export function HomeSheets({
           entry={editingPoop}
           open={!!editingPoop}
           onClose={() => onEditPoop(null)}
-          onSaved={() => { refreshLogs(); refreshFeedingLogs(); }}
-          onDeleted={() => { refreshLogs(); refreshFeedingLogs(); }}
+          onSaved={() => { onEditPoop(null); refreshLogs(); refreshFeedingLogs(); }}
+          onDeleted={() => { onEditPoop(null); refreshLogs(); refreshFeedingLogs(); }}
         />
       )}
       {editingDiaper && (
@@ -157,8 +170,8 @@ export function HomeSheets({
           entry={editingMeal}
           open={!!editingMeal}
           onClose={() => onEditMeal(null)}
-          onSaved={() => { refreshLogs(); refreshFeedingLogs(); }}
-          onDeleted={() => { refreshLogs(); refreshFeedingLogs(); }}
+          onSaved={() => { onEditMeal(null); refreshLogs(); refreshFeedingLogs(); }}
+          onDeleted={() => { onEditMeal(null); refreshLogs(); refreshFeedingLogs(); }}
         />
       )}
     </>

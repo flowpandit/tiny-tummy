@@ -11,6 +11,7 @@ export interface Child {
 }
 
 export type UnitSystem = "metric" | "imperial";
+export type TemperatureUnit = "celsius" | "fahrenheit";
 export type ChildSex = "male" | "female";
 
 export type FeedingType = "breast" | "formula" | "mixed" | "solids";
@@ -104,20 +105,38 @@ export interface SymptomEntry {
   episode_id: string | null;
   symptom_type: SymptomType;
   severity: SymptomSeverity;
+  temperature_c: number | null;
+  temperature_method: TemperatureMethod | null;
   logged_at: string;
   notes: string | null;
   created_at: string;
+  updated_at: string;
 }
 
 export type SymptomType =
+  | "fever"
+  | "cough_congestion"
+  | "low_appetite"
+  | "low_energy"
   | "straining"
   | "pain"
   | "rash"
   | "vomiting"
   | "blood_concern"
-  | "dehydration_concern";
+  | "dehydration_concern"
+  | "diarrhoea"
+  | "poop_concern"
+  | "other";
 
 export type SymptomSeverity = "mild" | "moderate" | "severe";
+
+export type TemperatureMethod =
+  | "rectal"
+  | "forehead"
+  | "ear"
+  | "armpit"
+  | "oral"
+  | "other";
 
 export interface GrowthEntry {
   id: string;
@@ -145,6 +164,9 @@ export interface SleepEntry {
   ended_at: string;
   notes: string | null;
   created_at: string;
+  merged_duration_minutes?: number;
+  merged_segments?: Array<{ started_at: string; ended_at: string }>;
+  source_log_ids?: string[];
 }
 
 export interface SleepLogDraft {
@@ -234,7 +256,15 @@ export interface Episode {
   updated_at: string;
 }
 
-export type EpisodeType = "constipation" | "diarrhoea";
+export type EpisodeType =
+  | "fever_illness"
+  | "stomach_bug"
+  | "vomiting"
+  | "rash_skin"
+  | "medication_reaction"
+  | "constipation"
+  | "diarrhoea"
+  | "other";
 
 export type EpisodeStatus = "active" | "resolved";
 
@@ -247,12 +277,16 @@ export interface EpisodeEvent {
   notes: string | null;
   logged_at: string;
   created_at: string;
+  source_kind: string | null;
+  source_id: string | null;
 }
 
 export type EpisodeEventType =
   | "symptom"
+  | "temperature"
   | "hydration"
   | "food"
+  | "medication"
   | "intervention"
   | "progress";
 

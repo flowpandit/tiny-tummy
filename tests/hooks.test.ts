@@ -1,11 +1,18 @@
 import test, { afterEach } from "node:test";
 import assert from "node:assert/strict";
+import React from "react";
 import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
 import "./test-dom.ts";
+import { DatabaseProvider, type DbClient } from "../src/contexts/DatabaseContext.tsx";
 import { useLoggingSheetLifecycle } from "../src/hooks/useLoggingSheetLifecycle.ts";
 import { usePhotoField } from "../src/hooks/usePhotoField.ts";
 import { useVisibilityRefresh } from "../src/hooks/useVisibilityRefresh.ts";
 import { useChildWorkflowActions } from "../src/hooks/useChildWorkflowActions.ts";
+import { useSleepLogSheetState } from "../src/hooks/useSleepLogSheetState.ts";
+import { useSleepQuickTimer } from "../src/hooks/useSleepQuickTimer.ts";
+import { useDietLogFormState } from "../src/hooks/useDietLogFormState.ts";
+import { useHomePageState } from "../src/hooks/useHomePageState.ts";
+import { getSleepTimerSettingKey } from "../src/lib/sleep-timer.ts";
 import type { Child } from "../src/lib/types.ts";
 
 afterEach(() => {
@@ -71,6 +78,28 @@ test("useLoggingSheetLifecycle closes immediately and schedules a reset", () => 
     window.setTimeout = originalSetTimeout;
     window.clearTimeout = originalClearTimeout;
   }
+});
+
+test("useHomePageState keeps sheet callbacks stable while opening health sheets", () => {
+  const { result } = renderHook(() => useHomePageState());
+  const closeEpisodeSheet = result.current.closeEpisodeSheet;
+  const openEpisodeSheet = result.current.openEpisodeSheet;
+
+  act(() => {
+    result.current.openEpisodeSheet("start");
+  });
+
+  assert.equal(result.current.episodeSheetOpen, true);
+  assert.equal(result.current.episodeSheetMode, "start");
+  assert.equal(result.current.closeEpisodeSheet, closeEpisodeSheet);
+  assert.equal(result.current.openEpisodeSheet, openEpisodeSheet);
+
+  act(() => {
+    result.current.setSymptomSheetOpen(true);
+  });
+
+  assert.equal(result.current.symptomSheetOpen, true);
+  assert.equal(result.current.closeEpisodeSheet, closeEpisodeSheet);
 });
 
 test("useLoggingSheetLifecycle runs logged success flow and clears pending timers on unmount", async () => {
@@ -222,6 +251,54 @@ test("usePhotoField revokes the active preview on unmount", async () => {
   }
 });
 
+test("useDietLogFormState saves optional breastfeed amount", async () => {
+  const createdLogs: Array<{ amount_ml?: number | null; food_type?: string; duration_minutes?: number | null }> = [];
+  const dbClient = {
+    createDietLog: async (input: { amount_ml?: number | null; food_type?: string; duration_minutes?: number | null }) => {
+      createdLogs.push(input);
+    },
+  } as unknown as DbClient;
+  const calls: string[] = [];
+
+  const wrapper = ({ children }: { children: React.ReactNode }) => (
+    React.createElement(DatabaseProvider, { client: dbClient }, children)
+  );
+
+  const { result } = renderHook(() => useDietLogFormState({
+    open: true,
+    childId: "child-1",
+    unitSystem: "metric",
+    initialDraft: {
+      food_type: "breast_milk",
+      amount_ml: "125",
+      duration_minutes: "12",
+      breast_side: "left",
+    },
+    onLogged: () => {
+      calls.push("logged");
+    },
+    onClose: () => {
+      calls.push("close");
+    },
+    onError: (message) => {
+      calls.push(`error:${message}`);
+    },
+  }), { wrapper });
+
+  await waitFor(() => {
+    assert.equal(result.current.foodType, "breast_milk");
+  });
+
+  await act(async () => {
+    await result.current.handleSubmit();
+  });
+
+  assert.equal(createdLogs[0]?.food_type, "breast_milk");
+  assert.equal(createdLogs[0]?.amount_ml, 125);
+  assert.equal(createdLogs[0]?.duration_minutes, 12);
+  assert.deepEqual(calls, ["logged", "close"]);
+});
+
 test("useVisibilityRefresh subscribes to focus and visibility events and cleans up on unmount", async () => {
   const calls: string[] = [];
   const addWindowListener = window.addEventListener.bind(window);
@@ -279,6 +356,161 @@ test("useVisibilityRefresh subscribes to focus and visibility events and cleans 
   }
 });
 
+test("useSleepLogSheetState blocks future manual sleep logs", async () => {
+  const createSleepLogCalls: Array<Record<string, unknown>> = [];
+  const errors: string[] = [];
+  const success: string[] = [];
+  const dbClient = {
+    getSetting: async () => "",
+    setSetting: async () => {},
+    createSleepLog: async (input: Record<string, unknown>) => {
+      createSleepLogCalls.push(input);
+    },
+  } as unknown as DbClient;
+  const wrapper = ({ children }: { children: React.ReactNode }) => (
+    React.createElement(DatabaseProvider, { client: dbClient }, children)
+  );
+
+  const { result } = renderHook(() => useSleepLogSheetState({
+    open: true,
+    childId: child.id,
+    onLogged: () => {},
+    onClose: () => {},
+    onError: (message) => {
+      errors.push(message);
+    },
+    onSuccess: (message) => {
+      success.push(message);
+    },
+  }), { wrapper });
+
+  await waitFor(() => {
+    assert.equal(result.current.timerSession, null);
+  });
+
+  act(() => {
+    result.current.setStartDate("2026-04-10");
+    result.current.setStartTime("11:00");
+    result.current.setEndDate("2026-04-11");
+    result.current.setEndTime("11:00");
+  });
+
+  const realDateNow = Date.now;
+  Date.now = () => new Date("2026-04-10T12:00:00.000Z").getTime();
+
+  try {
+    let saved = false;
+    await act(async () => {
+      saved = await result.current.handleSaveManual();
+    });
+
+    assert.equal(saved, false);
+    assert.deepEqual(errors, ["Sleep logs cannot be saved in the future."]);
+    assert.deepEqual(success, []);
+    assert.equal(createSleepLogCalls.length, 0);
+  } finally {
+    Date.now = realDateNow;
+  }
+});
+
+test("useSleepQuickTimer starts a nap timer from the quick action", async () => {
+  const settings = new Map<string, string>();
+  const success: string[] = [];
+  const errors: string[] = [];
+  const dbClient = {
+    getSetting: async (key: string) => settings.get(key) ?? "",
+    setSetting: async (key: string, value: string) => {
+      settings.set(key, value);
+    },
+    createSleepLog: async () => {},
+  } as unknown as DbClient;
+  const wrapper = ({ children }: { children: React.ReactNode }) => (
+    React.createElement(DatabaseProvider, { client: dbClient }, children)
+  );
+
+  const { result } = renderHook(() => useSleepQuickTimer({
+    activeChild: child,
+    onLogged: () => {},
+    onError: (message) => {
+      errors.push(message);
+    },
+    onSuccess: (message) => {
+      success.push(message);
+    },
+  }), { wrapper });
+
+  await waitFor(() => {
+    assert.equal(result.current.timerSession, null);
+  });
+
+  await act(async () => {
+    await result.current.handleStartNapTimer();
+  });
+
+  await waitFor(() => {
+    assert.equal(result.current.timerSession?.sleepType, "nap");
+  });
+
+  const rawSession = settings.get(getSleepTimerSettingKey(child.id));
+  assert.ok(rawSession);
+  assert.equal(JSON.parse(rawSession).sleepType, "nap");
+  assert.deepEqual(success, ["Sleep timer started."]);
+  assert.deepEqual(errors, []);
+});
+
+test("useSleepQuickTimer stops the timer and saves a sleep log", async () => {
+  const timerKey = getSleepTimerSettingKey(child.id);
+  const settings = new Map<string, string>([
+    [timerKey, JSON.stringify({ sleepType: "nap", startedAt: "2000-01-01T10:00:00", notes: "" })],
+  ]);
+  const createSleepLogCalls: Array<Record<string, unknown>> = [];
+  const success: string[] = [];
+  const errors: string[] = [];
+  let loggedCount = 0;
+  const dbClient = {
+    getSetting: async (key: string) => settings.get(key) ?? "",
+    setSetting: async (key: string, value: string) => {
+      settings.set(key, value);
+    },
+    createSleepLog: async (input: Record<string, unknown>) => {
+      createSleepLogCalls.push(input);
+    },
+  } as unknown as DbClient;
+  const wrapper = ({ children }: { children: React.ReactNode }) => (
+    React.createElement(DatabaseProvider, { client: dbClient }, children)
+  );
+
+  const { result } = renderHook(() => useSleepQuickTimer({
+    activeChild: child,
+    onLogged: () => {
+      loggedCount += 1;
+    },
+    onError: (message) => {
+      errors.push(message);
+    },
+    onSuccess: (message) => {
+      success.push(message);
+    },
+  }), { wrapper });
+
+  await waitFor(() => {
+    assert.equal(result.current.timerSession?.sleepType, "nap");
+  });
+
+  await act(async () => {
+    await result.current.handleStopAndSaveTimer();
+  });
+
+  assert.equal(createSleepLogCalls.length, 1);
+  assert.equal(createSleepLogCalls[0]?.child_id, child.id);
+  assert.equal(createSleepLogCalls[0]?.sleep_type, "nap");
+  assert.equal(createSleepLogCalls[0]?.started_at, "2000-01-01T10:00:00");
+  assert.equal(settings.get(timerKey), "");
+  assert.equal(loggedCount, 1);
+  assert.deepEqual(success, ["Sleep entry saved."]);
+  assert.deepEqual(errors, []);
+});
+
 test("useVisibilityRefresh does not subscribe when disabled", () => {
   const addWindowListener = window.addEventListener.bind(window);
   const addDocumentListener = document.addEventListener.bind(document);
@@ -307,64 +539,97 @@ test("useVisibilityRefresh does not subscribe when disabled", () => {
 });
 
 test("useChildWorkflowActions runs refresh, alert, and reminder steps in order", async () => {
+  const originalSetTimeout = globalThis.setTimeout;
+  const scheduled: Array<() => void> = [];
+  globalThis.setTimeout = ((callback: TimerHandler) => {
+    scheduled.push(callback as () => void);
+    return scheduled.length as unknown as number;
+  }) as typeof globalThis.setTimeout;
+
   const calls: string[] = [];
-  const { result } = renderHook(() => useChildWorkflowActions(
-    child,
-    async () => {
-      calls.push("refreshAlerts");
-    },
-    {
-      runChecks: async () => {
-        calls.push("runChecks");
-      },
-      syncSmartRemindersForChild: async () => {
-        calls.push("syncReminders");
-      },
-    },
-  ));
-
-  await result.current.runPostLogActions({
-    refresh: [
+  try {
+    const { result } = renderHook(() => useChildWorkflowActions(
+      child,
       async () => {
-        calls.push("refreshA");
+        calls.push("refreshAlerts");
       },
-      async () => {
-        calls.push("refreshB");
+      {
+        runChecks: async () => {
+          calls.push("runChecks");
+        },
+        syncSmartRemindersForChild: async () => {
+          calls.push("syncReminders");
+        },
       },
-    ],
-    alerts: true,
-    reminders: true,
-  });
+    ));
 
-  assert.deepEqual(calls, [
-    "refreshA",
-    "refreshB",
-    "runChecks",
-    "refreshAlerts",
-    "syncReminders",
-  ]);
+    await result.current.runPostLogActions({
+      refresh: [
+        async () => {
+          calls.push("refreshA");
+        },
+        async () => {
+          calls.push("refreshB");
+        },
+      ],
+      alerts: true,
+      reminders: true,
+    });
+
+    assert.deepEqual(calls, [
+      "refreshA",
+      "refreshB",
+      "runChecks",
+      "refreshAlerts",
+    ]);
+    assert.equal(scheduled.length, 1);
+
+    scheduled[0]?.();
+
+    assert.deepEqual(calls, [
+      "refreshA",
+      "refreshB",
+      "runChecks",
+      "refreshAlerts",
+      "syncReminders",
+    ]);
+  } finally {
+    globalThis.setTimeout = originalSetTimeout;
+  }
 });
 
-test("useChildWorkflowActions safely no-ops when the child is missing", async () => {
+test("useChildWorkflowActions does not schedule reminders when the child is missing", async () => {
+  const originalSetTimeout = globalThis.setTimeout;
+  const scheduled: Array<() => void> = [];
+  globalThis.setTimeout = ((callback: TimerHandler) => {
+    scheduled.push(callback as () => void);
+    return scheduled.length as unknown as number;
+  }) as typeof globalThis.setTimeout;
+
   const calls: string[] = [];
-  const { result } = renderHook(() => useChildWorkflowActions(
-    null,
-    async () => {
-      calls.push("refreshAlerts");
-    },
-    {
-      runChecks: async () => {
-        calls.push("runChecks");
+  try {
+    const { result } = renderHook(() => useChildWorkflowActions(
+      null,
+      async () => {
+        calls.push("refreshAlerts");
       },
-      syncSmartRemindersForChild: async () => {
-        calls.push("syncReminders");
+      {
+        runChecks: async () => {
+          calls.push("runChecks");
+        },
+        syncSmartRemindersForChild: async () => {
+          calls.push("syncReminders");
+        },
       },
-    },
-  ));
+    ));
 
-  await result.current.refreshChildAlerts();
-  await result.current.syncChildReminders();
-  await result.current.runPostLogActions({ alerts: true, reminders: true });
+    await result.current.refreshChildAlerts();
+    await result.current.syncChildReminders();
+    await result.current.runPostLogActions({ alerts: true, reminders: true });
 
-  assert.deepEqual(calls, []);
+    assert.deepEqual(calls, []);
+    assert.equal(scheduled.length, 0);
+  } finally {
+    globalThis.setTimeout = originalSetTimeout;
+  }
 });

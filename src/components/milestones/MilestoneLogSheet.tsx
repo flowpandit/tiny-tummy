@@ -8,21 +8,23 @@ import { cn } from "../../lib/cn";
 import { useMilestoneLogSheetState } from "../../hooks/useMilestoneLogSheetState";
 import { MILESTONE_OPTIONS } from "../../lib/milestone-constants";
 import { getCurrentLocalDate } from "../../lib/utils";
+import type { MilestoneType } from "../../lib/types";
 
 interface MilestoneLogSheetProps extends SheetVisibilityProps {
   childId: string;
+  initialType?: MilestoneType;
   onLogged: () => Promise<void> | void;
 }
 
-export function MilestoneLogSheet({ open, onClose, childId, onLogged }: MilestoneLogSheetProps) {
+export function MilestoneLogSheet({ open, onClose, childId, initialType, onLogged }: MilestoneLogSheetProps) {
   const { showError, showSuccess } = useToast();
   const { milestoneType, setMilestoneType, logDate, setLogDate, logTime, setLogTime, notes, setNotes, isSubmitting, handleSubmit } =
-    useMilestoneLogSheetState({ open, childId, onLogged, onClose, onError: showError, onSuccess: showSuccess });
+    useMilestoneLogSheetState({ open, childId, initialType, onLogged, onClose, onError: showError, onSuccess: showSuccess });
 
   return (
     <Sheet open={open} onClose={onClose}>
       <form onSubmit={(event: FormEvent) => { event.preventDefault(); void handleSubmit(); }} className="px-5 pb-8">
-        <h2 className="mb-2 text-center font-[var(--font-display)] text-lg font-semibold text-[var(--color-text)]">
+        <h2 className="mb-2 text-center text-lg font-semibold text-[var(--color-text)]">
           Add milestone
         </h2>
         <p className="mb-5 text-center text-sm text-[var(--color-text-secondary)]">

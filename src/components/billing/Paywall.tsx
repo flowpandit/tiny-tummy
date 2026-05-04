@@ -116,7 +116,7 @@ export function Paywall() {
                 <Logo className="h-full w-full" />
               </div>
               <div>
-                <p className="font-[var(--font-display)] text-xl font-semibold tracking-[-0.03em]">Tiny Tummy</p>
+                <p className="text-xl font-semibold tracking-[-0.03em]">Tiny Tummy</p>
                 <p className="text-sm text-[var(--color-text-secondary)]">
                   {daysRemaining > 0 ? `${daysRemaining} day${daysRemaining === 1 ? "" : "s"} left in trial` : "Trial ended"}
                 </p>
@@ -144,7 +144,7 @@ export function Paywall() {
                 initial={{ opacity: 0, y: 22 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.55, delay: 0.14, ease: "easeOut" }}
-                className="max-w-[11ch] font-[var(--font-display)] text-5xl font-semibold tracking-[-0.04em] text-[var(--color-text)] sm:text-6xl"
+                className="max-w-[11ch] text-5xl font-semibold tracking-[-0.04em] text-[var(--color-text)] sm:text-6xl"
               >
                 Keep every baby health record in one private place.
               </motion.h1>
@@ -155,7 +155,7 @@ export function Paywall() {
                 transition={{ duration: 0.55, delay: 0.2, ease: "easeOut" }}
                 className="mt-5 max-w-[34rem] text-lg leading-relaxed text-[var(--color-text-secondary)]"
               >
-                Tiny Tummy stays focused on the daily details that matter: logs, patterns, reports, and handoff notes you can trust when something changes.
+                Tiny Tummy stays focused on the daily details that matter: logs, patterns, reports, and private records you can trust when something changes.
               </motion.p>
 
               <motion.div
@@ -197,7 +197,7 @@ export function Paywall() {
 
               <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[var(--color-text-soft)]">One-time unlock</p>
               <div className="mt-4 flex items-end gap-2">
-                <span className="font-[var(--font-display)] text-6xl font-semibold tracking-[-0.05em]">$9.99</span>
+                <span className="text-6xl font-semibold tracking-[-0.05em]">$9.99</span>
                 <span className="pb-2 text-sm text-[var(--color-text-secondary)]">once</span>
               </div>
               <p className="mt-3 text-sm leading-6 text-[var(--color-text-secondary)]">

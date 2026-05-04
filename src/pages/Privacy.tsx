@@ -5,7 +5,7 @@ export function Privacy() {
     <div className="min-h-screen bg-[var(--color-bg)] px-5 py-6" style={{ paddingTop: "calc(var(--safe-area-top) + 94px)" }}>
       <Header showBackButton fallbackTo="/" />
 
-      <h1 className="font-[var(--font-display)] text-2xl font-bold text-[var(--color-text)] mb-6">
+      <h1 className="text-2xl font-bold text-[var(--color-text)] mb-6">
         Privacy Policy
       </h1>
 

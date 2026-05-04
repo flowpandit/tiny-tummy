@@ -2,6 +2,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Card, CardContent } from "../ui/card";
 import { InsetPanel } from "../ui/page-layout";
 import { TrackerMetricPanel } from "../tracking/TrackerPrimitives";
+import { PoopIcon } from "../ui/icons";
 import {
   formatBaselineRange,
   formatPredictionRange,
@@ -13,6 +14,102 @@ import {
   type DueRisk,
   type PoopPrediction,
 } from "../../lib/poop-insights";
+
+function ChevronIcon({ expanded }: { expanded: boolean }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 20 20"
+      fill="currentColor"
+      className={`h-4 w-4 transition-transform ${expanded ? "rotate-180" : ""}`}
+      aria-hidden="true"
+    >
+      <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 11.137l3.71-3.907a.75.75 0 1 1 1.08 1.04l-4.25 4.474a.75.75 0 0 1-1.08 0L5.21 8.27a.75.75 0 0 1 .02-1.06Z" clipRule="evenodd" />
+    </svg>
+  );
+}
+
+function nextLikelyToneStyles(prediction: PoopPrediction | null) {
+  if (prediction?.state === "overdue") {
+    return {
+      background: "var(--color-tracker-next-alert-surface)",
+      color: "var(--color-tracker-next-alert-text)",
+      borderColor: "var(--color-tracker-next-alert-border)",
+    };
+  }
+
+  if (prediction?.state === "due") {
+    return {
+      background: "var(--color-tracker-next-caution-surface)",
+      color: "var(--color-tracker-next-caution-text)",
+      borderColor: "var(--color-tracker-next-caution-border)",
+    };
+  }
+
+  return {
+    background: "var(--color-tracker-next-healthy-surface)",
+    color: "var(--color-tracker-next-healthy-text)",
+    borderColor: "var(--color-tracker-next-healthy-border)",
+  };
+}
+
+function InsightPoopArt({ accentColor }: { accentColor: string }) {
+  return (
+    <div className="pointer-events-none absolute bottom-5 right-5 hidden h-20 w-20 items-center justify-center rounded-full bg-[var(--color-tracker-art-surface)] md:flex" aria-hidden="true">
+      <PoopIcon className="h-11 w-11" color={accentColor} />
+    </div>
+  );
+}
+
+function NextLikelyTile({
+  prediction,
+}: {
+  prediction: PoopPrediction | null;
+}) {
+  const styles = nextLikelyToneStyles(prediction);
+
+  return (
+    <div
+      className="min-w-0 rounded-[14px] border px-3 py-2.5 md:rounded-[16px] md:px-3.5 md:py-3"
+      style={styles}
+    >
+      <div className="flex items-center gap-2">
+        <PoopIcon className="h-4.5 w-4.5 shrink-0" color="currentColor" />
+        <p className="min-w-0 text-[0.66rem] font-semibold uppercase tracking-[0.14em] md:text-[0.7rem]">
+          Next poop
+        </p>
+      </div>
+      <p className="mt-1.5 text-[0.9rem] font-semibold leading-tight tracking-[-0.02em] text-[var(--color-text)] md:text-[1rem]">
+        {getPredictionHeadline(prediction)}
+      </p>
+      <p className="mt-1 text-[0.68rem] leading-snug text-[var(--color-text-secondary)] md:text-[0.72rem]">
+        {prediction ? getPredictionDescription(prediction) : "A couple of logs will personalize the next window."}
+      </p>
+    </div>
+  );
+}
+
+function BaselineTile({
+  baseline,
+  baselineComparison,
+}: {
+  baseline: AgeBaseline;
+  baselineComparison: BaselineComparison;
+}) {
+  return (
+    <div className="min-w-0 rounded-[14px] border border-[var(--color-home-card-border)] bg-[var(--color-tracker-next-neutral-surface)] px-3 py-2.5 md:rounded-[16px] md:px-3.5 md:py-3">
+      <p className="text-[0.66rem] font-semibold uppercase tracking-[0.14em] text-[var(--color-text)] md:text-[0.7rem]">
+        Usual rhythm
+      </p>
+      <p className="mt-1.5 text-[0.9rem] font-semibold leading-tight tracking-[-0.02em] text-[var(--color-text)] md:text-[1rem]">
+        {formatBaselineRange(baseline)}
+      </p>
+      <p className="mt-1 text-[0.68rem] leading-snug text-[var(--color-text-secondary)] md:text-[0.72rem]">
+        {baselineComparison.label}
+      </p>
+    </div>
+  );
+}
 
 export function PoopHealthInsightCard({
   baseline,
@@ -36,43 +133,51 @@ export function PoopHealthInsightCard({
   onToggleExpanded: () => void;
 }) {
   return (
-    <Card className="relative overflow-hidden">
-      <span
-        aria-hidden="true"
-        className="absolute bottom-1.5 left-0 top-1.5 w-1.5 rounded-r-full"
-        style={{ backgroundColor: healthInsight.accentColor }}
-      />
-      <CardContent className="overflow-hidden py-3.5 pl-7 pr-3.5">
+    <Card
+      className="relative h-full overflow-hidden rounded-[18px] border shadow-[var(--shadow-home-card)] backdrop-blur-sm md:rounded-[24px]"
+      style={{
+        background: "var(--gradient-tracker-insight-poop)",
+        borderColor: "var(--color-home-card-border)",
+      }}
+    >
+      <InsightPoopArt accentColor={healthInsight.accentColor} />
+      <CardContent className="relative overflow-hidden p-4 md:p-5">
         <div className="flex items-start justify-between gap-3">
-          <div>
-            <p className="text-[0.95rem] font-semibold" style={{ color: healthInsight.accentColor }}>
+          <div className="min-w-0 md:max-w-[calc(100%_-_96px)]">
+            <p className="text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-[#a86235] md:text-[0.74rem]">
+              Poop insight
+            </p>
+            <p className="mt-3 text-[1rem] font-semibold leading-tight tracking-[-0.03em] text-[var(--color-text)] md:text-[1.12rem]">
               {healthInsight.title}
             </p>
-            <p className="mt-1 max-w-[34ch] text-[0.92rem] leading-snug text-[var(--color-text-secondary)]">
+            <p className="mt-2 max-w-[34ch] text-[0.74rem] leading-snug text-[var(--color-text-secondary)] md:text-[0.82rem]">
               {healthInsight.detail}
             </p>
           </div>
-          <span className={`rounded-full px-3 py-1.5 text-[12px] font-semibold ${statusBadge.className}`}>
+          <span className={`shrink-0 rounded-full px-2.5 py-1 text-[0.66rem] font-semibold md:px-3 md:text-[0.72rem] ${statusBadge.className}`}>
             {statusBadge.label}
           </span>
+        </div>
+
+        <div className="mt-4 rounded-[16px] border border-[var(--color-home-card-border)] bg-[var(--color-tracker-panel-surface)] p-2.5 md:mt-5 md:p-3">
+          <p className="px-1 text-[0.66rem] font-semibold uppercase tracking-[0.16em] text-[var(--color-text)] md:text-[0.72rem]">
+            Next likely
+          </p>
+          <div className="mt-2 grid grid-cols-2 gap-2">
+            <NextLikelyTile prediction={prediction} />
+            <BaselineTile baseline={baseline} baselineComparison={baselineComparison} />
+          </div>
         </div>
 
         <button
           type="button"
           onClick={onToggleExpanded}
-          className="mt-2 inline-flex items-center gap-1.5 text-[0.82rem] font-medium text-[var(--color-text-secondary)] transition-opacity hover:opacity-75"
+          className="mt-3 inline-flex items-center gap-1.5 text-[0.75rem] font-semibold transition-opacity hover:opacity-75 md:text-[0.82rem]"
+          style={{ color: healthInsight.accentColor }}
           aria-expanded={statusExpanded}
         >
           {statusExpanded ? "See less" : "See more"}
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 20 20"
-            fill="currentColor"
-            className={`h-4 w-4 transition-transform ${statusExpanded ? "rotate-180" : ""}`}
-            aria-hidden="true"
-          >
-            <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 11.137l3.71-3.907a.75.75 0 1 1 1.08 1.04l-4.25 4.474a.75.75 0 0 1-1.08 0L5.21 8.27a.75.75 0 0 1 .02-1.06Z" clipRule="evenodd" />
-          </svg>
+          <ChevronIcon expanded={statusExpanded} />
         </button>
         <AnimatePresence initial={false}>
           {statusExpanded && (
@@ -89,9 +194,9 @@ export function PoopHealthInsightCard({
                 animate={{ y: 0 }}
                 exit={{ y: -6 }}
                 transition={{ duration: 0.18, ease: "easeOut" }}
-                className="pt-2 pr-0.5"
+                className="pt-3 pr-0.5"
               >
-                <div className="grid grid-cols-2 gap-2.5">
+                <div className="grid grid-cols-2 gap-2">
                   <TrackerMetricPanel
                     eyebrow="Age baseline"
                     value={formatBaselineRange(baseline)}
@@ -104,7 +209,7 @@ export function PoopHealthInsightCard({
                     description={dueRisk.description}
                     tone={dueRisk.tone}
                   />
-                  <InsetPanel className="col-span-2 border-[var(--color-info)]/18 bg-[var(--color-info-bg)] p-3">
+                  <InsetPanel className="col-span-2 border-[var(--color-home-card-border)] bg-[var(--color-tracker-panel-surface)] p-3">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--color-text-soft)]">Next likely poop</p>
@@ -116,29 +221,29 @@ export function PoopHealthInsightCard({
                         </p>
                       </div>
                       {prediction && (
-                        <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-semibold text-[var(--color-chip-text-on-light)]">
+                        <span className="rounded-full border border-[var(--color-border)] bg-[var(--color-tracker-chip-surface)] px-2.5 py-1 text-[11px] font-semibold text-[var(--color-tracker-chip-text)]">
                           {prediction.confidence}
                         </span>
                       )}
                     </div>
                     {prediction && (
                       <div className="mt-3 flex flex-wrap gap-2">
-                        <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-chip-text-on-light)]">
+                        <span className="rounded-full border border-[var(--color-border)] bg-[var(--color-tracker-chip-surface)] px-2.5 py-1 text-[11px] font-medium text-[var(--color-tracker-chip-text)]">
                           Typical gap: {prediction.intervalLabel}
                         </span>
-                        <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-chip-text-on-light)]">
+                        <span className="rounded-full border border-[var(--color-border)] bg-[var(--color-tracker-chip-surface)] px-2.5 py-1 text-[11px] font-medium text-[var(--color-tracker-chip-text)]">
                           {formatPredictionRelative(prediction)}
                         </span>
-                        <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-chip-text-on-light)]">
+                        <span className="rounded-full border border-[var(--color-border)] bg-[var(--color-tracker-chip-surface)] px-2.5 py-1 text-[11px] font-medium text-[var(--color-tracker-chip-text)]">
                           Source: {prediction.source === "history" ? "recent rhythm" : "age baseline"}
                         </span>
-                        <span className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-chip-text-on-light)]">
+                        <span className="rounded-full border border-[var(--color-border)] bg-[var(--color-tracker-chip-surface)] px-2.5 py-1 text-[11px] font-medium text-[var(--color-tracker-chip-text)]">
                           Window: {formatPredictionRange(prediction)}
                         </span>
                         {prediction.adjustments.slice(0, 2).map((adjustment) => (
                           <span
                             key={adjustment.label}
-                            className="rounded-full border border-[var(--color-border)] bg-white/55 px-2.5 py-1 text-[11px] font-medium text-[var(--color-chip-text-on-light)]"
+                            className="rounded-full border border-[var(--color-border)] bg-[var(--color-tracker-chip-surface)] px-2.5 py-1 text-[11px] font-medium text-[var(--color-tracker-chip-text)]"
                           >
                             {adjustment.direction === "earlier" ? "Earlier" : "Later"}: {adjustment.label}
                           </span>
@@ -146,7 +251,7 @@ export function PoopHealthInsightCard({
                       </div>
                     )}
                   </InsetPanel>
-                  <InsetPanel className="col-span-2 p-3">
+                  <InsetPanel className="col-span-2 border-[var(--color-home-card-border)] bg-[var(--color-tracker-panel-surface)] p-3">
                     <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--color-text-soft)]">What this means</p>
                     <p className="mt-2 text-[13px] leading-relaxed text-[var(--color-text-secondary)]">{patternNarrative}</p>
                   </InsetPanel>

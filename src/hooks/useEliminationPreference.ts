@@ -1,12 +1,18 @@
 import { useEffect, useMemo, useState } from "react";
-import { getEliminationViewSettingKey, resolveEliminationExperience, type EliminationExperience, type EliminationViewPreference } from "../lib/diaper";
+import {
+  getEliminationViewSettingKey,
+  normalizeEliminationViewPreference,
+  resolveEliminationExperience,
+  type EliminationExperience,
+  type EliminationViewPreference,
+} from "../lib/diaper";
 import { useDbClient } from "../contexts/DatabaseContext";
 import type { Child } from "../lib/types";
 
 export function useEliminationPreference(child: Child | null) {
   const db = useDbClient();
   const [preference, setPreferenceState] = useState<EliminationViewPreference>("auto");
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(() => Boolean(child));
 
   useEffect(() => {
     if (!child) {
@@ -21,11 +27,12 @@ export function useEliminationPreference(child: Child | null) {
     db.getSetting(getEliminationViewSettingKey(child.id))
       .then((raw) => {
         if (cancelled) return;
-        if (raw === "diaper" || raw === "poop" || raw === "auto") {
-          setPreferenceState(raw);
-        } else {
-          setPreferenceState("auto");
-        }
+        setPreferenceState(
+          normalizeEliminationViewPreference(
+            child,
+            raw === "diaper" || raw === "poop" || raw === "auto" ? raw : "auto",
+          ),
+        );
       })
       .finally(() => {
         if (!cancelled) {
@@ -47,8 +54,9 @@ export function useEliminationPreference(child: Child | null) {
 
   const setPreference = async (value: EliminationViewPreference) => {
     if (!child) return;
-    setPreferenceState(value);
-    await db.setSetting(getEliminationViewSettingKey(child.id), value);
+    const normalizedValue = normalizeEliminationViewPreference(child, value);
+    setPreferenceState(normalizedValue);
+    await db.setSetting(getEliminationViewSettingKey(child.id), normalizedValue);
   };
 
   return { preference, setPreference, experience, isLoading };

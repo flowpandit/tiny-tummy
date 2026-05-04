@@ -66,8 +66,24 @@ export async function generateReportPdf(payload: ReportPdfPayload): Promise<stri
   return await invoke("generate_report_pdf", { payload });
 }
 
-export async function savePdfToDownloads(fileName: string, base64Data: string): Promise<void> {
+export interface SavedDownloadsPdf {
+  fileName: string;
+  uri: string;
+}
+
+export async function savePdfToDownloads(fileName: string, base64Data: string): Promise<SavedDownloadsPdf> {
   return await invoke("save_pdf_to_downloads", {
+    fileName,
+    base64Data,
+  });
+}
+
+export async function openPdfFromDownloads(uri: string): Promise<void> {
+  return await invoke("open_pdf_from_downloads", { uri });
+}
+
+export async function sharePdfReport(fileName: string, base64Data: string): Promise<void> {
+  return await invoke("share_pdf_report", {
     fileName,
     base64Data,
   });

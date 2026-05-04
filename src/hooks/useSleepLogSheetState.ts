@@ -9,12 +9,24 @@ import {
   parseSleepTimerSession,
   type SleepTimerSession,
 } from "../lib/sleep-timer";
-import { combineLocalDateAndTimeToUtcIso, formatLocalTimeValue, getCurrentLocalDate, getCurrentLocalTime } from "../lib/utils";
+import { classifySleepType } from "../lib/sleep-insights";
+import { combineLocalDateAndTimeToUtcIso, formatLocalDateKey, formatLocalTimeValue } from "../lib/utils";
 
-function getDefaultEndTime(): string {
-  const date = new Date();
-  date.setHours(date.getHours() + 1);
-  return formatLocalTimeValue(date);
+function getDefaultManualWindow(): {
+  startDate: string;
+  startTime: string;
+  endDate: string;
+  endTime: string;
+} {
+  const end = new Date();
+  const start = new Date(end.getTime() - 60 * 60 * 1000);
+
+  return {
+    startDate: formatLocalDateKey(start),
+    startTime: formatLocalTimeValue(start),
+    endDate: formatLocalDateKey(end),
+    endTime: formatLocalTimeValue(end),
+  };
 }
 
 type Mode = "manual" | "timer";
@@ -22,6 +34,8 @@ type Mode = "manual" | "timer";
 export function useSleepLogSheetState({
   open,
   childId,
+  initialMode = "manual",
+  initialSleepType = "nap",
   onLogged,
   onClose,
   onError,
@@ -29,34 +43,38 @@ export function useSleepLogSheetState({
 }: {
   open: boolean;
   childId: string;
+  initialMode?: Mode;
+  initialSleepType?: SleepType;
   onLogged: () => Promise<void> | void;
   onClose: () => void;
   onError: (message: string) => void;
   onSuccess: (message: string) => void;
 }) {
   const db = useDbClient();
+  const defaultWindow = getDefaultManualWindow();
   const [mode, setModeState] = useState<Mode>("manual");
   const [sleepType, setSleepType] = useState<SleepType>("nap");
-  const [startDate, setStartDate] = useState(getCurrentLocalDate());
-  const [startTime, setStartTime] = useState(getCurrentLocalTime());
-  const [endDate, setEndDate] = useState(getCurrentLocalDate());
-  const [endTime, setEndTime] = useState(getDefaultEndTime());
+  const [startDate, setStartDate] = useState(defaultWindow.startDate);
+  const [startTime, setStartTime] = useState(defaultWindow.startTime);
+  const [endDate, setEndDate] = useState(defaultWindow.endDate);
+  const [endTime, setEndTime] = useState(defaultWindow.endTime);
   const [notes, setNotes] = useState("");
   const [timerSession, setTimerSession] = useState<SleepTimerSession | null>(null);
   const [tick, setTick] = useState(Date.now());
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const resetManualState = useCallback((session: SleepTimerSession | null) => {
-    setModeState(session ? "timer" : "manual");
-    setSleepType(session?.sleepType ?? "nap");
-    setStartDate(getCurrentLocalDate());
-    setStartTime(getCurrentLocalTime());
-    setEndDate(getCurrentLocalDate());
-    setEndTime(getDefaultEndTime());
+    const manualWindow = getDefaultManualWindow();
+    setModeState(session ? "timer" : initialMode);
+    setSleepType(session?.sleepType ?? initialSleepType);
+    setStartDate(manualWindow.startDate);
+    setStartTime(manualWindow.startTime);
+    setEndDate(manualWindow.endDate);
+    setEndTime(manualWindow.endTime);
     setNotes(session?.notes ?? "");
     setTick(Date.now());
     setIsSubmitting(false);
-  }, []);
+  }, [initialMode, initialSleepType]);
 
   useEffect(() => {
     if (!open) return;
@@ -130,7 +148,7 @@ export function useSleepLogSheetState({
     try {
       await db.createSleepLog({
         child_id: childId,
-        sleep_type: timerSession.sleepType,
+        sleep_type: classifySleepType(timerSession.startedAt, endedAt),
         started_at: timerSession.startedAt,
         ended_at: endedAt,
         notes: timerSession.notes.trim() || null,
@@ -162,6 +180,11 @@ export function useSleepLogSheetState({
 
     if (new Date(endedAt).getTime() <= new Date(startedAt).getTime()) {
       onError("End time needs to be after the start time.");
+      return false;
+    }
+
+    if (new Date(startedAt).getTime() > Date.now() || new Date(endedAt).getTime() > Date.now()) {
+      onError("Sleep logs cannot be saved in the future.");
       return false;
     }
 

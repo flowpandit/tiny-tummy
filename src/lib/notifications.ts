@@ -66,6 +66,23 @@ async function cancelIfPending(id: number): Promise<void> {
   }
 }
 
+async function cancelPendingIds(ids: number[]): Promise<void> {
+  if (ids.length === 0) return;
+
+  try {
+    const pendingNotifs = await pending();
+    const idsToCancel = pendingNotifs
+      .filter((notification) => ids.includes(notification.id))
+      .map((notification) => notification.id);
+
+    if (idsToCancel.length > 0) {
+      await cancel(idsToCancel);
+    }
+  } catch {
+    // Ignore errors if no pending notifications
+  }
+}
+
 async function scheduleOneOffNotification(input: {
   id: number;
   title: string;
@@ -162,6 +179,9 @@ export async function cancelDailyReminder(): Promise<void> {
 }
 
 export async function syncSmartRemindersForChild(child: Child): Promise<void> {
+  const permissionGranted = await isPermissionGranted();
+  if (!permissionGranted) return;
+
   const settings = await getSmartReminderSettings();
   const ids = {
     noPoop: reminderId(child.id, "noPoop"),
@@ -169,14 +189,15 @@ export async function syncSmartRemindersForChild(child: Child): Promise<void> {
     episodeCheckIn: reminderId(child.id, "episodeCheckIn"),
   };
 
-  await Promise.all([
-    cancelIfPending(ids.noPoop),
-    cancelIfPending(ids.redFlagFollowUp),
-    cancelIfPending(ids.episodeCheckIn),
+  await cancelPendingIds([
+    ids.noPoop,
+    ids.redFlagFollowUp,
+    ids.episodeCheckIn,
   ]);
 
-  const permissionGranted = await isPermissionGranted();
-  if (!permissionGranted) return;
+  if (!settings.noPoop && !settings.redFlagFollowUp && !settings.episodeCheckIn) {
+    return;
+  }
 
   const summary = await getChildSummarySnapshot(child.id, {
     poopLimit: 30,

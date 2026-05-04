@@ -6,6 +6,7 @@ import app.tauri.annotation.InvokeArg
 import app.tauri.annotation.TauriPlugin
 import app.tauri.plugin.Invoke
 import app.tauri.plugin.Plugin
+import app.tauri.plugin.JSObject
 import com.android.billingclient.api.AcknowledgePurchaseParams
 import com.android.billingclient.api.BillingClient
 import com.android.billingclient.api.BillingClientStateListener
@@ -232,20 +233,22 @@ class BillingPlugin(private val activity: Activity) : Plugin(activity), Purchase
         })
     }
 
-    private fun successResult(productId: String, restored: Boolean, message: String): JSONObject {
-        return JSONObject()
-            .put("ok", true)
-            .put("restored", restored)
-            .put("productId", productId)
-            .put("message", message)
+    private fun successResult(productId: String, restored: Boolean, message: String): JSObject {
+        val result = JSObject()
+        result.put("ok", true)
+        result.put("restored", restored)
+        result.put("productId", productId)
+        result.put("message", message)
+        return result
     }
 
-    private fun errorResult(message: String): JSONObject {
-        return JSONObject()
-            .put("ok", false)
-            .put("restored", false)
-            .put("productId", JSONObject.NULL)
-            .put("message", message)
+    private fun errorResult(message: String): JSObject {
+        val result = JSObject()
+        result.put("ok", false)
+        result.put("restored", false)
+        result.put("productId", JSONObject.NULL)
+        result.put("message", message)
+        return result
     }
 
     private fun BillingResult.isOk(): Boolean {
@@ -257,3 +260,4 @@ class BillingPlugin(private val activity: Activity) : Plugin(activity), Purchase
         pendingProductId = null
     }
 }
+

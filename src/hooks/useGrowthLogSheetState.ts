@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useDbClient } from "../contexts/DatabaseContext";
+import { notifyGrowthLogsChanged } from "../lib/growth-events";
 import { combineLocalDateAndTimeToUtcIso, getCurrentLocalDate, getCurrentLocalTime, getLocalDateTimeParts } from "../lib/utils";
 import { formatGrowthValue, parseGrowthInputToMetric } from "../lib/units";
 import type { GrowthEntry, UnitSystem } from "../lib/types";
@@ -58,6 +59,7 @@ export function useGrowthLogSheetState({
       };
       if (entry) await db.updateGrowthLog(entry.id, payload);
       else await db.createGrowthLog({ child_id: childId, ...payload });
+      notifyGrowthLogsChanged(childId);
       await onLogged();
       onSuccess(entry ? "Growth measurement updated." : "Growth measurement saved.");
       onClose();
@@ -68,12 +70,13 @@ export function useGrowthLogSheetState({
     } finally {
       setIsSubmitting(false);
     }
-  }, [childId, entry, hasAnyMeasurement, headCircumferenceCm, heightCm, isSubmitting, measureDate, measureTime, notes, onClose, onError, onLogged, onSuccess, unitSystem, weightKg]);
+  }, [childId, db, entry, hasAnyMeasurement, headCircumferenceCm, heightCm, isSubmitting, measureDate, measureTime, notes, onClose, onError, onLogged, onSuccess, unitSystem, weightKg]);
 
   const handleDelete = useCallback(async () => {
     if (!entry || !onDeleted) return false;
     try {
       await db.deleteGrowthLog(entry.id);
+      notifyGrowthLogsChanged(childId);
       await onDeleted();
       onSuccess("Growth measurement deleted.");
       onClose();
@@ -82,7 +85,7 @@ export function useGrowthLogSheetState({
       onError("Could not delete the growth measurement. Please try again.");
       return false;
     }
-  }, [entry, onClose, onDeleted, onError, onSuccess]);
+  }, [childId, db, entry, onClose, onDeleted, onError, onSuccess]);
 
   return {
     measureDate, setMeasureDate, measureTime, setMeasureTime,

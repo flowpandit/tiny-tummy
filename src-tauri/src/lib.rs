@@ -1,6 +1,7 @@
 mod billing;
 mod downloads;
 mod engine;
+mod report_export;
 mod report_pdf;
 mod statusbar;
 
@@ -151,6 +152,18 @@ pub fn run() {
             sql: include_str!("../migrations/010_child_sex.sql"),
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 11,
+            description: "add symptom temperature",
+            sql: include_str!("../migrations/011_symptom_temperature.sql"),
+            kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 12,
+            description: "add symptom method and episode event source",
+            sql: include_str!("../migrations/012_symptom_method_and_updated_at.sql"),
+            kind: MigrationKind::Up,
+        },
     ];
 
     tauri::Builder::default()
@@ -170,6 +183,7 @@ pub fn run() {
         .plugin(tauri_plugin_os::init())
         .plugin(billing::init())
         .plugin(downloads::init())
+        .plugin(report_export::init())
         .plugin(statusbar::init())
         .invoke_handler(tauri::generate_handler![
             billing::billing_purchase_premium,
@@ -180,7 +194,9 @@ pub fn run() {
             get_child_status,
             get_guidance_tips,
             generate_report_pdf,
+            downloads::open_pdf_from_downloads,
             downloads::save_pdf_to_downloads,
+            report_export::share_pdf_report,
             statusbar::set_status_bar_style,
         ])
         .run(tauri::generate_context!())

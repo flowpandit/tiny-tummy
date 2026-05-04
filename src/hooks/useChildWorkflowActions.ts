@@ -47,10 +47,14 @@ export function useChildWorkflowActions(
       await refreshChildAlerts();
     }
 
-    if (reminders) {
-      await syncChildReminders();
+    if (reminders && child) {
+      globalThis.setTimeout(() => {
+        void syncChildReminders().catch(() => {
+          // Reminder sync is non-critical after a log save.
+        });
+      }, 0);
     }
-  }, [refreshChildAlerts, syncChildReminders]);
+  }, [child, refreshChildAlerts, syncChildReminders]);
 
   return {
     refreshChildAlerts,

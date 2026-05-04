@@ -50,6 +50,13 @@ export interface FeedMixSnapshot {
   chips: string[];
 }
 
+export const FEED_PREDICTION_FALLBACK = "Log feeds to predict next feeding time";
+const BREASTFEED_CLUSTER_GAP_MS = 20 * 60 * 1000;
+const MIN_FEED_HISTORY_INTERVALS = 2;
+const MIN_FEED_HISTORY_INTERVAL_MS = 45 * 60 * 1000;
+const MIN_FEED_HISTORY_INTERVAL_CAP_MS = 6 * 60 * 60 * 1000;
+const FEED_HISTORY_INTERVAL_CAP_FACTOR = 1.5;
+
 function getAgeDays(dateOfBirth: string): number {
   const [year, month, day] = dateOfBirth.split("-").map(Number);
   const birth = new Date(year, (month || 1) - 1, day || 1);
@@ -103,8 +110,57 @@ export function getFeedBaseline(dateOfBirth: string, feedingType: FeedingType): 
   };
 }
 
+function getFeedTimestamp(log: FeedingEntry): number {
+  const timestamp = new Date(log.logged_at).getTime();
+  return Number.isFinite(timestamp) ? timestamp : 0;
+}
+
+export function isFeedTimelineEntry(log: FeedingEntry): boolean {
+  return log.food_type !== "pumping";
+}
+
+export function getUnifiedFeedTimeline(logs: FeedingEntry[]): FeedingEntry[] {
+  return logs
+    .filter(isFeedTimelineEntry)
+    .sort((left, right) => getFeedTimestamp(right) - getFeedTimestamp(left));
+}
+
 export function getPredictableFeedLogs(logs: FeedingEntry[]): FeedingEntry[] {
-  return logs.filter((log) => log.food_type !== "pumping");
+  return getUnifiedFeedTimeline(logs);
+}
+
+function isBreastfeedLog(log: FeedingEntry): boolean {
+  return log.food_type === "breast_milk";
+}
+
+function getPredictionFeedLogs(logs: FeedingEntry[]): FeedingEntry[] {
+  const timeline = getUnifiedFeedTimeline(logs);
+  const predictionLogs: FeedingEntry[] = [];
+
+  for (const log of timeline) {
+    const previous = predictionLogs[predictionLogs.length - 1] ?? null;
+    if (previous) {
+      const gapMs = getFeedTimestamp(previous) - getFeedTimestamp(log);
+      if (
+        gapMs >= 0
+        && gapMs <= BREASTFEED_CLUSTER_GAP_MS
+        && (isBreastfeedLog(previous) || isBreastfeedLog(log))
+      ) {
+        continue;
+      }
+    }
+
+    predictionLogs.push(log);
+  }
+
+  return predictionLogs;
+}
+
+function getMaxFeedHistoryIntervalMs(baseline: FeedBaseline): number {
+  return Math.max(
+    MIN_FEED_HISTORY_INTERVAL_CAP_MS,
+    baseline.upperHours * FEED_HISTORY_INTERVAL_CAP_FACTOR * 3600000,
+  );
 }
 
 export function getTrackedMl(logs: FeedingEntry[]): number {
@@ -195,21 +251,22 @@ function lowerConfidence(confidence: PredictionConfidence): PredictionConfidence
 }
 
 export function getFeedPrediction(logs: FeedingEntry[], baseline: FeedBaseline): FeedPrediction | null {
-  const relevantLogs = getPredictableFeedLogs(logs).slice(0, 8);
+  const relevantLogs = getPredictionFeedLogs(logs).slice(0, 8);
   const lastFeed = relevantLogs[0] ?? null;
   if (!lastFeed) return null;
 
   const intervalsMs: number[] = [];
+  const maxHistoryIntervalMs = getMaxFeedHistoryIntervalMs(baseline);
   for (let index = 0; index < relevantLogs.length - 1; index += 1) {
-    const newer = new Date(relevantLogs[index].logged_at).getTime();
-    const older = new Date(relevantLogs[index + 1].logged_at).getTime();
+    const newer = getFeedTimestamp(relevantLogs[index]);
+    const older = getFeedTimestamp(relevantLogs[index + 1]);
     const diff = newer - older;
-    if (diff > 0) {
+    if (diff >= MIN_FEED_HISTORY_INTERVAL_MS && diff <= maxHistoryIntervalMs) {
       intervalsMs.push(diff);
     }
   }
 
-  const hasHistory = intervalsMs.length > 0;
+  const hasHistory = intervalsMs.length >= MIN_FEED_HISTORY_INTERVALS;
   const sortedIntervals = hasHistory ? [...intervalsMs].sort((left, right) => left - right) : [];
   const middle = Math.floor(sortedIntervals.length / 2);
   const baselineIntervalMs = ((baseline.lowerHours + baseline.upperHours) / 2) * 3600000;

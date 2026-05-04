@@ -1,36 +1,41 @@
+import { Card, CardContent } from "../ui/card";
+
 function WeeklyPatternDots({
   filledWeek,
 }: {
   filledWeek: Array<{ date: string; count: number; weekdayLabel: string }>;
 }) {
+  const maxCount = Math.max(...filledWeek.map((day) => day.count), 0);
+
   return (
-    <div className="flex items-end gap-1.5">
+    <div className="grid h-full grid-cols-7 items-end gap-2">
       {filledWeek.map((day) => {
-        const slots = [2, 1, 0];
+        const height = day.count === 0
+          ? 12
+          : Math.min(58, 20 + (day.count / Math.max(maxCount, 1)) * 38);
+
         return (
-          <div key={day.date} className="flex min-w-[22px] flex-col items-center gap-0.5">
-            <div className="flex h-[46px] flex-col justify-end gap-1">
-              {slots.map((slot) => {
-                const active = day.count > slot;
-                const isBar = day.count >= 3 && slot === 0;
-                return (
-                  <span
-                    key={`${day.date}-${slot}`}
-                    className={isBar ? "h-8 w-2.5 rounded-full" : "h-2.5 w-2.5 rounded-full"}
-                    style={{
-                      background: !active
-                        ? "rgba(148, 158, 176, 0.22)"
-                        : slot === 2
-                          ? "rgba(236, 112, 89, 0.92)"
-                          : slot === 1
-                            ? "rgba(104, 205, 110, 0.9)"
-                            : "rgba(245, 171, 82, 0.95)",
-                    }}
-                  />
-                );
-              })}
-            </div>
-            <span className="mt-1 text-[0.66rem] leading-none text-[var(--color-text-secondary)]">{day.weekdayLabel}</span>
+          <div key={day.date} className="flex min-w-0 flex-col items-center justify-end gap-1.5">
+            <span
+              className={`text-[0.68rem] font-semibold leading-none text-[var(--color-text)] md:text-[0.74rem] ${day.count === 0 ? "opacity-0" : ""}`}
+              aria-hidden={day.count === 0}
+            >
+              {day.count}
+            </span>
+            <span
+              className="w-3 rounded-full shadow-[0_7px_14px_rgba(172,139,113,0.12)] transition-transform hover:scale-105"
+              style={{
+                height: `${height}px`,
+                background: day.count === 0
+                  ? "rgba(148, 158, 176, 0.22)"
+                  : "linear-gradient(180deg, rgba(186, 117, 63, 0.92) 0%, rgba(126, 78, 43, 0.92) 100%)",
+                opacity: day.count === 0 ? 0.72 : 1,
+              }}
+              title={`${day.weekdayLabel}: ${day.count} ${day.count === 1 ? "poop" : "poops"}`}
+            />
+            <span className="text-[0.66rem] font-medium leading-none text-[var(--color-text-secondary)] md:text-[0.72rem]">
+              {day.weekdayLabel}
+            </span>
           </div>
         );
       })}
@@ -40,26 +45,49 @@ function WeeklyPatternDots({
 
 export function PoopWeeklyPatternCard({
   filledWeek,
+  todayPoopCount,
 }: {
   filledWeek: Array<{ date: string; count: number; weekdayLabel: string }>;
+  todayPoopCount: number;
 }) {
+  const hasLogs = filledWeek.some((day) => day.count > 0);
+
   return (
-    <div className="px-1">
-      <div className="rounded-[22px] border border-[var(--color-border)] bg-[var(--color-surface-strong)] px-4 py-3 shadow-[var(--shadow-soft)]">
-        <div className="flex min-h-[74px] items-center justify-between gap-4">
-          <div className="min-w-0 flex-1">
-            <p className="text-[0.8rem] font-medium uppercase leading-[1.15] tracking-[0.1em] text-[var(--color-text-soft)]">
-              Weekly
-              <br />
-              Pattern
-            </p>
-            <p className="mt-1 text-[0.72rem] leading-none text-[var(--color-text-secondary)]">Last 7 days</p>
-          </div>
-          <div className="flex-shrink-0">
-            <WeeklyPatternDots filledWeek={filledWeek} />
+    <Card
+      className="overflow-hidden rounded-[18px] border shadow-[var(--shadow-home-card)] backdrop-blur-sm md:rounded-[24px]"
+      style={{
+        background: "var(--color-home-card-surface)",
+        borderColor: "var(--color-home-card-border)",
+      }}
+    >
+      <CardContent className="p-4 md:p-5">
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-[var(--color-text)] md:text-[0.74rem]">
+            7-day pattern
+          </p>
+          <div className="flex items-center gap-2">
+            <span className="rounded-full bg-[var(--color-tracker-pill-surface)] px-2.5 py-1 text-[0.62rem] font-semibold text-[var(--color-text-secondary)] md:text-[0.7rem]">
+              {todayPoopCount} today
+            </span>
+            <span className="inline-flex items-center gap-1.5 text-[0.62rem] font-medium text-[var(--color-text-secondary)] md:text-[0.7rem]">
+              <span className="h-2 w-2 rounded-full bg-[#a86235]" />
+              Poop
+            </span>
           </div>
         </div>
-      </div>
-    </div>
+
+        <div className="mt-4 rounded-[16px] bg-[var(--color-home-empty-surface)] px-4 py-3 md:rounded-[18px] md:px-5">
+          <div className="h-[96px] md:h-[112px]">
+            {hasLogs ? (
+              <WeeklyPatternDots filledWeek={filledWeek} />
+            ) : (
+              <div className="flex h-full items-center justify-center text-[0.78rem] text-[var(--color-text-soft)]">
+                No poop logs in the last 7 days.
+              </div>
+            )}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 }

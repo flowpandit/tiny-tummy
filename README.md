@@ -190,6 +190,7 @@ cargo tauri android build --apk
 ```
 
 The release APK is at:
+
 ```
 src-tauri/gen/android/app/build/outputs/apk/universal/release/app-universal-release-unsigned.apk
 ```
@@ -210,11 +211,14 @@ adb install src-tauri/gen/android/app/build/outputs/apk/universal/release/app-un
 ```
 
 Alternatively, skip signing by building a debug APK (larger file, ~140 MB for single arch):
+
 ```bash
 cargo tauri android build --apk --debug --target aarch64
 ```
 
 ### iOS
+
+#### Running on a Simulator
 
 ```bash
 # 1. Initialize iOS project (one-time per machine)
@@ -243,6 +247,90 @@ cargo tauri ios dev
 
 If the simulator is already booted, you can just run `cargo tauri ios dev`.
 
+#### Running on a Physical Device
+
+To test on a physical iPhone, you need an Apple Developer account to configure signing in Xcode.
+
+1. **Enable Developer Mode:** On your iPhone, go to Settings > Privacy & Security > Developer Mode and toggle it on. Restart when prompted.
+2. **Connect Device:** Plug your iPhone into your Mac and "Trust" the computer.
+3. **Open Xcode:** Run `npm run tauri ios open` (or open `src-tauri/gen/apple/tiny-tummy.xcodeproj` directly).
+4. **Configure Account:** In Xcode, go to Xcode > Settings > Accounts and sign in with your Apple Developer account.
+5. **Set up Signing:**
+   - Click the `tiny-tummy` project in the left Project Navigator.
+   - Click the `tiny_tummy` target under TARGETS.
+   - Go to the **Signing & Capabilities** tab.
+   - Check "Automatically manage signing".
+   - Select your developer account from the "Team" dropdown menu.
+6. **Select Device:** At the top center of the Xcode window, click the device selector and choose your connected physical iPhone.
+
+If Xcode fails in the `Build Rust Code` phase because the script tries to write into `src-tauri/gen/apple/assets`, run:
+
+```bash
+npm run fix:ios-xcodeproj
+```
+
+That patches the generated iOS project to set `ENABLE_USER_SCRIPT_SANDBOXING = NO` for the `tiny-tummy_iOS` target, which allows the pre-build Rust/frontend asset script to write its outputs.
+7. **Run:** Click the Play button (or press `Cmd + R`) to build and install.
+8. **Trust Certificate:** The first time it installs, you may get an untrusted developer error on launch. On your iPhone, go to Settings > General > VPN & Device Management, tap your developer profile, and trust it.
+
+Once configured in Xcode, you can also run future builds from the CLI:
+
+```bash
+cargo tauri ios dev --device
+```
+
+Use `cargo tauri ios dev --device` when you want iOS hot reload. This path uses the Vite dev server from `build.devUrl`; for a physical iPad/iPhone, Tauri rewrites `localhost` to your Mac's network address and Vite listens on that address via `TAURI_DEV_HOST`.
+
+Use Xcode's Play button when you want a self-contained device install without hot reload. The Xcode pre-build script runs `scripts/build-rust-ios.sh`, copies the latest `dist` assets, and forces Tauri's `devUrl` to `null` for that build so the app does not try to reach the Vite server.
+
+#### iPad/iPhone Deployment Workflow (Recommended)
+
+To ensure the latest frontend changes and database optimizations are correctly installed on your physical device:
+
+1. **Build Frontend**: Update the assets that Xcode will bundle:
+   ```bash
+   pnpm build
+   ```
+2. **Patch Xcode Project**: Ensure signing and sandbox settings are correct:
+   ```bash
+   pnpm fix:ios-xcodeproj
+   ```
+3. **Open Xcode**:
+   ```bash
+   npm run tauri ios open
+   ```
+4. **Clean Build Folder**: In Xcode, go to **Product > Clean Build Folder** (or `Cmd + Shift + K`). This is critical for clearing cached assets and ensuring the new SQLite WAL mode is active.
+5. **Run**: Select your iPad/iPhone as the target and hit **Play**.
+
+If you see a local-network error while intentionally using hot reload, allow Tiny Tummy in iOS Settings > Privacy & Security > Local Network and restart the app. If you see that error while using the Xcode bundled-assets workflow, clean the build folder and reinstall the app so Xcode stops launching an older dev-server build.
+
+#### Enforcing Portrait Orientation
+
+To prevent layout thrashing and "rotation freezes" on tablets:
+
+- **iOS (Xcode)**:
+  1. Open the project in Xcode.
+  2. Select the `tiny-tummy` Target.
+  3. Under the **General** tab > **Deployment Info**, uncheck **Landscape Left** and **Landscape Right**. Leave only **Portrait** checked.
+- **Android**:
+  1. Open `src-tauri/gen/android/app/src/main/AndroidManifest.xml`.
+  2. In the `<activity>` tag, add `android:screenOrientation="portrait"`.
+
+#### App Icon Troubleshooting
+
+If the iPad shows the default Tauri icon:
+
+1. **Regenerate Icons**:
+   ```bash
+   pnpm tauri icon src-tauri/icons/icon.png
+   ```
+2. **Xcode Verification**:
+   - Open Xcode and go to the **Assets** catalog.
+   - Click **AppIcon** and ensure your custom icon is present in the slots.
+3. **Clean & Rebuild**: Perform a **Clean Build Folder** in Xcode before running again.
+
+#### Dual Platform Dev
+
 If you want to run the Android simulator at the same time as the iPhone/iPad simulator, start Android with:
 
 ```bash
@@ -250,8 +338,6 @@ cargo tauri android dev -c '{"build":{"beforeDevCommand":"true"}}'
 ```
 
 That skips re-running the shared frontend dev command, which is useful when iOS dev is already using it.
-
-> **Note:** Testing on a physical iPhone requires an Apple Developer account and a provisioning profile configured in the Xcode project at `src-tauri/gen/apple/`.
 
 ## Building for Production (Store Submission)
 
@@ -336,6 +422,7 @@ The `.ipa` is generated in `src-tauri/gen/apple/build/`. Upload to [App Store Co
 ## Database
 
 SQLite database stored at the platform's app data directory:
+
 - **iOS**: `~/Library/Containers/<bundle-id>/Data/`
 - **Android**: `/data/data/<package>/`
 - **macOS** (dev): `~/Library/Application Support/com.nikhilmehral.tinytummy/`

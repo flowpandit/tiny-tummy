@@ -34,20 +34,32 @@ export function useReportPageState(
     };
   }, [activeChild]);
 
+  const handleStartDateChange = useCallback((value: string) => {
+    setStartDate(value);
+    setReportData(null);
+  }, []);
+
+  const handleEndDateChange = useCallback((value: string) => {
+    setEndDate(value);
+    setReportData(null);
+  }, []);
+
   const toggleOption = useCallback((key: keyof ReportOptions) => {
     setOptions((current) => ({
       ...current,
       [key]: !current[key],
     }));
+    setReportData(null);
   }, []);
 
   const handleGenerate = useCallback(async () => {
-    if (!activeChild) return;
+    if (!activeChild) return null;
 
     setIsGenerating(true);
     try {
       const data = await generateReportData(activeChild.id, startDate, endDate, options, unitSystem);
       setReportData(data);
+      return data;
     } finally {
       setIsGenerating(false);
     }
@@ -57,8 +69,8 @@ export function useReportPageState(
     today,
     startDate,
     endDate,
-    setStartDate,
-    setEndDate,
+    setStartDate: handleStartDateChange,
+    setEndDate: handleEndDateChange,
     reportData,
     isGenerating,
     options,

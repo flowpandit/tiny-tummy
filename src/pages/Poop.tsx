@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useActiveChild } from "../contexts/ChildContext";
 import { usePoopLogs } from "../hooks/usePoopLogs";
 import { useFeedingLogs } from "../hooks/useFeedingLogs";
@@ -9,46 +9,42 @@ import { useSymptoms } from "../hooks/useSymptoms";
 import { usePoopPageState } from "../hooks/usePoopPageState";
 import { useEliminationPreference } from "../hooks/useEliminationPreference";
 import { useChildWorkflowActions } from "../hooks/useChildWorkflowActions";
-import { fillDailyFrequencyDays, formatLocalDateKey } from "../lib/stats";
+import { fillDailyFrequencyDays } from "../lib/stats";
 import { DAYS_IN_WEEK, getEarliestLoggedDate, getMaxWeekOffset, getWeekRange } from "../lib/tracker";
 import { getChildStatus } from "../lib/tauri";
-import { getCurrentLocalDate } from "../lib/utils";
-import { Card, CardContent } from "../components/ui/card";
+import { getCurrentLocalDate, getLocalDateKeyFromValue, isOnLocalDay } from "../lib/utils";
 import { Button } from "../components/ui/button";
 import { PageBody } from "../components/ui/page-layout";
 import { ScenicHero } from "../components/layout/ScenicHero";
-import {
-  TrackerMetricRing,
-} from "../components/tracking/TrackerPrimitives";
+import { CareToolsSection } from "../components/care/CareToolsSection";
 import { AlertBanner } from "../components/dashboard/AlertBanner";
 import { PoopPresetEditorSheet } from "../components/presets/QuickPresetEditorSheet";
 import { LogForm } from "../components/logging/LogForm";
 import { EditPoopSheet } from "../components/logging/EditPoopSheet";
-import { TimeSinceIndicator } from "../components/tracking/TimeSinceIndicator";
 import { useToast } from "../components/ui/toast";
 import { PoopHealthInsightCard } from "../components/poop/PoopHealthInsightCard";
+import { PoopHeroMetricsCard } from "../components/poop/PoopHeroMetricsCard";
 import { PoopQuickLogCard } from "../components/poop/PoopQuickLogCard";
 import { PoopRecentHistorySection } from "../components/poop/PoopRecentHistorySection";
-import { PoopRelatedLinks } from "../components/poop/PoopRelatedLinks";
+import { PoopTodaySummaryCard } from "../components/poop/PoopTodaySummaryCard";
 import { PoopWeeklyPatternCard } from "../components/poop/PoopWeeklyPatternCard";
 import type { HealthStatus, PoopEntry, PoopLogDraft } from "../lib/types";
 import {
   buildPatternNarrative,
   getAgeBaseline,
-  getAlertRingDisplay,
   getBaselineComparison,
   getDueRisk,
   getHealthInsightContent,
   getPrediction,
-  getPredictionRingDisplay,
   getRepeatablePoopEntry,
   getStatusBadge,
 } from "../lib/poop-insights";
 
 export function Poop() {
   const navigate = useNavigate();
+  const location = useLocation();
   const activeChild = useActiveChild();
-  const { experience } = useEliminationPreference(activeChild);
+  const { experience, isLoading: isEliminationPreferenceLoading } = useEliminationPreference(activeChild);
   const { showError, showSuccess } = useToast();
   const { logs, lastRealPoop, refresh } = usePoopLogs(activeChild?.id ?? null, 500);
   const { logs: feedingLogs } = useFeedingLogs(activeChild?.id ?? null);
@@ -64,12 +60,16 @@ export function Poop() {
   const [editingPoop, setEditingPoop] = useState<PoopEntry | null>(null);
   const [poopPresetSheetOpen, setPoopPresetSheetOpen] = useState(false);
   const [statusExpanded, setStatusExpanded] = useState(false);
+  const allowSettingsAlternate = location.state
+    && typeof location.state === "object"
+    && "allowSettingsAlternate" in location.state
+    && (location.state as { allowSettingsAlternate?: boolean }).allowSettingsAlternate === true;
 
   useEffect(() => {
-    if (experience.mode === "diaper") {
+    if (!allowSettingsAlternate && !isEliminationPreferenceLoading && experience.mode === "diaper") {
       navigate("/diaper", { replace: true });
     }
-  }, [experience.mode, navigate]);
+  }, [allowSettingsAlternate, experience.mode, isEliminationPreferenceLoading, navigate]);
 
   useEffect(() => {
     if (!activeChild) {
@@ -109,24 +109,26 @@ export function Poop() {
     }
   }, [maxWeekOffset, weekOffset]);
 
-  const { startDate, endDate } = useMemo(() => getWeekRange(weekOffset), [weekOffset]);
-  const weekStartKey = formatLocalDateKey(startDate);
-  const weekEndKey = formatLocalDateKey(endDate);
-
-  const weeklyRealLogs = useMemo(
-    () => logs.filter((log) => log.is_no_poop === 0 && log.logged_at >= `${weekStartKey}T00:00:00` && log.logged_at <= `${weekEndKey}T23:59:59`),
-    [logs, weekEndKey, weekStartKey],
-  );
-  const frequencyData = useMemo(() => {
+  const { endDate } = useMemo(() => getWeekRange(weekOffset), [weekOffset]);
+  const filledWeek = useMemo(() => {
+    const emptyWeek = fillDailyFrequencyDays([], DAYS_IN_WEEK, endDate);
+    const weekDates = new Set(emptyWeek.map((day) => day.date));
     const counts = new Map<string, number>();
-    for (const log of weeklyRealLogs) {
-      const key = log.logged_at.split("T")[0];
+
+    for (const log of logs) {
+      if (log.is_no_poop === 1) continue;
+
+      const key = getLocalDateKeyFromValue(log.logged_at);
+      if (!weekDates.has(key)) continue;
+
       counts.set(key, (counts.get(key) ?? 0) + 1);
     }
-    return [...counts.entries()].map(([date, count]) => ({ date, count }));
-  }, [weeklyRealLogs]);
 
-  const filledWeek = useMemo(() => fillDailyFrequencyDays(frequencyData, DAYS_IN_WEEK, endDate), [endDate, frequencyData]);
+    return emptyWeek.map((day) => ({
+      ...day,
+      count: counts.get(day.date) ?? 0,
+    }));
+  }, [endDate, logs]);
   const baseline = useMemo(
     () => getAgeBaseline(activeChild?.date_of_birth ?? getCurrentLocalDate(), activeChild?.feeding_type ?? "mixed"),
     [activeChild],
@@ -182,8 +184,11 @@ export function Poop() {
     () => getHealthInsightContent(effectiveStatus, normalDescription),
     [effectiveStatus, normalDescription],
   );
-  const predictionRing = useMemo(() => getPredictionRingDisplay(prediction), [prediction]);
-  const alertRing = useMemo(() => getAlertRingDisplay(alerts), [alerts]);
+  const todayKey = getCurrentLocalDate();
+  const todayPoopCount = useMemo(
+    () => logs.filter((log) => log.is_no_poop === 0 && isOnLocalDay(log.logged_at, todayKey)).length,
+    [logs, todayKey],
+  );
   const repeatablePoop = useMemo(() => getRepeatablePoopEntry(lastRealPoop), [lastRealPoop]);
   const recentHistory = useMemo(
     () => logs.filter((log) => log.is_no_poop === 0).slice(0, 3),
@@ -196,6 +201,11 @@ export function Poop() {
       alerts: true,
     });
   };
+
+  const handleAlertGuidance = () => {
+    navigate("/guidance", { state: { guidanceTopicId: "when-to-call", origin: "/poop" } });
+  };
+
   const {
     quickPoopPresets,
     repeatLastPoop,
@@ -209,73 +219,73 @@ export function Poop() {
   });
 
   if (!activeChild) return null;
-  if (experience.mode === "diaper") return null;
+  if (isEliminationPreferenceLoading) return null;
+  if (!allowSettingsAlternate && experience.mode === "diaper") return null;
 
   return (
-    <PageBody className="mt-0 space-y-0 px-0 py-0">
+    <PageBody className="-mt-8 space-y-0 px-0 py-0">
       <ScenicHero
         child={activeChild}
         title="Poop"
-        description="Pattern, timing, and alerts in one place."
+        description="Track poop timing, texture, and patterns with calm next-step guidance."
         action={<Button variant="cta" size="sm" onClick={() => setLogFormOpen(true)}>Add</Button>}
         className="-mx-4 overflow-hidden md:-mx-6 lg:-mx-8"
         scene="poop"
+        showChildInfo={false}
       />
 
-      <div className="space-y-4 px-4 py-5 md:px-6 lg:px-8">
-        <Card className="-mt-32 mb-0 relative z-10 border-transparent bg-transparent shadow-none backdrop-blur-0">
-          <CardContent className="p-4 pt-4">
-            <div className="grid grid-cols-3 gap-3">
-              <div className="flex flex-col items-center gap-2 text-center">
-                <TimeSinceIndicator
-                  timestamp={lastRealPoop?.logged_at ?? null}
-                  status={effectiveStatus === "alert" ? "alert" : effectiveStatus === "caution" ? "caution" : "healthy"}
-                />
-                <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-[var(--color-text-soft)]">Last poop</p>
-              </div>
-              <TrackerMetricRing
-                value={predictionRing.value}
-                unit={predictionRing.unit}
-                label="Next predicted"
-                gradient={predictionRing.gradient}
-              />
-              <TrackerMetricRing
-                value={alertRing.value}
-                unit={alertRing.unit}
-                label="Alerts"
-                gradient={alertRing.gradient}
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        <AlertBanner alerts={alerts} onDismiss={dismiss} />
-
-        <PoopQuickLogCard
-          quickPoopPresets={quickPoopPresets}
-          repeatablePoop={repeatablePoop}
-          onEditPresets={() => setPoopPresetSheetOpen(true)}
-          onRepeatLastPoop={() => { void repeatLastPoop(repeatablePoop); }}
-          onQuickPreset={(preset) => { void logQuickPoopPreset(preset); }}
-        />
-
-        <PoopWeeklyPatternCard filledWeek={filledWeek} />
-
-        <PoopHealthInsightCard
+      <div className="px-4 md:px-10">
+        <PoopHeroMetricsCard
           baseline={baseline}
-          baselineComparison={baselineComparison}
-          dueRisk={dueRisk}
-          healthInsight={healthInsight}
-          patternNarrative={patternNarrative}
+          className="-mt-36 md:-mt-32"
+          lastPoopTimestamp={lastRealPoop?.logged_at ?? null}
           prediction={prediction}
-          statusBadge={statusBadge}
-          statusExpanded={statusExpanded}
-          onToggleExpanded={() => setStatusExpanded((current) => !current)}
+          todayPoopCount={todayPoopCount}
         />
+      </div>
 
-        <PoopRecentHistorySection recentHistory={recentHistory} />
+      <div className="space-y-3 px-4 py-3 md:space-y-5 md:px-10 md:py-5">
+        <AlertBanner alerts={alerts} onAction={handleAlertGuidance} onDismiss={dismiss} />
 
-        <PoopRelatedLinks />
+        <div className="grid gap-3 md:grid-cols-2 md:gap-4">
+          <PoopQuickLogCard
+            quickPoopPresets={quickPoopPresets}
+            repeatablePoop={repeatablePoop}
+            onEditPresets={() => setPoopPresetSheetOpen(true)}
+            onRepeatLastPoop={() => { void repeatLastPoop(repeatablePoop); }}
+            onQuickPreset={(preset) => { void logQuickPoopPreset(preset); }}
+          />
+
+          <PoopHealthInsightCard
+            baseline={baseline}
+            baselineComparison={baselineComparison}
+            dueRisk={dueRisk}
+            healthInsight={healthInsight}
+            patternNarrative={patternNarrative}
+            prediction={prediction}
+            statusBadge={statusBadge}
+            statusExpanded={statusExpanded}
+            onToggleExpanded={() => setStatusExpanded((current) => !current)}
+          />
+        </div>
+
+        <div className="grid gap-3 md:grid-cols-2 md:gap-4">
+          <PoopTodaySummaryCard
+            baselineComparison={baselineComparison}
+            dueRisk={dueRisk}
+            lastRealPoop={lastRealPoop}
+            todayPoopCount={todayPoopCount}
+          />
+
+          <PoopRecentHistorySection
+            recentHistory={recentHistory}
+            onEditPoop={(log) => setEditingPoop(log)}
+          />
+        </div>
+
+        <PoopWeeklyPatternCard filledWeek={filledWeek} todayPoopCount={todayPoopCount} />
+
+        <CareToolsSection className="px-0" palette="soft" />
 
         <LogForm
           open={logFormOpen}
@@ -294,8 +304,8 @@ export function Poop() {
             entry={editingPoop}
             open={!!editingPoop}
             onClose={() => setEditingPoop(null)}
-            onSaved={() => { void handleRefresh(); }}
-            onDeleted={() => { void handleRefresh(); }}
+            onSaved={() => { setEditingPoop(null); void handleRefresh(); }}
+            onDeleted={() => { setEditingPoop(null); void handleRefresh(); }}
           />
         )}
 

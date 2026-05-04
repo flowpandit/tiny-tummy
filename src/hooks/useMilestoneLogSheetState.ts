@@ -4,10 +4,11 @@ import { combineLocalDateAndTimeToUtcIso, getCurrentLocalDate, getCurrentLocalTi
 import type { MilestoneType } from "../lib/types";
 
 export function useMilestoneLogSheetState({
-  open, childId, onLogged, onClose, onError, onSuccess,
+  open, childId, initialType = "started_solids", onLogged, onClose, onError, onSuccess,
 }: {
   open: boolean;
   childId: string;
+  initialType?: MilestoneType;
   onLogged: () => Promise<void> | void;
   onClose: () => void;
   onError: (message: string) => void;
@@ -22,12 +23,12 @@ export function useMilestoneLogSheetState({
 
   useEffect(() => {
     if (!open) return;
-    setMilestoneType("started_solids");
+    setMilestoneType(initialType);
     setLogDate(getCurrentLocalDate());
     setLogTime(getCurrentLocalTime());
     setNotes("");
     setIsSubmitting(false);
-  }, [open]);
+  }, [initialType, open]);
 
   const handleSubmit = useCallback(async () => {
     if (isSubmitting) return false;

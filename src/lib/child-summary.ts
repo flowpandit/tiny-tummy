@@ -1,5 +1,4 @@
 import * as db from "./db";
-import { getCaregiverNoteSettingKey } from "./caregiver-note";
 import { diaperIncludesStool, diaperIncludesWet } from "./diaper";
 import { formatLocalDateKey, isOnLocalDay } from "./utils";
 import type { Alert, DiaperEntry, Episode, EpisodeEvent, FeedingEntry, PoopEntry, SymptomEntry } from "./types";
@@ -25,7 +24,6 @@ export interface ChildSummarySnapshot extends ChildDailySummary {
   alerts: Alert[];
   episodeEvents: EpisodeEvent[];
   symptomLogs: SymptomEntry[];
-  handoffNote: string | null;
 }
 
 export function getTodayKey(now: Date = new Date()): string {
@@ -73,7 +71,7 @@ export async function getChildSummarySnapshot(
   const feedingLimit = options.feedingLimit ?? 100;
   const symptomLimit = options.symptomLimit ?? 10;
 
-  const [diaperLogs, poopLogs, lastPoop, feedingLogs, alerts, activeEpisode, symptomLogs, handoffNote] = await Promise.all([
+  const [diaperLogs, poopLogs, lastPoop, feedingLogs, alerts, activeEpisode, symptomLogs] = await Promise.all([
     db.getDiaperLogs(childId, poopLimit),
     db.getPoopLogs(childId, poopLimit),
     db.getLastRealPoop(childId),
@@ -81,7 +79,6 @@ export async function getChildSummarySnapshot(
     db.getActiveAlerts(childId),
     db.getActiveEpisode(childId),
     db.getSymptoms(childId, symptomLimit),
-    db.getSetting(getCaregiverNoteSettingKey(childId)),
   ]);
 
   const episodeEvents = activeEpisode
@@ -106,6 +103,5 @@ export async function getChildSummarySnapshot(
     alerts,
     episodeEvents,
     symptomLogs,
-    handoffNote,
   };
 }

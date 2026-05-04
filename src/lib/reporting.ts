@@ -3,8 +3,8 @@ import { STOOL_COLORS } from "./constants";
 import { getEpisodeTypeLabel } from "./episode-constants";
 import { getFeedingEntryDisplayLabel } from "./feeding";
 import { getMilestoneTypeLabel } from "./milestone-constants";
-import { getSymptomSeverityLabel, getSymptomTypeLabel } from "./symptom-constants";
-import { formatGrowthValue, formatVolumeValue, volumeMlToDisplay } from "./units";
+import { getSymptomSeverityLabel, getSymptomTypeLabel, getTemperatureMethodLabel } from "./symptom-constants";
+import { formatGrowthValue, formatTemperatureValue, formatVolumeValue, getDefaultTemperatureUnit, volumeMlToDisplay } from "./units";
 import * as db from "./db";
 import type {
   Episode,
@@ -36,7 +36,6 @@ export interface ReportOptions {
   includeMilestones: boolean;
   includeGrowth: boolean;
   includeNotes: boolean;
-  includeCaregiverNote: boolean;
   includePhotos: boolean;
 }
 
@@ -79,7 +78,6 @@ export interface ReportData {
   activeEpisodeGroup: EpisodeReportGroup | null;
   symptomLogs: SymptomEntry[];
   milestoneLogs: MilestoneEntry[];
-  caregiverNote: string | null;
   photoUrls: Record<string, string>;
   highlights: ReportHighlight[];
   stats: {
@@ -108,7 +106,6 @@ export interface ReportSourceData {
   episodeEvents: EpisodeEvent[];
   symptomLogs: SymptomEntry[];
   milestoneLogs: MilestoneEntry[];
-  caregiverNote: string | null;
 }
 
 export const defaultReportOptions: ReportOptions = {
@@ -119,7 +116,6 @@ export const defaultReportOptions: ReportOptions = {
   includeMilestones: true,
   includeGrowth: true,
   includeNotes: true,
-  includeCaregiverNote: true,
   includePhotos: true,
 };
 
@@ -129,14 +125,13 @@ export async function fetchReportSourceData(
   endDate: string,
   options: ReportOptions = defaultReportOptions,
 ): Promise<ReportSourceData> {
-  const [logs, feedingLogs, episodes, episodeEvents, symptomLogs, milestoneLogs, caregiverNote, growthLogs] = await Promise.all([
+  const [logs, feedingLogs, episodes, episodeEvents, symptomLogs, milestoneLogs, growthLogs] = await Promise.all([
     db.getPoopLogsForRange(childId, startDate, endDate),
     db.getFeedingLogsForRange(childId, startDate, endDate),
     db.getEpisodesForRange(childId, startDate, endDate),
     db.getEpisodeEventsForRange(childId, startDate, endDate),
     db.getSymptomsForRange(childId, startDate, endDate),
     db.getMilestonesForRange(childId, startDate, endDate),
-    db.getSetting(`handoff_note:${childId}`),
     options.includeGrowth ? db.getGrowthLogsForRange(childId, startDate, endDate) : Promise.resolve([]),
   ]);
 
@@ -148,7 +143,6 @@ export async function fetchReportSourceData(
     episodeEvents,
     symptomLogs,
     milestoneLogs,
-    caregiverNote,
   };
 }
 
@@ -459,12 +453,12 @@ function buildContextSections(input: {
   growthLogs: GrowthEntry[];
   episodeGroups: EpisodeReportGroup[];
   activeEpisodeGroup: EpisodeReportGroup | null;
-  caregiverNote: string | null;
   options: ReportOptions;
   dayCount: number;
   unitSystem: UnitSystem;
 }): ReportContextSection[] {
   const sections: ReportContextSection[] = [];
+  const episodeById = new Map(input.episodeGroups.map((group) => [group.episode.id, group.episode]));
 
   if (input.options.includeEpisodeSummary || input.options.includeEpisodes) {
     const rows = input.activeEpisodeGroup
@@ -474,6 +468,8 @@ function buildContextSections(input: {
             meta: `Started ${formatDate(input.activeEpisodeGroup.episode.started_at)}`,
             detail: [
               input.activeEpisodeGroup.episode.summary,
+              `${input.symptomLogs.filter((log) => log.episode_id === input.activeEpisodeGroup?.episode.id).length} linked symptom${input.symptomLogs.filter((log) => log.episode_id === input.activeEpisodeGroup?.episode.id).length === 1 ? "" : "s"}`,
+              `${input.activeEpisodeGroup.events.length} update${input.activeEpisodeGroup.events.length === 1 ? "" : "s"} in range`,
               input.activeEpisodeGroup.events[0]
                 ? `Latest update: ${input.activeEpisodeGroup.events[0].title} on ${formatDate(input.activeEpisodeGroup.events[0].logged_at)}`
                 : null,
@@ -483,8 +479,17 @@ function buildContextSections(input: {
         ]
       : input.episodeGroups.slice(0, 3).map(({ episode, events }) => ({
           title: getEpisodeTypeLabel(episode.episode_type),
-          meta: `${episode.status === "active" ? "Active" : "Resolved"} · ${formatDate(episode.started_at)}`,
-          detail: `${events.length} update${events.length === 1 ? "" : "s"} in range`,
+          meta: [
+            episode.status === "active" ? "Active" : "Resolved",
+            `Started ${formatDate(episode.started_at)}`,
+            episode.ended_at ? `Ended ${formatDate(episode.ended_at)}` : null,
+          ].filter(Boolean).join(" · "),
+          detail: [
+            `${input.symptomLogs.filter((log) => log.episode_id === episode.id).length} linked symptom${input.symptomLogs.filter((log) => log.episode_id === episode.id).length === 1 ? "" : "s"}`,
+            `${events.length} update${events.length === 1 ? "" : "s"} in range`,
+            events[0] ? `Latest update: ${events[0].title}` : null,
+            episode.outcome ? `Outcome: ${episode.outcome}` : null,
+          ].filter(Boolean).join(" · "),
         }));
 
     if (rows.length > 0) {
@@ -503,10 +508,24 @@ function buildContextSections(input: {
       rows: input.symptomLogs.slice(0, 6).map((log) => ({
         title: getSymptomTypeLabel(log.symptom_type),
         meta: `${getSymptomSeverityLabel(log.severity)} · ${formatDate(log.logged_at)}`,
-        detail: log.notes ?? undefined,
+        detail: [
+          log.temperature_c !== null ? formatTemperatureValue(log.temperature_c, getDefaultTemperatureUnit(input.unitSystem)) : null,
+          getTemperatureMethodLabel(log.temperature_method),
+          log.episode_id ? `In ${getEpisodeTypeLabel(episodeById.get(log.episode_id)?.episode_type ?? "other")}` : null,
+          log.notes,
+        ].filter(Boolean).join(" • ") || undefined,
       })),
     });
   }
+
+  sections.push({
+    title: "Report Note",
+    emptyText: "",
+    rows: [{
+      title: "Tracking summary only",
+      detail: "This report is a tracking summary from Tiny Tummy. It does not diagnose or replace medical advice.",
+    }],
+  });
 
   if (input.options.includeFeeds && input.feedingLogs.length > 0) {
     const avgFeedSessions = input.feedingLogs.length / input.dayCount;
@@ -576,14 +595,6 @@ function buildContextSections(input: {
     });
   }
 
-  if (input.options.includeCaregiverNote && input.caregiverNote) {
-    sections.push({
-      title: "Caregiver Note",
-      emptyText: "No caregiver note was included for this report.",
-      rows: input.caregiverNote ? [{ title: "Parent handoff note", detail: input.caregiverNote }] : [],
-    });
-  }
-
   return sections;
 }
 
@@ -598,6 +609,12 @@ function buildTimeline(input: {
   unitSystem: UnitSystem;
 }): ReportTimelineRow[] {
   const rows: Array<ReportTimelineRow & { sortAt: string }> = [];
+  const episodeById = new Map(input.episodeGroups.map((group) => [group.episode.id, group.episode]));
+  const linkedSymptomKeys = new Set(
+    input.symptomLogs
+      .filter((symptom) => symptom.episode_id)
+      .map((symptom) => `${symptom.episode_id}:${symptom.logged_at}`),
+  );
 
   for (const log of input.logs) {
     const colorInfo = log.color ? STOOL_COLORS.find((item) => item.value === log.color) : null;
@@ -635,7 +652,13 @@ function buildTimeline(input: {
         sortAt: log.logged_at,
         dateTime: formatDate(log.logged_at),
         eventType: "Symptom",
-        details: `${getSymptomTypeLabel(log.symptom_type)} · ${getSymptomSeverityLabel(log.severity)}`,
+        details: [
+          getSymptomTypeLabel(log.symptom_type),
+          getSymptomSeverityLabel(log.severity),
+          log.temperature_c !== null ? formatTemperatureValue(log.temperature_c, getDefaultTemperatureUnit(input.unitSystem)) : null,
+          getTemperatureMethodLabel(log.temperature_method),
+          log.episode_id ? `In ${getEpisodeTypeLabel(episodeById.get(log.episode_id)?.episode_type ?? "other")}` : null,
+        ].filter(Boolean).join(" · "),
         note: input.options.includeNotes ? log.notes ?? undefined : undefined,
       });
     }
@@ -680,6 +703,10 @@ function buildTimeline(input: {
       });
 
       for (const event of group.events) {
+        const isGeneratedSymptomEvent = event.event_type === "symptom"
+          && (event.source_kind === "symptom" || linkedSymptomKeys.has(`${event.episode_id}:${event.logged_at}`));
+        if (input.options.includeSymptoms && isGeneratedSymptomEvent) continue;
+
         rows.push({
           sortAt: event.logged_at,
           dateTime: formatDate(event.logged_at),
@@ -718,7 +745,6 @@ export function buildReportData(
     activeEpisodeGroup,
     symptomLogs: source.symptomLogs,
     milestoneLogs: source.milestoneLogs,
-    caregiverNote: source.caregiverNote,
     photoUrls: {},
     highlights: buildReportHighlights({
       logs: source.logs,
@@ -745,7 +771,6 @@ export function buildReportData(
       growthLogs: source.growthLogs,
       episodeGroups,
       activeEpisodeGroup,
-      caregiverNote: source.caregiverNote,
       options,
       dayCount,
       unitSystem,

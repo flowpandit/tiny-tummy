@@ -88,7 +88,7 @@ export function AllKids() {
     <div className="min-h-screen bg-[var(--color-bg)] px-4 py-6" style={{ paddingTop: "calc(var(--safe-area-top) + 94px)" }}>
       <Header showBackButton fallbackTo="/settings" />
 
-      <h2 className="font-[var(--font-display)] text-2xl font-bold text-[var(--color-text)] mb-1">
+      <h2 className="text-2xl font-bold text-[var(--color-text)] mb-1">
         All Kids
       </h2>
       <p className="text-sm text-[var(--color-text-secondary)] mb-6">
@@ -124,7 +124,7 @@ export function AllKids() {
                     {/* Info */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <p className="font-[var(--font-display)] text-base font-semibold text-[var(--color-text)] truncate">
+                        <p className="text-base font-semibold text-[var(--color-text)] truncate">
                           {summary.child.name}
                         </p>
                         {summary.alertCount > 0 && (

@@ -19,8 +19,112 @@ import {
   getLoggingTextareaClassName,
 } from "./logging-form-classnames";
 import { LogDateTimeFields } from "./LogDateTimeFields";
-import { getVolumeUnitLabel } from "../../lib/units";
-import type { FeedingLogDraft } from "../../lib/types";
+import { getVolumeUnitLabel, volumeMlToDisplay } from "../../lib/units";
+import type { FeedingLogDraft, UnitSystem } from "../../lib/types";
+
+const AMOUNT_SLIDER_MAX_ML = 500;
+
+function getAmountSliderConfig(unitSystem: UnitSystem) {
+  if (unitSystem === "imperial") {
+    return {
+      max: Math.round(volumeMlToDisplay(AMOUNT_SLIDER_MAX_ML, unitSystem) * 2) / 2,
+      step: 0.5,
+    };
+  }
+
+  return {
+    max: AMOUNT_SLIDER_MAX_ML,
+    step: 5,
+  };
+}
+
+function formatSliderAmount(value: number, unitSystem: UnitSystem): string {
+  if (unitSystem === "imperial") {
+    return Number.isInteger(value) ? String(value) : value.toFixed(1);
+  }
+
+  return String(Math.round(value));
+}
+
+function clampAmountForSlider(value: string, max: number): number {
+  const parsed = Number.parseFloat(value);
+  if (!Number.isFinite(parsed)) return 0;
+  return Math.min(max, Math.max(0, parsed));
+}
+
+function AmountField({
+  id,
+  value,
+  onChange,
+  placeholder,
+  unitSystem,
+  nightMode,
+  showSlider,
+}: {
+  id: string;
+  value: string;
+  onChange: (value: string) => void;
+  placeholder: string;
+  unitSystem: UnitSystem;
+  nightMode: boolean;
+  showSlider: boolean;
+}) {
+  const volumeUnit = getVolumeUnitLabel(unitSystem);
+  const slider = getAmountSliderConfig(unitSystem);
+  const sliderValue = clampAmountForSlider(value, slider.max);
+
+  return (
+    <div className="space-y-3">
+      <Input
+        id={id}
+        type="number"
+        min="0"
+        step={unitSystem === "imperial" ? "0.1" : "1"}
+        inputMode="numeric"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        placeholder={placeholder}
+        className={getLoggingInputClassName(nightMode)}
+      />
+
+      {showSlider && (
+        <div
+          className={cn(
+            "rounded-[18px] border px-3 py-3",
+            nightMode
+              ? "border-slate-700 bg-slate-900/70"
+              : "border-[var(--color-border)] bg-[var(--color-surface)]/72",
+          )}
+        >
+          <div className="mb-2 flex items-center justify-between gap-3">
+            <span className={cn("text-xs font-medium", nightMode ? "text-slate-400" : "text-[var(--color-text-secondary)]")}>
+              0 {volumeUnit}
+            </span>
+            <span className={cn("rounded-full px-2.5 py-1 text-xs font-semibold", nightMode ? "bg-slate-800 text-slate-100" : "bg-[var(--color-primary)]/10 text-[var(--color-primary)]")}>
+              {formatSliderAmount(sliderValue, unitSystem)} {volumeUnit}
+            </span>
+            <span className={cn("text-xs font-medium", nightMode ? "text-slate-400" : "text-[var(--color-text-secondary)]")}>
+              {formatSliderAmount(slider.max, unitSystem)} {volumeUnit}
+            </span>
+          </div>
+          <input
+            type="range"
+            min="0"
+            max={slider.max}
+            step={slider.step}
+            value={sliderValue}
+            onChange={(event) => {
+              const nextValue = Number.parseFloat(event.target.value);
+              onChange(formatSliderAmount(nextValue, unitSystem));
+            }}
+            className="h-2 w-full cursor-pointer accent-[var(--color-primary)]"
+            aria-label={`Adjust amount (${volumeUnit})`}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
 
 interface DietLogFormProps extends SheetVisibilityProps {
   childId: string;
@@ -93,6 +197,18 @@ export function DietLogForm({ open, onClose, childId, onLogged, initialDraft = n
                 </div>
               </LoggingFieldGroup>
 
+              <LoggingFieldGroup label={`Amount (${volumeUnit})`} isNight={nightMode}>
+                <AmountField
+                  id="amount-ml-breastfeed"
+                  value={amountMl}
+                  onChange={setAmountMl}
+                  placeholder={unitSystem === "imperial" ? "e.g. 4.0" : "e.g. 120"}
+                  unitSystem={unitSystem}
+                  nightMode={nightMode}
+                  showSlider
+                />
+              </LoggingFieldGroup>
+
               <LoggingFieldGroup label="Duration (minutes)" isNight={nightMode}>
                 <Input
                   id="duration-minutes"
@@ -111,16 +227,14 @@ export function DietLogForm({ open, onClose, childId, onLogged, initialDraft = n
           {foodType === "bottle" && (
             <>
               <LoggingFieldGroup label={`Amount (${volumeUnit})`} isNight={nightMode}>
-                <Input
+                <AmountField
                   id="amount-ml"
-                  type="number"
-                  min="0"
-                  step={unitSystem === "imperial" ? "0.1" : "1"}
-                  inputMode="numeric"
                   value={amountMl}
-                  onChange={(e) => setAmountMl(e.target.value)}
+                  onChange={setAmountMl}
                   placeholder={unitSystem === "imperial" ? "e.g. 4.0" : "e.g. 120"}
-                  className={getLoggingInputClassName(nightMode)}
+                  unitSystem={unitSystem}
+                  nightMode={nightMode}
+                  showSlider
                 />
               </LoggingFieldGroup>
 
@@ -143,16 +257,14 @@ export function DietLogForm({ open, onClose, childId, onLogged, initialDraft = n
 
           {(foodType === "formula" || foodType === "pumping" || foodType === "water") && (
             <LoggingFieldGroup label={`Amount (${volumeUnit})`} isNight={nightMode}>
-              <Input
+              <AmountField
                 id="amount-ml-other"
-                type="number"
-                min="0"
-                step={unitSystem === "imperial" ? "0.1" : "1"}
-                inputMode="numeric"
                 value={amountMl}
-                onChange={(e) => setAmountMl(e.target.value)}
+                onChange={setAmountMl}
                 placeholder={unitSystem === "imperial" ? "e.g. 3.0" : foodType === "pumping" ? "e.g. 90" : "e.g. 120"}
-                className={getLoggingInputClassName(nightMode)}
+                unitSystem={unitSystem}
+                nightMode={nightMode}
+                showSlider={foodType === "formula"}
               />
             </LoggingFieldGroup>
           )}

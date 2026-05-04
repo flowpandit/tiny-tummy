@@ -1,5 +1,6 @@
 import { type ReactNode, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useActiveChild } from "../../contexts/ChildContext";
 import { useTheme } from "../../contexts/ThemeContext";
 import { useUnits } from "../../contexts/UnitsContext";
 import { useTrialAccess, useTrialActions } from "../../contexts/TrialContext";
@@ -12,6 +13,7 @@ import { FieldLabel } from "../ui/field";
 import { TimePicker } from "../ui/time-picker";
 import { useToast } from "../ui/toast";
 import { Avatar } from "../child/Avatar";
+import { HomeActionBottleIcon, HomeActionBreastfeedIcon, HomeActionDiaperIcon, HomeActionSymptomIcon, PoopIcon } from "../ui/icons";
 import { CHILD_SEX_OPTIONS, FEEDING_TYPES } from "../../lib/constants";
 import { getAgeLabelFromDob } from "../../lib/utils";
 import {
@@ -22,8 +24,11 @@ import {
   setSmartReminderEnabled,
   syncSmartRemindersForChildren,
 } from "../../lib/notifications";
-import type { EliminationViewPreference } from "../../lib/diaper";
-import type { Child, UnitSystem } from "../../lib/types";
+import {
+  getAllowedEliminationViewPreferences,
+  type EliminationViewPreference,
+} from "../../lib/diaper";
+import type { Child, TemperatureUnit, UnitSystem } from "../../lib/types";
 
 const THEME_OPTIONS: { value: "system" | "light" | "dark"; label: string }[] = [
   { value: "system", label: "System" },
@@ -36,11 +41,21 @@ const UNIT_SYSTEM_OPTIONS: { value: UnitSystem; label: string }[] = [
   { value: "imperial", label: "Imperial" },
 ];
 
+const TEMPERATURE_UNIT_OPTIONS: { value: TemperatureUnit; label: string }[] = [
+  { value: "celsius", label: "°C" },
+  { value: "fahrenheit", label: "°F" },
+];
+
 const ELIMINATION_VIEW_OPTIONS: { value: EliminationViewPreference; label: string }[] = [
   { value: "auto", label: "Auto" },
   { value: "diaper", label: "Diaper" },
   { value: "poop", label: "Poop" },
 ];
+
+const SETTINGS_SECTION_TITLE_CLASS = "mb-2.5 px-1 text-[0.74rem] font-bold uppercase tracking-[0.18em] text-[var(--color-text-secondary)] md:mb-3 md:text-[0.78rem]";
+const SETTINGS_CARD_CLASS = "overflow-hidden rounded-[18px] shadow-[var(--shadow-home-card)] md:rounded-[24px]";
+const SETTINGS_ROW_CLASS = "flex min-h-[56px] items-center gap-3 px-4 py-3 transition-colors hover:bg-[var(--color-surface)]";
+const SETTINGS_DESCRIPTION_CLASS = "mt-0.5 text-[0.76rem] leading-snug text-[var(--color-text-secondary)]";
 
 function formatScheduleTime(value: string) {
   const [hour, minute] = value.split(":").map(Number);
@@ -49,39 +64,78 @@ function formatScheduleTime(value: string) {
   return `${displayHour}:${minute.toString().padStart(2, "0")} ${suffix}`;
 }
 
-function SettingsNavCard({
+type SettingsListIcon = "diaper" | "poop" | "feed" | "breastfeed" | "health" | "guidance" | "about";
+
+function SettingsListIcon({ icon }: { icon: SettingsListIcon }) {
+  const commonProps = {
+    className: "h-5 w-5",
+    fill: "none",
+    stroke: "currentColor",
+    strokeLinecap: "round" as const,
+    strokeLinejoin: "round" as const,
+    strokeWidth: 2,
+    viewBox: "0 0 24 24",
+  };
+
+  if (icon === "diaper") return <HomeActionDiaperIcon className="h-5 w-5" />;
+  if (icon === "poop") return <PoopIcon className="h-5 w-5" />;
+  if (icon === "feed") return <HomeActionBottleIcon className="h-5 w-5" />;
+  if (icon === "breastfeed") return <HomeActionBreastfeedIcon className="h-5 w-5" />;
+  if (icon === "health") return <HomeActionSymptomIcon className="h-5 w-5" />;
+
+  if (icon === "guidance") {
+    return (
+      <svg {...commonProps}>
+        <circle cx="12" cy="12" r="9" />
+        <path d="M9.6 9a2.6 2.6 0 0 1 5 1c0 2-2.6 2.2-2.6 4" />
+        <path d="M12 17h.01" />
+      </svg>
+    );
+  }
+
+  return (
+    <svg {...commonProps}>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 11v6" />
+      <path d="M12 7h.01" />
+    </svg>
+  );
+}
+
+function SettingsListRow({
   title,
   description,
+  icon,
   onClick,
 }: {
   title: string;
-  description: string;
+  description?: string;
+  icon: SettingsListIcon;
   onClick: () => void;
 }) {
   return (
-    <Card
-      role="button"
-      tabIndex={0}
-      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onClick(); }}
-      className="cursor-pointer transition-shadow hover:shadow-[var(--shadow-soft)]"
+    <button
+      type="button"
       onClick={onClick}
+      className={`group w-full cursor-pointer text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]/35 ${SETTINGS_ROW_CLASS}`}
     >
-      <CardContent className="flex items-center justify-between py-3">
-        <div>
-          <p className="text-sm font-medium text-[var(--color-text)]">{title}</p>
-          <p className="text-xs text-[var(--color-text-secondary)]">{description}</p>
-        </div>
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="var(--color-muted)" className="h-5 w-5">
-          <path fillRule="evenodd" d="M8.22 5.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L11.94 10 8.22 6.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
-        </svg>
-      </CardContent>
-    </Card>
+      <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center text-[var(--color-text-secondary)] transition-colors group-hover:text-[var(--color-text)]">
+        <SettingsListIcon icon={icon} />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-[0.95rem] font-semibold leading-tight text-[var(--color-text)]">{title}</span>
+        {description && (
+          <span className="mt-0.5 block truncate text-[0.76rem] leading-tight text-[var(--color-text-secondary)]">{description}</span>
+        )}
+      </span>
+    </button>
   );
 }
 
 export function ChildrenSection({
   activeChild,
   children,
+  className = "",
   confirmDelete,
   onAddChild,
   onConfirmDelete,
@@ -92,6 +146,7 @@ export function ChildrenSection({
 }: {
   activeChild: Child | null;
   children: Child[];
+  className?: string;
   confirmDelete: string | null;
   onAddChild: () => void;
   onConfirmDelete: (id: string) => void;
@@ -101,82 +156,107 @@ export function ChildrenSection({
   onSetConfirmDelete: (id: string | null) => void;
 }) {
   return (
-    <div className="mb-8">
+    <div className={className}>
       <div className="mb-3 flex items-center justify-between">
-        <h3 className="text-sm font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]">Children</h3>
+        <h3 className={SETTINGS_SECTION_TITLE_CLASS}>Children</h3>
         <div className="flex gap-2">
           {children.length > 1 && (
-            <button onClick={onOpenAllKids} className="cursor-pointer text-xs font-medium text-[var(--color-primary)]">
+            <button onClick={onOpenAllKids} className="cursor-pointer text-xs font-semibold text-[var(--color-primary)]">
               View All
             </button>
           )}
         </div>
       </div>
 
-      <div className="flex flex-col gap-2">
-        {children.map((child) => (
-          <Card key={child.id}>
-            <CardContent className="py-3">
-              <div className="flex items-center gap-3">
-                <Avatar childId={child.id} name={child.name} color={child.avatar_color} size="md" />
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <p className="truncate font-medium text-[var(--color-text)]">{child.name}</p>
+      <Card className={SETTINGS_CARD_CLASS}>
+        <CardContent className="p-0">
+          {children.map((child, index) => (
+            <div key={child.id} className={index > 0 ? "border-t border-[var(--color-border)]" : undefined}>
+              <div className="flex min-h-[62px] items-center gap-3 px-4 py-2.5 transition-colors hover:bg-[var(--color-surface)] md:min-h-[68px]">
+                <Avatar
+                  childId={child.id}
+                  name={child.name}
+                  color={child.avatar_color}
+                  size="sm"
+                  className="h-10 w-10 border border-white/80 shadow-[var(--shadow-soft)]"
+                />
+                <button
+                  type="button"
+                  onClick={() => onEditChild(child)}
+                  className="min-w-0 flex-1 cursor-pointer text-left"
+                >
+                  <span className="flex min-w-0 items-center gap-2">
+                    <span className="truncate text-[0.96rem] font-semibold leading-tight text-[var(--color-text)]">{child.name}</span>
                     {activeChild?.id === child.id && (
-                      <span className="rounded bg-[var(--color-primary)]/10 px-1.5 py-0.5 text-[10px] font-medium text-[var(--color-primary)]">
+                      <span className="shrink-0 rounded-full bg-[var(--color-primary)]/10 px-2 py-0.5 text-[0.62rem] font-bold uppercase tracking-[0.08em] text-[var(--color-primary)]">
                         Active
                       </span>
                     )}
-                  </div>
-                  <p className="text-xs text-[var(--color-text-secondary)]">
+                  </span>
+                  <span className="mt-0.5 block truncate text-[0.76rem] leading-tight text-[var(--color-text-secondary)]">
                     {[getAgeLabelFromDob(child.date_of_birth), child.sex ? CHILD_SEX_OPTIONS.find((option) => option.value === child.sex)?.label : null, FEEDING_TYPES.find((f) => f.value === child.feeding_type)?.label]
                       .filter(Boolean)
                       .join(" · ")}
-                  </p>
-                </div>
-                <div className="flex gap-1">
-                  <button
-                    onClick={() => onEditChild(child)}
-                    className="flex h-11 w-11 cursor-pointer items-center justify-center rounded-[var(--radius-sm)] text-[var(--color-text-secondary)] transition-colors hover:bg-[var(--color-bg)]"
-                    aria-label={`Edit ${child.name}`}
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
-                      <path d="m5.433 13.917 1.262-3.155A4 4 0 0 1 7.58 9.42l6.92-6.918a2.121 2.121 0 0 1 3 3l-6.92 6.918c-.383.383-.84.685-1.343.886l-3.154 1.262a.5.5 0 0 1-.65-.65Z" />
-                      <path d="M3.5 5.75c0-.69.56-1.25 1.25-1.25H10A.75.75 0 0 0 10 3H4.75A2.75 2.75 0 0 0 2 5.75v9.5A2.75 2.75 0 0 0 4.75 18h9.5A2.75 2.75 0 0 0 17 15.25V10a.75.75 0 0 0-1.5 0v5.25c0 .69-.56 1.25-1.25 1.25h-9.5c-.69 0-1.25-.56-1.25-1.25v-9.5Z" />
-                    </svg>
-                  </button>
-                  {children.length > 1 && (
-                    confirmDelete === child.id ? (
-                      <div className="flex gap-1">
-                        <button onClick={() => onDelete(child.id)} className="cursor-pointer rounded-[var(--radius-sm)] bg-[var(--color-alert)] px-2 py-1 text-xs text-white">
-                          Delete
-                        </button>
-                        <button onClick={() => onSetConfirmDelete(null)} className="cursor-pointer rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-bg)] px-2 py-1 text-xs text-[var(--color-text-secondary)]">
-                          Cancel
-                        </button>
-                      </div>
-                    ) : (
+                  </span>
+                </button>
+
+                {children.length > 1 && confirmDelete === child.id ? (
+                  <div className="flex shrink-0 items-center gap-1">
+                    <button
+                      onClick={() => onDelete(child.id)}
+                      className="h-8 cursor-pointer rounded-full bg-[var(--color-alert)] px-3 text-[0.74rem] font-semibold text-white"
+                    >
+                      Delete
+                    </button>
+                    <button
+                      onClick={() => onSetConfirmDelete(null)}
+                      className="h-8 cursor-pointer rounded-full border border-[var(--color-border)] bg-[var(--color-bg)] px-3 text-[0.74rem] font-semibold text-[var(--color-text-secondary)]"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex shrink-0 items-center gap-1">
+                    <button
+                      onClick={() => onEditChild(child)}
+                      className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full text-[var(--color-text-secondary)] transition-colors hover:bg-[var(--color-bg)] hover:text-[var(--color-text)]"
+                      aria-label={`Edit ${child.name}`}
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
+                        <path d="m5.433 13.917 1.262-3.155A4 4 0 0 1 7.58 9.42l6.92-6.918a2.121 2.121 0 0 1 3 3l-6.92 6.918c-.383.383-.84.685-1.343.886l-3.154 1.262a.5.5 0 0 1-.65-.65Z" />
+                        <path d="M3.5 5.75c0-.69.56-1.25 1.25-1.25H10A.75.75 0 0 0 10 3H4.75A2.75 2.75 0 0 0 2 5.75v9.5A2.75 2.75 0 0 0 4.75 18h9.5A2.75 2.75 0 0 0 17 15.25V10a.75.75 0 0 0-1.5 0v5.25c0 .69-.56 1.25-1.25 1.25h-9.5c-.69 0-1.25-.56-1.25-1.25v-9.5Z" />
+                      </svg>
+                    </button>
+                    {children.length > 1 && (
                       <button
                         onClick={() => onConfirmDelete(child.id)}
-                        className="flex h-11 w-11 cursor-pointer items-center justify-center rounded-[var(--radius-sm)] text-[var(--color-muted)] transition-colors hover:bg-[var(--color-alert-bg)] hover:text-[var(--color-alert)]"
+                        className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full text-[var(--color-muted)] transition-colors hover:bg-[var(--color-alert-bg)] hover:text-[var(--color-alert)]"
                         aria-label={`Remove ${child.name}`}
                       >
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
                           <path fillRule="evenodd" d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 1 0 .23 1.482l.149-.022.841 10.518A2.75 2.75 0 0 0 7.596 19h4.807a2.75 2.75 0 0 0 2.742-2.53l.841-10.52.149.023a.75.75 0 0 0 .23-1.482A41.03 41.03 0 0 0 14 4.193V3.75A2.75 2.75 0 0 0 11.25 1h-2.5ZM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4ZM8.58 7.72a.75.75 0 0 0-1.5.06l.3 7.5a.75.75 0 1 0 1.5-.06l-.3-7.5Zm4.34.06a.75.75 0 1 0-1.5-.06l-.3 7.5a.75.75 0 1 0 1.5.06l.3-7.5Z" clipRule="evenodd" />
                         </svg>
                       </button>
-                    )
-                  )}
-                </div>
+                    )}
+                  </div>
+                )}
               </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      <Button variant="secondary" className="mt-3 w-full" onClick={onAddChild}>
-        Add Child
-      </Button>
+            </div>
+          ))}
+          <div className={children.length > 0 ? "border-t border-[var(--color-border)]" : undefined}>
+            <button
+              type="button"
+              onClick={onAddChild}
+              className="flex min-h-[54px] w-full cursor-pointer items-center gap-3 px-4 py-2.5 text-left text-[var(--color-primary)] transition-colors hover:bg-[var(--color-surface)]"
+            >
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--color-primary)]/10 text-[1.15rem] font-semibold leading-none">
+                +
+              </span>
+              <span className="text-[0.92rem] font-semibold">Add Child</span>
+            </button>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
@@ -229,52 +309,54 @@ export function NotificationSection({ children }: { children: Child[] }) {
   };
 
   const reminderRows: Array<{ key: keyof typeof smartSettings; title: string; description: string }> = [
-    { key: "noPoop", title: "No-poop threshold", description: "Age-aware reminder when it's time to review a long gap since the last poop." },
-    { key: "redFlagFollowUp", title: "Red-flag stool follow-up", description: "Follow up after white, red, or post-newborn black stool entries." },
-    { key: "episodeCheckIn", title: "Active episode check-in", description: "Nudge you to add another update when an episode is still active." },
+    { key: "noPoop", title: "No-poop threshold", description: "Review long gaps since the last poop." },
+    { key: "redFlagFollowUp", title: "Red-flag stool follow-up", description: "Follow up after urgent stool colors." },
+    { key: "episodeCheckIn", title: "Active episode check-in", description: "Nudge for another episode update." },
   ];
 
   return (
-    <div className="mb-6">
-      <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]">Notifications</h3>
-      <Card>
-        <CardContent className="flex items-center justify-between py-3">
-          <div>
-            <p className="text-sm font-medium text-[var(--color-text)]">Daily check-in</p>
-            <p className="text-xs text-[var(--color-text-secondary)]">Remind me to log daily</p>
+    <section>
+      <h3 className={SETTINGS_SECTION_TITLE_CLASS}>Notifications</h3>
+      <Card className={SETTINGS_CARD_CLASS}>
+        <CardContent className="p-0">
+          <div className="flex min-h-[56px] items-center justify-between gap-3 px-4 py-3">
+            <div className="min-w-0">
+              <p className="truncate text-[0.9rem] font-semibold leading-tight text-[var(--color-text)]">Daily check-in</p>
+              <p className={SETTINGS_DESCRIPTION_CLASS}>Remind me to log daily</p>
+            </div>
+            <Switch checked={enabled} onCheckedChange={handleToggle} disabled={loading} ariaLabel="Toggle daily reminder" />
           </div>
-          <Switch checked={enabled} onCheckedChange={handleToggle} disabled={loading} ariaLabel="Toggle daily reminder" />
+
+          {reminderRows.map((row) => (
+            <div key={row.key} className="border-t border-[var(--color-border)]">
+              <div className="flex min-h-[56px] items-center justify-between gap-3 px-4 py-3">
+                <div className="min-w-0">
+                  <p className="truncate text-[0.9rem] font-semibold leading-tight text-[var(--color-text)]">{row.title}</p>
+                  <p className={SETTINGS_DESCRIPTION_CLASS}>{row.description}</p>
+                </div>
+                <Switch checked={smartSettings[row.key]} onCheckedChange={() => handleSmartToggle(row.key)} disabled={loading} ariaLabel={`Toggle ${row.title}`} />
+              </div>
+            </div>
+          ))}
         </CardContent>
       </Card>
-
-      <div className="mt-3 flex flex-col gap-2">
-        {reminderRows.map((row) => (
-          <Card key={row.key}>
-            <CardContent className="flex items-center justify-between gap-3 py-3">
-              <div className="min-w-0">
-                <p className="text-sm font-medium text-[var(--color-text)]">{row.title}</p>
-                <p className="text-xs text-[var(--color-text-secondary)]">{row.description}</p>
-              </div>
-              <Switch checked={smartSettings[row.key]} onCheckedChange={() => handleSmartToggle(row.key)} disabled={loading} ariaLabel={`Toggle ${row.title}`} />
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-    </div>
+    </section>
   );
 }
 
 export function ThemeSection({ child }: { child: Child | null }) {
   const { mode, setMode, nightModeEnabled, setNightModeEnabled, nightModeStart, nightModeEnd, setNightModeSchedule } = useTheme();
-  const { unitSystem, setUnitSystem } = useUnits();
+  const { unitSystem, temperatureUnit, setUnitSystem, setTemperatureUnit } = useUnits();
   const { preference: eliminationPreference, setPreference } = useEliminationPreference(child);
+  const eliminationOptions = ELIMINATION_VIEW_OPTIONS.filter((option) => getAllowedEliminationViewPreferences(child).includes(option.value));
+  const eliminationGridClassName = eliminationOptions.length === 2 ? "grid-cols-2" : "grid-cols-3";
 
   return (
-    <div className="mb-6">
-      <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]">App preferences</h3>
-      <Card className="border-[rgba(145,164,204,0.14)] bg-[rgba(32,43,61,0.94)] shadow-[0_18px_44px_rgba(8,12,22,0.24)]">
-        <CardContent className="space-y-0 py-2">
-          <CompactPreferenceRow
+    <section>
+      <h3 className={SETTINGS_SECTION_TITLE_CLASS}>App preferences</h3>
+      <Card className={SETTINGS_CARD_CLASS}>
+        <CardContent className="p-0">
+          <SettingsControlRow
             label="Theme"
             control={(
               <SegmentedControl
@@ -289,8 +371,8 @@ export function ThemeSection({ child }: { child: Child | null }) {
             )}
           />
 
-          <div className="border-t border-[rgba(145,164,204,0.12)] pt-3">
-            <CompactPreferenceRow
+          <div className="border-t border-[var(--color-border)]">
+            <SettingsControlRow
               label="Unit system"
               control={(
                 <SegmentedControl
@@ -306,9 +388,26 @@ export function ThemeSection({ child }: { child: Child | null }) {
             />
           </div>
 
+          <div className="border-t border-[var(--color-border)]">
+            <SettingsControlRow
+              label="Temperature"
+              control={(
+                <SegmentedControl
+                  value={temperatureUnit}
+                  onChange={(value) => setTemperatureUnit(value as TemperatureUnit)}
+                  options={TEMPERATURE_UNIT_OPTIONS}
+                  className="w-full"
+                  gridClassName="grid-cols-2"
+                  size="sm"
+                  variant="settings"
+                />
+              )}
+            />
+          </div>
+
           {eliminationPreference && (
-            <div className="border-t border-[rgba(145,164,204,0.12)] pt-3">
-              <CompactPreferenceRow
+            <div className="border-t border-[var(--color-border)]">
+              <SettingsControlRow
                 label="Main tracking page"
                 control={(
                   <SegmentedControl
@@ -317,9 +416,9 @@ export function ThemeSection({ child }: { child: Child | null }) {
                       const preference = next as EliminationViewPreference;
                       void setPreference(preference);
                     }}
-                    options={ELIMINATION_VIEW_OPTIONS}
+                    options={eliminationOptions}
                     className="w-full"
-                    gridClassName="grid-cols-3"
+                    gridClassName={eliminationGridClassName}
                     size="sm"
                     variant="settings"
                   />
@@ -328,40 +427,38 @@ export function ThemeSection({ child }: { child: Child | null }) {
             </div>
           )}
 
-          <div className="border-t border-[rgba(145,164,204,0.12)] pt-3">
-            <div className="rounded-[22px] bg-[rgba(28,37,55,0.86)] p-3.5">
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="text-sm font-medium text-[var(--color-text)]">Night mode schedule</p>
-                  <p className="mt-1 text-xs leading-relaxed text-[var(--color-text-secondary)]">
-                    Automatically switch to the softer low-glare palette overnight.
-                  </p>
-                </div>
-                <Switch checked={nightModeEnabled} onCheckedChange={setNightModeEnabled} ariaLabel="Toggle scheduled night mode" />
+          <div className="border-t border-[var(--color-border)] px-4 py-3">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-[0.9rem] font-semibold leading-tight text-[var(--color-text)]">Night mode schedule</p>
+                <p className={SETTINGS_DESCRIPTION_CLASS}>
+                  Switch to the softer low-glare palette overnight.
+                </p>
               </div>
-
-              {nightModeEnabled && (
-                <div className="mt-3">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <FieldLabel>Starts</FieldLabel>
-                      <TimePicker value={nightModeStart} onChange={(value) => setNightModeSchedule(value, nightModeEnd)} label="Night mode starts" />
-                    </div>
-                    <div>
-                      <FieldLabel>Ends</FieldLabel>
-                      <TimePicker value={nightModeEnd} onChange={(value) => setNightModeSchedule(nightModeStart, value)} label="Night mode ends" />
-                    </div>
-                  </div>
-                  <p className="mt-3 text-xs text-[var(--color-text-secondary)]">
-                    Active from {formatScheduleTime(nightModeStart)} to {formatScheduleTime(nightModeEnd)}.
-                  </p>
-                </div>
-              )}
+              <Switch checked={nightModeEnabled} onCheckedChange={setNightModeEnabled} ariaLabel="Toggle scheduled night mode" />
             </div>
+
+            {nightModeEnabled && (
+              <div className="mt-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <FieldLabel>Starts</FieldLabel>
+                    <TimePicker value={nightModeStart} onChange={(value) => setNightModeSchedule(value, nightModeEnd)} label="Night mode starts" />
+                  </div>
+                  <div>
+                    <FieldLabel>Ends</FieldLabel>
+                    <TimePicker value={nightModeEnd} onChange={(value) => setNightModeSchedule(nightModeStart, value)} label="Night mode ends" />
+                  </div>
+                </div>
+                <p className="mt-3 text-xs text-[var(--color-text-secondary)]">
+                  Active from {formatScheduleTime(nightModeStart)} to {formatScheduleTime(nightModeEnd)}.
+                </p>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
-    </div>
+    </section>
   );
 }
 
@@ -373,7 +470,7 @@ export function EliminationSection() {
   return null;
 }
 
-function CompactPreferenceRow({
+function SettingsControlRow({
   label,
   control,
 }: {
@@ -381,40 +478,60 @@ function CompactPreferenceRow({
   control: ReactNode;
 }) {
   return (
-    <div className="grid grid-cols-[110px_minmax(0,1fr)] items-center gap-3 py-2">
-      <div className="min-w-0 pr-2">
-        <p className="text-[0.92rem] font-medium leading-[1.15] text-[rgba(246,240,236,0.98)]">{label}</p>
+    <div className="grid min-h-[56px] grid-cols-[128px_minmax(0,1fr)] items-center gap-2.5 px-4 py-3">
+      <div className="min-w-0 pr-1">
+        <p className="text-[0.9rem] font-semibold leading-[1.1] text-[var(--color-text)]">{label}</p>
       </div>
       <div className="min-w-0">{control}</div>
     </div>
   );
 }
 
-export function RecordsSection() {
+export function RecordsSupportSection() {
   const navigate = useNavigate();
+  const activeChild = useActiveChild();
+  const { experience: eliminationExperience } = useEliminationPreference(activeChild);
+  const isBreastfeedVisibleInNav = activeChild?.feeding_type === "breast";
+  const openAlternateTrackingPage = (path: "/diaper" | "/poop" | "/feed" | "/breastfeed") => {
+    navigate(path, { state: { origin: "/settings", allowSettingsAlternate: true } });
+  };
+  const alternateEliminationRow = eliminationExperience.mode === "diaper"
+    ? { title: "Poop", icon: "poop" as const, onClick: () => openAlternateTrackingPage("/poop") }
+    : { title: "Diaper", icon: "diaper" as const, onClick: () => openAlternateTrackingPage("/diaper") };
+  const alternateFeedRow = isBreastfeedVisibleInNav
+    ? { title: "Feed", icon: "feed" as const, onClick: () => openAlternateTrackingPage("/feed") }
+    : { title: "Breastfeed", icon: "breastfeed" as const, onClick: () => openAlternateTrackingPage("/breastfeed") };
+  const rows: Array<{
+    title: string;
+    description?: string;
+    icon: SettingsListIcon;
+    onClick: () => void;
+  }> = [
+    alternateEliminationRow,
+    alternateFeedRow,
+    { title: "Health", icon: "health", onClick: () => navigate("/health", { state: { origin: "/settings" } }) },
+    { title: "Support & Guidance", icon: "guidance", onClick: () => navigate("/guidance") },
+    {
+      title: `About Tiny Tummy v${__APP_VERSION__}`,
+      description: "Privacy policy and offline data details",
+      icon: "about",
+      onClick: () => navigate("/privacy"),
+    },
+  ];
 
   return (
-    <div className="mb-6">
-      <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]">Records</h3>
-      <div className="flex flex-col gap-2">
-        <SettingsNavCard title="History" description="Timeline of logged entries" onClick={() => navigate("/history")} />
-        <SettingsNavCard title="Growth" description="Weight, length, and head circumference trends" onClick={() => navigate("/growth")} />
-        <SettingsNavCard title="Milestones" description="Health-linked context like solids, illness, teething, or medication changes" onClick={() => navigate("/milestones")} />
-      </div>
-    </div>
-  );
-}
-
-export function SupportSection() {
-  const navigate = useNavigate();
-
-  return (
-    <div className="mb-6">
-      <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]">Support</h3>
-      <div className="flex flex-col gap-2">
-        <SettingsNavCard title="Guidance" description="Evidence-based tips and when to call the doctor" onClick={() => navigate("/guidance")} />
-      </div>
-    </div>
+    <section>
+      <h3 className={SETTINGS_SECTION_TITLE_CLASS}>Records &amp; Support</h3>
+      <Card className={SETTINGS_CARD_CLASS}>
+        <CardContent className="p-0">
+          {rows.map((row, index) => (
+            <div key={row.title} className={index > 0 ? "border-t border-[var(--color-border)]" : undefined}>
+              <SettingsListRow {...row} />
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+    </section>
   );
 }
 
@@ -422,6 +539,11 @@ export function AccessSection() {
   const { daysRemaining, isLocked } = useTrialAccess();
   const { restorePremium } = useTrialActions();
   const { showError, showSuccess } = useToast();
+  const navigate = useNavigate();
+  const accessTitle = isLocked ? "Unlock Tiny Tummy Premium" : "Unlock more with Tiny Tummy Premium";
+  const accessDetail = isLocked
+    ? "Your trial has ended. Premium keeps insights, trend reports, growth tracking & more available."
+    : "Advanced insights, trend reports, growth tracking & more.";
 
   const handleRestore = async () => {
     try {
@@ -433,43 +555,64 @@ export function AccessSection() {
   };
 
   return (
-    <div className="mb-6">
-      <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]">Access</h3>
-      <Card>
-        <CardContent className="py-3">
-          <p className="text-sm font-medium text-[var(--color-text)]">
-            {isLocked ? "Trial expired" : `${daysRemaining} day${daysRemaining === 1 ? "" : "s"} left in trial`}
-          </p>
-          <p className="mt-1 text-xs text-[var(--color-text-secondary)]">
-            Tiny Tummy uses a local 14-day trial and a one-time premium unlock. Restores work from the current store account once mobile billing is wired.
-          </p>
-          <Button variant="secondary" className="mt-4 w-full" onClick={() => { void handleRestore(); }}>
-            Restore Purchases
-          </Button>
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
-
-export function AboutSection() {
-  const navigate = useNavigate();
-
-  return (
-    <div className="mb-6">
-      <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]">About</h3>
-      <Card>
-        <CardContent className="flex flex-col gap-2 py-3">
-          <p className="text-sm text-[var(--color-text)]">Tiny Tummy v{__APP_VERSION__}</p>
-          <p className="text-xs text-[var(--color-muted)]">100% offline. Your data never leaves this device.</p>
-          <div className="flex gap-4">
-            <button onClick={() => navigate("/privacy")} className="cursor-pointer text-left text-xs font-medium text-[var(--color-primary)]">
-              Privacy Policy
-            </button>
+    <section>
+      <div
+        className="settings-access-card relative overflow-hidden rounded-[18px] border px-3.5 py-3 shadow-[0_12px_28px_rgba(213,164,84,0.1)] md:flex md:items-center md:gap-4 md:px-4"
+        style={{
+          background: "linear-gradient(135deg, color-mix(in srgb, #fff7df 74%, var(--color-surface-strong)) 0%, color-mix(in srgb, #fff9ec 76%, var(--color-surface)) 100%)",
+          borderColor: "color-mix(in srgb, #f4bf53 42%, var(--color-border))",
+        }}
+      >
+        <div
+          aria-hidden="true"
+          className="settings-access-card__dark-surface pointer-events-none absolute inset-0 hidden"
+          style={{
+            background: "linear-gradient(135deg, color-mix(in srgb, #ffd166 16%, var(--color-surface-strong)) 0%, color-mix(in srgb, var(--color-bg-elevated) 88%, #ffd166) 100%)",
+          }}
+        />
+        <div className="flex items-start gap-2.5 md:flex-1 md:items-center">
+          <span className="settings-access-card__icon relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#ffd166] text-white shadow-[0_10px_20px_rgba(224,158,50,0.18)] md:h-11 md:w-11">
+            <svg viewBox="0 0 24 24" className="h-6 w-6" fill="currentColor" aria-hidden="true">
+              <path d="m12 3.4 2.36 4.78 5.27.77-3.82 3.72.9 5.25L12 15.45l-4.71 2.47.9-5.25-3.82-3.72 5.27-.77L12 3.4Z" />
+            </svg>
+          </span>
+          <div className="relative min-w-0">
+            <p className="text-[0.92rem] font-bold leading-tight tracking-[-0.02em] text-[var(--color-text)] md:text-[1rem]">
+              {accessTitle}
+            </p>
+            <p className="mt-0.5 text-[0.74rem] leading-snug text-[var(--color-text-secondary)] md:text-[0.84rem]">
+              {accessDetail}
+            </p>
+            {!isLocked && (
+              <p className="mt-0.5 text-[0.68rem] font-semibold text-[var(--color-text-soft)] md:text-[0.74rem]">
+                {daysRemaining} day{daysRemaining === 1 ? "" : "s"} left in trial
+              </p>
+            )}
           </div>
-        </CardContent>
-      </Card>
-    </div>
+        </div>
+        <div className="relative mt-3 flex gap-2 md:mt-0 md:shrink-0">
+          <button
+            type="button"
+            onClick={() => navigate("/unlock")}
+            className="settings-access-card__unlock inline-flex h-10 flex-1 items-center justify-center gap-1.5 rounded-full border border-[#ffd6ad] bg-[var(--color-surface-strong)] px-3.5 text-[0.8rem] font-bold text-[var(--color-primary)] shadow-[var(--shadow-soft)] md:flex-none"
+          >
+            <svg viewBox="0 0 24 24" className="h-4.5 w-4.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="m5 16 1.4-8 4 3.8L12 6l1.6 5.8 4-3.8L19 16H5Z" />
+              <path d="M5 18h14" />
+            </svg>
+            Unlock
+            <span aria-hidden="true" className="text-[1.1rem] leading-none">›</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => { void handleRestore(); }}
+            className="settings-access-card__restore inline-flex h-10 items-center justify-center rounded-full px-2.5 text-[0.76rem] font-semibold text-[var(--color-text-secondary)]"
+          >
+            Restore
+          </button>
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -503,9 +646,9 @@ export function DeveloperToolsSection({
   };
 
   return (
-    <div className="mb-12">
-      <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-[var(--color-alert)]">Developer Tools</h3>
-      <Card className="border-[var(--color-alert)]/30">
+    <section className="pb-4">
+      <h3 className="mb-3 px-1 text-[0.74rem] font-bold uppercase tracking-[0.18em] text-[var(--color-alert)] md:text-[0.78rem]">Developer Tools</h3>
+      <Card className={`${SETTINGS_CARD_CLASS} border-[var(--color-alert)]/30`}>
         <CardContent className="flex flex-col gap-3 py-3">
           <p className="text-xs text-[var(--color-text-secondary)]">These tools only appear during local development.</p>
           <p className="rounded-[var(--radius-sm)] bg-[var(--color-alert)]/8 px-3 py-2 text-xs text-[var(--color-text)]">
@@ -558,6 +701,6 @@ export function DeveloperToolsSection({
           </Button>
         </CardContent>
       </Card>
-    </div>
+    </section>
   );
 }

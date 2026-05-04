@@ -31,7 +31,7 @@ export function LogSuccess() {
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.3 }}
-        className="font-[var(--font-display)] text-xl font-semibold text-[var(--color-text)]"
+        className="text-xl font-semibold text-[var(--color-text)]"
       >
         Logged!
       </motion.p>

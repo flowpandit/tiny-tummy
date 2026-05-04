@@ -1,31 +1,40 @@
+import { useState } from "react";
 import { writeFile } from "@tauri-apps/plugin-fs";
 import { save } from "@tauri-apps/plugin-dialog";
 import { platform } from "@tauri-apps/plugin-os";
 import { useActiveChild } from "../contexts/ChildContext";
 import { useUnits } from "../contexts/UnitsContext";
 import { useReportPageState } from "../hooks/useReportPageState";
-import { Button } from "../components/ui/button";
-import { Card, CardContent } from "../components/ui/card";
-import { PageIntro } from "../components/ui/page-intro";
+import { CareToolsSection } from "../components/care/CareToolsSection";
+import { ScenicHero } from "../components/layout/ScenicHero";
+import { ReportComposerCard } from "../components/report/ReportComposerCard";
 import { PageBody } from "../components/ui/page-layout";
-import { DatePicker } from "../components/ui/date-picker";
-import { ReportPreview } from "../components/report/ReportPreview";
+import { ReportReadyCard } from "../components/report/ReportReadyCard";
 import { buildReportPdfPayload } from "../lib/report-pdf";
 import {
   buildReportPatientSummary,
   getReportSaveHelpText,
   getReportSaveLabel,
-  hasReportableTimeline,
-  REPORT_OPTION_TOGGLES,
+  hasReportableData,
 } from "../lib/report-view-model";
 import { useToast } from "../components/ui/toast";
-import { generateReportPdf, savePdfToDownloads } from "../lib/tauri";
+import {
+  generateReportPdf,
+  openPdfFromDownloads,
+  savePdfToDownloads,
+  sharePdfReport,
+} from "../lib/tauri";
+import { loadAvatarDataUrl } from "../lib/photos";
 
 export function Report() {
   const activeChild = useActiveChild();
   const { unitSystem } = useUnits();
   const { showError, showSuccess } = useToast();
-  const isAndroid = platform() === "android";
+  const currentPlatform = platform();
+  const isAndroid = currentPlatform === "android";
+  const isIos = currentPlatform === "ios";
+  const [savedAndroidReport, setSavedAndroidReport] = useState<{ fileName: string; uri: string } | null>(null);
+  const [isAutoSavingReport, setIsAutoSavingReport] = useState(false);
   const {
     today,
     startDate,
@@ -50,33 +59,83 @@ export function Report() {
     return bytes;
   };
 
-  const handlePrint = async () => {
+  const buildPdfFileName = () => {
+    const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+    return `tiny-tummy-pediatrician-report-${startDate}-to-${endDate}-${timestamp}.pdf`;
+  };
+
+  const createEncodedReportPdf = async (data = reportData) => {
+    if (!data) return null;
+
+    const childAvatarDataUrl = await loadAvatarDataUrl(activeChild.id).catch(() => null);
+    return await generateReportPdf(
+      buildReportPdfPayload({
+        child: activeChild,
+        startDate,
+        endDate,
+        data,
+        unitSystem,
+        childAvatarDataUrl,
+      }),
+    );
+  };
+
+  const saveAndroidReportToDownloads = async (data = reportData) => {
+    if (!data) return null;
+    if (!hasReportableData(data)) return null;
+
+    const encodedPdf = await createEncodedReportPdf(data);
+    if (!encodedPdf) return null;
+
+    const savedReport = await savePdfToDownloads(buildPdfFileName(), encodedPdf);
+    setSavedAndroidReport(savedReport);
+    showSuccess("Report saved to Downloads.");
+    return savedReport;
+  };
+
+  const handleGenerateReport = async () => {
+    try {
+      setSavedAndroidReport(null);
+      const data = await handleGenerate();
+
+      if (!isAndroid || !data || !hasReportableData(data)) {
+        return;
+      }
+
+      setIsAutoSavingReport(true);
+      await saveAndroidReportToDownloads(data);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      showError(`Could not generate the PDF report: ${message}`);
+    } finally {
+      setIsAutoSavingReport(false);
+    }
+  };
+
+  const handleSaveReport = async () => {
     if (!reportData) return;
-    if (!hasReportableTimeline(reportData)) {
+    if (!hasReportableData(reportData)) {
       showError("No reportable data exists in the selected date range.");
       return;
     }
 
     try {
-      const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-      const fileName = `tiny-tummy-pediatrician-report-${startDate}-to-${endDate}-${timestamp}.pdf`;
-      const encodedPdf = await generateReportPdf(buildReportPdfPayload({
-        child: activeChild,
-        startDate,
-        endDate,
-        data: reportData,
-        unitSystem,
-      }));
-
       if (isAndroid) {
-        await savePdfToDownloads(fileName, encodedPdf);
-        showSuccess(`PDF saved to Downloads as ${fileName}.`);
+        await saveAndroidReportToDownloads(reportData);
+        return;
+      }
+
+      const encodedPdf = await createEncodedReportPdf(reportData);
+      if (!encodedPdf) return;
+
+      if (isIos) {
+        await sharePdfReport(buildPdfFileName(), encodedPdf);
         return;
       }
 
       const pdfBytes = decodeBase64(encodedPdf);
       const targetPath = await save({
-        defaultPath: fileName,
+        defaultPath: buildPdfFileName(),
         filters: [
           {
             name: "PDF report",
@@ -93,124 +152,85 @@ export function Report() {
       showSuccess("PDF report saved successfully.");
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      showError(`Could not generate the PDF report: ${message}`);
+      showError(`Export failed: ${message}`);
     }
   };
 
+  const handleOpenSavedAndroidReport = async () => {
+    if (!savedAndroidReport) return;
+
+    try {
+      await openPdfFromDownloads(savedAndroidReport.uri);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      showError(message || "Could not open the saved PDF report.");
+    }
+  };
+
+  const handleReportCardAction = () => {
+    if (isAndroid && savedAndroidReport) {
+      void handleOpenSavedAndroidReport();
+      return;
+    }
+
+    void handleSaveReport();
+  };
+
   const patientSummary = buildReportPatientSummary(activeChild, startDate, endDate);
-  const reportPreviewPayload = reportData
-    ? buildReportPdfPayload({
-      child: activeChild,
-      startDate,
-      endDate,
-      data: reportData,
-      unitSystem,
-    })
-    : null;
+  const hasGeneratedReportData = hasReportableData(reportData);
+  const reportActionLabel = isAndroid && savedAndroidReport
+    ? "Open PDF report"
+    : isIos
+      ? "Share PDF report"
+    : getReportSaveLabel(isAndroid);
+  const reportActionHelpText = isAndroid && savedAndroidReport
+    ? "Report saved to Downloads. Tap to open it."
+    : isIos
+      ? "Opens the iOS share sheet so you can save to Files, open in Books, or share."
+    : getReportSaveHelpText(isAndroid);
 
   return (
-    <PageBody>
-      <PageIntro
-        eyebrow="Share"
-        title="Pediatrician Report"
-        description="Generate a bowel-first clinical summary with highlighted concerns, 7-day charts, and a chronological appendix."
+    <PageBody className="-mt-8 space-y-0 px-0 py-0">
+      <ScenicHero
+        child={activeChild}
+        title="Report"
+        description="Prepare a pediatrician-ready PDF with charts, context, and timeline detail."
+        className="-mx-4 overflow-hidden md:-mx-6 lg:-mx-8"
+        showChildInfo={false}
       />
 
-      <Card className="mb-5">
-        <CardContent className="py-4">
-          <div className="grid grid-cols-2 gap-3 mb-4">
-            <div>
-              <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1">
-                From
-              </label>
-              <DatePicker
-                value={startDate}
-                onChange={setStartDate}
-                max={endDate}
-                label="Start date"
-                dismissOnDocumentClick
-                overlayOffsetY={48}
-                usePortal
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1">
-                To
-              </label>
-              <DatePicker
-                value={endDate}
-                onChange={setEndDate}
-                min={startDate}
-                max={today}
-                label="End date"
-                dismissOnDocumentClick
-                overlayOffsetY={48}
-                usePortal
-              />
-            </div>
-          </div>
+      <div className="-mt-36 px-4 md:-mt-32 md:px-10">
+        <ReportComposerCard
+          today={today}
+          startDate={startDate}
+          endDate={endDate}
+          isGenerating={isGenerating || isAutoSavingReport}
+          options={options}
+          onStartDateChange={setStartDate}
+          onEndDateChange={setEndDate}
+          onGenerate={() => { void handleGenerateReport(); }}
+          onToggleOption={toggleOption}
+        />
+      </div>
 
-          <div className="mb-4 flex flex-col gap-2">
-            <p className="text-xs font-medium text-[var(--color-text-secondary)]">Include in report</p>
-            <div className="flex flex-wrap gap-2">
-              {REPORT_OPTION_TOGGLES.map((item) => (
-                <button
-                  key={item.key}
-                  type="button"
-                  onClick={() => toggleOption(item.key)}
-                  className={`px-3 py-2 rounded-[var(--radius-full)] text-xs font-semibold border transition-colors ${
-                    options[item.key]
-                      ? "border-[var(--color-primary)] bg-[var(--color-primary)]/10 text-[var(--color-primary)]"
-                      : "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-secondary)]"
-                  }`}
-                >
-                  {item.label}
-                </button>
-              ))}
-            </div>
-          </div>
+      <div className="space-y-3 px-4 py-3 md:space-y-5 md:px-10 md:py-5">
+        {reportData && (
+          <>
+            <ReportReadyCard
+              title={patientSummary.title}
+              subtitle={patientSummary.subtitle}
+              detail={patientSummary.detail}
+              hasReportableData={hasGeneratedReportData}
+              saveLabel={reportActionLabel}
+              saveHelpText={reportActionHelpText}
+              onSave={handleReportCardAction}
+            />
 
-          <Button
-            variant="primary"
-            className="w-full"
-            onClick={handleGenerate}
-            disabled={isGenerating}
-          >
-            {isGenerating ? "Generating..." : "Generate Report"}
-          </Button>
-        </CardContent>
-      </Card>
+          </>
+        )}
 
-      {reportData && (
-        <div>
-          {!hasReportableTimeline(reportData) && (
-            <Card className="mb-4">
-              <CardContent className="py-4">
-                <p className="text-sm font-medium text-[var(--color-text)]">No reportable data in this date range.</p>
-                <p className="mt-1 text-xs leading-relaxed text-[var(--color-text-secondary)]">
-                  Try expanding the date range. The picker now defaults to the child&apos;s latest recorded activity instead of today.
-                </p>
-              </CardContent>
-            </Card>
-          )}
-
-          <Card className="mb-4">
-            <CardContent className="py-4">
-              <p className="font-[var(--font-display)] text-lg font-semibold text-[var(--color-text)]">{patientSummary.title}</p>
-              <p className="mt-1 text-sm text-[var(--color-text-secondary)]">{patientSummary.subtitle}</p>
-              <p className="mt-3 text-xs text-[var(--color-muted)]">
-                {patientSummary.detail}
-              </p>
-            </CardContent>
-          </Card>
-
-          {reportPreviewPayload && <ReportPreview payload={reportPreviewPayload} />}
-
-          <Button variant="cta" className="w-full mb-4" onClick={handlePrint}>{getReportSaveLabel(isAndroid)}</Button>
-
-          <p className="text-xs text-[var(--color-muted)] text-center">{getReportSaveHelpText(isAndroid)}</p>
-        </div>
-      )}
+        <CareToolsSection className="px-0" palette="soft" />
+      </div>
     </PageBody>
   );
 }

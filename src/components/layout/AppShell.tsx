@@ -6,6 +6,7 @@ import { useEliminationPreference } from "../../hooks/useEliminationPreference";
 import { Header } from "./Header";
 import { BottomNav } from "./BottomNav";
 import { getAgeInMonthsFromDob } from "../../lib/utils";
+import { isSheetGestureLocked } from "../../lib/sheet-gesture-lock";
 
 const SWIPE_MIN_DISTANCE = 72;
 const SWIPE_DIRECTION_LOCK_RATIO = 1.2;
@@ -22,6 +23,7 @@ const INTERACTIVE_SELECTOR = [
   "[role='button']",
   "[role='link']",
   "[role='slider']",
+  "[data-sheet-root='true']",
   "[data-no-page-swipe='true']",
 ].join(", ");
 
@@ -38,9 +40,7 @@ export function AppShell() {
   const location = useLocation();
   const navigate = useNavigate();
   const activeChild = useActiveChild();
-  const { experience } = useEliminationPreference(activeChild);
   const mainRef = useRef<HTMLElement | null>(null);
-  const [isScrollHeaderVisible, setIsScrollHeaderVisible] = useState(false);
   const [dragOffsetX, setDragOffsetX] = useState(0);
   const [pullOffsetY, setPullOffsetY] = useState(0);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -64,27 +64,33 @@ export function AppShell() {
     || (window.navigator.platform === "MacIntel" && window.navigator.maxTouchPoints > 1)
   );
   const headerBackFallbackByPath: Record<string, string> = {
-    "/breastfeed": "/",
+    "/dashboard": "/",
+    "/health": "/settings",
     "/growth": "/settings",
     "/guidance": "/settings",
-    "/handoff": "/settings",
-    "/history": "/settings",
     "/milestones": "/settings",
     "/report": "/dashboard",
   };
-  const revealOnScrollPaths = new Set(["/poop", "/diaper", "/feed", "/sleep", "/breastfeed", "/growth"]);
-  const hideHeaderPaths = new Set(["/", "/settings"]);
-  const showHeader = !hideHeaderPaths.has(location.pathname);
-  const headerFallbackTo = headerBackFallbackByPath[location.pathname];
+  const originPath = location.state && typeof location.state === "object" && "origin" in location.state
+    ? (location.state as { origin?: string }).origin
+    : undefined;
+  const allowSettingsAlternate = location.state
+    && typeof location.state === "object"
+    && "allowSettingsAlternate" in location.state
+    && (location.state as { allowSettingsAlternate?: boolean }).allowSettingsAlternate === true;
+  const showHeader = Boolean(activeChild);
+  const headerFallbackTo = originPath ?? headerBackFallbackByPath[location.pathname];
   const showHeaderBackButton = Boolean(headerFallbackTo);
-  const revealHeaderOnScroll = revealOnScrollPaths.has(location.pathname);
+  const { experience: eliminationExperience } = useEliminationPreference(activeChild);
   const isBreastOnly = activeChild?.feeding_type === "breast";
   const isFeedingTransitionEligible = isBreastOnly && Boolean(activeChild) && getAgeInMonthsFromDob(activeChild.date_of_birth) >= 6;
+  const eliminationNavPath = eliminationExperience.route;
+  const eliminationNavLabel = eliminationExperience.navLabel;
   const feedNavPath = isBreastOnly ? "/breastfeed" : "/feed";
-  const feedNavLabel = isBreastOnly ? "Breastfeed" : "Feed";
+  const feedNavLabel = "Feed";
   const bottomNavPaths = useMemo(
-    () => ["/", experience.route, "/dashboard", feedNavPath, "/sleep", "/settings"],
-    [experience.route, feedNavPath],
+    () => ["/", eliminationNavPath, feedNavPath, "/sleep", "/history", "/settings"],
+    [eliminationNavPath, feedNavPath],
   );
   const bottomNavMeta = useMemo<Record<string, { label: string; eyebrow: string; description: string }>>(
     () => ({
@@ -93,15 +99,12 @@ export function AppShell() {
         eyebrow: "Today",
         description: "Return to the daily overview and quick actions.",
       },
-      [experience.route]: {
-        label: experience.navLabel,
+      [eliminationNavPath]: {
+        label: eliminationNavLabel,
         eyebrow: "Log",
-        description: `Jump to ${experience.navLabel.toLowerCase()} tracking.`,
-      },
-      "/dashboard": {
-        label: "Trend",
-        eyebrow: "Patterns",
-        description: "Review feeding, sleep, diaper, and stool patterns together.",
+        description: eliminationExperience.mode === "poop"
+          ? "Jump to poop tracking."
+          : "Jump to diaper tracking.",
       },
       [feedNavPath]: {
         label: feedNavLabel,
@@ -117,13 +120,18 @@ export function AppShell() {
         eyebrow: "Rest",
         description: "Check naps, overnight sleep, and totals.",
       },
+      "/history": {
+        label: "History",
+        eyebrow: "Timeline",
+        description: "Review the full care timeline.",
+      },
       "/settings": {
         label: "Settings",
         eyebrow: "More",
         description: "Open reports, growth, milestones, and preferences.",
       },
     }),
-    [experience.navLabel, experience.route, feedNavLabel, feedNavPath, isBreastOnly, isFeedingTransitionEligible],
+    [eliminationExperience.mode, eliminationNavLabel, eliminationNavPath, feedNavLabel, feedNavPath, isBreastOnly, isFeedingTransitionEligible],
   );
   const swipeRouteIndex = bottomNavPaths.indexOf(location.pathname);
   const canSwipeBetweenBottomRoutes = swipeRouteIndex !== -1;
@@ -165,37 +173,10 @@ export function AppShell() {
       return;
     }
 
-    if (location.pathname !== feedNavPath) {
+    if (!allowSettingsAlternate && location.pathname !== feedNavPath) {
       navigate(feedNavPath, { replace: true });
     }
-  }, [feedNavPath, location.pathname, navigate]);
-
-  useEffect(() => {
-    if (!showHeader) {
-      setIsScrollHeaderVisible(false);
-      return;
-    }
-
-    if (!revealHeaderOnScroll) {
-      setIsScrollHeaderVisible(true);
-      return;
-    }
-
-    const scrollRoot = mainRef.current;
-    if (!scrollRoot) return;
-
-    const revealThreshold = 170;
-    const updateVisibility = () => {
-      setIsScrollHeaderVisible(scrollRoot.scrollTop > revealThreshold);
-    };
-
-    updateVisibility();
-    scrollRoot.addEventListener("scroll", updateVisibility, { passive: true });
-
-    return () => {
-      scrollRoot.removeEventListener("scroll", updateVisibility);
-    };
-  }, [location.pathname, revealHeaderOnScroll, showHeader]);
+  }, [allowSettingsAlternate, feedNavPath, location.pathname, navigate]);
 
   const getSwipeTarget = (direction: "previous" | "next") => {
     if (!canSwipeBetweenBottomRoutes) return null;
@@ -205,6 +186,7 @@ export function AppShell() {
   };
 
   const handlePointerDown = (event: React.PointerEvent<HTMLElement>) => {
+    if (isSheetGestureLocked()) return;
     if (!canSwipeBetweenBottomRoutes || event.pointerType === "mouse" || pendingSwipePath) return;
 
     const target = event.target;
@@ -313,6 +295,7 @@ export function AppShell() {
   };
 
   const handleTouchStart = (event: React.TouchEvent<HTMLElement>) => {
+    if (isSheetGestureLocked()) return;
     if (!canPullToRefresh || pendingSwipePath) return;
 
     const target = event.target;
@@ -374,17 +357,14 @@ export function AppShell() {
         }}
       />
       <div className="pointer-events-none absolute inset-0">
-        <div className="absolute inset-x-0 top-0 h-[300px]" style={{ background: "var(--gradient-sunrise)" }} />
-        <div className="absolute -left-12 top-20 h-56 w-56 rounded-full bg-[var(--color-peach)]/26 blur-3xl" />
-        <div className="absolute right-[-64px] top-16 h-64 w-64 rounded-full bg-[var(--color-dawn)]/38 blur-3xl" />
-        <div className="absolute right-[-72px] top-52 h-64 w-64 rounded-full bg-[var(--color-apricot)]/14 blur-3xl" />
-        <div className="absolute bottom-20 left-[-44px] h-52 w-52 rounded-full bg-[var(--color-sky-wash)]/22 blur-3xl" />
+        <div className="absolute inset-0" style={{ background: "var(--gradient-app-bg)" }} />
       </div>
       {showHeader && (
         <Header
           showBackButton={showHeaderBackButton}
           fallbackTo={headerFallbackTo}
-          visible={isScrollHeaderVisible}
+          visible={showHeader}
+          density="compact"
         />
       )}
       <main
@@ -403,9 +383,9 @@ export function AppShell() {
           overscrollBehavior: "none",
           WebkitOverflowScrolling: "touch",
           touchAction: canSwipeBetweenBottomRoutes ? "pan-y" : "auto",
-          paddingBottom: "calc(var(--safe-area-bottom) + 96px)",
-          paddingTop: showHeader && !revealHeaderOnScroll
-            ? "calc(var(--safe-area-top) + 86px)"
+          paddingBottom: "var(--app-shell-bottom-padding)",
+          paddingTop: showHeader
+            ? "calc(var(--safe-area-top) + 74px)"
             : "var(--safe-area-top)",
         }}
       >
@@ -462,13 +442,13 @@ export function AppShell() {
                 className="flex h-full flex-col justify-center px-6"
                 style={{
                   background: dragOffsetX < 0
-                    ? "linear-gradient(270deg, rgba(255,247,238,0.96) 0%, rgba(255,251,244,0.62) 58%, rgba(255,251,244,0) 100%)"
-                    : "linear-gradient(90deg, rgba(255,247,238,0.96) 0%, rgba(255,251,244,0.62) 58%, rgba(255,251,244,0) 100%)",
+                    ? "var(--gradient-swipe-preview-next)"
+                    : "var(--gradient-swipe-preview-previous)",
                 }}
               >
                 <div className="rounded-[32px] border border-[var(--color-border)] bg-[var(--color-surface)]/92 p-6 shadow-[var(--shadow-medium)] backdrop-blur-[18px]">
                   <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--color-text-soft)]">{previewMeta.eyebrow}</p>
-                  <p className="mt-3 font-[var(--font-display)] text-[2rem] font-semibold leading-[0.96] tracking-[-0.04em] text-[var(--color-text)]">
+                  <p className="mt-3 text-[2rem] font-semibold leading-[0.96] tracking-[-0.04em] text-[var(--color-text)]">
                     {previewMeta.label}
                   </p>
                   <p className="mt-3 max-w-[24ch] text-sm leading-relaxed text-[var(--color-text-secondary)]">
@@ -500,7 +480,7 @@ export function AppShell() {
           </motion.div>
         </div>
       </main>
-      <BottomNav />
+      <BottomNav eliminationExperience={eliminationExperience} />
     </div>
   );
 }

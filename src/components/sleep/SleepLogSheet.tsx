@@ -16,6 +16,8 @@ import { getCurrentLocalDate } from "../../lib/utils";
 
 interface SleepLogSheetProps extends SheetVisibilityProps {
   childId: string;
+  initialMode?: "manual" | "timer";
+  initialSleepType?: SleepType;
   onLogged: () => Promise<void> | void;
 }
 
@@ -24,7 +26,14 @@ const SLEEP_TYPES: Array<{ value: SleepType; label: string; description: string 
   { value: "night", label: "Night", description: "Overnight sleep block." },
 ];
 
-export function SleepLogSheet({ open, onClose, childId, onLogged }: SleepLogSheetProps) {
+export function SleepLogSheet({
+  open,
+  onClose,
+  childId,
+  initialMode = "manual",
+  initialSleepType = "nap",
+  onLogged,
+}: SleepLogSheetProps) {
   const { showError, showSuccess } = useToast();
   const {
     mode,
@@ -52,6 +61,8 @@ export function SleepLogSheet({ open, onClose, childId, onLogged }: SleepLogShee
   } = useSleepLogSheetState({
     open,
     childId,
+    initialMode,
+    initialSleepType,
     onLogged,
     onClose,
     onError: showError,
@@ -70,7 +81,7 @@ export function SleepLogSheet({ open, onClose, childId, onLogged }: SleepLogShee
   return (
     <Sheet open={open} onClose={onClose}>
       <form onSubmit={handleSubmit} className="px-5 pb-8">
-        <h2 className="mb-2 text-center font-[var(--font-display)] text-lg font-semibold text-[var(--color-text)]">
+        <h2 className="mb-2 text-center text-lg font-semibold text-[var(--color-text)]">
           Add sleep log
         </h2>
         <p className="mb-5 text-center text-sm text-[var(--color-text-secondary)]">
@@ -125,9 +136,9 @@ export function SleepLogSheet({ open, onClose, childId, onLogged }: SleepLogShee
             <>
               <div className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg-elevated)] px-4 py-5 text-center">
                 <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--color-text-soft)]">
-                  {timerSession ? `${timerSession.sleepType === "night" ? "Night" : "Nap"} timer running` : "Sleep timer"}
+                  {timerSession ? "Sleep timer running" : "Sleep timer"}
                 </p>
-                <p className="mt-3 font-[var(--font-display)] text-4xl font-semibold tracking-[-0.04em] text-[var(--color-text)]">
+                <p className="mt-3 text-4xl font-semibold tracking-[-0.04em] text-[var(--color-text)]">
                   {formatSleepTimerClock(timerElapsedMs)}
                 </p>
                 <p className="mt-2 text-sm text-[var(--color-text-secondary)]">
@@ -178,7 +189,7 @@ export function SleepLogSheet({ open, onClose, childId, onLogged }: SleepLogShee
               <div>
                 <FieldLabel>End</FieldLabel>
                 <div className="grid grid-cols-2 gap-2">
-                  <DatePicker value={endDate} onChange={setEndDate} />
+                  <DatePicker value={endDate} onChange={setEndDate} max={getCurrentLocalDate()} />
                   <TimePicker value={endTime} onChange={setEndTime} />
                 </div>
               </div>

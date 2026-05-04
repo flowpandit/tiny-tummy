@@ -32,7 +32,7 @@ export function EditMealSheet({ entry, open, onClose, onSaved, onDeleted }: Edit
   return (
     <Sheet open={open} onClose={onClose}>
       <form onSubmit={(e: FormEvent) => { e.preventDefault(); void handleSave(); }} className="px-5 pb-8">
-        <h2 className="font-[var(--font-display)] text-lg font-semibold text-[var(--color-text)] mb-5 text-center">
+        <h2 className="text-lg font-semibold text-[var(--color-text)] mb-5 text-center">
           Edit feed
         </h2>
 

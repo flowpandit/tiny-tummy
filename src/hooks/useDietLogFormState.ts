@@ -77,7 +77,7 @@ export function useDietLogFormState({
   const handleSubmit = useCallback(async () => {
     if (!foodType || isSubmitting) return false;
     const showsFoodName = foodType === "solids" || foodType === "other";
-    const showsAmount = foodType === "formula" || foodType === "bottle" || foodType === "pumping" || foodType === "water";
+    const showsAmount = foodType === "breast_milk" || foodType === "formula" || foodType === "bottle" || foodType === "pumping" || foodType === "water";
     const showsDuration = foodType === "breast_milk" || foodType === "pumping";
     const showsBreastSide = foodType === "breast_milk";
     const showsBottleContent = foodType === "bottle";

@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { buildTrendsOverviewModel } from "../src/lib/trends.ts";
+import { formatLocalDateKey } from "../src/lib/utils.ts";
 import type { Child, DiaperEntry, FeedingEntry, PoopEntry, SleepEntry } from "../src/lib/types.ts";
 
 const child: Child = {
@@ -26,7 +27,12 @@ function isoDaysAgo(daysAgo: number, hour = 9, minute = 0) {
   return date.toISOString();
 }
 
-function createFeed(id: string, loggedAt: string, foodType: FeedingEntry["food_type"] = "formula"): FeedingEntry {
+function createFeed(
+  id: string,
+  loggedAt: string,
+  foodType: FeedingEntry["food_type"] = "formula",
+  overrides: Partial<FeedingEntry> = {},
+): FeedingEntry {
   return {
     id,
     child_id: child.id,
@@ -41,6 +47,7 @@ function createFeed(id: string, loggedAt: string, foodType: FeedingEntry["food_t
     is_constipation_support: 0,
     notes: null,
     created_at: loggedAt,
+    ...overrides,
   };
 }
 
@@ -119,6 +126,11 @@ test("buildTrendsOverviewModel creates compact summary ring data for each domain
   assert.ok(model.summaryTiles.every((tile) => tile.gradient.includes("gradient")));
   assert.ok(model.summaryTiles.every((tile) => tile.value.length > 0));
   assert.equal(model.summaryTiles.find((tile) => tile.id === "poop")?.unit, "type");
+  assert.deepEqual(
+    model.trendHighlights.map((highlight) => highlight.id),
+    ["feed", "sleep", "wet", "stool"],
+  );
+  assert.ok(model.trendHighlights.every((highlight) => highlight.headline.length > 0));
 });
 
 test("buildTrendsOverviewModel shapes overview rows and day-series data", () => {
@@ -146,4 +158,37 @@ test("buildTrendsOverviewModel shapes overview rows and day-series data", () => 
   assert.equal(model.diaperChart.data.length, 7);
   assert.ok(model.overviewNarrative.length >= 3);
   assert.match(model.poopNarrative, /latest stool|poop trends/i);
+  assert.match(
+    model.trendHighlights.find((highlight) => highlight.id === "feed")?.detail ?? "",
+    /Recent days average/i,
+  );
+});
+
+test("buildTrendsOverviewModel counts breastfeeding logs on the local feed chart day", () => {
+  const todayKey = formatLocalDateKey(new Date());
+  const todayBreastfeed = createFeed("breastfeed-today", isoDaysAgo(0, 6, 15), "breast_milk", {
+    amount_ml: null,
+    bottle_content: null,
+    breast_side: "left",
+    duration_minutes: 12,
+  });
+  const todayBottle = createFeed("bottle-today", isoDaysAgo(0, 8, 30), "bottle", {
+    amount_ml: 90,
+    bottle_content: "breast_milk",
+  });
+
+  const model = buildTrendsOverviewModel({
+    child,
+    days: 7,
+    poopLogs: [],
+    lastRealPoop: null,
+    feedingLogs: [todayBottle, todayBreastfeed],
+    sleepLogs: [],
+    diaperLogs: [],
+  });
+
+  const todayFeedDatum = model.feedChart.data.find((datum) => datum.date === todayKey);
+
+  assert.equal(todayFeedDatum?.feeds, 2);
+  assert.ok(model.overviewRows.some((row) => row.dayKey === todayKey && row.events.some((event) => event.id === "feed-breastfeed-today")));
 });

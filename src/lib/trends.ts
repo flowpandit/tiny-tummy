@@ -11,10 +11,11 @@ import type {
   PoopEntry,
   SleepEntry,
 } from "./types";
-import { formatLocalDateKey, isOnLocalDay, timeSince, timeSinceDetailed } from "./utils";
+import { formatLocalDateKey, getLocalDateKeyFromValue, isOnLocalDay, timeSince, timeSinceDetailed } from "./utils";
 
 export type TrendsTab = "overview" | "feed" | "sleep" | "diaper" | "poop";
 export type TrendTone = "default" | "info" | "healthy" | "cta";
+export type TrendDirection = "up" | "down" | "steady" | "waiting";
 
 export interface TrendSummaryTileModel {
   id: TrendsTab;
@@ -38,6 +39,15 @@ export interface TrendBarDatum {
   [key: string]: string | number;
 }
 
+export interface TrendHighlightModel {
+  id: "feed" | "sleep" | "wet" | "stool";
+  label: string;
+  headline: string;
+  detail: string;
+  direction: TrendDirection;
+  tone: TrendTone;
+}
+
 export interface OverviewEvent {
   id: string;
   kind: "feed" | "sleep" | "diaper" | "poop";
@@ -55,6 +65,7 @@ export interface TrendsOverviewModel {
   hasAnyData: boolean;
   summaryTiles: TrendSummaryTileModel[];
   overviewRows: OverviewRow[];
+  trendHighlights: TrendHighlightModel[];
   overviewNarrative: string[];
   feedNarrative: string;
   sleepNarrative: string;
@@ -274,7 +285,7 @@ function buildFeedChartData(logs: FeedingEntry[], days: number): TrendBarDatum[]
   const counts = new Map<string, number>();
 
   for (const log of predictableLogs) {
-    const dayKey = log.logged_at.split("T")[0];
+    const dayKey = getLocalDateKeyFromValue(log.logged_at);
     counts.set(dayKey, (counts.get(dayKey) ?? 0) + 1);
   }
 
@@ -313,6 +324,185 @@ function buildDiaperChartData(logs: DiaperEntry[], days: number): TrendBarDatum[
     wet: logs.filter((log) => isOnLocalDay(log.logged_at, dayKey) && diaperIncludesWet(log.diaper_type)).length,
     dirty: logs.filter((log) => isOnLocalDay(log.logged_at, dayKey) && diaperIncludesStool(log.diaper_type)).length,
   }));
+}
+
+function buildPoopChartData(logs: PoopEntry[], days: number): TrendBarDatum[] {
+  const dayKeys = buildDayKeys(days);
+
+  return dayKeys.map((dayKey) => ({
+    date: dayKey,
+    label: formatShortDay(dayKey),
+    poops: logs.filter((log) => log.is_no_poop === 0 && isOnLocalDay(log.logged_at, dayKey)).length,
+  }));
+}
+
+function getNumericDatumValue(datum: TrendBarDatum, key: string): number {
+  const value = datum[key];
+  return typeof value === "number" && Number.isFinite(value) ? value : 0;
+}
+
+function average(values: number[]): number {
+  if (values.length === 0) return 0;
+  return values.reduce((sum, value) => sum + value, 0) / values.length;
+}
+
+function getAverageComparison(data: TrendBarDatum[], key: string): { previous: number; recent: number; delta: number; total: number } {
+  const midpoint = Math.max(1, Math.floor(data.length / 2));
+  const previousValues = data.slice(0, midpoint).map((datum) => getNumericDatumValue(datum, key));
+  const recentValues = data.slice(midpoint).map((datum) => getNumericDatumValue(datum, key));
+  const previous = average(previousValues);
+  const recent = average(recentValues);
+
+  return {
+    previous,
+    recent,
+    delta: recent - previous,
+    total: [...previousValues, ...recentValues].reduce((sum, value) => sum + value, 0),
+  };
+}
+
+function getTrendDirection(delta: number, threshold: number): Exclude<TrendDirection, "waiting"> {
+  if (Math.abs(delta) < threshold) return "steady";
+  return delta > 0 ? "up" : "down";
+}
+
+function formatTrendAverage(value: number, unit: string): string {
+  const rounded = Math.round(value * 10) / 10;
+  return `${rounded.toFixed(rounded % 1 === 0 ? 0 : 1)} ${unit}/day`;
+}
+
+function buildAverageHighlight({
+  data,
+  key,
+  label,
+  id,
+  unit,
+  threshold,
+  headlines,
+  emptyDetail,
+}: {
+  data: TrendBarDatum[];
+  key: string;
+  label: string;
+  id: TrendHighlightModel["id"];
+  unit: string;
+  threshold: number;
+  headlines: Record<Exclude<TrendDirection, "waiting">, string>;
+  emptyDetail: string;
+}): TrendHighlightModel {
+  const comparison = getAverageComparison(data, key);
+
+  if (comparison.total === 0) {
+    return {
+      id,
+      label,
+      headline: `${label} needs a few logs`,
+      detail: emptyDetail,
+      direction: "waiting",
+      tone: "default",
+    };
+  }
+
+  const direction = getTrendDirection(comparison.delta, threshold);
+  const tone = direction === "steady" ? "healthy" : direction === "down" && id === "wet" ? "cta" : "info";
+
+  return {
+    id,
+    label,
+    headline: headlines[direction],
+    detail: `Recent days average ${formatTrendAverage(comparison.recent, unit)} vs ${formatTrendAverage(comparison.previous, unit)} earlier.`,
+    direction,
+    tone,
+  };
+}
+
+function buildTrendHighlights({
+  feedChartData,
+  sleepChartData,
+  diaperChartData,
+  poopLogs,
+  days,
+}: {
+  feedChartData: TrendBarDatum[];
+  sleepChartData: TrendBarDatum[];
+  diaperChartData: TrendBarDatum[];
+  poopLogs: PoopEntry[];
+  days: number;
+}): TrendHighlightModel[] {
+  const poopChartData = buildPoopChartData(poopLogs, days);
+  const poopTotal = poopChartData.reduce((sum, datum) => sum + getNumericDatumValue(datum, "poops"), 0);
+  const dirtyTotal = diaperChartData.reduce((sum, datum) => sum + getNumericDatumValue(datum, "dirty"), 0);
+  const stoolData = poopTotal > 0 ? poopChartData : diaperChartData;
+  const stoolKey = poopTotal > 0 ? "poops" : "dirty";
+  const stoolLabel = poopTotal > 0 ? "Poop" : "Dirty diapers";
+
+  return [
+    buildAverageHighlight({
+      data: feedChartData,
+      key: "feeds",
+      label: "Feeds",
+      id: "feed",
+      unit: "feeds",
+      threshold: 0.45,
+      headlines: {
+        up: "Feeds are trending up",
+        down: "Feeds are easing down",
+        steady: "Feed rhythm looks steady",
+      },
+      emptyDetail: "Feed trends will appear once a few entries land in this range.",
+    }),
+    buildAverageHighlight({
+      data: sleepChartData,
+      key: "hours",
+      label: "Sleep",
+      id: "sleep",
+      unit: "hr",
+      threshold: 0.5,
+      headlines: {
+        up: "Sleep time is trending up",
+        down: "Sleep time is trending down",
+        steady: "Sleep time looks steady",
+      },
+      emptyDetail: "Sleep trends will appear once naps or nights are logged.",
+    }),
+    buildAverageHighlight({
+      data: diaperChartData,
+      key: "wet",
+      label: "Wet diapers",
+      id: "wet",
+      unit: "wet",
+      threshold: 0.6,
+      headlines: {
+        up: "Wet diapers are trending up",
+        down: "Wet diapers are lower",
+        steady: "Wet output looks steady",
+      },
+      emptyDetail: "Wet diaper trends will appear once output is logged.",
+    }),
+    dirtyTotal > 0 || poopTotal > 0
+      ? buildAverageHighlight({
+        data: stoolData,
+        key: stoolKey,
+        label: stoolLabel,
+        id: "stool",
+        unit: "logs",
+        threshold: 0.35,
+        headlines: {
+          up: "Stool frequency is trending up",
+          down: "Stool frequency is easing down",
+          steady: "Stool frequency looks steady",
+        },
+        emptyDetail: "Stool trends will appear once a few logs are saved.",
+      })
+      : {
+        id: "stool",
+        label: "Stool",
+        headline: "Stool trend needs a few logs",
+        detail: "Stool frequency will appear once poop or dirty diaper logs are saved.",
+        direction: "waiting",
+        tone: "default",
+      },
+  ];
 }
 
 function buildOverviewRows({
@@ -491,6 +681,9 @@ export function buildTrendsOverviewModel({
   sleepLogs: SleepEntry[];
   diaperLogs: DiaperEntry[];
 }): TrendsOverviewModel {
+  const feedChartData = buildFeedChartData(feedingLogs, days);
+  const sleepChartData = buildSleepChartData(sleepLogs, days);
+  const diaperChartData = buildDiaperChartData(diaperLogs, days);
   const narratives = buildOverviewNarrative({
     child,
     feedingLogs,
@@ -514,21 +707,28 @@ export function buildTrendsOverviewModel({
       poopLogs,
       days,
     }),
+    trendHighlights: buildTrendHighlights({
+      feedChartData,
+      sleepChartData,
+      diaperChartData,
+      poopLogs,
+      days,
+    }),
     overviewNarrative: narratives.overview,
     feedNarrative: narratives.feed,
     sleepNarrative: narratives.sleep,
     diaperNarrative: narratives.diaper,
     poopNarrative: narratives.poop,
     feedChart: {
-      data: buildFeedChartData(feedingLogs, days),
+      data: feedChartData,
       series: [{ key: "feeds", label: "Feeds", color: "var(--color-chart-warm-end)" }],
     },
     sleepChart: {
-      data: buildSleepChartData(sleepLogs, days),
+      data: sleepChartData,
       series: [{ key: "hours", label: "Sleep hours", color: "var(--color-info)" }],
     },
     diaperChart: {
-      data: buildDiaperChartData(diaperLogs, days),
+      data: diaperChartData,
       series: [
         { key: "wet", label: "Wet", color: "var(--color-info)" },
         { key: "dirty", label: "Dirty", color: "var(--color-chart-warm-end)" },

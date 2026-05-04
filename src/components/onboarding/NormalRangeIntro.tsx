@@ -60,7 +60,7 @@ export function NormalRangeIntro({
         </div>
       </motion.div>
 
-      <h2 className="font-[var(--font-display)] text-2xl font-bold text-[var(--color-text)] mb-2 text-center">
+      <h2 className="text-2xl font-bold text-[var(--color-text)] mb-2 text-center">
         Great! Here's what's normal for {child.name}
       </h2>
 

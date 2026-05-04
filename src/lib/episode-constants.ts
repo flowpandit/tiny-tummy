@@ -6,14 +6,44 @@ export const EPISODE_TYPES: {
   description: string;
 }[] = [
   {
+    value: "fever_illness",
+    label: "Fever / illness",
+    description: "Track temperature, symptoms, fluids, medicine, and recovery.",
+  },
+  {
+    value: "stomach_bug",
+    label: "Stomach upset",
+    description: "Track vomiting, diarrhoea, appetite, fluids, and progress.",
+  },
+  {
+    value: "vomiting",
+    label: "Vomiting",
+    description: "Track vomiting, fluids, triggers, and how often it happens.",
+  },
+  {
+    value: "rash_skin",
+    label: "Rash / skin",
+    description: "Track rash changes, discomfort, medicine, and notes.",
+  },
+  {
+    value: "medication_reaction",
+    label: "Medicine / reaction concern",
+    description: "Track medicine timing, symptoms, and possible reactions.",
+  },
+  {
     value: "constipation",
-    label: "Constipation",
+    label: "Constipation concern",
     description: "Track hard stools, straining, hydration, and what you tried.",
   },
   {
     value: "diarrhoea",
     label: "Diarrhoea",
     description: "Track loose stools, fluids, symptoms, and recovery.",
+  },
+  {
+    value: "other",
+    label: "Other health concern",
+    description: "Track any health concern across multiple updates.",
   },
 ];
 
@@ -22,8 +52,10 @@ export const EPISODE_EVENT_TYPES: {
   label: string;
 }[] = [
   { value: "symptom", label: "Symptom" },
+  { value: "temperature", label: "Temperature" },
   { value: "hydration", label: "Hydration" },
   { value: "food", label: "Food" },
+  { value: "medication", label: "Medication" },
   { value: "intervention", label: "Intervention" },
   { value: "progress", label: "Progress" },
 ];
