@@ -252,8 +252,6 @@ function ContextOverviewPage({ model, pageNumber, totalPages }: { model: ReportP
       <ReportMeta model={model} compact />
 
       <section className="tt-care-notes">
-        <IconBadge icon="clipboard" tone="alert" size="hero" />
-        <h2>Care Notes</h2>
         <div className="tt-care-notes__grid">
           {model.context.careNotes.map((note) => (
             <ToneRow key={`${note.label}-${note.value}`} row={note} />
@@ -541,14 +539,14 @@ function InfoRows({ rows, columns = false }: { rows: ReportPreviewRow[]; columns
 }
 
 function DailyStoolChart({ points, noPoopDates }: { points: ReportDailyPoint[]; noPoopDates: string[] }) {
-  const max = Math.max(1, ...points.map((point) => point.stoolCount));
+  const max = getChartScaleMax(points.map((point) => point.stoolCount));
 
   return (
     <section className="tt-chart-card">
       <SectionTitle title="Daily Stool Output" icon="poop" tone="alert" compact />
       <p className="tt-chart-subtitle">Stool count by recent day</p>
       <div className="tt-bar-chart-wrap">
-        <div className="tt-bar-axis" aria-hidden="true"><span>{max}</span><span>{Math.max(1, Math.round(max / 2))}</span><span>0</span></div>
+        <div className="tt-bar-axis" aria-hidden="true"><span>{max}</span><span>{Math.max(1, Math.ceil(max / 2))}</span><span>0</span></div>
         <div className="tt-bar-chart" style={{ "--point-count": points.length } as CSSProperties}>
         {points.map((point) => (
           <div key={point.key} className="tt-bar-point">
@@ -572,7 +570,7 @@ function DailyStoolChart({ points, noPoopDates }: { points: ReportDailyPoint[]; 
 }
 
 function DailyDiaperChart({ points }: { points: ReportDailyPoint[] }) {
-  const max = Math.max(1, ...points.map((point) => point.wetOnly + point.dirtyOnly + point.mixed));
+  const max = getChartScaleMax(points.map((point) => point.wetOnly + point.dirtyOnly + point.mixed));
 
   return (
     <section className="tt-chart-card">
@@ -584,7 +582,7 @@ function DailyDiaperChart({ points }: { points: ReportDailyPoint[] }) {
         <span><i className="tt-legend-box tt-legend-mixed" />Mixed</span>
       </div>
       <div className="tt-bar-chart-wrap">
-        <div className="tt-bar-axis" aria-hidden="true"><span>{max}</span><span>{Math.max(1, Math.round(max / 2))}</span><span>0</span></div>
+        <div className="tt-bar-axis" aria-hidden="true"><span>{max}</span><span>{Math.max(1, Math.ceil(max / 2))}</span><span>0</span></div>
         <div className="tt-bar-chart tt-bar-chart--stacked" style={{ "--point-count": points.length } as CSSProperties}>
         {points.map((point) => {
           const total = point.wetOnly + point.dirtyOnly + point.mixed;
@@ -626,11 +624,12 @@ function StoolTypeTrend({ points }: { points: ReportTypeTrendPoint[] }) {
             ))}
           </div>
           <div className="tt-stool-type-key">
+            <strong className="tt-stool-type-key__title">Bristol Stool Chart (Simplified)</strong>
             {REPORT_STOOL_TYPE_KEY.map((item) => (
               <span key={item.type}>
                 <img src={REPORT_STOOL_TYPE_ICONS[item.type]} alt="" aria-hidden="true" />
                 <strong>T{item.type}</strong>
-                {item.label}
+                <em>{item.label}</em>
               </span>
             ))}
           </div>
@@ -643,15 +642,30 @@ function StoolTypeTrend({ points }: { points: ReportTypeTrendPoint[] }) {
 }
 
 function ColourBreakdown({ items }: { items: ReportColourBreakdownItem[] }) {
-  const gradient = buildDonutGradient(items);
-
   return (
     <section className="tt-chart-card">
       <SectionTitle title="Stool Colour Breakdown" icon="drop" tone="alert" compact />
       <p className="tt-chart-subtitle">Colours observed in this period</p>
       {items.length > 0 ? (
         <div className="tt-colour-breakdown">
-          <div className="tt-donut" style={{ "--donut-gradient": gradient } as CSSProperties}>
+          <div className="tt-donut" aria-hidden="true">
+            <svg viewBox="0 0 42 42">
+              {buildDonutSegments(items).map((segment) => (
+                <circle
+                  key={segment.key}
+                  cx="21"
+                  cy="21"
+                  r="15.915"
+                  pathLength="100"
+                  fill="none"
+                  stroke={segment.color}
+                  strokeWidth="10"
+                  strokeDasharray={`${segment.length} ${100 - segment.length}`}
+                  strokeDashoffset={-segment.offset}
+                  transform="rotate(-90 21 21)"
+                />
+              ))}
+            </svg>
             <span>{items[0]?.percent ?? 0}%</span>
           </div>
           <div className="tt-colour-list">
@@ -997,7 +1011,7 @@ function getIconForLabel(label: string): ReportIconName {
   if (value.includes("no-poop") || value.includes("sleep")) return "moon";
   if (value.includes("stool") || value.includes("poop") || value.includes("consistency")) return "poop";
   if (value.includes("type") || value.includes("quality") || value.includes("pattern") || value.includes("trend")) return "bars";
-  if (value.includes("date") || value.includes("streak") || value.includes("latest") || value.includes("last")) return "calendar";
+  if (value.includes("date") || value.includes("streak") || value.includes("latest") || value.includes("last") || value.includes("start")) return "calendar";
   return "info";
 }
 
@@ -1008,17 +1022,25 @@ function getTimelineFilterIcon(filter: ReportTimelineFilter): ReportIconName {
   return "timeline";
 }
 
-function buildDonutGradient(items: ReportColourBreakdownItem[]): string {
-  if (items.length === 0) return "#efe8dc 0 100%";
+function buildDonutSegments(items: ReportColourBreakdownItem[]) {
+  const total = items.reduce((sum, item) => sum + item.count, 0);
+  let offset = 0;
 
-  let cursor = 0;
-  const stops = items.map((item, index) => {
-    const start = cursor;
-    cursor = index === items.length - 1 ? 100 : Math.min(100, cursor + item.percent);
-    return `${item.color} ${start}% ${cursor}%`;
+  return items.map((item, index) => {
+    const length = index === items.length - 1
+      ? Math.max(0, 100 - offset)
+      : total > 0
+        ? (item.count / total) * 100
+        : 0;
+    const segment = {
+      key: item.value,
+      color: item.color,
+      length,
+      offset,
+    };
+    offset += length;
+    return segment;
   });
-
-  return stops.join(", ");
 }
 
 function EmptyChart({ text }: { text: string }) {
@@ -1027,6 +1049,13 @@ function EmptyChart({ text }: { text: string }) {
 
 function EmptyTable({ text }: { text: string }) {
   return <div className="tt-empty-table">{text}</div>;
+}
+
+function getChartScaleMax(values: number[]) {
+  const max = Math.max(0, ...values);
+  if (max <= 3) return 3;
+  if (max <= 6) return max;
+  return Math.ceil(max / 2) * 2;
 }
 
 function chunkTimelineGroups(groups: ReportTimelineGroup[]): ReportTimelineGroup[][] {

@@ -150,7 +150,7 @@
   grid-template-columns: minmax(0, 1fr) 44mm;
   gap: 5mm;
   align-items: stretch;
-  padding: 0 0 3.6mm;
+  padding: 0 0 4.5mm;
   border-bottom: 1px solid var(--tt-rule);
 }
 
@@ -160,7 +160,7 @@
   flex-direction: column;
   align-items: flex-start;
   justify-content: center;
-  gap: 1.2mm;
+  gap: 0.45mm;
 }
 
 .tt-report-brand {
@@ -247,6 +247,7 @@
 
 .tt-report-patient-details strong {
   display: block;
+  margin-bottom: 0.7mm;
   color: var(--tt-ink);
   font-family: var(--font-sans, Inter, system-ui, sans-serif);
   font-size: 16px;
@@ -398,16 +399,22 @@
 .tt-report-brief {
   position: relative;
   display: grid;
-  grid-template-columns: 30mm minmax(0, 1fr);
-  gap: 8mm;
+  grid-template-columns: 24mm minmax(0, 1fr);
+  gap: 6mm;
   align-items: center;
-  min-height: 41mm;
+  min-height: 35mm;
   margin: 4.7mm 0 4.5mm;
-  padding: 5.3mm 7mm 5.3mm 8mm;
+  padding: 3.4mm 7mm 4.8mm 7mm;
   border: 1px solid #eaded1;
   border-radius: 8px;
   background: linear-gradient(100deg, #fff4e9 0%, #fbf2e7 55%, #fffaf3 100%);
   overflow: hidden;
+}
+
+.tt-report-brief .tt-icon-badge--hero {
+  --tt-badge-size: 23mm;
+  --tt-icon-size: 52%;
+  justify-self: center;
 }
 
 .tt-report-brief::before,
@@ -791,9 +798,12 @@
 }
 
 .tt-bar-value {
+  display: grid;
+  place-items: center;
   color: var(--tt-ink);
   font-size: 10px;
   font-weight: 800;
+  line-height: 1;
 }
 
 .tt-bar-track {
@@ -864,9 +874,11 @@
   display: inline-flex;
   align-items: center;
   gap: 1.5mm;
+  line-height: 1;
 }
 
 .tt-legend-box {
+  flex: 0 0 auto;
   width: 3mm;
   height: 3mm;
   border: 1px solid rgba(35, 27, 24, 0.25);
@@ -921,12 +933,7 @@
 
 .tt-type-trend::before {
   content: "";
-  position: absolute;
-  top: 5mm;
-  right: 8mm;
-  left: 8mm;
-  height: 1px;
-  background: var(--tt-rust);
+  display: none;
 }
 
 .tt-type-point {
@@ -941,16 +948,22 @@
 }
 
 .tt-type-point strong {
-  display: grid;
+  display: inline-flex;
+  box-sizing: border-box;
   width: 10mm;
   height: 10mm;
-  place-items: center;
+  align-items: center;
+  justify-content: center;
+  padding-top: 0.15mm;
   border: 1.5px solid var(--tt-rust);
   border-radius: 999px;
   background: var(--tt-paper);
   color: var(--tt-rust);
   font-size: 12px;
+  font-weight: 800;
   line-height: 1;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
 }
 
 .tt-type-point span {
@@ -965,18 +978,14 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 2mm 5mm;
   margin-top: 4mm;
-  padding: 8mm 5mm 3.2mm;
+  padding: 3.2mm 5mm;
   border: 1px solid var(--tt-rule-soft);
   border-radius: 8px;
   background: rgba(255, 250, 243, 0.92);
 }
 
-.tt-stool-type-key::before {
-  content: "Bristol Stool Chart (Simplified)";
-  position: absolute;
-  top: 2.4mm;
-  left: 0;
-  width: 100%;
+.tt-stool-type-key__title {
+  grid-column: 1 / -1;
   color: var(--tt-ink);
   font-size: 10px;
   font-weight: 700;
@@ -1001,9 +1010,20 @@
   object-fit: contain;
 }
 
-.tt-stool-type-key strong {
+.tt-stool-type-key span strong {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   color: var(--tt-ink);
   font-size: 9px;
+  line-height: 1;
+}
+
+.tt-stool-type-key em {
+  display: block;
+  color: var(--tt-body);
+  font-style: normal;
+  line-height: 1.16;
 }
 
 .tt-colour-breakdown {
@@ -1021,8 +1041,16 @@
   height: 38mm;
   place-items: center;
   border-radius: 999px;
-  background: conic-gradient(var(--donut-gradient));
+  background: #efe8dc;
   box-shadow: inset 0 0 0 1px rgba(60, 43, 32, 0.12);
+}
+
+.tt-donut svg {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 
 .tt-donut::after {
@@ -1050,13 +1078,12 @@
   display: grid;
   grid-template-columns: 4mm minmax(0, 1fr) auto;
   gap: 2.5mm;
-  align-items: start;
+  align-items: center;
 }
 
 .tt-colour-swatch {
   width: 3.5mm;
   height: 3.5mm;
-  margin-top: 0.7mm;
   border: 1px solid rgba(35, 27, 24, 0.26);
   border-radius: 999px;
 }
@@ -1135,11 +1162,10 @@
 .tt-care-notes {
   position: relative;
   display: grid;
-  grid-template-columns: 31mm minmax(0, 1fr);
-  gap: 6mm;
-  align-items: center;
-  margin-bottom: 5mm;
-  padding: 5mm 5mm 5mm 7mm;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: stretch;
+  margin-bottom: 3mm;
+  padding: 3mm 4mm 3mm 6mm;
   background: linear-gradient(100deg, #fff4e9 0%, #fffaf3 100%);
   overflow: hidden;
 }
@@ -1151,17 +1177,22 @@
 }
 
 .tt-care-notes__grid {
-  grid-column: 2;
-  grid-template-columns: repeat(auto-fit, minmax(26mm, 1fr));
+  grid-column: 1;
+  grid-template-columns: repeat(auto-fit, minmax(30mm, 1fr));
   align-items: stretch;
 }
 
 .tt-tone-row {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
-  gap: 2.5mm;
+  gap: 1mm 2mm;
   align-items: center;
   padding: 0 3mm 0 0;
+}
+
+.tt-tone-row .tt-icon-badge {
+  grid-row: 1 / span 2;
+  align-self: center;
 }
 
 .tt-tone-row:not(:last-child) {
@@ -1177,7 +1208,7 @@
 
 .tt-tone-row p {
   grid-column: 2;
-  margin: -1mm 0 0;
+  margin: 0;
   color: var(--tt-muted);
   font-size: 8.6px;
   line-height: 1.2;
@@ -1199,41 +1230,56 @@
   font-size: 24px;
 }
 
+.tt-report-panel--episode > div {
+  min-width: 0;
+}
+
 .tt-report-panel--episode .tt-info-rows--columns {
-  grid-template-columns: repeat(auto-fit, minmax(26mm, 1fr));
-  gap: 0;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.8mm;
+  margin-top: 2.4mm;
 }
 
 .tt-report-panel--episode .tt-info-row {
-  display: block;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.8mm 1.6mm;
+  align-items: center;
   min-height: 0;
-  padding: 0 3mm;
+  padding: 1.5mm 1.8mm;
   border-bottom: 0;
-  border-right: 1px solid var(--tt-rule);
-  text-align: center;
+  border: 1px solid var(--tt-rule-soft);
+  border-radius: 6px;
+  background: rgba(255, 253, 248, 0.64);
+  text-align: left;
 }
 
 .tt-report-panel--episode .tt-info-row:last-child {
-  border-right: 0;
+  border-right: 1px solid var(--tt-rule-soft);
 }
 
 .tt-report-panel--episode .tt-info-row .tt-icon-badge {
-  margin: 0 auto 1mm;
+  grid-column: 1;
+  grid-row: 1 / span 3;
+  align-self: center;
+  margin: 0;
 }
 
 .tt-report-panel--episode .tt-info-row span,
 .tt-report-panel--episode .tt-info-row p {
   display: block;
+  grid-column: 2;
   margin: 0;
   color: var(--tt-body);
   font-size: 9.2px;
   line-height: 1.25;
-  text-align: center;
+  text-align: left;
 }
 
 .tt-report-panel--episode .tt-info-row strong {
   display: block;
-  margin-top: 1.5mm;
+  grid-column: 2;
+  margin-top: 0.4mm;
   color: var(--tt-ink);
   font-family: var(--font-sans, Inter, system-ui, sans-serif);
   font-size: 11.5px;
@@ -1249,7 +1295,7 @@
   align-content: start;
   border: 1px solid var(--tt-rule-soft);
   border-radius: 8px;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .tt-clinical-table > div {
@@ -1382,24 +1428,30 @@
 }
 
 .tt-report-page--context .tt-care-notes {
-  grid-template-columns: 24mm minmax(0, 1fr);
-  gap: 4mm;
-  margin-bottom: 3.2mm;
-  padding: 3.2mm 3.6mm 3.2mm 6mm;
-}
-
-.tt-report-page--context .tt-care-notes .tt-icon-badge--hero {
-  --tt-badge-size: 20mm;
-  --tt-icon-size: 54%;
-}
-
-.tt-report-page--context .tt-care-notes h2 {
-  align-self: center;
-  font-size: 20px;
+  grid-template-columns: minmax(0, 1fr);
+  margin-bottom: 3mm;
+  padding: 2.8mm 3.6mm 2.8mm 6mm;
 }
 
 .tt-report-page--context .tt-care-notes__grid {
-  gap: 1.4mm 2mm;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.6mm 2.4mm;
+}
+
+.tt-report-page--context .tt-care-notes .tt-tone-row {
+  min-height: 11mm;
+  padding: 1.6mm 2mm;
+  border: 1px solid var(--tt-rule-soft);
+  border-radius: 6px;
+  background: rgba(255, 253, 248, 0.58);
+}
+
+.tt-report-page--context .tt-care-notes .tt-tone-row:not(:last-child) {
+  border-right: 1px solid var(--tt-rule-soft);
+}
+
+.tt-report-page--context .tt-care-notes .tt-icon-badge {
+  --tt-badge-size: 7.8mm;
 }
 
 .tt-report-page--context .tt-tone-row {
@@ -1477,7 +1529,7 @@
 }
 
 .tt-report-page--context .tt-report-panel--episode .tt-info-row {
-  padding: 0 2mm;
+  padding: 1.4mm 1.5mm;
 }
 
 .tt-report-page--context .tt-report-panel--episode .tt-info-row span,
@@ -1611,14 +1663,14 @@
   position: absolute;
   top: 0;
   bottom: 3mm;
-  left: 0;
+  left: 2.2mm;
   width: 1px;
   background: rgba(200, 80, 50, 0.45);
 }
 
 .tt-timeline-date {
   position: relative;
-  padding: 3mm 4mm 2mm 5.5mm;
+  padding: 3mm 4mm 2mm 7.5mm;
   border-top: 1px solid var(--tt-rule-soft);
   background: rgba(255, 250, 244, 0.96);
   color: var(--tt-rust);
@@ -1631,7 +1683,7 @@
   content: "";
   position: absolute;
   top: 4.5mm;
-  left: -1.25mm;
+  left: 1mm;
   width: 2.5mm;
   height: 2.5mm;
   border-radius: 999px;
@@ -1838,7 +1890,7 @@ body.tt-report-html-pdf-export .tt-report-page__content {
 body.tt-report-html-pdf-export .tt-report-header {
   grid-template-columns: minmax(0, 1fr) 44mm !important;
   align-items: stretch !important;
-  padding-bottom: 3.6mm !important;
+  padding-bottom: 4.5mm !important;
 }
 
 body.tt-report-html-pdf-export .tt-report-patient-card {
@@ -1860,10 +1912,16 @@ body.tt-report-html-pdf-export .tt-report-meta__note {
   border-left: 1px solid var(--tt-rule) !important;
 }
 
-body.tt-report-html-pdf-export .tt-report-brief,
-body.tt-report-html-pdf-export .tt-care-notes,
 body.tt-report-html-pdf-export .tt-report-panel--episode {
   grid-template-columns: 30mm minmax(0, 1fr) !important;
+}
+
+body.tt-report-html-pdf-export .tt-report-brief {
+  grid-template-columns: 24mm minmax(0, 1fr) !important;
+}
+
+body.tt-report-html-pdf-export .tt-care-notes {
+  grid-template-columns: minmax(0, 1fr) !important;
 }
 
 body.tt-report-html-pdf-export .tt-report-panel--episode {
@@ -1895,7 +1953,7 @@ body.tt-report-html-pdf-export .tt-metric-grid--compact {
 }
 
 body.tt-report-html-pdf-export .tt-care-notes__grid {
-  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
 }
 
 body.tt-report-html-pdf-export .tt-timeline-tabs {
@@ -1924,9 +1982,17 @@ body.tt-report-html-pdf-export .tt-feeding-table .tt-table-row {
 }
 
 body.tt-report-html-pdf-export .tt-report-page--context .tt-report-brief,
-body.tt-report-html-pdf-export .tt-report-page--context .tt-care-notes,
 body.tt-report-html-pdf-export .tt-report-page--context .tt-report-panel--episode {
   grid-template-columns: 24mm minmax(0, 1fr) !important;
+}
+
+body.tt-report-html-pdf-export .tt-report-page--context .tt-care-notes {
+  grid-template-columns: minmax(0, 1fr) !important;
+}
+
+body.tt-report-html-pdf-export .tt-report-page--context .tt-care-notes__grid,
+body.tt-report-html-pdf-export .tt-report-page--context .tt-report-panel--episode .tt-info-rows--columns {
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
 }
 
 body.tt-report-html-pdf-export .tt-report-page--context .tt-report-panel--episode {
@@ -1934,19 +2000,33 @@ body.tt-report-html-pdf-export .tt-report-page--context .tt-report-panel--episod
 }
 
 body.tt-report-html-pdf-export .tt-report-page--context .tt-symptom-table .tt-table-head {
-  grid-template-columns: 28mm 18mm 22mm minmax(0, 1fr) !important;
+  grid-template-columns: 23mm 14mm 19mm minmax(0, 1fr) !important;
 }
 
 body.tt-report-html-pdf-export .tt-report-page--context .tt-symptom-table .tt-table-row {
-  grid-template-columns: 5.5mm 22.5mm 18mm 22mm minmax(0, 1fr) !important;
+  grid-template-columns: 5mm 18mm 14mm 19mm minmax(0, 1fr) !important;
 }
 
 body.tt-report-html-pdf-export .tt-report-page--context .tt-feeding-table .tt-table-head {
-  grid-template-columns: 28mm 16mm minmax(0, 1fr) !important;
+  grid-template-columns: 23mm 12mm minmax(0, 1fr) !important;
 }
 
 body.tt-report-html-pdf-export .tt-report-page--context .tt-feeding-table .tt-table-row {
-  grid-template-columns: 5.5mm 22.5mm 16mm minmax(0, 1fr) !important;
+  grid-template-columns: 5mm 18mm 12mm minmax(0, 1fr) !important;
+}
+
+body.tt-report-html-pdf-export .tt-report-page--context .tt-table-head,
+body.tt-report-html-pdf-export .tt-report-page--context .tt-table-row {
+  gap: 1mm !important;
+  padding-right: 2mm !important;
+  padding-left: 2mm !important;
+}
+
+body.tt-report-html-pdf-export .tt-report-page--context .tt-table-row strong,
+body.tt-report-html-pdf-export .tt-report-page--context .tt-table-row span,
+body.tt-report-html-pdf-export .tt-report-page--context .tt-table-row p {
+  font-size: 8.2px !important;
+  line-height: 1.18 !important;
 }
 
 @page {
