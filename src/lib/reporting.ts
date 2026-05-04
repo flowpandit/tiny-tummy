@@ -234,7 +234,28 @@ function getVisiblePoopLogs(logs: PoopEntry[], diaperLogs: DiaperEntry[]): PoopE
       .map((log) => log.linked_poop_log_id)
       .filter((id): id is string => Boolean(id)),
   );
-  return logs.filter((log) => !linkedPoopIds.has(log.id));
+  const diaperStoolKeys = new Set(
+    diaperLogs
+      .filter(hasStoolInDiaper)
+      .map((log) => [
+        log.logged_at,
+        log.stool_type ?? "",
+        log.color ?? "",
+        log.size ?? "",
+      ].join("|")),
+  );
+
+  return logs.filter((log) => {
+    if (linkedPoopIds.has(log.id)) return false;
+    if (log.is_no_poop === 1) return true;
+    const logKey = [
+      log.logged_at,
+      log.stool_type ?? "",
+      log.color ?? "",
+      log.size ?? "",
+    ].join("|");
+    return !diaperStoolKeys.has(logKey);
+  });
 }
 
 function buildReportStoolEvents(logs: PoopEntry[], diaperLogs: DiaperEntry[]): ReportStoolEvent[] {
@@ -444,6 +465,7 @@ function buildDashboardStats(input: {
   const actualPoops = input.stoolEvents.filter((log) => log.is_no_poop === 0);
   const avgStoolsPerDay = actualPoops.length / input.dayCount;
   const longestNoPoopStreak = getLongestNoPoopStreak(input.stoolEvents);
+  const noPoopMarkers = input.stoolEvents.filter((log) => log.is_no_poop === 1).length;
   const feedSessionsPerDay = input.feedingLogs.length / input.dayCount;
   const bottleVolumePerDay = input.feedingLogs.reduce((sum, log) => sum + (log.amount_ml ?? 0), 0) / input.dayCount;
   const breastfeedingMinutesPerDay = input.feedingLogs.reduce((sum, log) => sum + (log.duration_minutes ?? 0), 0) / input.dayCount;
@@ -456,9 +478,11 @@ function buildDashboardStats(input: {
       detail: `${actualPoops.length} stool${actualPoops.length === 1 ? "" : "s"} logged`,
     },
     {
-      label: "Longest no-poop streak",
-      value: longestNoPoopStreak > 0 ? `${longestNoPoopStreak}d` : "None",
-      detail: longestNoPoopStreak > 0 ? "Based on marked no-poop days" : "No streak logged",
+      label: "No-poop markers",
+      value: noPoopMarkers > 0 ? String(noPoopMarkers) : "None",
+      detail: longestNoPoopStreak > 0
+        ? `Longest streak ${longestNoPoopStreak} day${longestNoPoopStreak === 1 ? "" : "s"}`
+        : "No marked no-poop days",
     },
     {
       label: "Dirty diapers",
@@ -602,6 +626,40 @@ function buildChartData(
   };
 }
 
+function getSymptomSeverityRank(severity: SymptomEntry["severity"]): number {
+  if (severity === "severe") return 3;
+  if (severity === "moderate") return 2;
+  return 1;
+}
+
+function formatReportSymptom(log: SymptomEntry, unitSystem: UnitSystem): string {
+  const detailParts = [
+    getSymptomSeverityLabel(log.severity),
+    log.temperature_c !== null ? formatTemperatureValue(log.temperature_c, getDefaultTemperatureUnit(unitSystem)) : null,
+    log.temperature_c !== null ? getTemperatureMethodLabel(log.temperature_method)?.toLowerCase() : null,
+  ].filter(Boolean);
+
+  return detailParts.length > 0
+    ? `${getSymptomTypeLabel(log.symptom_type)} (${detailParts.join(", ")})`
+    : getSymptomTypeLabel(log.symptom_type);
+}
+
+function buildLinkedSymptomSummary(symptoms: SymptomEntry[], unitSystem: UnitSystem): string | null {
+  if (symptoms.length === 0) return null;
+
+  const sortedSymptoms = [...symptoms].sort((left, right) => {
+    const severityDiff = getSymptomSeverityRank(right.severity) - getSymptomSeverityRank(left.severity);
+    if (severityDiff !== 0) return severityDiff;
+    return left.logged_at < right.logged_at ? 1 : -1;
+  });
+  const shown = sortedSymptoms.slice(0, 3).map((log) => formatReportSymptom(log, unitSystem));
+  const remaining = sortedSymptoms.length - shown.length;
+
+  return remaining > 0
+    ? `${shown.join("; ")}; +${remaining} more`
+    : shown.join("; ");
+}
+
 function buildContextSections(input: {
   reportKind: ReportKind;
   stoolEvents: ReportStoolEvent[];
@@ -689,35 +747,45 @@ function buildContextSections(input: {
 
   if (input.options.includeEpisodeSummary || input.options.includeEpisodes) {
     const rows = input.activeEpisodeGroup
-      ? [
-          {
-            title: `${getEpisodeTypeLabel(input.activeEpisodeGroup.episode.episode_type)} (active)`,
-            meta: `Started ${formatDate(input.activeEpisodeGroup.episode.started_at)}`,
+      ? (() => {
+          const linkedSymptoms = input.symptomLogs.filter((log) => log.episode_id === input.activeEpisodeGroup?.episode.id);
+          const linkedSymptomSummary = buildLinkedSymptomSummary(linkedSymptoms, input.unitSystem);
+          const latestEvent = [...input.activeEpisodeGroup.events].sort((left, right) => (left.logged_at < right.logged_at ? 1 : -1))[0] ?? null;
+          return [
+            {
+              title: `${getEpisodeTypeLabel(input.activeEpisodeGroup.episode.episode_type)} (active)`,
+              meta: `Started ${formatDate(input.activeEpisodeGroup.episode.started_at)}`,
+              detail: [
+                input.activeEpisodeGroup.episode.summary ? `Summary: ${input.activeEpisodeGroup.episode.summary}` : null,
+                linkedSymptomSummary ? `Linked symptoms: ${linkedSymptomSummary}` : "No linked symptoms logged",
+                `${input.activeEpisodeGroup.events.length} update${input.activeEpisodeGroup.events.length === 1 ? "" : "s"} in range`,
+                latestEvent ? `Latest update: ${latestEvent.title} on ${formatDate(latestEvent.logged_at)}` : null,
+                input.activeEpisodeGroup.episode.outcome ? `Outcome: ${input.activeEpisodeGroup.episode.outcome}` : null,
+              ].filter(Boolean).join(" · "),
+            },
+          ];
+        })()
+      : input.episodeGroups.slice(0, 3).map(({ episode, events }) => {
+          const linkedSymptomSummary = buildLinkedSymptomSummary(
+            input.symptomLogs.filter((log) => log.episode_id === episode.id),
+            input.unitSystem,
+          );
+          const latestEvent = [...events].sort((left, right) => (left.logged_at < right.logged_at ? 1 : -1))[0] ?? null;
+          return {
+            title: getEpisodeTypeLabel(episode.episode_type),
+            meta: [
+              episode.status === "active" ? "Active" : "Resolved",
+              `Started ${formatDate(episode.started_at)}`,
+              episode.ended_at ? `Ended ${formatDate(episode.ended_at)}` : null,
+            ].filter(Boolean).join(" · "),
             detail: [
-              input.activeEpisodeGroup.episode.summary,
-              `${input.symptomLogs.filter((log) => log.episode_id === input.activeEpisodeGroup?.episode.id).length} linked symptom${input.symptomLogs.filter((log) => log.episode_id === input.activeEpisodeGroup?.episode.id).length === 1 ? "" : "s"}`,
-              `${input.activeEpisodeGroup.events.length} update${input.activeEpisodeGroup.events.length === 1 ? "" : "s"} in range`,
-              input.activeEpisodeGroup.events[0]
-                ? `Latest update: ${input.activeEpisodeGroup.events[0].title} on ${formatDate(input.activeEpisodeGroup.events[0].logged_at)}`
-                : null,
-              input.activeEpisodeGroup.episode.outcome ? `Outcome: ${input.activeEpisodeGroup.episode.outcome}` : null,
-            ].filter(Boolean).join(" "),
-          },
-        ]
-      : input.episodeGroups.slice(0, 3).map(({ episode, events }) => ({
-          title: getEpisodeTypeLabel(episode.episode_type),
-          meta: [
-            episode.status === "active" ? "Active" : "Resolved",
-            `Started ${formatDate(episode.started_at)}`,
-            episode.ended_at ? `Ended ${formatDate(episode.ended_at)}` : null,
-          ].filter(Boolean).join(" · "),
-          detail: [
-            `${input.symptomLogs.filter((log) => log.episode_id === episode.id).length} linked symptom${input.symptomLogs.filter((log) => log.episode_id === episode.id).length === 1 ? "" : "s"}`,
-            `${events.length} update${events.length === 1 ? "" : "s"} in range`,
-            events[0] ? `Latest update: ${events[0].title}` : null,
-            episode.outcome ? `Outcome: ${episode.outcome}` : null,
-          ].filter(Boolean).join(" · "),
-        }));
+              linkedSymptomSummary ? `Linked symptoms: ${linkedSymptomSummary}` : "No linked symptoms logged",
+              `${events.length} update${events.length === 1 ? "" : "s"} in range`,
+              latestEvent ? `Latest update: ${latestEvent.title} on ${formatDate(latestEvent.logged_at)}` : null,
+              episode.outcome ? `Outcome: ${episode.outcome}` : null,
+            ].filter(Boolean).join(" · "),
+          };
+        });
 
     if (rows.length > 0) {
       sections.push({

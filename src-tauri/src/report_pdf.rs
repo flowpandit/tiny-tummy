@@ -29,12 +29,29 @@ pub struct ReportPdfPayload {
     pub child_avatar_data_url: Option<String>,
     pub generated_at_label: String,
     pub patient_summary: String,
+    pub doctor_brief: ReportPdfDoctorBrief,
     pub attention_chips: Vec<ReportPdfChip>,
     pub dashboard_stats: Vec<ReportPdfStat>,
     pub summary_cards: Vec<ReportPdfSummaryCard>,
     pub charts: Vec<ReportPdfChart>,
     pub context_sections: Vec<ReportPdfSection>,
     pub timeline: Vec<ReportPdfTimelineRow>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ReportPdfDoctorBrief {
+    pub headline: String,
+    pub rows: Vec<ReportPdfBriefRow>,
+    pub questions: Vec<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ReportPdfBriefRow {
+    pub label: String,
+    pub value: String,
+    pub detail: String,
+    pub tone: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -56,7 +73,6 @@ pub struct ReportPdfSummaryCard {
     pub title: String,
     pub value: String,
     pub detail: String,
-    pub tone: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -132,13 +148,6 @@ struct ReportOverviewItem {
     label: String,
     value: String,
     detail: String,
-}
-
-struct ReportInsightItem {
-    title: String,
-    value: String,
-    detail: String,
-    tone: String,
 }
 
 struct AtAGlanceRow {
@@ -286,9 +295,9 @@ impl PdfLayout {
     fn draw_page_one_summary(&mut self, payload: &ReportPdfPayload) -> Result<(), String> {
         self.draw_cover_hero(payload)?;
         self.add_gap(6.0);
+        self.draw_doctor_brief(&payload.doctor_brief)?;
+        self.add_gap(5.0);
         self.draw_overview_tiles(payload)?;
-        self.add_gap(6.0);
-        self.draw_insight_cards(payload)?;
         Ok(())
     }
 
@@ -425,6 +434,96 @@ impl PdfLayout {
         Ok(())
     }
 
+    fn draw_doctor_brief(&mut self, brief: &ReportPdfDoctorBrief) -> Result<(), String> {
+        let label_height = 8.0;
+        let panel_height = 78.0;
+        self.ensure_space(label_height + panel_height);
+        self.draw_section_label("Doctor brief", self.y_mm);
+
+        let x = MARGIN_LEFT_MM;
+        let y = self.y_mm + label_height;
+        self.draw_card(x, y, CONTENT_WIDTH_MM, panel_height, Some(color_surface()));
+        self.draw_wrapped_text_at(
+            &sanitize_text(&brief.headline),
+            x + 4.0,
+            y + 4.0,
+            CONTENT_WIDTH_MM - 8.0,
+            9.8,
+            BuiltinFont::HelveticaBold,
+            color_ink(),
+        );
+
+        let rows_y = y + 18.0;
+        let columns = 2usize;
+        let gap = 4.0;
+        let row_height = 19.0;
+        let row_width = (CONTENT_WIDTH_MM - gap - 8.0) / columns as f32;
+        for (index, row) in brief.rows.iter().take(4).enumerate() {
+            let col = index % columns;
+            let row_index = index / columns;
+            let row_x = x + 4.0 + col as f32 * (row_width + gap);
+            let row_y = rows_y + row_index as f32 * row_height;
+            self.draw_filled_rect(row_x, row_y, row_width, row_height - 2.0, tone_fill(&row.tone));
+            self.draw_wrapped_text_at(
+                &sanitize_text(&row.label),
+                row_x + 2.6,
+                row_y + 2.0,
+                row_width - 5.2,
+                5.9,
+                BuiltinFont::HelveticaBold,
+                tone_text(&row.tone),
+            );
+            self.draw_wrapped_text_at(
+                &sanitize_text(&truncate_text(&row.value, 34)),
+                row_x + 2.6,
+                row_y + 7.0,
+                row_width - 5.2,
+                7.4,
+                BuiltinFont::HelveticaBold,
+                color_ink(),
+            );
+            self.draw_wrapped_text_at(
+                &sanitize_text(&truncate_text(&row.detail, 72)),
+                row_x + 2.6,
+                row_y + 12.8,
+                row_width - 5.2,
+                5.8,
+                BuiltinFont::Helvetica,
+                color_body(),
+            );
+        }
+
+        let question_text = brief
+            .questions
+            .iter()
+            .take(2)
+            .enumerate()
+            .map(|(index, question)| format!("{}. {}", index + 1, question))
+            .collect::<Vec<_>>()
+            .join("  ");
+        self.draw_wrapped_text_at(
+            "Questions to ask",
+            x + 4.0,
+            y + 58.2,
+            34.0,
+            6.4,
+            BuiltinFont::HelveticaBold,
+            color_body(),
+        );
+        self.draw_wrapped_text_at(
+            &sanitize_text(&truncate_text(&question_text, 180)),
+            x + 42.0,
+            y + 58.2,
+            CONTENT_WIDTH_MM - 46.0,
+            6.2,
+            BuiltinFont::Helvetica,
+            color_muted(),
+        );
+
+        self.y_mm += label_height + panel_height;
+        Ok(())
+    }
+
     fn draw_overview_tiles(&mut self, payload: &ReportPdfPayload) -> Result<(), String> {
         let items = build_overview_items(payload);
         if items.is_empty() {
@@ -442,7 +541,7 @@ impl PdfLayout {
             label_height + rows as f32 * card_height + rows.saturating_sub(1) as f32 * gap;
         self.ensure_space(total_height);
 
-        self.draw_section_label("Executive overview", self.y_mm);
+        self.draw_section_label("Supporting metrics", self.y_mm);
         let card_y = self.y_mm + label_height;
 
         for (index, item) in items.iter().take(visible).enumerate() {
@@ -478,64 +577,6 @@ impl PdfLayout {
                 7.1,
                 BuiltinFont::Helvetica,
                 color_muted(),
-            );
-        }
-
-        self.y_mm += total_height;
-        Ok(())
-    }
-
-    fn draw_insight_cards(&mut self, payload: &ReportPdfPayload) -> Result<(), String> {
-        let items = build_insight_items(payload);
-        if items.is_empty() {
-            return Ok(());
-        }
-
-        let visible = items.len().min(4);
-        let label_height = 8.0;
-        let card_height = 30.5;
-        let columns = 2usize;
-        let rows = (visible + columns - 1) / columns;
-        let gap = 4.0;
-        let card_width = (CONTENT_WIDTH_MM - gap) / columns as f32;
-        let total_height =
-            label_height + rows as f32 * card_height + rows.saturating_sub(1) as f32 * gap;
-        self.ensure_space(total_height);
-
-        self.draw_section_label("Key insights", self.y_mm);
-        let card_y = self.y_mm + label_height;
-        for (index, card) in items.iter().take(visible).enumerate() {
-            let row = index / columns;
-            let col = index % columns;
-            let x = MARGIN_LEFT_MM + col as f32 * (card_width + gap);
-            let y = card_y + row as f32 * (card_height + gap);
-            self.draw_card(x, y, card_width, card_height, Some(tone_fill(&card.tone)));
-            self.draw_wrapped_text_at(
-                &sanitize_text(&card.title),
-                x + 3.0,
-                y + 3.8,
-                card_width - 6.0,
-                7.5,
-                BuiltinFont::HelveticaBold,
-                tone_text(&card.tone),
-            );
-            self.draw_wrapped_text_at(
-                &sanitize_text(&card.value),
-                x + 3.0,
-                y + 10.8,
-                card_width - 9.0,
-                insight_value_font_size(&card.value),
-                BuiltinFont::HelveticaBold,
-                color_ink(),
-            );
-            self.draw_wrapped_text_at(
-                &sanitize_text(&truncate_text(&card.detail, 108)),
-                x + 3.0,
-                y + 18.7,
-                card_width - 9.0,
-                7.5,
-                BuiltinFont::Helvetica,
-                color_body(),
             );
         }
 
@@ -599,7 +640,7 @@ impl PdfLayout {
         let columns = 2usize;
         let gap = 4.0;
         let chart_width = (CONTENT_WIDTH_MM - gap) / columns as f32;
-        let chart_height = 60.0;
+        let chart_height = 64.0;
         let rows = (visible + columns - 1) / columns;
         let total_height = rows as f32 * chart_height + rows.saturating_sub(1) as f32 * gap;
         self.ensure_space(total_height);
@@ -952,7 +993,7 @@ impl PdfLayout {
                 }
                 self.draw_circle(center_x, center_y, 1.25, color_peach_text());
                 let value_label = chart_point_value_label(chart, point.primary_value);
-                let value_label_width = if is_stool_type_chart { 14.0 } else { 6.0 };
+                let value_label_width = if is_stool_type_chart { 6.5 } else { 6.0 };
                 let value_label_x = (center_x - value_label_width / 2.0)
                     .max(start_x)
                     .min(x_mm + width_mm - 4.0 - value_label_width);
@@ -1043,26 +1084,26 @@ impl PdfLayout {
         }
 
         if is_stool_type_chart {
-            let legend_y = y_mm + height_mm - 10.0;
-            self.draw_filled_rect(x_mm + 3.0, legend_y + 1.2, 2.6, 2.6, color_peach_text());
-            self.draw_wrapped_text_at(
-                &sanitize_text(&chart.primary_label),
-                x_mm + 7.0,
-                legend_y,
-                width_mm - 10.0,
-                5.9,
-                BuiltinFont::Helvetica,
-                color_body(),
-            );
-            self.draw_wrapped_text_at(
-                stool_type_legend_text(),
+            let legend_y = y_mm + height_mm - 13.8;
+            self.draw_chart_legend_item(
                 x_mm + 3.0,
-                legend_y + 4.0,
-                width_mm - 6.0,
-                4.9,
-                BuiltinFont::Helvetica,
-                color_muted(),
+                legend_y,
+                x_mm + 7.0,
+                width_mm - 10.0,
+                &chart.primary_label,
+                color_peach_text(),
             );
+            for (index, line) in stool_type_legend_lines().iter().enumerate() {
+                self.draw_wrapped_text_at(
+                    line,
+                    x_mm + 3.0,
+                    legend_y + 5.2 + index as f32 * 4.4,
+                    width_mm - 6.0,
+                    4.8,
+                    BuiltinFont::Helvetica,
+                    color_muted(),
+                );
+            }
             return Ok(());
         }
 
@@ -1072,32 +1113,56 @@ impl PdfLayout {
         } else {
             width_mm - 10.0
         };
-        self.draw_filled_rect(x_mm + 3.0, legend_y + 1.0, 2.6, 2.6, color_peach_text());
-        self.draw_wrapped_text_at(
-            &sanitize_text(&chart.primary_label),
-            x_mm + 7.0,
+        self.draw_chart_legend_item(
+            x_mm + 3.0,
             legend_y,
+            x_mm + 7.0,
             primary_legend_width,
-            6.2,
-            BuiltinFont::Helvetica,
-            color_body(),
+            &chart.primary_label,
+            color_peach_text(),
         );
 
         if let Some(label) = &chart.secondary_label {
             let secondary_x = x_mm + width_mm * 0.56;
-            self.draw_filled_rect(secondary_x, legend_y + 1.0, 2.6, 2.6, color_blue());
-            self.draw_wrapped_text_at(
-                &sanitize_text(label),
-                secondary_x + 4.0,
+            self.draw_chart_legend_item(
+                secondary_x,
                 legend_y,
+                secondary_x + 4.0,
                 width_mm * 0.36,
-                6.2,
-                BuiltinFont::Helvetica,
-                color_body(),
+                label,
+                color_blue(),
             );
         }
 
         Ok(())
+    }
+
+    fn draw_chart_legend_item(
+        &mut self,
+        swatch_x_mm: f32,
+        baseline_y_mm: f32,
+        label_x_mm: f32,
+        label_width_mm: f32,
+        label: &str,
+        swatch_color: Color,
+    ) {
+        let swatch_size = 2.6;
+        self.draw_filled_rect(
+            swatch_x_mm,
+            baseline_y_mm - swatch_size + 0.45,
+            swatch_size,
+            swatch_size,
+            swatch_color,
+        );
+        self.draw_wrapped_text_at(
+            &sanitize_text(label),
+            label_x_mm,
+            baseline_y_mm,
+            label_width_mm,
+            6.2,
+            BuiltinFont::Helvetica,
+            color_body(),
+        );
     }
 
     fn draw_stool_type_axis_labels(
@@ -2161,13 +2226,6 @@ fn overview_value_font_size(value: &str) -> f32 {
     }
 }
 
-fn insight_value_font_size(value: &str) -> f32 {
-    match sanitize_text(value).chars().count() {
-        0..=18 => 9.8,
-        _ => 8.8,
-    }
-}
-
 fn truncate_text(input: &str, max_chars: usize) -> String {
     let mut chars = input.chars();
     let mut output = String::new();
@@ -2192,8 +2250,10 @@ fn build_overview_items(payload: &ReportPdfPayload) -> Vec<ReportOverviewItem> {
     let stool_card = find_summary_card(payload, "Stool pattern");
     let feed_card = find_summary_card(payload, "Feed rhythm");
     let symptom_card = find_summary_card(payload, "Symptoms & episodes");
+    let tummy_card = find_summary_card(payload, "Tummy context");
     let growth_card = find_summary_card(payload, "Growth & milestones");
-    let no_poop_stat = find_stat(payload, "Longest no-poop streak");
+    let no_poop_stat = find_stat(payload, "No-poop markers")
+        .or_else(|| find_stat(payload, "Longest no-poop streak"));
     let bottle_stat = payload.dashboard_stats.iter().find(|stat| {
         stat.label == "Bottle volume / day" || stat.label == "Breastfeeding duration / day"
     });
@@ -2222,16 +2282,14 @@ fn build_overview_items(payload: &ReportPdfPayload) -> Vec<ReportOverviewItem> {
     if let Some(stat) = no_poop_stat {
         items.push(ReportOverviewItem {
             label: "No-poop days".to_string(),
-            value: if no_poop_total > 0 {
-                format!(
-                    "{} day{}",
-                    no_poop_total,
-                    if no_poop_total == 1 { "" } else { "s" }
-                )
+            value: if stat.label == "No-poop markers" {
+                stat.value.clone()
+            } else if no_poop_total > 0 {
+                format!("{} day{}", no_poop_total, if no_poop_total == 1 { "" } else { "s" })
             } else {
                 "None".to_string()
             },
-            detail: format!("Longest streak {}", stat.value),
+            detail: stat.detail.clone().unwrap_or_else(|| format!("Longest streak {}", stat.value)),
         });
     }
 
@@ -2267,6 +2325,14 @@ fn build_overview_items(payload: &ReportPdfPayload) -> Vec<ReportOverviewItem> {
     if let Some(card) = symptom_card {
         items.push(ReportOverviewItem {
             label: "Symptoms".to_string(),
+            value: card.value.clone(),
+            detail: card.detail.clone(),
+        });
+    }
+
+    if let Some(card) = tummy_card {
+        items.push(ReportOverviewItem {
+            label: "Tummy context".to_string(),
             value: card.value.clone(),
             detail: card.detail.clone(),
         });
@@ -2316,25 +2382,6 @@ fn build_overview_items(payload: &ReportPdfPayload) -> Vec<ReportOverviewItem> {
     items
 }
 
-fn build_insight_items(payload: &ReportPdfPayload) -> Vec<ReportInsightItem> {
-    let mut items = Vec::new();
-
-    for card in &payload.summary_cards {
-        if items.len() >= 4 {
-            break;
-        }
-
-        items.push(ReportInsightItem {
-            title: card.title.clone(),
-            value: card.value.clone(),
-            detail: card.detail.clone(),
-            tone: card.tone.clone(),
-        });
-    }
-
-    items
-}
-
 fn build_at_a_glance_rows(payload: &ReportPdfPayload) -> Vec<AtAGlanceRow> {
     let mut rows = Vec::new();
 
@@ -2371,6 +2418,7 @@ fn overview_label(label: &str) -> &str {
     match label {
         "Avg stools / day" => "Stool count",
         "Longest no-poop streak" => "No-poop days",
+        "No-poop markers" => "No-poop days",
         "Feed sessions / day" => "Feed sessions",
         "Bottle volume / day" => "Bottle volume",
         "Breastfeeding duration / day" => "Nursing time",
@@ -2441,19 +2489,22 @@ fn chart_point_value_label(chart: &ReportPdfChart, value: i64) -> String {
 
 fn stool_type_compact_label(value: i64) -> &'static str {
     match value {
-        1 => "T1 hard",
-        2 => "T2 lumpy",
-        3 => "T3 cracked",
-        4 => "T4 smooth",
-        5 => "T5 soft",
-        6 => "T6 mushy",
-        7 => "T7 watery",
+        1 => "T1",
+        2 => "T2",
+        3 => "T3",
+        4 => "T4",
+        5 => "T5",
+        6 => "T6",
+        7 => "T7",
         _ => "Type ?",
     }
 }
 
-fn stool_type_legend_text() -> &'static str {
-    "T1 hard pellets, T2 lumpy, T3 cracked, T4 smooth, T5 soft, T6 mushy, T7 watery"
+fn stool_type_legend_lines() -> [&'static str; 2] {
+    [
+        "T1 hard pellets, T2 lumpy, T3 cracked, T4 smooth",
+        "T5 soft, T6 mushy, T7 watery",
+    ]
 }
 
 fn cover_title_lines(title: &str) -> (String, String) {
@@ -2598,6 +2649,27 @@ mod tests {
             child_avatar_data_url: None,
             generated_at_label: "Generated by Tiny Tummy | Mar 31, 2026".to_string(),
             patient_summary: "Sam · DOB 2025-09-30 · 6 months old · Diet mixed".to_string(),
+            doctor_brief: ReportPdfDoctorBrief {
+                headline: "Loose stools should be reviewed with recent symptoms.".to_string(),
+                rows: vec![
+                    ReportPdfBriefRow {
+                        label: "Stool signal".to_string(),
+                        value: "2 loose stools".to_string(),
+                        detail: "Type 6-7 stool pattern on Mar 12.".to_string(),
+                        tone: "caution".to_string(),
+                    },
+                    ReportPdfBriefRow {
+                        label: "Related context".to_string(),
+                        value: "1 symptom".to_string(),
+                        detail: "Symptoms: Straining (moderate).".to_string(),
+                        tone: "info".to_string(),
+                    },
+                ],
+                questions: vec![
+                    "Could this stool change be related to illness or diet?".to_string(),
+                    "What changes should trigger follow-up?".to_string(),
+                ],
+            },
             attention_chips: vec![ReportPdfChip {
                 tone: "caution".to_string(),
                 text: "No-poop streak recorded".to_string(),
@@ -2630,25 +2702,21 @@ mod tests {
                     title: "Stool pattern".to_string(),
                     value: "6 stools".to_string(),
                     detail: "Most common type 4 · Most common color yellow".to_string(),
-                    tone: "healthy".to_string(),
                 },
                 ReportPdfSummaryCard {
                     title: "Feed rhythm".to_string(),
                     value: "192 feeds".to_string(),
                     detail: "6.4 feed sessions per day".to_string(),
-                    tone: "info".to_string(),
                 },
                 ReportPdfSummaryCard {
                     title: "Symptoms & episodes".to_string(),
                     value: "1 symptom".to_string(),
                     detail: "Review symptom details in the table view".to_string(),
-                    tone: "caution".to_string(),
                 },
                 ReportPdfSummaryCard {
                     title: "Growth & milestones".to_string(),
                     value: "1 growth · 2 milestones".to_string(),
                     detail: "Recent measurements and context included".to_string(),
-                    tone: "info".to_string(),
                 },
             ],
             charts: vec![

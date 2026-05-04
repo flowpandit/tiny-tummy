@@ -220,7 +220,21 @@ test("report data links symptom context and de-duplicates generated episode symp
   assert.deepEqual(data.timeline.map((row) => row.eventType), ["Symptom", "Episode"]);
   assert.match(data.timeline[0]?.details ?? "", /Rectal/);
   assert.match(data.timeline[0]?.details ?? "", /In Fever \/ illness/);
-  assert.equal(data.contextSections.find((section) => section.title === "Episode Context")?.rows[0]?.detail?.includes("1 linked symptom"), true);
+  const episodeDetail = data.contextSections.find((section) => section.title === "Episode Context")?.rows[0]?.detail ?? "";
+  assert.match(episodeDetail, /Linked symptoms: Fever/);
+  assert.match(episodeDetail, /Moderate/);
+  assert.match(episodeDetail, /38.2/);
+
+  const payload = buildReportPdfPayload({
+    child,
+    startDate: "2026-04-12",
+    endDate: "2026-04-12",
+    data,
+    unitSystem: "metric",
+  });
+  const tummyCard = payload.summaryCards.find((card) => card.title === "Tummy context");
+  assert.match(tummyCard?.value ?? "", /Fever \/ illness \(active\)/);
+  assert.match(tummyCard?.detail ?? "", /Symptoms: Fever/);
 });
 
 test("report data includes diaper output without duplicating linked poop timeline rows", () => {
