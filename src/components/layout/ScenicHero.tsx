@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode, type RefObject } from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   breastfeedingSceneArt,
   diaperSceneArt,
@@ -20,6 +21,8 @@ import type { Child } from "../../lib/types";
 import { getAgeLabelFromDob } from "../../lib/utils";
 import { useChildActions, useChildren } from "../../contexts/ChildContext";
 import { useTheme } from "../../contexts/ThemeContext";
+import { useTrialAccess } from "../../contexts/TrialContext";
+import { canAccessChild } from "../../lib/feature-access";
 import { Avatar } from "../child/Avatar";
 
 type ScenicHeroProps = {
@@ -49,7 +52,10 @@ export function ScenicHero({
 }: ScenicHeroProps) {
   const children = useChildren();
   const { setActiveChildId } = useChildActions();
+  const { entitlement } = useTrialAccess();
   const { resolved } = useTheme();
+  const navigate = useNavigate();
+  const location = useLocation();
   const isDarkArtwork = resolved !== "light";
   const skyArt = isDarkArtwork ? watercolorCloudsDark : watercolorClouds;
   const ridgeArt = isDarkArtwork ? watercolorMountainsDark : watercolorMountains;
@@ -67,8 +73,21 @@ export function ScenicHero({
   const resolvedSiblingChildren = siblingChildren.length > 0
     ? siblingChildren
     : children.filter((candidate) => candidate.id !== child.id);
-  const resolvedOnSelectChild = onSelectChild ?? setActiveChildId;
   const canSwapChildren = resolvedSiblingChildren.length > 0;
+
+  const handleSelectChild = (childId: string) => {
+    if (onSelectChild) {
+      onSelectChild(childId);
+      return;
+    }
+
+    if (!canAccessChild(childId, children, entitlement)) {
+      navigate("/unlock", { state: { featureId: "multiChild", returnTo: location.pathname } });
+      return;
+    }
+
+    setActiveChildId(childId);
+  };
 
   useEffect(() => {
     setIsChildTrayOpen(false);
@@ -466,7 +485,7 @@ export function ScenicHero({
                             key={sibling.id}
                             type="button"
                             aria-label={`Switch to ${sibling.name}`}
-                            onClick={() => resolvedOnSelectChild(sibling.id)}
+                            onClick={() => handleSelectChild(sibling.id)}
                             className="rounded-full transition-transform hover:scale-[1.03] active:scale-[0.98]"
                           >
                             <Avatar

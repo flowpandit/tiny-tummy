@@ -1,8 +1,10 @@
 import { useLocation, useNavigate } from "react-router-dom";
 import { useActiveChild, useChildActions, useChildren } from "../../contexts/ChildContext";
+import { useTrialAccess } from "../../contexts/TrialContext";
 import { useUnits } from "../../contexts/UnitsContext";
 import { useGrowthLogs } from "../../hooks/useGrowthLogs";
 import { buildChildProfileSubtitleParts } from "../../lib/child-profile-summary";
+import { canAccessChild } from "../../lib/feature-access";
 import { CompactChildNav } from "./CompactChildNav";
 
 type HeaderProps = {
@@ -16,6 +18,7 @@ export function Header({ showBackButton = false, fallbackTo = "/", visible = tru
   const activeChild = useActiveChild();
   const children = useChildren();
   const { setActiveChildId } = useChildActions();
+  const { entitlement } = useTrialAccess();
   const { unitSystem } = useUnits();
   const { logs: growthLogs } = useGrowthLogs(activeChild?.id ?? null);
   const navigate = useNavigate();
@@ -38,6 +41,15 @@ export function Header({ showBackButton = false, fallbackTo = "/", visible = tru
     navigate(originPath ?? fallbackTo);
   };
 
+  const handleSelectChild = (childId: string) => {
+    if (!canAccessChild(childId, children, entitlement)) {
+      navigate("/unlock", { state: { featureId: "multiChild", returnTo: location.pathname } });
+      return;
+    }
+
+    setActiveChildId(childId);
+  };
+
   return (
     <header
       className={`fixed inset-x-0 top-0 z-30 transition-all duration-200 ${visible ? "pointer-events-auto translate-y-0 opacity-100" : "pointer-events-none -translate-y-4 opacity-0"}`}
@@ -57,7 +69,7 @@ export function Header({ showBackButton = false, fallbackTo = "/", visible = tru
         <CompactChildNav
           activeChild={activeChild}
           otherChildren={otherChildren}
-          onSelectChild={setActiveChildId}
+          onSelectChild={handleSelectChild}
           showBackButton={showBackButton}
           onBack={showBackButton ? handleBack : undefined}
           density={density}

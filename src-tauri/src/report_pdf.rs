@@ -201,10 +201,19 @@ impl PdfLayout {
     }
 
     fn draw_page_two(&mut self, payload: &ReportPdfPayload) -> Result<(), String> {
+        let is_tummy_report = payload.title.contains("Poop & Tummy");
         self.draw_compact_page_header(
             payload,
-            "Daily Overview + Domain Trends",
-            "Daily stool output, feed activity, and pattern signals for the selected period.",
+            if is_tummy_report {
+                "Poop + Diaper Patterns"
+            } else {
+                "Daily Overview + Domain Trends"
+            },
+            if is_tummy_report {
+                "Daily stool output, diaper output, and tummy pattern signals for the selected period."
+            } else {
+                "Daily stool output, feed activity, and pattern signals for the selected period."
+            },
         );
 
         if !payload.charts.is_empty() {
@@ -220,10 +229,19 @@ impl PdfLayout {
     }
 
     fn draw_page_three(&mut self, payload: &ReportPdfPayload) -> Result<(), String> {
+        let is_tummy_report = payload.title.contains("Poop & Tummy");
         self.draw_compact_page_header(
             payload,
-            "Clinical Context",
-            "Feeding, growth, symptom, episode, and milestone context from the same report period.",
+            if is_tummy_report {
+                "Tummy Context"
+            } else {
+                "Clinical Context"
+            },
+            if is_tummy_report {
+                "Symptoms, episodes, feeding context, diaper output, and safety notes from the same report period."
+            } else {
+                "Feeding, growth, symptom, episode, and milestone context from the same report period."
+            },
         );
 
         self.draw_attention_notes(&payload.attention_chips)?;
@@ -317,8 +335,10 @@ impl PdfLayout {
             rgb(0.25, 0.18, 0.15),
         );
 
+        let (cover_line_one, cover_line_two) = cover_title_lines(&payload.title);
+
         self.draw_wrapped_text_at(
-            "Baby Health",
+            &cover_line_one,
             MARGIN_LEFT_MM + 6.0,
             y + 26.0,
             98.0,
@@ -327,7 +347,7 @@ impl PdfLayout {
             color_ink(),
         );
         self.draw_wrapped_text_at(
-            "Report",
+            &cover_line_two,
             MARGIN_LEFT_MM + 6.0,
             y + 38.0,
             94.0,
@@ -579,7 +599,7 @@ impl PdfLayout {
         let columns = 2usize;
         let gap = 4.0;
         let chart_width = (CONTENT_WIDTH_MM - gap) / columns as f32;
-        let chart_height = 48.0;
+        let chart_height = 60.0;
         let rows = (visible + columns - 1) / columns;
         let total_height = rows as f32 * chart_height + rows.saturating_sub(1) as f32 * gap;
         self.ensure_space(total_height);
@@ -863,26 +883,56 @@ impl PdfLayout {
             return Ok(());
         }
 
-        let max_value = chart
-            .points
-            .iter()
-            .map(|point| point.primary_value.max(point.secondary_value.unwrap_or(0)))
-            .max()
-            .unwrap_or(0)
-            .max(1) as f32;
+        let is_stool_type_chart = is_stool_type_chart(chart);
+        let max_value = if is_stool_type_chart {
+            7.0
+        } else {
+            chart
+                .points
+                .iter()
+                .map(|point| point.primary_value.max(point.secondary_value.unwrap_or(0)))
+                .max()
+                .unwrap_or(0)
+                .max(1) as f32
+        };
+        let min_value = if is_stool_type_chart { 1.0 } else { 0.0 };
 
-        let chart_inner_top = y_mm + 15.0;
-        let chart_inner_height = 22.0;
-        let chart_inner_width = width_mm - 8.0;
-        let start_x = x_mm + 4.0;
+        let chart_inner_top = y_mm + 16.5;
+        let chart_inner_height = 23.0;
+        let axis_width = if is_stool_type_chart { 15.0 } else { 7.0 };
+        let chart_inner_width = width_mm - axis_width - 8.0;
+        let start_x = x_mm + axis_width + 3.5;
         let group_width = chart_inner_width / chart.points.len() as f32;
+
+        if is_stool_type_chart {
+            self.draw_stool_type_axis_labels(x_mm + 3.0, chart_inner_top, axis_width, chart_inner_height);
+        } else {
+            self.draw_wrapped_text_at(
+                &max_value.round().to_string(),
+                x_mm + 3.0,
+                chart_inner_top - 1.2,
+                axis_width,
+                5.6,
+                BuiltinFont::Helvetica,
+                color_muted(),
+            );
+            self.draw_wrapped_text_at(
+                "0",
+                x_mm + 3.0,
+                chart_inner_top + chart_inner_height - 2.4,
+                axis_width,
+                5.6,
+                BuiltinFont::Helvetica,
+                color_muted(),
+            );
+        }
 
         for marker in [0.33_f32, 0.66_f32] {
             let y = chart_inner_top + chart_inner_height * marker;
-            self.draw_line(x_mm + 4.0, y, x_mm + width_mm - 4.0, y, color_rule(), 0.25);
+            self.draw_line(start_x, y, x_mm + width_mm - 4.0, y, color_rule(), 0.25);
         }
         self.draw_line(
-            x_mm + 4.0,
+            start_x,
             chart_inner_top + chart_inner_height,
             x_mm + width_mm - 4.0,
             chart_inner_top + chart_inner_height,
@@ -894,19 +944,33 @@ impl PdfLayout {
             let mut previous: Option<(f32, f32)> = None;
             for (index, point) in chart.points.iter().enumerate() {
                 let center_x = start_x + group_width * index as f32 + group_width / 2.0;
-                let center_y = chart_inner_top
-                    + (chart_inner_height
-                        - (point.primary_value as f32 / max_value) * chart_inner_height);
+                let normalized_value = ((point.primary_value as f32).clamp(min_value, max_value) - min_value)
+                    / (max_value - min_value).max(1.0);
+                let center_y = chart_inner_top + (chart_inner_height - normalized_value * chart_inner_height);
                 if let Some((px, py)) = previous {
                     self.draw_line(px, py, center_x, center_y, color_peach_text(), 1.2);
                 }
                 self.draw_circle(center_x, center_y, 1.25, color_peach_text());
+                let value_label = chart_point_value_label(chart, point.primary_value);
+                let value_label_width = if is_stool_type_chart { 14.0 } else { 6.0 };
+                let value_label_x = (center_x - value_label_width / 2.0)
+                    .max(start_x)
+                    .min(x_mm + width_mm - 4.0 - value_label_width);
+                self.draw_wrapped_text_at(
+                    &value_label,
+                    value_label_x,
+                    (center_y - 4.4).max(y_mm + 12.8),
+                    value_label_width,
+                    if is_stool_type_chart { 5.2 } else { 5.8 },
+                    BuiltinFont::HelveticaBold,
+                    color_body(),
+                );
                 previous = Some((center_x, center_y));
                 if should_draw_chart_label(index, chart.points.len()) {
                     self.draw_wrapped_text_at(
                         &sanitize_text(&point.label),
                         start_x + group_width * index as f32,
-                        y_mm + height_mm - 8.5,
+                        y_mm + height_mm - 13.2,
                         group_width.max(8.0),
                         6.2,
                         BuiltinFont::Helvetica,
@@ -923,20 +987,43 @@ impl PdfLayout {
                 let primary_width = group_width * 0.32;
                 let secondary_width = group_width * 0.22;
 
-                self.draw_filled_rect(
-                    group_x + 3.0,
-                    chart_inner_top + (chart_inner_height - primary_height),
-                    primary_width,
-                    primary_height.max(1.0),
-                    color_peach_text(),
-                );
+                if point.primary_value > 0 {
+                    let primary_y = chart_inner_top + (chart_inner_height - primary_height);
+                    self.draw_filled_rect(
+                        group_x + 3.0,
+                        primary_y,
+                        primary_width,
+                        primary_height.max(1.0),
+                        color_peach_text(),
+                    );
+                    self.draw_wrapped_text_at(
+                        &point.primary_value.to_string(),
+                        group_x + 2.4,
+                        (primary_y - 3.8).max(y_mm + 12.8),
+                        primary_width + 4.0,
+                        5.6,
+                        BuiltinFont::HelveticaBold,
+                        color_body(),
+                    );
+                }
 
                 if point.secondary_value.unwrap_or(0) > 0 {
+                    let secondary_value = point.secondary_value.unwrap_or(0);
+                    let secondary_y = chart_inner_top + (chart_inner_height - secondary_height);
                     self.draw_filled_rect(
                         group_x + 3.0 + primary_width + 1.5,
-                        chart_inner_top + (chart_inner_height - secondary_height),
+                        secondary_y,
                         secondary_width,
                         secondary_height.max(1.0),
+                        color_blue(),
+                    );
+                    self.draw_wrapped_text_at(
+                        &secondary_value.to_string(),
+                        group_x + 2.6 + primary_width,
+                        (secondary_y - 3.8).max(y_mm + 12.8),
+                        secondary_width + 8.0,
+                        5.6,
+                        BuiltinFont::HelveticaBold,
                         color_blue(),
                     );
                 }
@@ -945,7 +1032,7 @@ impl PdfLayout {
                     self.draw_wrapped_text_at(
                         &sanitize_text(&point.label),
                         group_x,
-                        y_mm + height_mm - 8.5,
+                        y_mm + height_mm - 13.2,
                         group_width.max(8.0),
                         6.2,
                         BuiltinFont::Helvetica,
@@ -955,29 +1042,98 @@ impl PdfLayout {
             }
         }
 
+        if is_stool_type_chart {
+            let legend_y = y_mm + height_mm - 10.0;
+            self.draw_filled_rect(x_mm + 3.0, legend_y + 1.2, 2.6, 2.6, color_peach_text());
+            self.draw_wrapped_text_at(
+                &sanitize_text(&chart.primary_label),
+                x_mm + 7.0,
+                legend_y,
+                width_mm - 10.0,
+                5.9,
+                BuiltinFont::Helvetica,
+                color_body(),
+            );
+            self.draw_wrapped_text_at(
+                stool_type_legend_text(),
+                x_mm + 3.0,
+                legend_y + 4.0,
+                width_mm - 6.0,
+                4.9,
+                BuiltinFont::Helvetica,
+                color_muted(),
+            );
+            return Ok(());
+        }
+
+        let legend_y = y_mm + height_mm - 6.4;
+        let primary_legend_width = if chart.secondary_label.is_some() {
+            (width_mm - 10.0) * 0.46
+        } else {
+            width_mm - 10.0
+        };
+        self.draw_filled_rect(x_mm + 3.0, legend_y + 1.0, 2.6, 2.6, color_peach_text());
         self.draw_wrapped_text_at(
             &sanitize_text(&chart.primary_label),
-            x_mm + 3.0,
-            y_mm + height_mm - 4.2,
-            width_mm - 28.0,
+            x_mm + 7.0,
+            legend_y,
+            primary_legend_width,
             6.2,
             BuiltinFont::Helvetica,
             color_body(),
         );
 
         if let Some(label) = &chart.secondary_label {
+            let secondary_x = x_mm + width_mm * 0.56;
+            self.draw_filled_rect(secondary_x, legend_y + 1.0, 2.6, 2.6, color_blue());
             self.draw_wrapped_text_at(
                 &sanitize_text(label),
-                x_mm + width_mm * 0.56,
-                y_mm + height_mm - 4.2,
-                width_mm * 0.40,
+                secondary_x + 4.0,
+                legend_y,
+                width_mm * 0.36,
                 6.2,
                 BuiltinFont::Helvetica,
-                color_muted(),
+                color_body(),
             );
         }
 
         Ok(())
+    }
+
+    fn draw_stool_type_axis_labels(
+        &mut self,
+        x_mm: f32,
+        chart_inner_top: f32,
+        axis_width: f32,
+        chart_inner_height: f32,
+    ) {
+        self.draw_wrapped_text_at(
+            "T7 watery",
+            x_mm,
+            chart_inner_top - 1.2,
+            axis_width,
+            5.0,
+            BuiltinFont::Helvetica,
+            color_muted(),
+        );
+        self.draw_wrapped_text_at(
+            "T4 smooth",
+            x_mm,
+            chart_inner_top + chart_inner_height * 0.48,
+            axis_width,
+            5.0,
+            BuiltinFont::Helvetica,
+            color_muted(),
+        );
+        self.draw_wrapped_text_at(
+            "T1 hard",
+            x_mm,
+            chart_inner_top + chart_inner_height - 2.4,
+            axis_width,
+            5.0,
+            BuiltinFont::Helvetica,
+            color_muted(),
+        );
     }
 
     fn draw_context_section(&mut self, section: &ReportPdfSection) -> Result<(), String> {
@@ -2269,6 +2425,58 @@ fn chart_total(payload: &ReportPdfPayload, title: &str, secondary: bool) -> i64 
 
 fn should_draw_chart_label(index: usize, len: usize) -> bool {
     len <= 8 || index == 0 || index + 1 == len || index % ((len / 4).max(1)) == 0
+}
+
+fn is_stool_type_chart(chart: &ReportPdfChart) -> bool {
+    chart.title == "Stool type trend"
+}
+
+fn chart_point_value_label(chart: &ReportPdfChart, value: i64) -> String {
+    if is_stool_type_chart(chart) {
+        return stool_type_compact_label(value).to_string();
+    }
+
+    value.to_string()
+}
+
+fn stool_type_compact_label(value: i64) -> &'static str {
+    match value {
+        1 => "T1 hard",
+        2 => "T2 lumpy",
+        3 => "T3 cracked",
+        4 => "T4 smooth",
+        5 => "T5 soft",
+        6 => "T6 mushy",
+        7 => "T7 watery",
+        _ => "Type ?",
+    }
+}
+
+fn stool_type_legend_text() -> &'static str {
+    "T1 hard pellets, T2 lumpy, T3 cracked, T4 smooth, T5 soft, T6 mushy, T7 watery"
+}
+
+fn cover_title_lines(title: &str) -> (String, String) {
+    if title.contains("Poop & Tummy") {
+        return ("Poop & Tummy".to_string(), "Report".to_string());
+    }
+
+    if title.contains("Baby Health") {
+        return ("Baby Health".to_string(), "Report".to_string());
+    }
+
+    let sanitized = sanitize_text(title);
+    let first_line = sanitized
+        .strip_suffix(" Report")
+        .unwrap_or(&sanitized)
+        .trim()
+        .to_string();
+
+    if first_line.is_empty() {
+        ("Tiny Tummy".to_string(), "Report".to_string())
+    } else {
+        (first_line, "Report".to_string())
+    }
 }
 
 fn patient_detail_line(payload: &ReportPdfPayload) -> String {

@@ -6,10 +6,12 @@ import { DatePicker } from "../components/ui/date-picker";
 import { FieldLabel, Input } from "../components/ui/field";
 import { SegmentedControl } from "../components/ui/segmented-control";
 import { AvatarUpload } from "../components/child/AvatarUpload";
+import { PremiumInlineLock } from "../components/billing/PremiumLocks";
 import { FEEDING_TYPES, AVATAR_COLORS, CHILD_SEX_OPTIONS } from "../lib/constants";
 import { cn } from "../lib/cn";
 import { useCreateChildAction } from "../hooks/useCreateChildAction";
-import { useChildActions } from "../contexts/ChildContext";
+import { useChildActions, useChildren } from "../contexts/ChildContext";
+import { usePremiumFeature } from "../contexts/TrialContext";
 import { useToast } from "../components/ui/toast";
 import { Header } from "../components/layout/Header";
 import { getCurrentLocalDate } from "../lib/utils";
@@ -17,6 +19,8 @@ import type { ChildSex, FeedingType } from "../lib/types";
 
 export function AddChild() {
   const navigate = useNavigate();
+  const children = useChildren();
+  const canUseMultiChild = usePremiumFeature("multiChild");
   const { refreshChildren, setActiveChildId } = useChildActions();
   const { showError } = useToast();
   const createChild = useCreateChildAction();
@@ -30,6 +34,7 @@ export function AddChild() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const isValid = name.trim().length > 0 && dob.length > 0 && sex !== null;
+  const isAddingPremiumChild = children.length > 0 && !canUseMultiChild;
 
   const handleAvatarSave = async (blob: Blob) => {
     setAvatarBlob(blob);
@@ -39,7 +44,7 @@ export function AddChild() {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (!isValid || isSubmitting) return;
+    if (!isValid || isSubmitting || isAddingPremiumChild) return;
 
     setIsSubmitting(true);
     try {
@@ -54,6 +59,33 @@ export function AddChild() {
       return;
     }
   };
+
+  if (isAddingPremiumChild) {
+    return (
+      <div
+        className="min-h-[100dvh] bg-[var(--color-bg)] px-6"
+        style={{
+          paddingTop: "calc(var(--safe-area-top) + 94px)",
+        }}
+      >
+        <Header showBackButton fallbackTo="/settings" />
+
+        <h2 className="mb-2 text-2xl font-bold text-[var(--color-text)]">
+          Add a child
+        </h2>
+        <p className="mb-6 text-[var(--color-text-secondary)]">
+          One child stays free. Premium unlocks tracking for every child.
+        </p>
+
+        <PremiumInlineLock
+          featureId="multiChild"
+          title="Multi-child tracking is Premium"
+          description="Your existing records stay private on this device. Unlock once to add and switch between more children."
+          actionLabel="Unlock multi-child"
+        />
+      </div>
+    );
+  }
 
   return (
     <div

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useActiveChild, useChildActions, useChildren } from "../contexts/ChildContext";
-import { useTrialActions } from "../contexts/TrialContext";
+import { useTrialAccess, useTrialActions } from "../contexts/TrialContext";
 import { EditChildSheet } from "../components/settings/EditChildSheet";
 import {
   AccessSection,
@@ -13,6 +13,7 @@ import {
 } from "../components/settings/SettingsSections";
 import { PageBody } from "../components/ui/page-layout";
 import { useDeleteChildAction } from "../hooks/useSettingsActions";
+import { canUsePremiumFeature } from "../lib/feature-access";
 import type { Child } from "../lib/types";
 
 function SettingsHeroArt() {
@@ -70,6 +71,7 @@ export function Settings() {
   const children = useChildren();
   const activeChild = useActiveChild();
   const { refreshChildren } = useChildActions();
+  const { entitlement } = useTrialAccess();
   const { clearPremium, resetTrial, setTrialDaysAgo, simulateExpiration, unlockPremium } = useTrialActions();
   const navigate = useNavigate();
   const deleteChild = useDeleteChildAction(refreshChildren);
@@ -81,6 +83,16 @@ export function Settings() {
     setConfirmDelete(null);
   };
 
+  const handleAddChild = () => {
+    if (!canUsePremiumFeature(entitlement, "multiChild") && children.length > 0) {
+      navigate("/unlock", { state: { featureId: "multiChild", returnTo: "/settings" } });
+      return;
+    }
+
+    navigate("/add-child");
+  };
+  const isAddChildPremiumLocked = !canUsePremiumFeature(entitlement, "multiChild") && children.length > 0;
+
   return (
     <PageBody className="-mt-8 space-y-0 px-0 py-0">
       <SettingsHero />
@@ -90,7 +102,8 @@ export function Settings() {
           activeChild={activeChild}
           children={children}
           className="relative z-10 -mt-16 md:-mt-20"
-          onAddChild={() => navigate("/add-child")}
+          onAddChild={handleAddChild}
+          isAddChildPremiumLocked={isAddChildPremiumLocked}
           confirmDelete={confirmDelete}
           onConfirmDelete={setConfirmDelete}
           onDelete={handleDelete}

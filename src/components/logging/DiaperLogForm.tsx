@@ -11,6 +11,8 @@ import { ColorPicker } from "./ColorPicker";
 import { SizePicker } from "./SizePicker";
 import { FieldLabel, Textarea } from "../ui/field";
 import { useTheme } from "../../contexts/ThemeContext";
+import { usePremiumFeature } from "../../contexts/TrialContext";
+import { PremiumInlineLock } from "../billing/PremiumLocks";
 import { cn } from "../../lib/cn";
 import { diaperIncludesStool, diaperIncludesWet } from "../../lib/diaper";
 import { useDiaperLogFormState } from "../../hooks/useDiaperLogFormState";
@@ -41,6 +43,7 @@ export function DiaperLogForm({
 }: DiaperLogFormProps) {
   const { showError } = useToast();
   const { resolved } = useTheme();
+  const canAddPhoto = usePremiumFeature("photoCapture");
   const nightMode = resolved === "night";
   const { fileInputRef, photoFile, photoPreview, resetPhoto, setPhotoFromChange } = usePhotoField();
 
@@ -104,15 +107,17 @@ export function DiaperLogForm({
             {showsStoolFields(diaperType) && (
               <div>
                 <FieldLabel className="mb-1.5">Photo (optional)</FieldLabel>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  capture="environment"
-                  onChange={setPhotoFromChange}
-                  className="hidden"
-                  id="diaper-photo-input"
-                />
+                {canAddPhoto && (
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    onChange={setPhotoFromChange}
+                    className="hidden"
+                    id="diaper-photo-input"
+                  />
+                )}
                 {photoPreview ? (
                   <div className="relative inline-block">
                     <img
@@ -129,6 +134,14 @@ export function DiaperLogForm({
                       ×
                     </button>
                   </div>
+                ) : !canAddPhoto ? (
+                  <PremiumInlineLock
+                    featureId="photoCapture"
+                    tone="compact"
+                    title="Photos are Premium"
+                    description="Wet and dirty diaper logging stays free. Unlock Premium when you want private stool photos saved with entries."
+                    actionLabel="Unlock photos"
+                  />
                 ) : (
                   <button
                     type="button"

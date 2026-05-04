@@ -3,10 +3,12 @@ import { writeFile } from "@tauri-apps/plugin-fs";
 import { save } from "@tauri-apps/plugin-dialog";
 import { platform } from "@tauri-apps/plugin-os";
 import { useActiveChild } from "../contexts/ChildContext";
+import { usePremiumFeature } from "../contexts/TrialContext";
 import { useUnits } from "../contexts/UnitsContext";
 import { useReportPageState } from "../hooks/useReportPageState";
 import { CareToolsSection } from "../components/care/CareToolsSection";
 import { ScenicHero } from "../components/layout/ScenicHero";
+import { PremiumInlineLock } from "../components/billing/PremiumLocks";
 import { ReportComposerCard } from "../components/report/ReportComposerCard";
 import { PageBody } from "../components/ui/page-layout";
 import { ReportReadyCard } from "../components/report/ReportReadyCard";
@@ -29,6 +31,7 @@ import { loadAvatarDataUrl } from "../lib/photos";
 export function Report() {
   const activeChild = useActiveChild();
   const { unitSystem } = useUnits();
+  const canUseReports = usePremiumFeature("doctorReports");
   const { showError, showSuccess } = useToast();
   const currentPlatform = platform();
   const isAndroid = currentPlatform === "android";
@@ -43,12 +46,41 @@ export function Report() {
     setEndDate,
     reportData,
     isGenerating,
+    reportKind,
+    setReportKind,
     options,
     toggleOption,
     handleGenerate,
   } = useReportPageState(activeChild, unitSystem);
 
   if (!activeChild) return null;
+
+  if (!canUseReports) {
+    return (
+      <PageBody className="-mt-8 space-y-0 px-0 py-0">
+        <ScenicHero
+          child={activeChild}
+          title="Report"
+          description="Prepare a pediatrician-ready PDF with charts, context, and timeline detail."
+          className="-mx-4 overflow-hidden md:-mx-6 lg:-mx-8"
+          showChildInfo={false}
+        />
+
+        <div className="-mt-28 px-4 md:-mt-24 md:px-10">
+          <PremiumInlineLock
+            featureId="doctorReports"
+            title="Doctor-ready PDFs are Premium"
+            description="Basic logging stays free. Unlock when you want a clean report with poop, diaper, feeding, symptoms, and timeline context for a visit."
+            actionLabel="Unlock reports"
+          />
+        </div>
+
+        <div className="space-y-3 px-4 py-3 md:space-y-5 md:px-10 md:py-5">
+          <CareToolsSection className="px-0" palette="soft" />
+        </div>
+      </PageBody>
+    );
+  }
 
   const decodeBase64 = (value: string) => {
     const binary = atob(value);
@@ -61,7 +93,8 @@ export function Report() {
 
   const buildPdfFileName = () => {
     const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-    return `tiny-tummy-pediatrician-report-${startDate}-to-${endDate}-${timestamp}.pdf`;
+    const reportSlug = reportKind === "poopTummy" ? "poop-tummy-report" : "pediatrician-report";
+    return `tiny-tummy-${reportSlug}-${startDate}-to-${endDate}-${timestamp}.pdf`;
   };
 
   const createEncodedReportPdf = async (data = reportData) => {
@@ -188,13 +221,16 @@ export function Report() {
     : isIos
       ? "Opens the iOS share sheet so you can save to Files, open in Books, or share."
     : getReportSaveHelpText(isAndroid);
+  const heroDescription = reportKind === "poopTummy"
+    ? "Prepare a pediatrician-ready poop and tummy PDF with diapers, stool patterns, and timeline detail."
+    : "Prepare a pediatrician-ready PDF with charts, context, and timeline detail.";
 
   return (
     <PageBody className="-mt-8 space-y-0 px-0 py-0">
       <ScenicHero
         child={activeChild}
         title="Report"
-        description="Prepare a pediatrician-ready PDF with charts, context, and timeline detail."
+        description={heroDescription}
         className="-mx-4 overflow-hidden md:-mx-6 lg:-mx-8"
         showChildInfo={false}
       />
@@ -205,7 +241,9 @@ export function Report() {
           startDate={startDate}
           endDate={endDate}
           isGenerating={isGenerating || isAutoSavingReport}
+          reportKind={reportKind}
           options={options}
+          onReportKindChange={setReportKind}
           onStartDateChange={setStartDate}
           onEndDateChange={setEndDate}
           onGenerate={() => { void handleGenerateReport(); }}

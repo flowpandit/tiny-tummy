@@ -10,6 +10,7 @@ import type {
 import { getEpisodeTypeLabel } from "./episode-constants";
 import { getMilestoneTypeLabel } from "./milestone-constants";
 import { getAgeLabelFromDob } from "./utils";
+import { STOOL_COLORS } from "./constants";
 
 export interface ReportPdfPayload {
   title: string;
@@ -126,7 +127,13 @@ function buildAttentionChips(highlights: ReportHighlight[]): ReportPdfChip[] {
 }
 
 function buildSummaryCards(data: ReportData): ReportPdfSummaryCard[] {
-  const actualPoops = data.logs.filter((log) => log.is_no_poop === 0);
+  const actualPoops = data.stoolEvents.filter((log) => log.is_no_poop === 0);
+  const hardStools = actualPoops.filter((log) => (log.stool_type ?? 99) <= 2).length;
+  const looseStools = actualPoops.filter((log) => (log.stool_type ?? 0) >= 6).length;
+  const redFlagStools = actualPoops.filter((log) => {
+    const colorInfo = log.color ? STOOL_COLORS.find((item) => item.value === log.color) : null;
+    return Boolean(colorInfo?.isRedFlag);
+  }).length;
   const stoolDetailParts = [
     data.stats.mostCommonType ? `Most common type ${data.stats.mostCommonType}` : null,
     data.stats.mostCommonColor ? `Most common color ${data.stats.mostCommonColor}` : null,
@@ -142,6 +149,45 @@ function buildSummaryCards(data: ReportData): ReportPdfSummaryCard[] {
     : data.activeEpisodeGroup
       ? "caution"
       : "info";
+
+  if (data.reportKind === "poopTummy") {
+    return [
+      {
+        title: "Stool pattern",
+        value: `${actualPoops.length} stool${actualPoops.length === 1 ? "" : "s"}`,
+        detail: stoolDetailParts.length > 0 ? stoolDetailParts.join(" · ") : "No stool type or color trend recorded",
+        tone: data.highlights.some((item) => item.tone === "alert") ? "caution" : "healthy",
+      },
+      {
+        title: "Diaper output",
+        value: `${data.diaperStats.wet} wet · ${data.diaperStats.dirty} dirty`,
+        detail: data.diaperStats.darkUrine > 0
+          ? `${data.diaperStats.darkUrine} dark urine diaper${data.diaperStats.darkUrine === 1 ? "" : "s"} logged`
+          : `${data.diaperStats.total} total diaper${data.diaperStats.total === 1 ? "" : "s"} in range`,
+        tone: data.diaperStats.darkUrine > 0 ? "caution" : data.diaperStats.total > 0 ? "info" : "default",
+      },
+      {
+        title: "Consistency watch",
+        value: `${hardStools} hard · ${looseStools} loose`,
+        detail: redFlagStools > 0
+          ? `${redFlagStools} red-flag color${redFlagStools === 1 ? "" : "s"} logged`
+          : "No red-flag stool color highlighted",
+        tone: redFlagStools > 0 || looseStools >= 2 ? "caution" : "healthy",
+      },
+      {
+        title: "Tummy context",
+        value: data.activeEpisodeGroup
+          ? getEpisodeTypeLabel(data.activeEpisodeGroup.episode.episode_type)
+          : `${data.symptomLogs.length} symptom${data.symptomLogs.length === 1 ? "" : "s"}`,
+        detail: data.activeEpisodeGroup
+          ? `${linkedSymptomCount} linked symptom${linkedSymptomCount === 1 ? "" : "s"} · ${data.activeEpisodeGroup.events.length} episode update${data.activeEpisodeGroup.events.length === 1 ? "" : "s"}`
+          : data.symptomLogs.length > 0
+            ? `${severeSymptomCount} severe · ${data.episodeGroups.length} episode${data.episodeGroups.length === 1 ? "" : "s"}`
+            : "No symptom or episode activity logged",
+        tone: symptomTone,
+      },
+    ];
+  }
 
   return [
     {
@@ -197,10 +243,18 @@ function buildCharts(data: ReportData, unitSystem: UnitSystem): ReportPdfChart[]
     charts.push({
       title: "Stool type trend",
       kind: "line",
-      primaryLabel: "Type",
+      primaryLabel: "Bristol-style stool type",
       points: mapPoints(data.chartData.stoolConsistency),
     });
   }
+
+  charts.push({
+    title: "Daily diaper output",
+    kind: "bar",
+    primaryLabel: "Wet",
+    secondaryLabel: "Dirty",
+    points: mapPoints(data.chartData.diaperOutput),
+  });
 
   charts.push({
     title: "Daily feed activity",
@@ -219,7 +273,19 @@ function buildCharts(data: ReportData, unitSystem: UnitSystem): ReportPdfChart[]
     });
   }
 
-  return charts.slice(0, 4);
+  if (data.reportKind === "poopTummy") {
+    return charts.slice(0, 4);
+  }
+
+  return charts
+    .filter((chart) => chart.title !== "Daily diaper output" || data.diaperLogs.length > 0)
+    .slice(0, 4);
+}
+
+function getReportPdfTitle(data: ReportData): string {
+  return data.reportKind === "poopTummy"
+    ? "Baby Poop & Tummy Report"
+    : "Baby Health Report";
 }
 
 export function buildReportPdfPayload(input: {
@@ -240,7 +306,7 @@ export function buildReportPdfPayload(input: {
   });
 
   return {
-    title: "Baby Health Report",
+    title: getReportPdfTitle(data),
     subtitle: `${startDate} to ${endDate}`,
     childName: child.name,
     childMeta: `${getAgeLabelFromDob(child.date_of_birth)} · Feeding ${child.feeding_type}`,

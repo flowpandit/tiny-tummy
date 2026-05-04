@@ -1,10 +1,13 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
+  REPORT_KIND_OPTIONS,
   REPORT_OPTION_TOGGLES,
   buildReportPatientSummary,
   getDefaultReportDateRange,
+  getReportCoreItems,
   getReportDateRangeFromLatestActivity,
+  getReportOptionToggles,
   getReportSaveHelpText,
   getReportSaveLabel,
   hasReportableData,
@@ -22,9 +25,23 @@ test("exposes the expected report option toggles", () => {
       "includeEpisodes",
       "includeEpisodeSummary",
       "includeGrowth",
+      "includePhotos",
       "includeNotes",
     ],
   );
+  assert.deepEqual(
+    getReportOptionToggles("poopTummy").map((toggle) => toggle.key),
+    [
+      "includeFeeds",
+      "includeSymptoms",
+      "includeEpisodes",
+      "includeEpisodeSummary",
+      "includePhotos",
+      "includeNotes",
+    ],
+  );
+  assert.deepEqual(REPORT_KIND_OPTIONS.map((item) => item.value), ["poopTummy", "fullHealth"]);
+  assert.deepEqual(getReportCoreItems("poopTummy"), ["Poop logs", "Diapers", "Stool colors", "No-poop days"]);
 });
 
 test("builds the default report date range from the provided reference date", () => {
@@ -50,6 +67,8 @@ test("detects whether report data has exportable clinical content", () => {
   assert.equal(hasReportableData(null), false);
   assert.equal(hasReportableData({
     logs: [],
+    diaperLogs: [],
+    stoolEvents: [],
     feedingLogs: [],
     growthLogs: [],
     symptomLogs: [],
@@ -59,6 +78,8 @@ test("detects whether report data has exportable clinical content", () => {
   } as never), false);
   assert.equal(hasReportableData({
     logs: [],
+    diaperLogs: [],
+    stoolEvents: [],
     feedingLogs: [{ id: "feed-1" }],
     growthLogs: [],
     symptomLogs: [],
@@ -68,6 +89,19 @@ test("detects whether report data has exportable clinical content", () => {
   } as never), true);
   assert.equal(hasReportableData({
     logs: [],
+    diaperLogs: [{ id: "diaper-1" }],
+    stoolEvents: [],
+    feedingLogs: [],
+    growthLogs: [],
+    symptomLogs: [],
+    milestoneLogs: [],
+    episodeGroups: [],
+    timeline: [],
+  } as never), true);
+  assert.equal(hasReportableData({
+    logs: [],
+    diaperLogs: [],
+    stoolEvents: [],
     feedingLogs: [],
     growthLogs: [],
     symptomLogs: [],
@@ -101,5 +135,5 @@ test("builds a patient summary with child identity and selected range", () => {
   const summary = buildReportPatientSummary(child, "2026-03-16", "2026-04-14");
   assert.equal(summary.title, "Mila");
   assert.match(summary.subtitle, /^0 days old · 2026-03-16 to 2026-04-14$/);
-  assert.match(summary.detail, /executive summary, clinical context, and a chronological appendix/i);
+  assert.match(summary.detail, /focused summary, clinical context, and a chronological appendix/i);
 });

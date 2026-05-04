@@ -9,7 +9,9 @@ import { LogSuccess } from "./LogSuccess";
 import { LogDateTimeFields } from "./LogDateTimeFields";
 import { cn } from "../../lib/cn";
 import { useTheme } from "../../contexts/ThemeContext";
+import { usePremiumFeature } from "../../contexts/TrialContext";
 import { FieldLabel, Textarea } from "../ui/field";
+import { PremiumInlineLock } from "../billing/PremiumLocks";
 import { useLogFormState } from "../../hooks/useLogFormState";
 import { useLoggingSheetLifecycle } from "../../hooks/useLoggingSheetLifecycle";
 import { usePhotoField } from "../../hooks/usePhotoField";
@@ -29,6 +31,7 @@ interface LogFormProps extends SheetVisibilityProps {
 export function LogForm({ open, onClose, childId, onLogged, initialDraft = null }: LogFormProps) {
   const { showError } = useToast();
   const { resolved } = useTheme();
+  const canAddPhoto = usePremiumFeature("photoCapture");
   const nightMode = resolved === "night";
   const { fileInputRef, photoFile, photoPreview, resetPhoto, setPhotoFromChange } = usePhotoField();
 
@@ -90,15 +93,17 @@ export function LogForm({ open, onClose, childId, onLogged, initialDraft = null 
               <FieldLabel className={getLoggingLabelClassName(nightMode)}>
                 Photo (optional)
               </FieldLabel>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                capture="environment"
-                onChange={setPhotoFromChange}
-                className="hidden"
-                id="photo-input"
-              />
+              {canAddPhoto && (
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  onChange={setPhotoFromChange}
+                  className="hidden"
+                  id="photo-input"
+                />
+              )}
               {photoPreview ? (
                 <div className="relative inline-block">
                   <img
@@ -117,6 +122,14 @@ export function LogForm({ open, onClose, childId, onLogged, initialDraft = null 
                     </svg>
                   </button>
                 </div>
+              ) : !canAddPhoto ? (
+                <PremiumInlineLock
+                  featureId="photoCapture"
+                  tone="compact"
+                  title="Photos are Premium"
+                  description="Keep logging poop for free. Unlock Premium when you want private stool photos saved with entries."
+                  actionLabel="Unlock photos"
+                />
               ) : (
                 <button
                   type="button"

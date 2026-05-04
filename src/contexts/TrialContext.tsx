@@ -1,8 +1,20 @@
 import { createContext, useContext, useEffect, useMemo, useRef, type ReactNode } from "react";
 import { useStoreSelector } from "../lib/store";
 import { createTrialStore, type TrialStore } from "./trial-store";
+import {
+  canUsePremiumFeature,
+  getAccessKind,
+  hasFullAccess,
+  type AccessKind,
+  type PremiumFeatureId,
+} from "../lib/feature-access";
+import type { EntitlementState } from "../lib/entitlements";
 
 interface TrialContextState {
+  entitlement: EntitlementState | null;
+  accessKind: AccessKind;
+  hasFullAccess: boolean;
+  isFreeBasic: boolean;
   isLocked: boolean;
   daysRemaining: number;
   isLoading: boolean;
@@ -43,20 +55,33 @@ export function useTrialAccess() {
   const entitlement = useStoreSelector(store, (state) => state.entitlement);
   const isLoading = useStoreSelector(store, (state) => state.isLoading);
   const loadError = useStoreSelector(store, (state) => state.loadError);
-  const isLocked = entitlement?.kind === "trial_expired";
+  const accessKind = getAccessKind(entitlement);
+  const hasFullPlanAccess = hasFullAccess(entitlement);
+  const isFreeBasic = accessKind === "free";
+  const isLocked = isFreeBasic;
   const daysRemaining = entitlement?.daysRemaining ?? 14;
 
   return useMemo(() => ({
+    entitlement,
+    accessKind,
+    hasFullAccess: hasFullPlanAccess,
+    isFreeBasic,
     isLocked,
     daysRemaining,
     isLoading,
     loadError,
-  }), [daysRemaining, isLoading, isLocked, loadError]);
+  }), [accessKind, daysRemaining, entitlement, hasFullPlanAccess, isFreeBasic, isLoading, isLocked, loadError]);
 }
 
 export function useTrialActions() {
   const store = useTrialStore();
   return store.actions;
+}
+
+export function usePremiumFeature(featureId: PremiumFeatureId) {
+  const store = useTrialStore();
+  const entitlement = useStoreSelector(store, (state) => state.entitlement);
+  return canUsePremiumFeature(entitlement, featureId);
 }
 
 export function useTrial() {
