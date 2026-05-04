@@ -250,6 +250,7 @@ test("home recommendation uses mixed feed data for next feed prediction", () => 
   });
 
   assert.equal(model.recommendation.accent, "feed");
+  assert.equal(model.recommendation.action, "open-feed");
   assert.match(model.recommendation.title, /feed/i);
 });
 
@@ -268,6 +269,27 @@ test("home recommendation shows the feed fallback when there is no feed timeline
 
   assert.equal(model.recommendation.title, FEED_PREDICTION_FALLBACK);
   assert.equal(model.recommendation.accent, "feed");
+  assert.equal(model.recommendation.action, "log-feed");
+});
+
+test("home recommendations can include multiple actionable cards", () => {
+  const model = buildHomeAssistantModel({
+    child,
+    summary: {
+      ...summary,
+      todayWetDiapers: 0,
+    },
+    poopLogs: [],
+    diaperLogs: [],
+    feedingLogs: [],
+    sleepLogs: [],
+    alerts: [],
+    includeHydration: true,
+    now: new Date("2026-05-03T10:00:00.000Z"),
+  });
+
+  assert.deepEqual(model.recommendations.map((recommendation) => recommendation.accent), ["feed", "hydration"]);
+  assert.deepEqual(model.recommendations.map((recommendation) => recommendation.action), ["log-feed", "log-diaper"]);
 });
 
 function createFeed(input: Partial<FeedingEntry> & Pick<FeedingEntry, "id" | "logged_at" | "food_type">): FeedingEntry {

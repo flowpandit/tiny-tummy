@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { useActiveChild } from "../contexts/ChildContext";
 import { usePoopLogs } from "../hooks/usePoopLogs";
@@ -32,7 +33,7 @@ import { HomeHealthActions } from "../components/home/HomeHealthActions";
 import { HomeActiveEpisodes } from "../components/home/HomeActiveEpisodes";
 import { HomeSheets } from "../components/home/HomeSheets";
 import { AlertBanner } from "../components/dashboard/AlertBanner";
-import { HomeActionBottleIcon, HomeActionSleepIcon } from "../components/ui/icons";
+import { HomeActionBottleIcon, HomeActionDiaperIcon, HomeActionSleepIcon } from "../components/ui/icons";
 import { useToast } from "../components/ui/toast";
 import type { Episode } from "../lib/types";
 
@@ -74,6 +75,9 @@ export function Home() {
   const { experience: eliminationExperience } = useEliminationPreference(activeChild);
   const homeState = useHomePageState();
   const [selectedEpisodeId, setSelectedEpisodeId] = useState<string | null>(null);
+  const [recommendationIndex, setRecommendationIndex] = useState(0);
+  const [recommendationDirection, setRecommendationDirection] = useState(1);
+  const shouldReduceMotion = useReducedMotion();
 
   useHomeEffects({
     activeChild,
@@ -250,8 +254,40 @@ export function Home() {
     sleepTimerElapsedMs,
     sleepTimerSession,
   ]);
+  const recommendationSignature = assistantModel?.recommendations
+    .map((item) => `${item.title}:${item.detail}:${item.action}`)
+    .join("|") ?? "";
+  const recommendationCount = assistantModel?.recommendations.length ?? 0;
+
+  useEffect(() => {
+    setRecommendationIndex(0);
+    setRecommendationDirection(1);
+  }, [activeChild?.id, recommendationSignature]);
+
+  useEffect(() => {
+    if (recommendationCount <= 1) return undefined;
+
+    const interval = window.setInterval(() => {
+      setRecommendationDirection(1);
+      setRecommendationIndex((current) => (current + 1) % recommendationCount);
+    }, 7000);
+
+    return () => window.clearInterval(interval);
+  }, [recommendationCount, recommendationSignature]);
 
   if (!activeChild || !summary || !assistantModel) return null;
+
+  const recommendations = assistantModel.recommendations.length > 0
+    ? assistantModel.recommendations
+    : [assistantModel.recommendation];
+  const activeRecommendationIndex = Math.min(recommendationIndex, recommendations.length - 1);
+  const activeRecommendation = recommendations[activeRecommendationIndex] ?? assistantModel.recommendation;
+
+  const handleRecommendationDotSelect = (index: number) => {
+    if (index === activeRecommendationIndex) return;
+    setRecommendationDirection(index > activeRecommendationIndex ? 1 : -1);
+    setRecommendationIndex(index);
+  };
 
   const handleInsightSelect = (insight: HomeInsightCard) => {
     if (insight.id === "feed-active") {
@@ -303,9 +339,11 @@ export function Home() {
     navigate("/guidance", { state: { guidanceTopicId: "when-to-call", origin: "/" } });
   };
 
-  const recommendationIcon = assistantModel.recommendation.accent === "sleep"
+  const recommendationIcon = activeRecommendation.accent === "sleep"
     ? <HomeActionSleepIcon className="h-6 w-6 text-[var(--color-home-recommendation-sleep-icon)] md:h-8 md:w-8" />
-    : <HomeActionBottleIcon className="h-6 w-6 text-[var(--color-home-recommendation-feed-icon)] md:h-8 md:w-8" />;
+    : activeRecommendation.accent === "hydration"
+      ? <HomeActionDiaperIcon className="h-6 w-6 text-[var(--color-home-recommendation-feed-icon)] md:h-8 md:w-8" />
+      : <HomeActionBottleIcon className="h-6 w-6 text-[var(--color-home-recommendation-feed-icon)] md:h-8 md:w-8" />;
 
   return (
     <div className="flex flex-col gap-3 pb-3 pt-0 md:gap-7 md:pb-4 md:pt-0.5">
@@ -337,7 +375,7 @@ export function Home() {
 
       <div className="px-4 md:px-10">
         <div
-          className="relative flex min-h-[82px] items-center gap-3 overflow-hidden rounded-[18px] border px-3.5 py-3 shadow-[0_16px_34px_rgba(211,174,103,0.1)] md:min-h-[154px] md:gap-4 md:rounded-[28px] md:px-8 md:py-5"
+          className="relative flex min-h-[92px] items-center gap-3 overflow-hidden rounded-[18px] border px-3.5 py-3 pb-5 shadow-[0_16px_34px_rgba(211,174,103,0.1)] md:min-h-[154px] md:gap-4 md:rounded-[28px] md:px-8 md:py-5 md:pb-7"
           style={{
             background: "var(--gradient-home-recommendation)",
             borderColor: "var(--color-home-recommendation-border)",
@@ -346,31 +384,60 @@ export function Home() {
           <div className="absolute right-[92px] top-5 text-lg text-[var(--color-home-recommendation-star)] md:right-[250px] md:top-7 md:text-2xl">✦</div>
           <div className="absolute bottom-4 right-[52px] text-2xl text-[var(--color-home-recommendation-star)] md:bottom-7 md:right-[192px] md:text-3xl">✦</div>
           <RecommendationBottleArt />
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full shadow-[var(--shadow-inner)] md:h-14 md:w-14" style={{ background: "var(--color-home-recommendation-icon-surface)" }}>
-            {recommendationIcon}
+          <div className="relative z-10 min-w-0 flex-1 overflow-hidden">
+            <AnimatePresence initial={false} custom={recommendationDirection} mode="popLayout">
+              <motion.div
+                key={`${activeRecommendation.title}-${activeRecommendation.detail}-${activeRecommendation.action}`}
+                custom={recommendationDirection}
+                initial={shouldReduceMotion ? false : { x: recommendationDirection * 36, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                exit={shouldReduceMotion ? { opacity: 0 } : { x: recommendationDirection * -36, opacity: 0 }}
+                transition={{ duration: shouldReduceMotion ? 0.01 : 0.34, ease: [0.22, 1, 0.36, 1] }}
+                className="flex min-w-0 items-center gap-3 md:gap-4"
+                aria-live="polite"
+              >
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full shadow-[var(--shadow-inner)] md:h-14 md:w-14" style={{ background: "var(--color-home-recommendation-icon-surface)" }}>
+                  {recommendationIcon}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[0.8rem] font-semibold uppercase tracking-[0.16em] text-[var(--color-home-recommendation-label)] md:text-[0.85rem]">
+                    Recommended next
+                  </p>
+                  <p className="mt-1 text-[1.06rem] font-semibold leading-tight tracking-[-0.03em] text-[var(--color-text)] md:mt-1.5 md:text-[1.45rem]">
+                    {activeRecommendation.title}
+                  </p>
+                  <p className="mt-1 text-[0.85rem] leading-snug text-[var(--color-text-secondary)] md:mt-2 md:text-[1.06rem] md:leading-relaxed">
+                    {activeRecommendation.detail}
+                  </p>
+                </div>
+              </motion.div>
+            </AnimatePresence>
           </div>
-          <div className="min-w-0 flex-1">
-            <p className="text-[0.8rem] font-semibold uppercase tracking-[0.16em] text-[var(--color-home-recommendation-label)] md:text-[0.85rem]">
-              Recommended next
-            </p>
-            <p className="mt-1 text-[1.06rem] font-semibold leading-tight tracking-[-0.03em] text-[var(--color-text)] md:mt-1.5 md:text-[1.45rem]">
-              {assistantModel.recommendation.title}
-            </p>
-            <p className="mt-1 text-[0.85rem] leading-snug text-[var(--color-text-secondary)] md:mt-2 md:text-[1.06rem] md:leading-relaxed">
-              {assistantModel.recommendation.detail}
-            </p>
-          </div>
-          <button
-            type="button"
-            aria-label="Open recommendation"
-            className="relative z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[1.6rem] leading-none shadow-[0_10px_28px_rgba(145,112,79,0.14)] md:h-14 md:w-14 md:text-[2rem]"
-            style={{
-              background: "var(--color-home-recommendation-button-bg)",
-              color: "var(--color-home-recommendation-button-text)",
-            }}
-          >
-            ›
-          </button>
+          {recommendations.length > 1 && (
+            <div
+              className="absolute bottom-2.5 left-1/2 z-10 flex -translate-x-1/2 items-center gap-2 md:bottom-3.5"
+              aria-label="Recommendation carousel"
+            >
+              {recommendations.map((recommendation, index) => {
+                const isActive = index === activeRecommendationIndex;
+                return (
+                  <button
+                    key={`${recommendation.title}-${recommendation.action}-${index}`}
+                    type="button"
+                    aria-label={`Show recommendation ${index + 1}`}
+                    aria-current={isActive ? "true" : undefined}
+                    onClick={() => handleRecommendationDotSelect(index)}
+                    className="h-1.5 w-1.5 rounded-full transition-colors md:h-2 md:w-2"
+                    style={{
+                      backgroundColor: isActive
+                        ? "var(--color-cta)"
+                        : "color-mix(in srgb, var(--color-text-soft) 52%, var(--color-home-recommendation-button-bg))",
+                    }}
+                  />
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
 

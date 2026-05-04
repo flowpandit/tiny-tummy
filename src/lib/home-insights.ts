@@ -53,6 +53,8 @@ export interface HomeRecommendationCard {
   title: string;
   detail: string;
   accent: "feed" | "hydration" | "sleep" | "general";
+  action: "log-feed" | "open-feed" | "open-sleep" | "log-diaper" | "none";
+  actionLabel: string;
 }
 
 export interface HomeTimelineItem {
@@ -77,6 +79,7 @@ export interface HomeAssistantModel {
   status: HomeStatusMessage;
   insights: HomeInsightCard[];
   recommendation: HomeRecommendationCard;
+  recommendations: HomeRecommendationCard[];
   timeline: HomeTimelineItem[];
   glanceStats: HomeGlanceStat[];
 }
@@ -353,71 +356,84 @@ export function elevateActiveFeedInsight(insights: HomeInsightCard[], activeFeed
   return [activeFeedInsight, ...insights.filter((insight) => insight.accent !== "feed")];
 }
 
-function buildRecommendation(input: {
+function buildRecommendations(input: {
   child: Child;
   summary: ChildDailySummary;
   feedLogs: FeedingEntry[];
   sleepLogs: SleepEntry[];
   includeHydration: boolean;
-}): HomeRecommendationCard {
+}): HomeRecommendationCard[] {
   const feedTimeline = getUnifiedFeedTimeline(input.feedLogs);
   const feedPrediction = getFeedPrediction(feedTimeline, getFeedBaseline(input.child.date_of_birth, input.child.feeding_type));
   const sleepPrediction = getSleepPrediction(input.sleepLogs, getWakeBaseline(input.child.date_of_birth));
   const pronoun = getPronoun(input.child.sex);
+  const recommendations: HomeRecommendationCard[] = [];
 
   if (feedPrediction && (feedPrediction.state === "due" || feedPrediction.state === "overdue")) {
-    return {
+    recommendations.push({
       title: "Log the next feed now",
       detail: `${pronoun} usually feeds around this time.`,
       accent: "feed",
-    };
-  }
-
-  if (feedPrediction) {
-    return {
+      action: "log-feed",
+      actionLabel: "Log feed",
+    });
+  } else if (feedPrediction) {
+    recommendations.push({
       title: `Log next feed ${formatSleepWindow(feedPrediction.predictedAt).toLowerCase()}`,
       detail: `${pronoun} usually feeds around this time.`,
       accent: "feed",
-    };
-  }
-
-  if (feedTimeline.length === 0) {
-    return {
+      action: "open-feed",
+      actionLabel: "Open feed",
+    });
+  } else if (feedTimeline.length === 0) {
+    recommendations.push({
       title: FEED_PREDICTION_FALLBACK,
       detail: "Breastfeeds and bottle feeds will shape the next window.",
       accent: "feed",
-    };
+      action: "log-feed",
+      actionLabel: "Log feed",
+    });
   }
 
   if (sleepPrediction && (sleepPrediction.state === "due" || sleepPrediction.state === "overdue")) {
-    return {
+    recommendations.push({
       title: "Sleep window opening soon",
       detail: "A nap may be the next helpful step.",
       accent: "sleep",
-    };
-  }
-
-  if (sleepPrediction) {
-    return {
+      action: "open-sleep",
+      actionLabel: "Open sleep",
+    });
+  } else if (sleepPrediction) {
+    recommendations.push({
       title: `Watch for the next nap ${formatSleepWindow(sleepPrediction.predictedAt).toLowerCase()}`,
       detail: "A little rest may be coming up soon.",
       accent: "sleep",
-    };
+      action: "open-sleep",
+      actionLabel: "Open sleep",
+    });
   }
 
   if (input.includeHydration && input.summary.todayWetDiapers === 0) {
-    return {
+    recommendations.push({
       title: "Check hydration",
       detail: "A wet diaper update will help round out today’s picture.",
       accent: "hydration",
-    };
+      action: "log-diaper",
+      actionLabel: "Log wet diaper",
+    });
   }
 
-  return {
+  if (recommendations.length > 0) {
+    return recommendations;
+  }
+
+  return [{
     title: "Keep logging the day as it unfolds",
     detail: "Small updates here make the bigger patterns easier to spot later.",
     accent: "general",
-  };
+    action: "none",
+    actionLabel: "No action",
+  }];
 }
 
 function getHomeTimelineFeedAccent(entry: FeedingEntry): HomeTimelineItem["accent"] {
@@ -567,6 +583,13 @@ export function buildHomeAssistantModel(input: {
   const feedPrediction = getFeedPrediction(feedTimeline, getFeedBaseline(input.child.date_of_birth, input.child.feeding_type));
   const classifiedSleepLogs = getClassifiedSleepLogs(input.sleepLogs);
   const sleepPrediction = getSleepPrediction(classifiedSleepLogs, getWakeBaseline(input.child.date_of_birth));
+  const recommendations = buildRecommendations({
+    child: input.child,
+    summary: input.summary,
+    feedLogs: input.feedingLogs,
+    sleepLogs: classifiedSleepLogs,
+    includeHydration,
+  });
   const status = buildStatusMessage({
     child: input.child,
     alerts: input.alerts,
@@ -587,13 +610,8 @@ export function buildHomeAssistantModel(input: {
       buildFeedInsight(input.child, input.feedingLogs),
       buildSleepInsight(input.child, classifiedSleepLogs),
     ].filter((insight): insight is HomeInsightCard => insight !== null),
-    recommendation: buildRecommendation({
-      child: input.child,
-      summary: input.summary,
-      feedLogs: input.feedingLogs,
-      sleepLogs: classifiedSleepLogs,
-      includeHydration,
-    }),
+    recommendation: recommendations[0],
+    recommendations,
     timeline: buildTimeline(input.poopLogs, input.diaperLogs, input.feedingLogs, classifiedSleepLogs, dayKey),
     glanceStats: buildGlanceStats({
       summary: input.summary,
