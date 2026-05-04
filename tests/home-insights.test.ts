@@ -189,6 +189,34 @@ test("home timeline includes completed sleep logs", () => {
   assert.equal(model.timeline[0]?.detail, "45m");
 });
 
+test("home timeline presents breastfeeding logs with breastfeed styling metadata", () => {
+  const breastfeed = createFeed({
+    id: "breastfeed-1",
+    logged_at: "2024-05-03T09:55:00",
+    food_type: "breast_milk",
+    duration_minutes: 1,
+    breast_side: "right",
+    notes: "Timed breastfeeding session • Right 1m",
+  });
+
+  const model = buildHomeAssistantModel({
+    child,
+    summary,
+    poopLogs: [],
+    diaperLogs: [],
+    feedingLogs: [breastfeed],
+    sleepLogs: [],
+    alerts: [],
+    includeHydration: false,
+    now: new Date("2024-05-03T10:00:00"),
+  });
+
+  assert.equal(model.timeline[0]?.kind, "feed");
+  assert.equal(model.timeline[0]?.title, "Breastfeed");
+  assert.equal(model.timeline[0]?.detail, "Right side · 1 min");
+  assert.equal(model.timeline[0]?.accent, "breastfeedRight");
+});
+
 test("home recommendation uses mixed feed data for next feed prediction", () => {
   const breastfedChild = {
     ...child,

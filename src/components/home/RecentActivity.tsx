@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom";
-import { HomeActionBottleIcon, HomeActionDiaperIcon, HomeActionSleepIcon, PoopIcon } from "../ui/icons";
+import { getBreastHistoryTone } from "../../lib/breastfeed-insights";
+import { HomeActionBottleIcon, HomeActionBreastfeedIcon, HomeActionDiaperIcon, HomeActionSleepIcon, PoopIcon } from "../ui/icons";
 import type { HomeGlanceStat, HomeTimelineItem } from "../../lib/home-insights";
 
 interface RecentActivityProps {
@@ -8,7 +9,32 @@ interface RecentActivityProps {
   onTimelineItemSelect: (item: HomeTimelineItem) => void;
 }
 
+const BREASTFEED_TIMELINE_TONES = {
+  breastfeedLeft: getBreastHistoryTone("left"),
+  breastfeedRight: getBreastHistoryTone("right"),
+  breastfeedBoth: getBreastHistoryTone("both"),
+} satisfies Partial<Record<HomeTimelineItem["accent"], ReturnType<typeof getBreastHistoryTone>>>;
+
+function getBreastfeedTimelineTone(accent: HomeTimelineItem["accent"]) {
+  return BREASTFEED_TIMELINE_TONES[accent as keyof typeof BREASTFEED_TIMELINE_TONES] ?? null;
+}
+
 function TimelineIcon({ accent }: { accent: HomeTimelineItem["accent"] }) {
+  const breastfeedTone = getBreastfeedTimelineTone(accent);
+  if (breastfeedTone) {
+    return (
+      <span
+        className="inline-flex text-current"
+        style={{
+          color: breastfeedTone.dot,
+          transform: accent === "breastfeedRight" ? "scaleX(-1)" : undefined,
+        }}
+      >
+        <HomeActionBreastfeedIcon className="h-3.5 w-3.5 md:h-4 md:w-4" />
+      </span>
+    );
+  }
+
   if (accent === "poop") {
     return <PoopIcon className="h-3.5 w-3.5 md:h-4 md:w-4" color="var(--color-home-poop-icon)" />;
   }
@@ -45,6 +71,14 @@ function GlanceIcon({ accent }: { accent: HomeGlanceStat["accent"] }) {
 }
 
 function timelineAccentStyles(accent: HomeTimelineItem["accent"]) {
+  const breastfeedTone = getBreastfeedTimelineTone(accent);
+  if (breastfeedTone) {
+    return {
+      dot: breastfeedTone.dot,
+      iconSurface: breastfeedTone.bg,
+    };
+  }
+
   if (accent === "poop") {
     return {
       dot: "#c98c59",

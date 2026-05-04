@@ -1,5 +1,4 @@
 import { diaperIncludesStool, getDiaperTypeLabel, getUrineColorLabel } from "./diaper";
-import { getFeedingEntryDetailParts, getFeedingEntryPrimaryLabel } from "./feeding";
 import {
   FEED_PREDICTION_FALLBACK,
   formatPredictionRange,
@@ -8,6 +7,7 @@ import {
   type FeedPrediction,
   getUnifiedFeedTimeline,
 } from "./feed-insights";
+import { getHistoryFeedingPresentation } from "./history-timeline";
 import { BITSS_TYPES } from "./constants";
 import { formatLocalDateKey, getAgeLabelFromDob, isOnLocalDay, timeSince } from "./utils";
 import { formatSleepDuration, getClassifiedSleepLogs, getDurationMinutes, getSleepPrediction, getWakeBaseline } from "./sleep-insights";
@@ -62,7 +62,7 @@ export interface HomeTimelineItem {
   timeLabel: string;
   title: string;
   detail: string;
-  accent: "feed" | "diaper" | "poop" | "sleep";
+  accent: "feed" | "breastfeedLeft" | "breastfeedRight" | "breastfeedBoth" | "diaper" | "poop" | "sleep";
 }
 
 export interface HomeGlanceStat {
@@ -420,6 +420,16 @@ function buildRecommendation(input: {
   };
 }
 
+function getHomeTimelineFeedAccent(entry: FeedingEntry): HomeTimelineItem["accent"] {
+  if (entry.food_type === "breast_milk") {
+    if (entry.breast_side === "left") return "breastfeedLeft";
+    if (entry.breast_side === "right") return "breastfeedRight";
+    if (entry.breast_side === "both") return "breastfeedBoth";
+  }
+
+  return "feed";
+}
+
 function buildTimeline(poops: PoopEntry[], diapers: DiaperEntry[], feedings: FeedingEntry[], sleeps: SleepEntry[], dayKey: string): HomeTimelineItem[] {
   const poopItems = poops
     .filter((entry) => isOnLocalDay(entry.logged_at, dayKey) && entry.is_no_poop === 0)
@@ -458,19 +468,23 @@ function buildTimeline(poops: PoopEntry[], diapers: DiaperEntry[], feedings: Fee
 
   const feedItems = feedings
     .filter((entry) => isOnLocalDay(entry.logged_at, dayKey))
-    .map((entry) => ({
-      id: `feed-${entry.id}`,
-      logged_at: entry.logged_at,
-      item: {
+    .map((entry) => {
+      const presentation = getHistoryFeedingPresentation(entry, "metric");
+
+      return {
         id: `feed-${entry.id}`,
-        sourceId: entry.id,
-        kind: "feed" as const,
-        timeLabel: formatClock(entry.logged_at),
-        title: getFeedingEntryPrimaryLabel(entry),
-        detail: getFeedingEntryDetailParts(entry).join(" • ") || "Logged",
-        accent: "feed" as const,
-      },
-    }));
+        logged_at: entry.logged_at,
+        item: {
+          id: `feed-${entry.id}`,
+          sourceId: entry.id,
+          kind: "feed" as const,
+          timeLabel: formatClock(entry.logged_at),
+          title: presentation.title,
+          detail: presentation.subtitle ?? "Logged",
+          accent: getHomeTimelineFeedAccent(entry),
+        },
+      };
+    });
 
   const sleepItems = sleeps
     .filter((entry) => isOnLocalDay(entry.ended_at, dayKey))
