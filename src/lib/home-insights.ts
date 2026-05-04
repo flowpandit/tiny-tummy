@@ -1,6 +1,13 @@
 import { diaperIncludesStool, getDiaperTypeLabel, getUrineColorLabel } from "./diaper";
 import { getFeedingEntryDetailParts, getFeedingEntryPrimaryLabel } from "./feeding";
-import { FEED_PREDICTION_FALLBACK, getFeedBaseline, getFeedPrediction, getUnifiedFeedTimeline } from "./feed-insights";
+import {
+  FEED_PREDICTION_FALLBACK,
+  formatPredictionRange,
+  getFeedBaseline,
+  getFeedPrediction,
+  type FeedPrediction,
+  getUnifiedFeedTimeline,
+} from "./feed-insights";
 import { BITSS_TYPES } from "./constants";
 import { formatLocalDateKey, getAgeLabelFromDob, isOnLocalDay, timeSince } from "./utils";
 import { formatSleepDuration, getClassifiedSleepLogs, getDurationMinutes, getSleepPrediction, getWakeBaseline } from "./sleep-insights";
@@ -110,6 +117,26 @@ function formatSleepWindow(predictedAt: Date, now = Date.now()): string {
 
   const overdueHours = Math.round(overdueMinutes / 60);
   return `${overdueHours}h ago`;
+}
+
+function formatFeedInsightDuration(durationMs: number): string {
+  const minutesTotal = Math.max(1, Math.round(durationMs / 60000));
+  if (minutesTotal < 60) return `${minutesTotal}m`;
+
+  const hours = Math.floor(minutesTotal / 60);
+  const minutes = minutesTotal % 60;
+  if (minutes === 0) return `${hours}h`;
+  return `${hours}h ${minutes}m`;
+}
+
+function formatHomeFeedPredictionHeadline(prediction: FeedPrediction, now = Date.now()): string {
+  if (prediction.state === "due") return "Next feed now";
+
+  if (prediction.state === "overdue") {
+    return `Next feed about ${formatFeedInsightDuration(now - prediction.latestAt.getTime())} late`;
+  }
+
+  return `Next feed in about ${formatFeedInsightDuration(prediction.predictedAt.getTime() - now)}`;
 }
 
 function getRecentPoopEntries(poopLogs: PoopEntry[], diaperLogs: DiaperEntry[], dayKey: string) {
@@ -269,8 +296,8 @@ function buildFeedInsight(child: Child, feedLogs: FeedingEntry[]): HomeInsightCa
     return {
       id: "feed",
       label: "Next feed",
-      value: "Next feed",
-      detail: `${formatSleepWindow(feedPrediction.predictedAt)} · Usually feeds around this time`,
+      value: formatHomeFeedPredictionHeadline(feedPrediction),
+      detail: formatPredictionRange(feedPrediction),
       accent: "feed",
     };
   }

@@ -112,8 +112,9 @@ test("home feed insight uses the unified feed prediction", () => {
 
   const feedInsight = model.insights.find((insight) => insight.id === "feed");
 
-  assert.equal(feedInsight?.value, "Next feed");
-  assert.match(feedInsight?.detail ?? "", /Usually feeds around this time/);
+  assert.match(feedInsight?.value ?? "", /^Next feed in about /);
+  assert.match(feedInsight?.detail ?? "", / - /);
+  assert.doesNotMatch(feedInsight?.detail ?? "", /Usually feeds around this time/);
 });
 
 test("active breastfeeding insight replaces the next feed insight", () => {
