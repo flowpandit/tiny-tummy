@@ -16,11 +16,13 @@ import {
   formatHistoryDayHeader,
   formatHistorySleepDuration,
   getEarliestHistoryDate,
+  getHistoryFeedingPresentation,
   getHistoryDisplayDays,
   getHistoryRange,
   getVisiblePoopLogs,
   groupTimelineByDay,
   hasHistoryEntries,
+  isHistoryBreastfeedEntry,
   summarizeTimelineEvents,
 } from "../src/lib/history-timeline.ts";
 import { formatLocalDateKey } from "../src/lib/utils.ts";
@@ -285,6 +287,32 @@ test("summarizes timeline events for the lightweight history overview", () => {
     diapers: 2,
     other: 1,
     total: 6,
+  });
+});
+
+test("presents breastfeeding history entries with breastfeed copy", () => {
+  const breastfeed: FeedingEntry = {
+    id: "breastfeed-1",
+    child_id: "child-1",
+    logged_at: "2026-04-14T09:55:00",
+    food_type: "breast_milk",
+    food_name: null,
+    amount_ml: null,
+    duration_minutes: 1,
+    breast_side: "right",
+    bottle_content: null,
+    reaction_notes: null,
+    is_constipation_support: 0,
+    notes: "Timed breastfeeding session • Right 1m",
+    created_at: "2026-04-14T09:55:00",
+  };
+
+  assert.equal(isHistoryBreastfeedEntry(breastfeed), true);
+  assert.deepEqual(getHistoryFeedingPresentation(breastfeed, "metric"), {
+    kind: "breastfeed",
+    title: "Breastfeed",
+    subtitle: "Right side · 1 min",
+    tagLabel: "breastfeed",
   });
 });
 

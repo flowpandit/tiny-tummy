@@ -1,4 +1,9 @@
 import { formatLocalDateKey, getLocalDateKeyFromValue } from "./utils.ts";
+import {
+  getBreastfeedContextHistorySummary,
+  getBreastfeedContextHistoryTitle,
+} from "./breastfeed-insights.ts";
+import { getFeedingEntryDetailParts, getFeedingEntryPrimaryLabel, getFeedingEntrySecondaryText } from "./feeding.ts";
 import type {
   DiaperEntry,
   Episode,
@@ -9,6 +14,7 @@ import type {
   PoopEntry,
   SleepEntry,
   SymptomEntry,
+  UnitSystem,
 } from "./types.ts";
 
 export type TimelineEvent =
@@ -36,6 +42,39 @@ export type TimelineEventSummary = {
   other: number;
   total: number;
 };
+
+export type HistoryFeedingPresentation = {
+  kind: "feed" | "breastfeed";
+  title: string;
+  subtitle: string | null;
+  tagLabel: string;
+};
+
+export function isHistoryBreastfeedEntry(entry: FeedingEntry): boolean {
+  return entry.food_type === "breast_milk"
+    && (entry.breast_side === "left" || entry.breast_side === "right" || entry.breast_side === "both");
+}
+
+export function getHistoryFeedingPresentation(entry: FeedingEntry, unitSystem: UnitSystem): HistoryFeedingPresentation {
+  if (isHistoryBreastfeedEntry(entry)) {
+    return {
+      kind: "breastfeed",
+      title: getBreastfeedContextHistoryTitle(entry),
+      subtitle: getBreastfeedContextHistorySummary(entry, unitSystem),
+      tagLabel: "breastfeed",
+    };
+  }
+
+  const detailText = getFeedingEntryDetailParts(entry, unitSystem).join(" · ");
+  const secondaryText = [detailText, getFeedingEntrySecondaryText(entry)].filter(Boolean).join(" · ");
+
+  return {
+    kind: "feed",
+    title: getFeedingEntryPrimaryLabel(entry),
+    subtitle: secondaryText || null,
+    tagLabel: "feed",
+  };
+}
 
 export function formatHistoryTime(dateStr: string): string {
   return new Date(dateStr).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });

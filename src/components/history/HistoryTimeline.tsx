@@ -3,7 +3,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { BITSS_TYPES, STOOL_COLORS } from "../../lib/constants";
 import { getDiaperTypeLabel, getUrineColorLabel } from "../../lib/diaper";
 import { getEpisodeEventTypeLabel, getEpisodeTypeLabel } from "../../lib/episode-constants";
-import { getFeedingEntryDetailParts, getFeedingEntryPrimaryLabel, getFeedingEntrySecondaryText } from "../../lib/feeding";
+import { getBreastHistoryTone } from "../../lib/breastfeed-insights";
 import { getMilestoneTypeLabel } from "../../lib/milestone-constants";
 import { loadPhoto } from "../../lib/photos";
 import { getSymptomSeverityLabel, getSymptomTypeLabel, getTemperatureMethodLabel } from "../../lib/symptom-constants";
@@ -11,14 +11,17 @@ import { cn } from "../../lib/cn";
 import {
   formatHistoryDateTime,
   formatHistoryDayHeader,
+  getHistoryFeedingPresentation,
   formatHistorySleepDuration,
   formatHistoryTime,
+  isHistoryBreastfeedEntry,
   type TimelineEvent,
   type TimelineEventSummary,
 } from "../../lib/history-timeline";
 import { formatGrowthSummary as formatGrowthSummaryWithUnits, formatTemperatureValue } from "../../lib/units";
 import {
   HomeActionBottleIcon,
+  HomeActionBreastfeedIcon,
   HomeActionDiaperIcon,
   HomeActionSleepIcon,
   MealIcon,
@@ -39,7 +42,11 @@ import type {
   TemperatureUnit,
 } from "../../lib/types";
 
-type HistoryTone = "feed" | "poop" | "wet" | "sleep" | "symptom" | "milestone" | "episode";
+type HistoryTone = "feed" | "breastfeedLeft" | "breastfeedRight" | "breastfeedBoth" | "poop" | "wet" | "sleep" | "symptom" | "milestone" | "episode";
+
+const BREASTFEED_LEFT_TONE = getBreastHistoryTone("left");
+const BREASTFEED_RIGHT_TONE = getBreastHistoryTone("right");
+const BREASTFEED_BOTH_TONE = getBreastHistoryTone("both");
 
 const HISTORY_TONES: Record<HistoryTone, {
   label: string;
@@ -56,6 +63,30 @@ const HISTORY_TONES: Record<HistoryTone, {
     iconBg: "color-mix(in srgb, #ef7f55 14%, white)",
     dotBg: "#fff6f1",
     dotBorder: "#f4ad8f",
+  },
+  breastfeedLeft: {
+    label: "breastfeed",
+    bg: "color-mix(in srgb, #de5c9f 16%, transparent)",
+    fg: BREASTFEED_LEFT_TONE.dot,
+    iconBg: BREASTFEED_LEFT_TONE.bg,
+    dotBg: "#fff4fa",
+    dotBorder: "#e7a3c9",
+  },
+  breastfeedRight: {
+    label: "breastfeed",
+    bg: "color-mix(in srgb, #6f8df0 16%, transparent)",
+    fg: BREASTFEED_RIGHT_TONE.dot,
+    iconBg: BREASTFEED_RIGHT_TONE.bg,
+    dotBg: "#f4f7ff",
+    dotBorder: "#b8c7f8",
+  },
+  breastfeedBoth: {
+    label: "breastfeed",
+    bg: "color-mix(in srgb, #8f83c9 16%, transparent)",
+    fg: BREASTFEED_BOTH_TONE.dot,
+    iconBg: BREASTFEED_BOTH_TONE.bg,
+    dotBg: "#f8f5ff",
+    dotBorder: "#c9bee9",
   },
   poop: {
     label: "poop",
@@ -308,10 +339,16 @@ function getDiaperHistoryIcon(diaperType: DiaperEntry["diaper_type"]): string {
   return diaperDirtyIcon;
 }
 
+function getBreastfeedHistoryTone(entry: FeedingEntry): HistoryTone {
+  if (entry.breast_side === "left") return "breastfeedLeft";
+  if (entry.breast_side === "right") return "breastfeedRight";
+  return "breastfeedBoth";
+}
+
 function getEventTone(event: TimelineEvent): HistoryTone {
   switch (event.kind) {
     case "meal":
-      return "feed";
+      return isHistoryBreastfeedEntry(event.entry) ? getBreastfeedHistoryTone(event.entry) : "feed";
     case "sleep":
       return "sleep";
     case "symptom":
@@ -379,20 +416,30 @@ function PoopItem({ log, onTap }: { log: PoopEntry; onTap: () => void }) {
 }
 
 function MealItem({ meal, unitSystem, onTap }: { meal: FeedingEntry; unitSystem: "metric" | "imperial"; onTap: () => void }) {
-  const detailText = getFeedingEntryDetailParts(meal, unitSystem).join(" · ");
-  const secondaryText = [detailText, getFeedingEntrySecondaryText(meal)].filter(Boolean).join(" · ");
+  const presentation = getHistoryFeedingPresentation(meal, unitSystem);
+  const isBreastfeed = presentation.kind === "breastfeed";
+  const tone = isBreastfeed ? getBreastfeedHistoryTone(meal) : "feed";
 
   return (
     <BaseItem
       onTap={onTap}
-      tone="feed"
-      icon={meal.food_type === "bottle" || meal.food_type === "formula"
-        ? <HomeActionBottleIcon className="h-4 w-4" />
-        : <MealIcon className="h-4 w-4 flex-shrink-0" color="currentColor" />}
+      tone={tone}
+      icon={isBreastfeed
+        ? (
+          <span
+            className="inline-flex"
+            style={{ transform: meal.breast_side === "right" ? "scaleX(-1)" : undefined }}
+          >
+            <HomeActionBreastfeedIcon className="h-4 w-4" />
+          </span>
+        )
+        : meal.food_type === "bottle" || meal.food_type === "formula"
+          ? <HomeActionBottleIcon className="h-4 w-4" />
+          : <MealIcon className="h-4 w-4 flex-shrink-0" color="currentColor" />}
       time={formatHistoryTime(meal.logged_at)}
-      title={getFeedingEntryPrimaryLabel(meal)}
-      subtitle={secondaryText || null}
-      tagLabel="feed"
+      title={presentation.title}
+      subtitle={presentation.subtitle}
+      tagLabel={presentation.tagLabel}
     />
   );
 }
