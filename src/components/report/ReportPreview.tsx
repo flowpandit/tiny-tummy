@@ -23,7 +23,10 @@ import type { Child, UnitSystem } from "../../lib/types";
 import { Avatar } from "../child/Avatar";
 import { Logo } from "../ui/Logo";
 
-const TIMELINE_ROWS_PER_PAGE = 13;
+const BASE_REPORT_PAGE_COUNT = 6;
+const TIMELINE_FIRST_PAGE_UNITS = 16.5;
+const TIMELINE_CONTINUED_PAGE_UNITS = 22;
+const TIMELINE_GROUP_HEADER_UNITS = 1.2;
 const REPORT_STOOL_TYPE_ICONS: Record<number, string> = {
   1: poop1Icon,
   2: poop2Icon,
@@ -86,8 +89,8 @@ export function ReportPreview({
     () => buildTimelineGroups(reportData.timeline, timelineFilter),
     [reportData.timeline, timelineFilter],
   );
-  const timelinePages = useMemo(() => chunkTimelineGroups(filteredTimelineGroups, TIMELINE_ROWS_PER_PAGE), [filteredTimelineGroups]);
-  const totalPages = 3 + Math.max(1, timelinePages.length);
+  const timelinePages = useMemo(() => chunkTimelineGroups(filteredTimelineGroups), [filteredTimelineGroups]);
+  const totalPages = BASE_REPORT_PAGE_COUNT + Math.max(1, timelinePages.length);
 
   return (
     <section
@@ -108,9 +111,12 @@ export function ReportPreview({
       )}
 
       <div className="tt-report-scroll">
-        <BriefPage model={model} pageNumber={1} totalPages={totalPages} />
-        <PatternPage model={model} pageNumber={2} totalPages={totalPages} />
-        <ContextPage model={model} pageNumber={3} totalPages={totalPages} />
+        <BriefOverviewPage model={model} pageNumber={1} totalPages={totalPages} />
+        <BriefDetailPage model={model} pageNumber={2} totalPages={totalPages} />
+        <PatternOverviewPage model={model} pageNumber={3} totalPages={totalPages} />
+        <PatternDetailPage model={model} pageNumber={4} totalPages={totalPages} />
+        <ContextOverviewPage model={model} pageNumber={5} totalPages={totalPages} />
+        <ContextDetailPage model={model} pageNumber={6} totalPages={totalPages} />
         <TimelinePages
           model={model}
           filter={timelineFilter}
@@ -125,7 +131,7 @@ export function ReportPreview({
   );
 }
 
-function BriefPage({ model, pageNumber, totalPages }: { model: ReportPreviewModel; pageNumber: number; totalPages: number }) {
+function BriefOverviewPage({ model, pageNumber, totalPages }: { model: ReportPreviewModel; pageNumber: number; totalPages: number }) {
   return (
     <ReportPage pageNumber={pageNumber} totalPages={totalPages} footer={model.privacyFooter} variant="brief">
       <ReportPageHeader model={model} title={model.title} />
@@ -153,7 +159,18 @@ function BriefPage({ model, pageNumber, totalPages }: { model: ReportPreviewMode
           ))}
         </div>
       </section>
+    </ReportPage>
+  );
+}
 
+function BriefDetailPage({ model, pageNumber, totalPages }: { model: ReportPreviewModel; pageNumber: number; totalPages: number }) {
+  return (
+    <ReportPage pageNumber={pageNumber} totalPages={totalPages} footer={model.privacyFooter} variant="brief">
+      <ReportPageHeader
+        model={model}
+        title="Pediatrician Brief"
+        subtitle="Recent events and appointment questions from the selected report period."
+      />
       <div className="tt-report-two-column">
         <section className="tt-report-panel" aria-label="Last important events">
           <SectionTitle title="Last Important Events" icon="calendar" compact />
@@ -177,7 +194,7 @@ function BriefPage({ model, pageNumber, totalPages }: { model: ReportPreviewMode
   );
 }
 
-function PatternPage({ model, pageNumber, totalPages }: { model: ReportPreviewModel; pageNumber: number; totalPages: number }) {
+function PatternOverviewPage({ model, pageNumber, totalPages }: { model: ReportPreviewModel; pageNumber: number; totalPages: number }) {
   return (
     <ReportPage pageNumber={pageNumber} totalPages={totalPages} footer={model.privacyFooter} variant="pattern">
       <ReportPageHeader
@@ -195,6 +212,21 @@ function PatternPage({ model, pageNumber, totalPages }: { model: ReportPreviewMo
       <div className="tt-report-chart-grid">
         <DailyStoolChart points={model.pattern.dailyPoints} noPoopDates={model.pattern.noPoopDates} />
         <StoolTypeTrend points={model.pattern.stoolTypeTrend} />
+      </div>
+    </ReportPage>
+  );
+}
+
+function PatternDetailPage({ model, pageNumber, totalPages }: { model: ReportPreviewModel; pageNumber: number; totalPages: number }) {
+  return (
+    <ReportPage pageNumber={pageNumber} totalPages={totalPages} footer={model.privacyFooter} variant="pattern">
+      <ReportPageHeader
+        model={model}
+        title="Poop + Diaper Pattern Review"
+        subtitle="Colour, diaper output, hydration notes, and clinical notes for the selected period."
+      />
+
+      <div className="tt-report-chart-grid">
         <ColourBreakdown items={model.pattern.colourBreakdown} />
         <DailyDiaperChart points={model.pattern.dailyPoints} />
       </div>
@@ -213,7 +245,7 @@ function PatternPage({ model, pageNumber, totalPages }: { model: ReportPreviewMo
   );
 }
 
-function ContextPage({ model, pageNumber, totalPages }: { model: ReportPreviewModel; pageNumber: number; totalPages: number }) {
+function ContextOverviewPage({ model, pageNumber, totalPages }: { model: ReportPreviewModel; pageNumber: number; totalPages: number }) {
   return (
     <ReportPage pageNumber={pageNumber} totalPages={totalPages} footer={model.privacyFooter} variant="context">
       <ReportPageHeader model={model} title="Tummy Context" />
@@ -247,6 +279,18 @@ function ContextPage({ model, pageNumber, totalPages }: { model: ReportPreviewMo
           <InfoRows rows={model.context.episodeRows} columns />
         </div>
       </section>
+    </ReportPage>
+  );
+}
+
+function ContextDetailPage({ model, pageNumber, totalPages }: { model: ReportPreviewModel; pageNumber: number; totalPages: number }) {
+  return (
+    <ReportPage pageNumber={pageNumber} totalPages={totalPages} footer={model.privacyFooter} variant="context">
+      <ReportPageHeader
+        model={model}
+        title="Tummy Context"
+        subtitle="Symptoms, feeding context, and tracking summary for clinical review."
+      />
 
       <div className="tt-report-two-column">
         <section className="tt-report-panel">
@@ -290,7 +334,7 @@ function TimelinePages({
       {visiblePages.map((pageGroups, index) => (
         <ReportPage
           key={`${filter}-${index}`}
-          pageNumber={4 + index}
+          pageNumber={BASE_REPORT_PAGE_COUNT + 1 + index}
           totalPages={totalPages}
           footer={model.privacyFooter}
           variant="timeline"
@@ -985,38 +1029,81 @@ function EmptyTable({ text }: { text: string }) {
   return <div className="tt-empty-table">{text}</div>;
 }
 
-function chunkTimelineGroups(groups: ReportTimelineGroup[], rowsPerPage: number): ReportTimelineGroup[][] {
+function chunkTimelineGroups(groups: ReportTimelineGroup[]): ReportTimelineGroup[][] {
   const pages: ReportTimelineGroup[][] = [];
   let current: ReportTimelineGroup[] = [];
-  let rowCount = 0;
+  let currentUnits = 0;
+
+  const currentBudget = () => (pages.length === 0 ? TIMELINE_FIRST_PAGE_UNITS : TIMELINE_CONTINUED_PAGE_UNITS);
+  const pushCurrent = () => {
+    if (current.length === 0) return;
+    pages.push(current);
+    current = [];
+    currentUnits = 0;
+  };
 
   for (const group of groups) {
-    if (rowCount > 0 && rowCount + group.rows.length > rowsPerPage) {
-      pages.push(current);
-      current = [];
-      rowCount = 0;
-    }
+    let remainingRows = group.rows;
+    let isContinuation = false;
 
-    if (group.rows.length <= rowsPerPage) {
-      current.push(group);
-      rowCount += group.rows.length;
-      continue;
-    }
+    while (remainingRows.length > 0) {
+      const availableUnits = currentBudget() - currentUnits;
+      const fittingRows = takeTimelineRowsForBudget(remainingRows, availableUnits);
 
-    for (let index = 0; index < group.rows.length; index += rowsPerPage) {
-      if (current.length > 0) {
-        pages.push(current);
-        current = [];
-        rowCount = 0;
+      if (fittingRows.length === 0 && current.length > 0) {
+        pushCurrent();
+        continue;
       }
-      const chunk = group.rows.slice(index, index + rowsPerPage);
-      pages.push([{ dateLabel: index === 0 ? group.dateLabel : `${group.dateLabel} (continued)`, rows: chunk }]);
+
+      const rowsForPage = fittingRows.length > 0 ? fittingRows : [remainingRows[0]];
+      const pageGroup = {
+        dateLabel: isContinuation ? `${group.dateLabel} (continued)` : group.dateLabel,
+        rows: rowsForPage,
+      };
+
+      current.push(pageGroup);
+      currentUnits += estimateTimelineGroupUnits(pageGroup);
+      remainingRows = remainingRows.slice(rowsForPage.length);
+      isContinuation = true;
+
+      if (remainingRows.length > 0) {
+        pushCurrent();
+      }
     }
   }
 
-  if (current.length > 0) {
-    pages.push(current);
-  }
+  pushCurrent();
 
   return pages;
+}
+
+function takeTimelineRowsForBudget(
+  rows: ReportTimelineGroup["rows"],
+  availableUnits: number,
+): ReportTimelineGroup["rows"] {
+  const taken: ReportTimelineGroup["rows"] = [];
+  let usedUnits = TIMELINE_GROUP_HEADER_UNITS;
+
+  for (const row of rows) {
+    const nextUnits = estimateTimelineRowUnits(row);
+    if (taken.length > 0 && usedUnits + nextUnits > availableUnits) {
+      break;
+    }
+    if (taken.length === 0 && usedUnits + nextUnits > availableUnits) {
+      break;
+    }
+    taken.push(row);
+    usedUnits += nextUnits;
+  }
+
+  return taken;
+}
+
+function estimateTimelineGroupUnits(group: ReportTimelineGroup) {
+  return TIMELINE_GROUP_HEADER_UNITS + group.rows.reduce((total, row) => total + estimateTimelineRowUnits(row), 0);
+}
+
+function estimateTimelineRowUnits(row: ReportTimelineGroup["rows"][number]) {
+  const textLength = `${row.time} ${row.event} ${row.details} ${row.note}`.length;
+  return 1 + Math.max(0, Math.ceil((textLength - 72) / 72)) * 0.45;
 }

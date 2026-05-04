@@ -617,12 +617,40 @@
   margin-top: 4mm;
 }
 
+.tt-report-two-column > *,
+.tt-report-chart-grid > *,
+.tt-metric-grid > * {
+  min-width: 0;
+}
+
 .tt-report-two-column--bottom {
-  grid-template-columns: 0.73fr 1.82fr;
+  grid-template-columns: 0.95fr 1.55fr;
 }
 
 .tt-report-panel {
+  min-width: 0;
   padding: 3.5mm;
+}
+
+.tt-report-two-column--bottom .tt-info-row {
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 1.5mm 2.4mm;
+  align-items: start;
+}
+
+.tt-report-two-column--bottom .tt-info-row strong,
+.tt-report-two-column--bottom .tt-info-row p {
+  grid-column: 2;
+}
+
+.tt-report-two-column--bottom .tt-info-row strong {
+  justify-self: start;
+  font-size: 15.5px;
+}
+
+.tt-report-two-column--bottom .tt-info-row p {
+  text-align: left;
+  font-size: 9px;
 }
 
 .tt-event-list {
@@ -1807,10 +1835,6 @@ body.tt-report-html-pdf-export .tt-report-page__content {
   padding: 10.5mm 13mm 24mm !important;
 }
 
-body.tt-report-html-pdf-export .tt-report-footer {
-  display: none !important;
-}
-
 body.tt-report-html-pdf-export .tt-report-header {
   grid-template-columns: minmax(0, 1fr) 44mm !important;
   align-items: stretch !important;
@@ -1851,7 +1875,7 @@ body.tt-report-html-pdf-export .tt-report-two-column {
 }
 
 body.tt-report-html-pdf-export .tt-report-two-column--bottom {
-  grid-template-columns: 0.73fr 1.82fr !important;
+  grid-template-columns: 0.95fr 1.55fr !important;
 }
 
 body.tt-report-html-pdf-export .tt-report-chart-grid {
