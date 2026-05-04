@@ -3,7 +3,8 @@ use base64::Engine;
 use printpdf::{
     graphics::{Line, LinePoint, PaintMode, Point, Polygon, PolygonRing, WindingOrder},
     ops::PdfFontHandle,
-    BuiltinFont, Color, Mm, Op, PdfDocument, PdfPage, PdfSaveOptions, Pt, Rgb, TextItem,
+    BuiltinFont, Color, Mm, Op, PdfDocument, PdfPage, PdfSaveOptions, Pt, Px, RawImage, Rgb,
+    TextItem, XObjectId, XObjectTransform,
 };
 use serde::Deserialize;
 
@@ -11,10 +12,21 @@ const PAGE_WIDTH_MM: f32 = 210.0;
 const PAGE_HEIGHT_MM: f32 = 297.0;
 const PAGE_PAD_X_MM: f32 = 13.0;
 const PAGE_PAD_TOP_MM: f32 = 10.5;
-const CONTENT_BOTTOM_MM: f32 = 267.0;
+const CONTENT_BOTTOM_MM: f32 = 264.0;
 const FOOTER_TOP_MM: f32 = 276.0;
 const CONTENT_WIDTH_MM: f32 = PAGE_WIDTH_MM - (PAGE_PAD_X_MM * 2.0);
 const CARD_RADIUS_MM: f32 = 2.4;
+
+static BRAND_ICON_PNG: &[u8] = include_bytes!("../assets/report-icons/brand.png");
+static POOP_ICON_PNG: &[u8] = include_bytes!("../assets/report-icons/poop.png");
+static DIAPER_ICON_PNG: &[u8] = include_bytes!("../assets/report-icons/diaper.png");
+static DIAPER_WET_ICON_PNG: &[u8] = include_bytes!("../assets/report-icons/diaper-wet.png");
+static DIAPER_DIRTY_ICON_PNG: &[u8] = include_bytes!("../assets/report-icons/diaper-dirty.png");
+static DIAPER_MIXED_ICON_PNG: &[u8] = include_bytes!("../assets/report-icons/diaper-mixed.png");
+static FEED_ICON_PNG: &[u8] = include_bytes!("../assets/report-icons/feed.png");
+static BREASTFEED_ICON_PNG: &[u8] = include_bytes!("../assets/report-icons/breastfeed.png");
+static SYMPTOM_ICON_PNG: &[u8] = include_bytes!("../assets/report-icons/symptom.png");
+static EPISODE_ICON_PNG: &[u8] = include_bytes!("../assets/report-icons/episode.png");
 
 #[derive(Debug, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
@@ -22,6 +34,8 @@ pub struct NativeReportPdfPayload {
     pub title: String,
     pub child_name: String,
     pub child_avatar_color: String,
+    #[serde(default)]
+    pub child_avatar_data_url: Option<String>,
     pub age_label: String,
     pub dob_label: String,
     pub feeding_label: String,
@@ -143,7 +157,6 @@ pub struct ColourBreakdownItem {
 #[derive(Debug, Deserialize, Clone)]
 pub struct ClinicalNote {
     pub topic: String,
-    pub value: String,
     pub note: String,
     pub tone: String,
 }
@@ -204,6 +217,7 @@ struct PatientHeader {
     child_name: String,
     child_initial: String,
     child_avatar_color: Color,
+    child_avatar_image: Option<PdfAsset>,
     dob_label: String,
     age_label: String,
     feeding_label: String,
@@ -222,8 +236,82 @@ struct PdfLayout {
     ops: Vec<Op>,
     y_mm: f32,
     has_content: bool,
+    assets: PdfAssets,
     patient: PatientHeader,
     page_context: Option<PageContext>,
+}
+
+#[derive(Clone)]
+struct PdfAsset {
+    id: XObjectId,
+    width_px: usize,
+    height_px: usize,
+    dpi: f32,
+}
+
+#[derive(Default)]
+struct PdfAssets {
+    brand: Option<PdfAsset>,
+    poop: Option<PdfAsset>,
+    diaper: Option<PdfAsset>,
+    diaper_wet: Option<PdfAsset>,
+    diaper_dirty: Option<PdfAsset>,
+    diaper_mixed: Option<PdfAsset>,
+    feed: Option<PdfAsset>,
+    breastfeed: Option<PdfAsset>,
+    symptom: Option<PdfAsset>,
+    episode: Option<PdfAsset>,
+}
+
+#[derive(Clone, Copy)]
+enum ReportIcon {
+    Brand,
+    Poop,
+    Diaper,
+    DiaperWet,
+    DiaperDirty,
+    DiaperMixed,
+    Feed,
+    Breastfeed,
+    Symptom,
+    Episode,
+}
+
+enum ImageFit {
+    Contain,
+    Cover,
+}
+
+impl PdfAssets {
+    fn register(doc: &mut PdfDocument) -> Self {
+        Self {
+            brand: register_png_asset(doc, BRAND_ICON_PNG),
+            poop: register_png_asset(doc, POOP_ICON_PNG),
+            diaper: register_png_asset(doc, DIAPER_ICON_PNG),
+            diaper_wet: register_png_asset(doc, DIAPER_WET_ICON_PNG),
+            diaper_dirty: register_png_asset(doc, DIAPER_DIRTY_ICON_PNG),
+            diaper_mixed: register_png_asset(doc, DIAPER_MIXED_ICON_PNG),
+            feed: register_png_asset(doc, FEED_ICON_PNG),
+            breastfeed: register_png_asset(doc, BREASTFEED_ICON_PNG),
+            symptom: register_png_asset(doc, SYMPTOM_ICON_PNG),
+            episode: register_png_asset(doc, EPISODE_ICON_PNG),
+        }
+    }
+
+    fn get(&self, icon: ReportIcon) -> Option<&PdfAsset> {
+        match icon {
+            ReportIcon::Brand => self.brand.as_ref(),
+            ReportIcon::Poop => self.poop.as_ref(),
+            ReportIcon::Diaper => self.diaper.as_ref(),
+            ReportIcon::DiaperWet => self.diaper_wet.as_ref(),
+            ReportIcon::DiaperDirty => self.diaper_dirty.as_ref(),
+            ReportIcon::DiaperMixed => self.diaper_mixed.as_ref(),
+            ReportIcon::Feed => self.feed.as_ref(),
+            ReportIcon::Breastfeed => self.breastfeed.as_ref(),
+            ReportIcon::Symptom => self.symptom.as_ref(),
+            ReportIcon::Episode => self.episode.as_ref(),
+        }
+    }
 }
 
 impl PdfLayout {
@@ -234,13 +322,20 @@ impl PdfLayout {
             .next()
             .map(|ch| ch.to_uppercase().collect::<String>())
             .unwrap_or_else(|| "T".to_string());
+        let mut doc = PdfDocument::new(&payload.title);
+        let assets = PdfAssets::register(&mut doc);
+        let child_avatar_image = payload
+            .child_avatar_data_url
+            .as_deref()
+            .and_then(|data_url| register_data_url_image(&mut doc, data_url));
 
         Self {
-            doc: PdfDocument::new(&payload.title),
+            doc,
             pages: Vec::new(),
             ops: Vec::new(),
             y_mm: PAGE_PAD_TOP_MM,
             has_content: false,
+            assets,
             patient: PatientHeader {
                 child_name: payload.child_name.clone(),
                 child_initial,
@@ -248,6 +343,7 @@ impl PdfLayout {
                     &payload.child_avatar_color,
                     rgb(0.36, 0.42, 0.32),
                 ),
+                child_avatar_image,
                 dob_label: payload.dob_label.clone(),
                 age_label: payload.age_label.clone(),
                 feeding_label: payload.feeding_label.clone(),
@@ -309,7 +405,7 @@ impl PdfLayout {
             subtitle: subtitle.map(str::to_string),
         });
         self.reset_page();
-        self.draw_page_header(title, subtitle);
+        self.draw_page_header(title, subtitle, false);
     }
 
     fn continue_report_page(&mut self) {
@@ -318,12 +414,7 @@ impl PdfLayout {
         self.reset_page();
 
         if let Some(context) = context {
-            let title = if context.title.ends_with("(continued)") {
-                context.title
-            } else {
-                format!("{} (continued)", context.title)
-            };
-            self.draw_page_header(&title, context.subtitle.as_deref());
+            self.draw_page_header(&context.title, context.subtitle.as_deref(), true);
         }
     }
 
@@ -337,7 +428,7 @@ impl PdfLayout {
         self.y_mm += gap_mm;
     }
 
-    fn draw_page_header(&mut self, title: &str, subtitle: Option<&str>) {
+    fn draw_page_header(&mut self, title: &str, subtitle: Option<&str>, continued: bool) {
         let top = PAGE_PAD_TOP_MM;
         let patient_x = PAGE_WIDTH_MM - PAGE_PAD_X_MM - 44.0;
         let child_initial = self.patient.child_initial.clone();
@@ -354,46 +445,55 @@ impl PdfLayout {
             BuiltinFont::HelveticaBold,
             leaf(),
         );
-        self.draw_round_rect(
+        self.draw_icon_tile(
             PAGE_PAD_X_MM,
             top + 1.1,
             8.0,
-            8.0,
-            2.0,
-            leaf_soft(),
-            Some(rule_soft()),
-            0.35,
-        );
-        self.draw_text_line(
+            ReportIcon::Brand,
             "T",
-            PAGE_PAD_X_MM + 2.55,
-            top + 6.8,
-            9.0,
-            BuiltinFont::HelveticaBold,
-            leaf(),
+            "default",
         );
 
-        self.draw_wrapped_text_at(
+        let title_top = top + 15.0;
+        let title_font = 22.0;
+        let title_h = self.draw_wrapped_text_at(
             title,
             PAGE_PAD_X_MM,
-            top + 15.0,
+            title_top,
             128.0,
-            22.0,
+            title_font,
             BuiltinFont::HelveticaBold,
             ink(),
             Some(2),
         );
+        let mut header_cursor = title_top + title_h;
+        if continued {
+            header_cursor += 1.0;
+            self.draw_text_line(
+                "continued",
+                PAGE_PAD_X_MM,
+                header_cursor + 2.7,
+                8.2,
+                BuiltinFont::HelveticaBold,
+                muted(),
+            );
+            header_cursor += 4.7;
+        }
         if let Some(subtitle) = subtitle {
-            self.draw_wrapped_text_at(
+            let subtitle_top = header_cursor + 1.8;
+            let subtitle_h = self.draw_wrapped_text_at(
                 subtitle,
                 PAGE_PAD_X_MM,
-                top + 26.5,
+                subtitle_top,
                 116.0,
-                8.2,
+                8.8,
                 BuiltinFont::Helvetica,
                 body(),
-                Some(2),
+                Some(3),
             );
+            header_cursor = subtitle_top + subtitle_h;
+        } else {
+            header_cursor += 0.8;
         }
 
         self.draw_line(
@@ -404,21 +504,12 @@ impl PdfLayout {
             rule(),
             0.35,
         );
-        self.draw_circle(
-            patient_x + 5.3,
-            top + 8.5,
-            5.4,
+        self.draw_patient_avatar(
+            patient_x,
+            top + 3.1,
+            10.8,
             child_avatar_color,
-            Some(paper()),
-            0.45,
-        );
-        self.draw_text_line(
             &child_initial,
-            patient_x + 3.6,
-            top + 10.0,
-            8.8,
-            BuiltinFont::HelveticaBold,
-            paper(),
         );
         self.draw_text_line(
             &child_name,
@@ -454,13 +545,13 @@ impl PdfLayout {
         );
         self.draw_line(
             PAGE_PAD_X_MM,
-            top + 28.8,
+            header_cursor + 4.0,
             PAGE_WIDTH_MM - PAGE_PAD_X_MM,
-            top + 28.8,
+            header_cursor + 4.0,
             rule(),
             0.35,
         );
-        self.y_mm = top + 34.0;
+        self.y_mm = header_cursor + 9.2;
     }
 
     fn draw_report_meta(
@@ -553,11 +644,11 @@ impl PdfLayout {
         );
         let gap = 3.0;
         let col_w = (CONTENT_WIDTH_MM - gap) / 2.0;
-        let y = self.y_mm + 1.5;
         let left_h = self.measure_event_panel(&payload.brief.last_important_events, col_w);
         let right_h = self.measure_question_panel(&payload.brief.questions, col_w);
-        let h = left_h.max(right_h).max(118.0);
+        let h = left_h.max(right_h).max(90.0);
         self.ensure_space(h);
+        let y = self.y_mm + 1.5;
         self.draw_event_panel(
             PAGE_PAD_X_MM,
             y,
@@ -632,19 +723,19 @@ impl PdfLayout {
 
         let left_w = 68.0;
         let right_w = CONTENT_WIDTH_MM - left_w - 3.0;
-        let y = self.y_mm;
         let left_h =
             self.measure_info_panel("Hydration Notes", &payload.pattern.hydration_rows, left_w);
         let right_h = self.measure_clinical_panel(&payload.pattern.clinical_notes, right_w);
         let h = left_h.max(right_h).max(54.0);
         self.ensure_space(h);
+        let y = self.y_mm;
         self.draw_info_panel(
             PAGE_PAD_X_MM,
             y,
             left_w,
             h,
             "Hydration Notes",
-            "H",
+            "hydration",
             &payload.pattern.hydration_rows,
             false,
         )?;
@@ -666,7 +757,6 @@ impl PdfLayout {
 
         let gap = 3.0;
         let col_w = (CONTENT_WIDTH_MM - gap) / 2.0;
-        let y = self.y_mm;
         let left_h = self.measure_info_panel(
             "Poop & Tummy Summary",
             &payload.context.poop_summary_rows,
@@ -675,13 +765,14 @@ impl PdfLayout {
         let right_h = self.measure_info_panel("Diaper Output", &payload.context.diaper_rows, col_w);
         let h = left_h.max(right_h).max(68.0);
         self.ensure_space(h);
+        let y = self.y_mm;
         self.draw_info_panel(
             PAGE_PAD_X_MM,
             y,
             col_w,
             h,
             "Poop & Tummy Summary",
-            "P",
+            "poop",
             &payload.context.poop_summary_rows,
             false,
         )?;
@@ -691,7 +782,7 @@ impl PdfLayout {
             col_w,
             h,
             "Diaper Output",
-            "D",
+            "diaper",
             &payload.context.diaper_rows,
             false,
         )?;
@@ -708,11 +799,11 @@ impl PdfLayout {
         );
         let gap = 3.0;
         let col_w = (CONTENT_WIDTH_MM - gap) / 2.0;
-        let y = self.y_mm + 1.0;
         let symptom_h = self.measure_symptom_panel(&payload.context.symptom_rows, col_w);
         let feeding_h = self.measure_feeding_panel(&payload.context.feeding_rows, col_w);
         let h = symptom_h.max(feeding_h).max(94.0);
         self.ensure_space(h);
+        let y = self.y_mm + 1.0;
         self.draw_symptom_panel(PAGE_PAD_X_MM, y, col_w, h, &payload.context.symptom_rows)?;
         self.draw_feeding_panel(
             PAGE_PAD_X_MM + col_w + gap,
@@ -878,15 +969,30 @@ impl PdfLayout {
             BuiltinFont::HelveticaBold,
             leaf(),
         );
-        self.draw_line(
-            text_x + text_width_estimate(title, 15.8) + 3.0,
+        self.draw_heading_rule_after(
+            text_x,
             y + 5.4,
+            title,
+            15.8,
             PAGE_WIDTH_MM - PAGE_PAD_X_MM,
-            y + 5.4,
-            rule(),
-            0.35,
+            6.0,
         );
         self.y_mm = y + 11.0;
+    }
+
+    fn draw_heading_rule_after(
+        &mut self,
+        text_x: f32,
+        y: f32,
+        title: &str,
+        font_size_pt: f32,
+        max_x: f32,
+        gap: f32,
+    ) {
+        let rule_x = text_x + text_width_estimate(title, font_size_pt) + gap;
+        if rule_x + 10.0 <= max_x {
+            self.draw_line(rule_x, y, max_x, y, rule(), 0.3);
+        }
     }
 
     fn draw_metric_grid(
@@ -898,6 +1004,7 @@ impl PdfLayout {
         if metrics.is_empty() {
             return Ok(());
         }
+        let h = h.max(30.0);
         let gap = 3.0;
         let card_w = (CONTENT_WIDTH_MM - gap * (columns.saturating_sub(1) as f32)) / columns as f32;
         self.ensure_space(h);
@@ -921,22 +1028,24 @@ impl PdfLayout {
                 label_icon(&metric.label),
                 &metric.tone,
             );
+            let value_font = metric_value_font_size(&metric.value, card_w - 4.0);
+            let label_top = y + h - 8.4;
             self.draw_wrapped_text_at(
                 &metric.value,
                 x + 2.0,
-                y + 13.0,
+                y + 11.9,
                 card_w - 4.0,
-                if metric.value.len() > 8 { 12.0 } else { 17.5 },
+                value_font,
                 BuiltinFont::HelveticaBold,
                 tone_main(&metric.tone),
-                Some(2),
+                Some(if value_font < 11.0 { 2 } else { 1 }),
             );
             self.draw_wrapped_text_at(
                 &metric.label,
                 x + 2.0,
-                y + h - 9.0,
+                label_top,
                 card_w - 4.0,
-                7.4,
+                7.2,
                 BuiltinFont::HelveticaBold,
                 body(),
                 Some(2),
@@ -947,19 +1056,11 @@ impl PdfLayout {
     }
 
     fn measure_event_panel(&self, events: &[ReportEvent], width: f32) -> f32 {
-        16.0 + events
+        18.0 + events
             .iter()
-            .map(|event| {
-                9.5_f32.max(
-                    measure_wrapped_text(
-                        &format!("{} {}", event.value, event.detail),
-                        width * 0.34,
-                        7.2,
-                        Some(3),
-                    ) + 3.5,
-                )
-            })
+            .map(|event| measure_event_row_height(event, width))
             .sum::<f32>()
+            + 2.0
     }
 
     fn draw_event_panel(
@@ -979,13 +1080,14 @@ impl PdfLayout {
             "D",
             "default",
         );
-        let mut row_y = y + 16.0;
+        let mut row_y = y + 16.5;
         for event in events {
-            let row_h =
-                11.0_f32.max(measure_wrapped_text(&event.detail, w * 0.34, 6.5, Some(2)) + 5.0);
+            let row_h = measure_event_row_height(event, w);
+            let detail_x = x + 47.0;
+            let detail_w = w - 51.0;
             self.draw_badge(
                 x + 3.5,
-                row_y + 1.4,
+                row_y + (row_h - 7.2) / 2.0,
                 7.2,
                 label_icon(&event.label),
                 &event.tone,
@@ -993,40 +1095,33 @@ impl PdfLayout {
             self.draw_wrapped_text_at(
                 &event.label,
                 x + 13.0,
-                row_y + 1.0,
-                28.0,
+                row_y + 2.0,
+                29.0,
                 7.8,
                 BuiltinFont::HelveticaBold,
                 ink(),
                 Some(2),
             );
-            self.draw_line(
-                x + 43.0,
-                row_y + row_h / 2.0,
-                x + w - 32.0,
-                row_y + row_h / 2.0,
-                rgb(0.64, 0.61, 0.56),
-                0.25,
-            );
             self.draw_wrapped_text_at(
                 &event.value,
-                x + w - 30.0,
-                row_y + 1.0,
-                27.0,
+                detail_x,
+                row_y + 1.9,
+                detail_w,
                 7.2,
                 BuiltinFont::HelveticaBold,
                 ink(),
-                Some(2),
+                Some(3),
             );
+            let value_h = measure_wrapped_text(&event.value, detail_w, 7.2, Some(3));
             self.draw_wrapped_text_at(
                 &event.detail,
-                x + w - 30.0,
-                row_y + 6.8,
-                27.0,
-                6.1,
+                detail_x,
+                row_y + 2.6 + value_h,
+                detail_w,
+                6.3,
                 BuiltinFont::Helvetica,
                 muted(),
-                Some(2),
+                Some(3),
             );
             self.draw_line(
                 x + 3.5,
@@ -1083,7 +1178,7 @@ impl PdfLayout {
         Ok(())
     }
 
-    fn draw_chart_title(&mut self, x: f32, y: f32, title: &str, icon: &str) {
+    fn draw_chart_title(&mut self, x: f32, y: f32, w: f32, title: &str, icon: &str) {
         self.draw_badge(x, y, 8.2, icon, "alert");
         self.draw_text_line(
             title,
@@ -1093,14 +1188,7 @@ impl PdfLayout {
             BuiltinFont::HelveticaBold,
             rust(),
         );
-        self.draw_line(
-            x + 10.8 + text_width_estimate(title, 13.5) + 2.0,
-            y + 5.0,
-            x + 79.0,
-            y + 5.0,
-            rule(),
-            0.3,
-        );
+        self.draw_heading_rule_after(x + 10.8, y + 5.0, title, 13.5, x + w, 5.0);
     }
 
     fn draw_daily_stool_chart(
@@ -1113,7 +1201,7 @@ impl PdfLayout {
         no_poop_dates: &[String],
     ) -> Result<(), String> {
         self.draw_round_rect(x, y, w, h, CARD_RADIUS_MM, paper(), Some(rule_soft()), 0.45);
-        self.draw_chart_title(x + 4.0, y + 3.6, "Daily Stool Output", "P");
+        self.draw_chart_title(x + 4.0, y + 3.6, w - 8.0, "Daily Stool Output", "poop");
         self.draw_text_line(
             "Stool count by recent day",
             x + 15.0,
@@ -1166,7 +1254,7 @@ impl PdfLayout {
         points: &[DailyPoint],
     ) -> Result<(), String> {
         self.draw_round_rect(x, y, w, h, CARD_RADIUS_MM, paper(), Some(rule_soft()), 0.45);
-        self.draw_chart_title(x + 4.0, y + 3.6, "Daily Diaper Output", "D");
+        self.draw_chart_title(x + 4.0, y + 3.6, w - 8.0, "Daily Diaper Output", "diaper");
         self.draw_text_line(
             "Wet, dirty, and mixed diapers by recent day",
             x + 15.0,
@@ -1200,7 +1288,7 @@ impl PdfLayout {
         points: &[TypeTrendPoint],
     ) -> Result<(), String> {
         self.draw_round_rect(x, y, w, h, CARD_RADIUS_MM, paper(), Some(rule_soft()), 0.45);
-        self.draw_chart_title(x + 4.0, y + 3.6, "Stool Type Trend", "T");
+        self.draw_chart_title(x + 4.0, y + 3.6, w - 8.0, "Stool Type Trend", "poop");
         self.draw_text_line(
             "Bristol-style stool types over time",
             x + 15.0,
@@ -1323,7 +1411,7 @@ impl PdfLayout {
         items: &[ColourBreakdownItem],
     ) -> Result<(), String> {
         self.draw_round_rect(x, y, w, h, CARD_RADIUS_MM, paper(), Some(rule_soft()), 0.45);
-        self.draw_chart_title(x + 4.0, y + 3.6, "Stool Colour Breakdown", "C");
+        self.draw_chart_title(x + 4.0, y + 3.6, w - 8.0, "Stool Colour Breakdown", "poop");
         self.draw_text_line(
             "Colours observed in this period",
             x + 15.0,
@@ -1359,6 +1447,22 @@ impl PdfLayout {
         let list_x = x + 48.5;
         let mut row_y = y + 25.5;
         for item in items.iter().take(6) {
+            let value = format!("{}% ({})", item.percent, item.count);
+            let value_font = 6.8;
+            let value_right = x + w - 4.0;
+            let value_left = value_right - text_width_estimate(&value, value_font);
+            let label_x = list_x + 6.0;
+            let label_w = (value_left - label_x - 2.0).max(18.0);
+            let note = if item.is_red_flag {
+                "Red-flag colour"
+            } else if item.value == items[0].value {
+                "Most common"
+            } else {
+                "Observed"
+            };
+            let label_h = measure_wrapped_text(&item.label, label_w, 7.1, Some(2));
+            let note_h = measure_wrapped_text(note, label_w, 5.8, Some(1));
+            let row_h = 8.6_f32.max(label_h + note_h + 0.8);
             self.draw_circle(
                 list_x + 2.0,
                 row_y + 2.0,
@@ -1369,58 +1473,44 @@ impl PdfLayout {
             );
             self.draw_wrapped_text_at(
                 &item.label,
-                list_x + 6.0,
+                label_x,
                 row_y - 0.8,
-                w - 68.0,
-                7.4,
+                label_w,
+                7.1,
                 BuiltinFont::HelveticaBold,
                 if item.is_red_flag { rust() } else { ink() },
-                Some(1),
+                Some(2),
             );
-            let note = if item.is_red_flag {
-                "Red-flag colour"
-            } else if item.value == items[0].value {
-                "Most common"
-            } else {
-                "Observed"
-            };
-            self.draw_text_line(
+            self.draw_wrapped_text_at(
                 note,
-                list_x + 6.0,
-                row_y + 4.2,
+                label_x,
+                row_y - 0.4 + label_h,
+                label_w,
                 5.8,
                 BuiltinFont::Helvetica,
                 muted(),
+                Some(1),
             );
             self.draw_text_line(
-                &format!("{}% ({})", item.percent, item.count),
-                x + w - 22.0,
+                &value,
+                value_right - text_width_estimate(&value, value_font),
                 row_y + 2.8,
-                6.8,
+                value_font,
                 BuiltinFont::HelveticaBold,
                 ink(),
             );
-            row_y += 8.2;
+            row_y += row_h;
         }
         Ok(())
     }
 
     fn measure_info_panel(&self, title: &str, rows: &[InfoRow], width: f32) -> f32 {
-        14.0 + measure_wrapped_text(title, width - 22.0, 12.0, Some(1))
+        16.0 + measure_wrapped_text(title, width - 22.0, 12.0, Some(1))
             + rows
                 .iter()
-                .map(|row| {
-                    let detail = row.detail.as_deref().unwrap_or("");
-                    10.0_f32.max(
-                        measure_wrapped_text(
-                            &format!("{} {} {}", row.label, row.value, detail),
-                            width - 16.0,
-                            7.4,
-                            None,
-                        ) + 3.0,
-                    )
-                })
+                .map(|row| measure_info_row_height(row, width, false))
                 .sum::<f32>()
+            + 2.0
     }
 
     fn draw_info_panel(
@@ -1450,10 +1540,14 @@ impl PdfLayout {
         let mut row_y = y + if compact { 13.0 } else { 15.0 };
         for row in rows {
             let tone = row.tone.as_deref().unwrap_or("default");
-            let row_h = if compact { 8.6 } else { 10.5 };
+            let row_h = measure_info_row_height(row, w, compact);
+            let label_w = if compact { w * 0.34 } else { w * 0.36 };
+            let value_x = x + if compact { w * 0.48 } else { w * 0.52 };
+            let value_w = x + w - value_x - 3.5;
+            let value_font = if compact { 8.0 } else { 9.4 };
             self.draw_badge(
                 x + 3.5,
-                row_y + 1.0,
+                row_y + (row_h - if compact { 6.0 } else { 7.0 }) / 2.0,
                 if compact { 6.0 } else { 7.0 },
                 label_icon(&row.label),
                 tone,
@@ -1461,33 +1555,33 @@ impl PdfLayout {
             self.draw_wrapped_text_at(
                 &row.label,
                 x + 12.0,
-                row_y + 0.8,
-                w * 0.37,
+                row_y + 1.5,
+                label_w,
                 7.0,
                 BuiltinFont::HelveticaBold,
                 ink(),
-                Some(2),
+                Some(3),
             );
-            self.draw_wrapped_text_at(
+            let value_h = self.draw_wrapped_text_at(
                 &row.value,
-                x + w * 0.52,
-                row_y + 0.5,
-                w * 0.43,
-                if compact { 8.0 } else { 10.0 },
+                value_x,
+                row_y + 1.2,
+                value_w,
+                value_font,
                 BuiltinFont::HelveticaBold,
                 tone_main(tone),
-                Some(2),
+                Some(3),
             );
             if let Some(detail) = &row.detail {
                 self.draw_wrapped_text_at(
                     detail,
-                    x + w * 0.52,
-                    row_y + 5.7,
-                    w * 0.43,
-                    5.8,
+                    value_x,
+                    row_y + 2.0 + value_h,
+                    value_w,
+                    if compact { 5.6 } else { 5.8 },
                     BuiltinFont::Helvetica,
                     body(),
-                    Some(2),
+                    Some(3),
                 );
             }
             self.draw_line(
@@ -1504,19 +1598,11 @@ impl PdfLayout {
     }
 
     fn measure_clinical_panel(&self, rows: &[ClinicalNote], width: f32) -> f32 {
-        15.0 + rows
+        17.0 + rows
             .iter()
-            .map(|row| {
-                9.5_f32.max(
-                    measure_wrapped_text(
-                        &format!("{} {}", row.value, row.note),
-                        width - 47.0,
-                        6.8,
-                        None,
-                    ) + 3.5,
-                )
-            })
+            .map(|row| measure_clinical_row_height(row, width))
             .sum::<f32>()
+            + 2.0
     }
 
     fn draw_clinical_panel(
@@ -1538,14 +1624,20 @@ impl PdfLayout {
         );
         let mut row_y = y + 15.0;
         for (index, row) in rows.iter().enumerate() {
-            let row_h = 10.2_f32.max(measure_wrapped_text(&row.note, w - 48.0, 6.8, Some(3)) + 4.0);
+            let row_h = measure_clinical_row_height(row, w);
             let fill = if index % 2 == 0 { paper() } else { wash() };
             self.draw_rect(x + 3.2, row_y, w - 6.4, row_h, fill, None, 0.0);
-            self.draw_badge(x + 5.0, row_y + 1.7, 5.8, label_icon(&row.topic), &row.tone);
+            self.draw_badge(
+                x + 5.0,
+                row_y + (row_h - 5.8) / 2.0,
+                5.8,
+                label_icon(&row.topic),
+                &row.tone,
+            );
             self.draw_wrapped_text_at(
                 &row.topic,
                 x + 13.0,
-                row_y + 1.7,
+                row_y + 2.0,
                 27.0,
                 6.8,
                 BuiltinFont::HelveticaBold,
@@ -1555,12 +1647,12 @@ impl PdfLayout {
             self.draw_wrapped_text_at(
                 &row.note,
                 x + 43.0,
-                row_y + 1.6,
+                row_y + 2.0,
                 w - 48.0,
                 6.8,
                 BuiltinFont::Helvetica,
                 body(),
-                Some(3),
+                None,
             );
             self.draw_line(
                 x + 3.2,
@@ -1640,7 +1732,24 @@ impl PdfLayout {
     }
 
     fn draw_episode_context(&mut self, rows: &[InfoRow]) -> Result<(), String> {
-        let h = 50.0_f32.max(22.0 + ((rows.len().max(1) + 1) / 2) as f32 * 16.0);
+        let left_w = 26.0;
+        let gap = 3.0;
+        let item_w = (CONTENT_WIDTH_MM - left_w - gap - 3.0) / 2.0;
+        let mut row_heights = Vec::new();
+        for chunk in rows.chunks(2) {
+            row_heights.push(
+                chunk
+                    .iter()
+                    .map(|row| measure_episode_item_height(row, item_w))
+                    .fold(0.0_f32, f32::max),
+            );
+        }
+        if row_heights.is_empty() {
+            row_heights.push(13.5);
+        }
+        let grid_h =
+            row_heights.iter().sum::<f32>() + (row_heights.len().saturating_sub(1) as f32 * 2.0);
+        let h = 35.0_f32.max(grid_h + 12.0);
         self.ensure_space(h);
         let y = self.y_mm;
         self.draw_round_rect(
@@ -1653,49 +1762,63 @@ impl PdfLayout {
             Some(rgb(0.94, 0.79, 0.73)),
             0.45,
         );
-        self.draw_badge(PAGE_PAD_X_MM + 6.0, y + 12.0, 21.0, "E", "alert");
-        self.draw_text_line(
+        let cols = 2;
+        self.draw_badge(PAGE_PAD_X_MM + 5.5, y + 7.5, 14.0, "episode", "alert");
+        self.draw_wrapped_text_at(
             "Episode Context",
-            PAGE_PAD_X_MM + 33.0,
-            y + 10.0,
-            18.0,
+            PAGE_PAD_X_MM + 4.8,
+            y + 23.0,
+            left_w - 4.0,
+            11.8,
             BuiltinFont::HelveticaBold,
             rust(),
+            Some(2),
         );
-        let cols = 2;
-        let gap = 2.0;
-        let item_w = (CONTENT_WIDTH_MM - 40.0 - gap) / cols as f32;
+        let grid_x = PAGE_PAD_X_MM + left_w + gap;
+        let mut row_offsets = Vec::new();
+        let mut offset = 6.0;
+        for row_h in &row_heights {
+            row_offsets.push(offset);
+            offset += *row_h + 2.0;
+        }
         for (index, row) in rows.iter().enumerate() {
             let col = index % cols;
             let row_index = index / cols;
-            let x = PAGE_PAD_X_MM + 33.0 + col as f32 * (item_w + gap);
-            let item_y = y + 15.0 + row_index as f32 * 15.0;
+            let x = grid_x + col as f32 * (item_w + 2.0);
+            let item_y = y + row_offsets[row_index];
+            let item_h = row_heights[row_index];
             let tone = row.tone.as_deref().unwrap_or("default");
             self.draw_round_rect(
                 x,
                 item_y,
                 item_w,
-                13.2,
+                item_h,
                 1.6,
                 paper(),
                 Some(rule_soft()),
                 0.25,
             );
-            self.draw_badge(x + 1.5, item_y + 2.2, 6.0, label_icon(&row.label), tone);
+            self.draw_badge(
+                x + 1.6,
+                item_y + (item_h - 6.0) / 2.0,
+                6.0,
+                label_icon(&row.label),
+                tone,
+            );
             self.draw_text_line(
                 &row.label,
                 x + 8.8,
-                item_y + 5.0,
+                item_y + 4.5,
                 5.8,
                 BuiltinFont::Helvetica,
                 body(),
             );
-            self.draw_wrapped_text_at(
+            let value_h = self.draw_wrapped_text_at(
                 &row.value,
                 x + 8.8,
                 item_y + 5.0,
                 item_w - 10.5,
-                6.8,
+                6.4,
                 BuiltinFont::HelveticaBold,
                 ink(),
                 Some(2),
@@ -1704,12 +1827,12 @@ impl PdfLayout {
                 self.draw_wrapped_text_at(
                     detail,
                     x + 8.8,
-                    item_y + 9.0,
+                    item_y + 5.8 + value_h,
                     item_w - 10.5,
-                    5.4,
+                    5.3,
                     BuiltinFont::Helvetica,
                     body(),
-                    Some(1),
+                    Some(2),
                 );
             }
         }
@@ -1721,12 +1844,11 @@ impl PdfLayout {
         if rows.is_empty() {
             return 48.0;
         }
-        21.0 + rows
+        24.0 + rows
             .iter()
-            .map(|row| {
-                9.2_f32.max(measure_wrapped_text(&row.note, width - 76.0, 6.0, Some(3)) + 3.5)
-            })
+            .map(|row| measure_symptom_row_height(row, width))
             .sum::<f32>()
+            + 2.0
     }
 
     fn draw_symptom_panel(
@@ -1738,7 +1860,7 @@ impl PdfLayout {
         rows: &[SymptomSummaryRow],
     ) -> Result<(), String> {
         self.draw_round_rect(x, y, w, h, CARD_RADIUS_MM, paper(), Some(rule_soft()), 0.45);
-        self.draw_panel_title(x + 3.5, y + 3.2, w - 7.0, "Symptoms", "S", "alert");
+        self.draw_panel_title(x + 3.5, y + 3.2, w - 7.0, "Symptoms", "symptom", "alert");
         if rows.is_empty() {
             self.draw_empty_box(
                 "No symptoms were logged in this period.",
@@ -1750,16 +1872,17 @@ impl PdfLayout {
             return Ok(());
         }
         let mut row_y = y + 17.0;
+        let widths = symptom_table_widths(w);
         self.draw_table_header(
             x + 3.0,
             row_y,
             w - 6.0,
             &["Symptom", "Severity", "Latest", "Parent note"],
-            &[24.0, 18.0, 21.0, w - 6.0 - 63.0],
+            &widths,
         );
         row_y += 7.0;
         for row in rows {
-            let row_h = 9.5_f32.max(measure_wrapped_text(&row.note, w - 73.0, 6.0, Some(3)) + 3.4);
+            let row_h = measure_symptom_row_height(row, w);
             self.draw_rect(
                 x + 3.0,
                 row_y,
@@ -1769,43 +1892,48 @@ impl PdfLayout {
                 Some(rule_soft()),
                 0.2,
             );
+            let inner_x = x + 3.0;
             self.draw_badge(
-                x + 4.5,
-                row_y + 1.8,
+                inner_x + 1.5,
+                row_y + (row_h - 5.2) / 2.0,
                 5.2,
                 label_icon(&row.symptom),
                 &row.tone,
             );
             self.draw_wrapped_text_at(
                 &row.symptom,
-                x + 10.5,
-                row_y + 1.1,
-                18.0,
+                inner_x + 8.0,
+                row_y + 2.0,
+                widths[0] - 9.0,
                 6.2,
                 BuiltinFont::HelveticaBold,
                 ink(),
-                Some(2),
+                None,
             );
-            self.draw_severity_dots(x + 31.0, row_y + 3.4, row.severity_score);
+            self.draw_severity_dots(
+                inner_x + widths[0] + 2.2,
+                row_y + row_h / 2.0,
+                row.severity_score,
+            );
             self.draw_wrapped_text_at(
                 &row.latest,
-                x + 49.0,
-                row_y + 1.4,
-                20.0,
+                inner_x + widths[0] + widths[1] + 2.0,
+                row_y + 2.0,
+                widths[2] - 3.0,
                 5.8,
                 BuiltinFont::Helvetica,
                 body(),
-                Some(2),
+                None,
             );
             self.draw_wrapped_text_at(
                 &row.note,
-                x + 70.5,
-                row_y + 1.1,
-                w - 76.0,
+                inner_x + widths[0] + widths[1] + widths[2] + 2.0,
+                row_y + 2.0,
+                widths[3] - 3.0,
                 6.0,
                 BuiltinFont::Helvetica,
                 body(),
-                Some(3),
+                None,
             );
             row_y += row_h;
         }
@@ -1816,12 +1944,11 @@ impl PdfLayout {
         if rows.is_empty() {
             return 48.0;
         }
-        21.0 + rows
+        24.0 + rows
             .iter()
-            .map(|row| {
-                9.0_f32.max(measure_wrapped_text(&row.notes, width - 52.0, 6.2, Some(3)) + 3.4)
-            })
+            .map(|row| measure_feeding_row_height(row, width))
             .sum::<f32>()
+            + 2.0
     }
 
     fn draw_feeding_panel(
@@ -1833,7 +1960,14 @@ impl PdfLayout {
         rows: &[FeedingSummaryRow],
     ) -> Result<(), String> {
         self.draw_round_rect(x, y, w, h, CARD_RADIUS_MM, paper(), Some(rule_soft()), 0.45);
-        self.draw_panel_title(x + 3.5, y + 3.2, w - 7.0, "Feeding Summary", "F", "default");
+        self.draw_panel_title(
+            x + 3.5,
+            y + 3.2,
+            w - 7.0,
+            "Feeding Summary",
+            "feed",
+            "default",
+        );
         if rows.is_empty() {
             self.draw_empty_box(
                 "No feeding logs were included in this report.",
@@ -1845,16 +1979,17 @@ impl PdfLayout {
             return Ok(());
         }
         let mut row_y = y + 17.0;
+        let widths = feeding_table_widths(w);
         self.draw_table_header(
             x + 3.0,
             row_y,
             w - 6.0,
             &["Type", "Entries", "Notes"],
-            &[27.0, 16.0, w - 49.0],
+            &widths,
         );
         row_y += 7.0;
         for row in rows {
-            let row_h = 9.5_f32.max(measure_wrapped_text(&row.notes, w - 54.0, 6.2, Some(3)) + 3.4);
+            let row_h = measure_feeding_row_height(row, w);
             self.draw_rect(
                 x + 3.0,
                 row_y,
@@ -1864,42 +1999,43 @@ impl PdfLayout {
                 Some(rule_soft()),
                 0.2,
             );
+            let inner_x = x + 3.0;
             self.draw_badge(
-                x + 4.5,
-                row_y + 1.8,
+                inner_x + 1.5,
+                row_y + (row_h - 5.2) / 2.0,
                 5.2,
                 label_icon(&row.r#type),
                 "default",
             );
             self.draw_wrapped_text_at(
                 &row.r#type,
-                x + 10.5,
-                row_y + 1.2,
-                21.0,
+                inner_x + 8.0,
+                row_y + 2.0,
+                widths[0] - 9.0,
                 6.4,
                 BuiltinFont::HelveticaBold,
                 ink(),
-                Some(2),
+                None,
             );
             self.draw_wrapped_text_at(
                 &row.entries,
-                x + 34.0,
-                row_y + 1.5,
-                12.0,
+                inner_x + widths[0] + 2.0,
+                row_y + 2.0,
+                widths[1] - 3.0,
                 6.2,
                 BuiltinFont::Helvetica,
                 body(),
-                Some(1),
+                None,
             );
             self.draw_wrapped_text_at(
                 &row.notes,
-                x + 49.0,
-                row_y + 1.1,
-                w - 54.0,
+                inner_x + widths[0] + widths[1] + 2.0,
+                row_y + 2.0,
+                widths[2] - 3.0,
                 6.2,
                 BuiltinFont::Helvetica,
                 body(),
-                Some(3),
+                None,
             );
             row_y += row_h;
         }
@@ -1943,8 +2079,8 @@ impl PdfLayout {
         let y = self.y_mm;
         let labels = [
             ("Full timeline", "T", true),
-            ("Poop / diaper", "P", false),
-            ("Symptoms / episodes", "S", false),
+            ("Poop / diaper", "poop", false),
+            ("Symptoms / episodes", "symptom", false),
             ("Doctor brief", "B", false),
         ];
         let gap = 7.0;
@@ -2019,7 +2155,7 @@ impl PdfLayout {
     }
 
     fn draw_timeline_group(&mut self, group: &TimelineGroup) -> Result<(), String> {
-        let date_h = 8.0;
+        let date_h = 8.6;
         if self.y_mm + date_h + 9.0 > CONTENT_BOTTOM_MM {
             self.continue_report_page();
             self.draw_timeline_table_header(self.y_mm);
@@ -2035,11 +2171,11 @@ impl PdfLayout {
             Some(rule_soft()),
             0.25,
         );
-        self.draw_circle(PAGE_PAD_X_MM + 2.5, y + 3.7, 1.15, rust(), None, 0.0);
+        self.draw_circle(PAGE_PAD_X_MM + 3.0, y + 4.0, 1.15, rust(), None, 0.0);
         self.draw_text_line(
             &group.date_label,
-            PAGE_PAD_X_MM + 7.5,
-            y + 5.4,
+            PAGE_PAD_X_MM + 8.0,
+            y + 5.8,
             10.5,
             BuiltinFont::HelveticaBold,
             rust(),
@@ -2062,7 +2198,7 @@ impl PdfLayout {
         ]
         .into_iter()
         .fold(0.0_f32, f32::max)
-            + 4.4;
+            + 5.0;
         let row_h = row_h.max(9.0);
 
         if self.y_mm + row_h > CONTENT_BOTTOM_MM {
@@ -2085,7 +2221,7 @@ impl PdfLayout {
         self.draw_wrapped_text_at(
             &row.time,
             x + 3.0,
-            y + 1.7,
+            y + 2.0,
             widths[0] - 6.0,
             7.1,
             BuiltinFont::Helvetica,
@@ -2094,11 +2230,17 @@ impl PdfLayout {
         );
         x += widths[0];
         self.draw_line(x, y, x, y + row_h, rule_soft(), 0.22);
-        self.draw_badge(x + 2.5, y + 2.3, 5.2, label_icon(&row.event), &row.tone);
+        self.draw_badge(
+            x + 2.5,
+            y + (row_h - 5.2) / 2.0,
+            5.2,
+            label_icon(&row.event),
+            &row.tone,
+        );
         self.draw_wrapped_text_at(
             &row.event,
             x + 9.0,
-            y + 1.7,
+            y + 2.0,
             widths[1] - 11.0,
             7.2,
             BuiltinFont::HelveticaBold,
@@ -2110,7 +2252,7 @@ impl PdfLayout {
         self.draw_wrapped_text_at(
             &row.details,
             x + 3.0,
-            y + 1.7,
+            y + 2.0,
             widths[2] - 6.0,
             7.1,
             BuiltinFont::Helvetica,
@@ -2122,7 +2264,7 @@ impl PdfLayout {
         self.draw_wrapped_text_at(
             &row.note,
             x + 3.0,
-            y + 1.7,
+            y + 2.0,
             widths[3] - 6.0,
             7.1,
             BuiltinFont::Helvetica,
@@ -2427,14 +2569,7 @@ impl PdfLayout {
             if tone == "alert" { rust() } else { leaf() },
             Some(1),
         );
-        self.draw_line(
-            x + 10.0 + text_width_estimate(title, 11.5) + 2.0,
-            y + 4.6,
-            x + w,
-            y + 4.6,
-            rule(),
-            0.25,
-        );
+        self.draw_heading_rule_after(x + 10.0, y + 4.6, title, 11.5, x + w, 4.5);
     }
 
     fn draw_table_header(&mut self, x: f32, y: f32, w: f32, labels: &[&str], widths: &[f32]) {
@@ -2500,6 +2635,17 @@ impl PdfLayout {
             None,
             0.0,
         );
+        if let Some(icon) = icon_for_symbol(label) {
+            let icon_size = size * 0.68;
+            self.draw_icon_fit(
+                icon,
+                x + (size - icon_size) / 2.0,
+                y + (size - icon_size) / 2.0,
+                icon_size,
+                icon_size,
+            );
+            return;
+        }
         let text = truncate_chars(label, 2);
         let text_size = (size * 0.43).max(4.0);
         let tx = x + size / 2.0 - text_width_estimate(&text, text_size) / 2.0;
@@ -2510,6 +2656,146 @@ impl PdfLayout {
             text_size,
             BuiltinFont::HelveticaBold,
             tone_main(tone),
+        );
+    }
+
+    fn draw_icon_tile(
+        &mut self,
+        x: f32,
+        y: f32,
+        size: f32,
+        icon: ReportIcon,
+        fallback_label: &str,
+        tone: &str,
+    ) {
+        self.draw_round_rect(
+            x,
+            y,
+            size,
+            size,
+            size * 0.25,
+            leaf_soft(),
+            Some(rule_soft()),
+            0.35,
+        );
+        let icon_size = size * 0.78;
+        if self.draw_icon_fit(
+            icon,
+            x + (size - icon_size) / 2.0,
+            y + (size - icon_size) / 2.0,
+            icon_size,
+            icon_size,
+        ) {
+            return;
+        }
+        self.draw_text_line(
+            fallback_label,
+            x + size * 0.32,
+            y + size * 0.72,
+            size * 0.62,
+            BuiltinFont::HelveticaBold,
+            tone_main(tone),
+        );
+    }
+
+    fn draw_patient_avatar(&mut self, x: f32, y: f32, size: f32, color: Color, initial: &str) {
+        if let Some(asset) = self.patient.child_avatar_image.clone() {
+            self.ops.push(Op::SaveGraphicsState);
+            self.clip_circle(x + size / 2.0, y + size / 2.0, size / 2.0);
+            self.draw_asset_cover(&asset, x, y, size, size);
+            self.ops.push(Op::RestoreGraphicsState);
+            self.draw_circle_outline(x + size / 2.0, y + size / 2.0, size / 2.0, paper(), 0.6);
+            return;
+        }
+
+        self.draw_circle(
+            x + size / 2.0,
+            y + size / 2.0,
+            size / 2.0,
+            color,
+            Some(paper()),
+            0.45,
+        );
+        self.draw_text_line(
+            initial,
+            x + size * 0.34,
+            y + size * 0.64,
+            size * 0.82,
+            BuiltinFont::HelveticaBold,
+            paper(),
+        );
+    }
+
+    fn draw_icon_fit(&mut self, icon: ReportIcon, x: f32, y: f32, w: f32, h: f32) -> bool {
+        if let Some(asset) = self.assets.get(icon).cloned() {
+            self.draw_asset_fit(&asset, x, y, w, h);
+            true
+        } else {
+            false
+        }
+    }
+
+    fn draw_asset_fit(&mut self, asset: &PdfAsset, x: f32, y: f32, w: f32, h: f32) {
+        self.draw_asset(asset, x, y, w, h, ImageFit::Contain);
+    }
+
+    fn draw_asset_cover(&mut self, asset: &PdfAsset, x: f32, y: f32, w: f32, h: f32) {
+        self.draw_asset(asset, x, y, w, h, ImageFit::Cover);
+    }
+
+    fn draw_asset(&mut self, asset: &PdfAsset, x: f32, y: f32, w: f32, h: f32, fit: ImageFit) {
+        let base_w_pt = Px(asset.width_px).into_pt(asset.dpi).0;
+        let base_h_pt = Px(asset.height_px).into_pt(asset.dpi).0;
+        if base_w_pt <= 0.0 || base_h_pt <= 0.0 {
+            return;
+        }
+
+        let target_w_pt = Mm(w).into_pt().0;
+        let target_h_pt = Mm(h).into_pt().0;
+        let scale = match fit {
+            ImageFit::Contain => (target_w_pt / base_w_pt).min(target_h_pt / base_h_pt),
+            ImageFit::Cover => (target_w_pt / base_w_pt).max(target_h_pt / base_h_pt),
+        };
+        let draw_w_mm = Mm::from(Pt(base_w_pt * scale)).0;
+        let draw_h_mm = Mm::from(Pt(base_h_pt * scale)).0;
+        let draw_x = x + (w - draw_w_mm) / 2.0;
+        let draw_y = y + (h - draw_h_mm) / 2.0;
+
+        self.ops.push(Op::UseXobject {
+            id: asset.id.clone(),
+            transform: XObjectTransform {
+                translate_x: Some(Mm(draw_x).into_pt()),
+                translate_y: Some(Mm(PAGE_HEIGHT_MM - draw_y - draw_h_mm).into_pt()),
+                scale_x: Some(scale),
+                scale_y: Some(scale),
+                dpi: Some(asset.dpi),
+                ..Default::default()
+            },
+        });
+        self.has_content = true;
+    }
+
+    fn clip_circle(&mut self, cx: f32, cy: f32, r: f32) {
+        let mut points = Vec::new();
+        for index in 0..32 {
+            let angle = std::f32::consts::TAU * (index as f32 / 32.0);
+            points.push((cx + angle.cos() * r, cy + angle.sin() * r));
+        }
+        self.draw_polygon_from_top_with_mode(&points, paper(), None, 0.0, PaintMode::Clip);
+    }
+
+    fn draw_circle_outline(&mut self, cx: f32, cy: f32, r: f32, color: Color, stroke_width: f32) {
+        let mut points = Vec::new();
+        for index in 0..32 {
+            let angle = std::f32::consts::TAU * (index as f32 / 32.0);
+            points.push((cx + angle.cos() * r, cy + angle.sin() * r));
+        }
+        self.draw_polygon_from_top_with_mode(
+            &points,
+            paper(),
+            Some(color),
+            stroke_width,
+            PaintMode::Stroke,
         );
     }
 
@@ -2914,6 +3200,131 @@ fn rounded_rect_points(x: f32, y: f32, w: f32, h: f32, radius: f32) -> Vec<(f32,
     points
 }
 
+fn register_png_asset(doc: &mut PdfDocument, bytes: &[u8]) -> Option<PdfAsset> {
+    let mut warnings = Vec::new();
+    let image = RawImage::decode_from_bytes(bytes, &mut warnings).ok()?;
+    register_raw_image(doc, image)
+}
+
+fn register_data_url_image(doc: &mut PdfDocument, data_url: &str) -> Option<PdfAsset> {
+    let encoded = data_url
+        .split_once(',')
+        .map(|(_, value)| value)
+        .unwrap_or(data_url);
+    let bytes = STANDARD.decode(encoded).ok()?;
+    let mut warnings = Vec::new();
+    let image = RawImage::decode_from_bytes(&bytes, &mut warnings).ok()?;
+    register_raw_image(doc, image)
+}
+
+fn register_raw_image(doc: &mut PdfDocument, image: RawImage) -> Option<PdfAsset> {
+    let width_px = image.width;
+    let height_px = image.height;
+    let id = doc.add_image(&image);
+    Some(PdfAsset {
+        id,
+        width_px,
+        height_px,
+        dpi: 300.0,
+    })
+}
+
+fn icon_for_symbol(symbol: &str) -> Option<ReportIcon> {
+    match symbol {
+        "brand" => Some(ReportIcon::Brand),
+        "poop" | "stool" | "stool-type" | "stool-colour" => Some(ReportIcon::Poop),
+        "diaper" => Some(ReportIcon::Diaper),
+        "diaper-wet" | "hydration" | "urine" => Some(ReportIcon::DiaperWet),
+        "diaper-dirty" => Some(ReportIcon::DiaperDirty),
+        "diaper-mixed" => Some(ReportIcon::DiaperMixed),
+        "feed" | "bottle" | "solids" => Some(ReportIcon::Feed),
+        "breastfeed" => Some(ReportIcon::Breastfeed),
+        "symptom" => Some(ReportIcon::Symptom),
+        "episode" => Some(ReportIcon::Episode),
+        _ => None,
+    }
+}
+
+fn metric_value_font_size(value: &str, max_width_mm: f32) -> f32 {
+    let char_count = value.chars().count();
+    if char_count <= 3 && text_width_estimate(value, 17.0) <= max_width_mm {
+        17.0
+    } else if char_count <= 7 && text_width_estimate(value, 15.0) <= max_width_mm {
+        15.0
+    } else if text_width_estimate(value, 12.0) <= max_width_mm {
+        12.0
+    } else {
+        9.8
+    }
+}
+
+fn measure_event_row_height(event: &ReportEvent, width: f32) -> f32 {
+    let detail_w = (width - 51.0).max(24.0);
+    let label_h = measure_wrapped_text(&event.label, 29.0, 7.8, Some(2));
+    let value_h = measure_wrapped_text(&event.value, detail_w, 7.2, Some(3));
+    let detail_h = measure_wrapped_text(&event.detail, detail_w, 6.3, Some(3));
+    13.2_f32.max(label_h.max(value_h + detail_h + 0.8) + 4.0)
+}
+
+fn measure_info_row_height(row: &InfoRow, width: f32, compact: bool) -> f32 {
+    let label_w = if compact { width * 0.34 } else { width * 0.36 };
+    let value_w = width - if compact { width * 0.48 } else { width * 0.52 } - 3.5;
+    let value_font = if compact { 8.0 } else { 9.4 };
+    let detail_font = if compact { 5.6 } else { 5.8 };
+    let label_h = measure_wrapped_text(&row.label, label_w, 7.0, Some(3));
+    let value_h = measure_wrapped_text(&row.value, value_w, value_font, Some(3));
+    let detail_h = row
+        .detail
+        .as_deref()
+        .map(|detail| measure_wrapped_text(detail, value_w, detail_font, Some(3)) + 0.8)
+        .unwrap_or(0.0);
+    let min_h: f32 = if compact { 8.8 } else { 10.5 };
+    min_h.max(label_h.max(value_h + detail_h) + 3.2)
+}
+
+fn measure_clinical_row_height(row: &ClinicalNote, width: f32) -> f32 {
+    let topic_h = measure_wrapped_text(&row.topic, 27.0, 6.8, Some(2));
+    let note_h = measure_wrapped_text(&row.note, width - 48.0, 6.8, None);
+    10.4_f32.max(topic_h.max(note_h) + 4.0)
+}
+
+fn measure_episode_item_height(row: &InfoRow, width: f32) -> f32 {
+    let text_w = width - 10.5;
+    let value_h = measure_wrapped_text(&row.value, text_w, 6.4, Some(2));
+    let detail_h = row
+        .detail
+        .as_deref()
+        .map(|detail| measure_wrapped_text(detail, text_w, 5.3, Some(2)) + 0.8)
+        .unwrap_or(0.0);
+    13.5_f32.max(value_h + detail_h + 7.0)
+}
+
+fn symptom_table_widths(panel_width: f32) -> [f32; 4] {
+    let inner = panel_width - 6.0;
+    [28.0, 14.0, 20.0, inner - 62.0]
+}
+
+fn feeding_table_widths(panel_width: f32) -> [f32; 3] {
+    let inner = panel_width - 6.0;
+    [28.0, 12.0, inner - 40.0]
+}
+
+fn measure_symptom_row_height(row: &SymptomSummaryRow, width: f32) -> f32 {
+    let widths = symptom_table_widths(width);
+    let symptom_h = measure_wrapped_text(&row.symptom, widths[0] - 9.0, 6.2, None);
+    let latest_h = measure_wrapped_text(&row.latest, widths[2] - 3.0, 5.8, None);
+    let note_h = measure_wrapped_text(&row.note, widths[3] - 3.0, 6.0, None);
+    10.0_f32.max(symptom_h.max(latest_h).max(note_h) + 4.0)
+}
+
+fn measure_feeding_row_height(row: &FeedingSummaryRow, width: f32) -> f32 {
+    let widths = feeding_table_widths(width);
+    let type_h = measure_wrapped_text(&row.r#type, widths[0] - 9.0, 6.4, None);
+    let entries_h = measure_wrapped_text(&row.entries, widths[1] - 3.0, 6.2, None);
+    let notes_h = measure_wrapped_text(&row.notes, widths[2] - 3.0, 6.2, None);
+    10.0_f32.max(type_h.max(entries_h).max(notes_h) + 4.0)
+}
+
 fn wrap_text(text: &str, max_width_mm: f32, font_size_pt: f32) -> Vec<String> {
     let cleaned = sanitize_text(text).trim().to_string();
     if cleaned.is_empty() {
@@ -3017,39 +3428,51 @@ fn chart_scale_max(values: Vec<u32>) -> u32 {
 }
 
 fn timeline_widths() -> [f32; 4] {
-    [24.0, 37.0, CONTENT_WIDTH_MM - 24.0 - 37.0 - 37.0, 37.0]
+    [31.0, 39.0, CONTENT_WIDTH_MM - 31.0 - 39.0 - 38.0, 38.0]
 }
 
 fn label_icon(label: &str) -> &str {
     let value = label.to_lowercase();
-    if value.contains("feed")
-        || value.contains("breast")
+    if value.contains("breast") {
+        "breastfeed"
+    } else if value.contains("feed")
         || value.contains("bottle")
         || value.contains("formula")
+        || value.contains("solid")
     {
-        "F"
+        "feed"
+    } else if value.contains("mixed") {
+        "diaper-mixed"
+    } else if value.contains("dirty") {
+        "diaper-dirty"
     } else if value.contains("wet") || value.contains("urine") || value.contains("hydration") {
-        "H"
-    } else if value.contains("diaper") || value.contains("dirty") || value.contains("mixed") {
-        "D"
+        "diaper-wet"
+    } else if value.contains("diaper") {
+        "diaper"
     } else if value.contains("red")
         || value.contains("flag")
         || value.contains("colour")
         || value.contains("color")
     {
-        "!"
+        "poop"
+    } else if value.contains("episode") {
+        "episode"
     } else if value.contains("symptom")
         || value.contains("fever")
-        || value.contains("episode")
         || value.contains("temp")
+        || value.contains("cough")
+        || value.contains("rash")
+        || value.contains("appetite")
     {
-        "S"
-    } else if value.contains("no-poop") || value.contains("sleep") {
-        "N"
-    } else if value.contains("stool") || value.contains("poop") || value.contains("consistency") {
-        "P"
+        "symptom"
+    } else if value.contains("stool")
+        || value.contains("poop")
+        || value.contains("consistency")
+        || value.contains("no-poop")
+    {
+        "poop"
     } else if value.contains("type") || value.contains("pattern") || value.contains("trend") {
-        "T"
+        "poop"
     } else if value.contains("date")
         || value.contains("latest")
         || value.contains("last")
@@ -3110,7 +3533,7 @@ fn tone_border(tone: &str) -> Color {
 }
 
 fn text_width_estimate(text: &str, font_size_pt: f32) -> f32 {
-    text.chars().count() as f32 * (font_size_pt * 0.46) * 25.4 / 72.0
+    text.chars().count() as f32 * (font_size_pt * 0.50) * 25.4 / 72.0
 }
 
 fn pt_to_mm(pt: f32) -> f32 {
@@ -3224,6 +3647,7 @@ mod tests {
             title: "Poop & Tummy Report".to_string(),
             child_name: "Maya".to_string(),
             child_avatar_color: "#8b9b76".to_string(),
+            child_avatar_data_url: None,
             age_label: "7 months old".to_string(),
             dob_label: "2025-10-03".to_string(),
             feeding_label: "Mixed".to_string(),
@@ -3250,7 +3674,7 @@ mod tests {
                 stool_type_trend: vec![TypeTrendPoint { date_label: "May 1".to_string(), label: "T4".to_string(), tone: "default".to_string() }],
                 colour_breakdown: vec![ColourBreakdownItem { label: "Yellow".to_string(), value: "yellow".to_string(), count: 2, percent: 67, color: "#d6a33f".to_string(), is_red_flag: false }],
                 hydration_rows: vec![row("Urine colour", "normal (3)"), row("Dark urine logged", "None")],
-                clinical_notes: vec![ClinicalNote { topic: "Stool signal".to_string(), value: "3 stool logs".to_string(), note: "Review dated entries for type, colour, notes, and photos.".to_string(), tone: "default".to_string() }],
+                clinical_notes: vec![ClinicalNote { topic: "Stool signal".to_string(), note: "Review dated entries for type, colour, notes, and photos.".to_string(), tone: "default".to_string() }],
             },
             context: ContextModel {
                 care_notes: vec![row("Care notes", "No specific tummy concern signal was highlighted")],

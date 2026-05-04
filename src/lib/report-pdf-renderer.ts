@@ -1,5 +1,5 @@
 import { renderReportPreviewToPdfBase64 } from "./report-html-pdf";
-import { buildNativeReportPdfPayload } from "./report-native-pdf";
+import { buildNativeReportPdfPayloadWithAssets } from "./report-native-pdf";
 import { generateNativeReportPdf } from "./tauri";
 import type { ReportData } from "./reporting";
 import type { Child, UnitSystem } from "./types";
@@ -52,7 +52,7 @@ export async function renderReportPdfBase64(input: {
   const renderer = input.renderer ?? getReportPdfRenderer();
   const startedAt = performance.now();
   const base64Data = renderer === "rust"
-    ? await generateNativeReportPdf(buildNativeReportPdfPayload(input))
+    ? await generateNativeReportPdf(await buildNativeReportPdfPayloadWithAssets(input))
     : await renderReactReportPdf(input.previewRoot);
 
   return {
