@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { writeFile } from "@tauri-apps/plugin-fs";
 import { save } from "@tauri-apps/plugin-dialog";
 import { platform } from "@tauri-apps/plugin-os";
@@ -11,8 +11,9 @@ import { ScenicHero } from "../components/layout/ScenicHero";
 import { PremiumInlineLock } from "../components/billing/PremiumLocks";
 import { ReportComposerCard } from "../components/report/ReportComposerCard";
 import { PageBody } from "../components/ui/page-layout";
+import { ReportPreview } from "../components/report/ReportPreview";
 import { ReportReadyCard } from "../components/report/ReportReadyCard";
-import { buildReportPdfPayload } from "../lib/report-pdf";
+import { renderReportPreviewToPdfBase64 } from "../lib/report-html-pdf";
 import {
   buildReportPatientSummary,
   getReportSaveHelpText,
@@ -21,12 +22,33 @@ import {
 } from "../lib/report-view-model";
 import { useToast } from "../components/ui/toast";
 import {
-  generateReportPdf,
   openPdfFromDownloads,
   savePdfToDownloads,
   sharePdfReport,
 } from "../lib/tauri";
-import { loadAvatarDataUrl } from "../lib/photos";
+
+function decodeBase64(value: string) {
+  const binary = atob(value);
+  const bytes = new Uint8Array(binary.length);
+  for (let index = 0; index < binary.length; index += 1) {
+    bytes[index] = binary.charCodeAt(index);
+  }
+  return bytes;
+}
+
+function buildPdfFileName(reportKind: "poopTummy" | "fullHealth", startDate: string, endDate: string) {
+  const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+  const reportSlug = reportKind === "poopTummy" ? "poop-tummy-report" : "pediatrician-report";
+  return `tiny-tummy-${reportSlug}-${startDate}-to-${endDate}-${timestamp}.pdf`;
+}
+
+function waitForRenderedReportPreview() {
+  return new Promise<void>((resolve) => {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => resolve());
+    });
+  });
+}
 
 export function Report() {
   const activeChild = useActiveChild();
@@ -38,6 +60,9 @@ export function Report() {
   const isIos = currentPlatform === "ios";
   const [savedAndroidReport, setSavedAndroidReport] = useState<{ fileName: string; uri: string } | null>(null);
   const [isAutoSavingReport, setIsAutoSavingReport] = useState(false);
+  const [isSavingReport, setIsSavingReport] = useState(false);
+  const [pendingAndroidAutoSave, setPendingAndroidAutoSave] = useState(false);
+  const reportPreviewRef = useRef<HTMLElement | null>(null);
   const {
     today,
     startDate,
@@ -52,6 +77,62 @@ export function Report() {
     toggleOption,
     handleGenerate,
   } = useReportPageState(activeChild, unitSystem);
+  const hasGeneratedReportData = hasReportableData(reportData);
+  const getPdfFileName = useCallback(
+    () => buildPdfFileName(reportKind, startDate, endDate),
+    [endDate, reportKind, startDate],
+  );
+  const createEncodedReportPdf = useCallback(async () => {
+    const previewRoot = reportPreviewRef.current;
+    if (!previewRoot) {
+      throw new Error("Report preview is still preparing. Try again in a moment.");
+    }
+
+    return await renderReportPreviewToPdfBase64(previewRoot);
+  }, []);
+  const saveAndroidReportToDownloads = useCallback(async (data = reportData) => {
+    if (!data) return null;
+    if (!hasReportableData(data)) return null;
+
+    const encodedPdf = await createEncodedReportPdf();
+
+    const savedReport = await savePdfToDownloads(getPdfFileName(), encodedPdf);
+    setSavedAndroidReport(savedReport);
+    showSuccess("Report saved to Downloads.");
+    return savedReport;
+  }, [createEncodedReportPdf, getPdfFileName, reportData, showSuccess]);
+
+  useEffect(() => {
+    if (!pendingAndroidAutoSave || !isAndroid || !reportData || !hasGeneratedReportData) return;
+
+    let cancelled = false;
+
+    async function runPendingAndroidSave() {
+      try {
+        setIsAutoSavingReport(true);
+        await waitForRenderedReportPreview();
+        if (!cancelled) {
+          await saveAndroidReportToDownloads(reportData);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          const message = error instanceof Error ? error.message : String(error);
+          showError(`Could not save the PDF report: ${message}`);
+        }
+      } finally {
+        if (!cancelled) {
+          setPendingAndroidAutoSave(false);
+          setIsAutoSavingReport(false);
+        }
+      }
+    }
+
+    void runPendingAndroidSave();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [hasGeneratedReportData, isAndroid, pendingAndroidAutoSave, reportData, saveAndroidReportToDownloads, showError]);
 
   if (!activeChild) return null;
 
@@ -82,50 +163,6 @@ export function Report() {
     );
   }
 
-  const decodeBase64 = (value: string) => {
-    const binary = atob(value);
-    const bytes = new Uint8Array(binary.length);
-    for (let index = 0; index < binary.length; index += 1) {
-      bytes[index] = binary.charCodeAt(index);
-    }
-    return bytes;
-  };
-
-  const buildPdfFileName = () => {
-    const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-    const reportSlug = reportKind === "poopTummy" ? "poop-tummy-report" : "pediatrician-report";
-    return `tiny-tummy-${reportSlug}-${startDate}-to-${endDate}-${timestamp}.pdf`;
-  };
-
-  const createEncodedReportPdf = async (data = reportData) => {
-    if (!data) return null;
-
-    const childAvatarDataUrl = await loadAvatarDataUrl(activeChild.id).catch(() => null);
-    return await generateReportPdf(
-      buildReportPdfPayload({
-        child: activeChild,
-        startDate,
-        endDate,
-        data,
-        unitSystem,
-        childAvatarDataUrl,
-      }),
-    );
-  };
-
-  const saveAndroidReportToDownloads = async (data = reportData) => {
-    if (!data) return null;
-    if (!hasReportableData(data)) return null;
-
-    const encodedPdf = await createEncodedReportPdf(data);
-    if (!encodedPdf) return null;
-
-    const savedReport = await savePdfToDownloads(buildPdfFileName(), encodedPdf);
-    setSavedAndroidReport(savedReport);
-    showSuccess("Report saved to Downloads.");
-    return savedReport;
-  };
-
   const handleGenerateReport = async () => {
     try {
       setSavedAndroidReport(null);
@@ -135,17 +172,15 @@ export function Report() {
         return;
       }
 
-      setIsAutoSavingReport(true);
-      await saveAndroidReportToDownloads(data);
+      setPendingAndroidAutoSave(true);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       showError(`Could not generate the PDF report: ${message}`);
-    } finally {
-      setIsAutoSavingReport(false);
     }
   };
 
   const handleSaveReport = async () => {
+    if (isSavingReport) return;
     if (!reportData) return;
     if (!hasReportableData(reportData)) {
       showError("No reportable data exists in the selected date range.");
@@ -153,22 +188,24 @@ export function Report() {
     }
 
     try {
+      setIsSavingReport(true);
+      await waitForRenderedReportPreview();
+
       if (isAndroid) {
         await saveAndroidReportToDownloads(reportData);
         return;
       }
 
-      const encodedPdf = await createEncodedReportPdf(reportData);
-      if (!encodedPdf) return;
+      const encodedPdf = await createEncodedReportPdf();
 
       if (isIos) {
-        await sharePdfReport(buildPdfFileName(), encodedPdf);
+        await sharePdfReport(getPdfFileName(), encodedPdf);
         return;
       }
 
       const pdfBytes = decodeBase64(encodedPdf);
       const targetPath = await save({
-        defaultPath: buildPdfFileName(),
+        defaultPath: getPdfFileName(),
         filters: [
           {
             name: "PDF report",
@@ -186,6 +223,8 @@ export function Report() {
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       showError(`Export failed: ${message}`);
+    } finally {
+      setIsSavingReport(false);
     }
   };
 
@@ -201,6 +240,8 @@ export function Report() {
   };
 
   const handleReportCardAction = () => {
+    if (isSavingReport) return;
+
     if (isAndroid && savedAndroidReport) {
       void handleOpenSavedAndroidReport();
       return;
@@ -210,17 +251,19 @@ export function Report() {
   };
 
   const patientSummary = buildReportPatientSummary(activeChild, startDate, endDate);
-  const hasGeneratedReportData = hasReportableData(reportData);
-  const reportActionLabel = isAndroid && savedAndroidReport
-    ? "Open PDF report"
-    : isIos
-      ? "Share PDF report"
-    : getReportSaveLabel(isAndroid);
-  const reportActionHelpText = isAndroid && savedAndroidReport
-    ? "Report saved to Downloads. Tap to open it."
-    : isIos
-      ? "Opens the iOS share sheet so you can save to Files, open in Books, or share."
-    : getReportSaveHelpText(isAndroid);
+  const isPreparingReport = isSavingReport || isAutoSavingReport;
+  const reportActionLabel = (() => {
+    if (isPreparingReport) return "Preparing PDF...";
+    if (isAndroid && savedAndroidReport) return "Open PDF report";
+    if (isIos) return "Share PDF report";
+    return getReportSaveLabel(isAndroid);
+  })();
+  const reportActionHelpText = (() => {
+    if (isPreparingReport) return "Rendering the report into a PDF. The save or share dialog will open in a moment.";
+    if (isAndroid && savedAndroidReport) return "Report saved to Downloads. Tap to open it.";
+    if (isIos) return "Opens the iOS share sheet so you can save to Files, open in Books, or share.";
+    return getReportSaveHelpText(isAndroid);
+  })();
   const heroDescription = reportKind === "poopTummy"
     ? "Prepare a pediatrician-ready poop and tummy PDF with diapers, stool patterns, and timeline detail."
     : "Prepare a pediatrician-ready PDF with charts, context, and timeline detail.";
@@ -240,7 +283,7 @@ export function Report() {
           today={today}
           startDate={startDate}
           endDate={endDate}
-          isGenerating={isGenerating || isAutoSavingReport}
+          isGenerating={isGenerating || isAutoSavingReport || isSavingReport}
           reportKind={reportKind}
           options={options}
           onReportKindChange={setReportKind}
@@ -259,11 +302,25 @@ export function Report() {
               subtitle={patientSummary.subtitle}
               detail={patientSummary.detail}
               hasReportableData={hasGeneratedReportData}
+              isSaving={isPreparingReport}
               saveLabel={reportActionLabel}
               saveHelpText={reportActionHelpText}
               onSave={handleReportCardAction}
             />
 
+            {hasGeneratedReportData && (
+              <div className="tt-report-export-stage" aria-hidden="true">
+                <ReportPreview
+                  child={activeChild}
+                  startDate={startDate}
+                  endDate={endDate}
+                  reportData={reportData}
+                  unitSystem={unitSystem}
+                  previewRef={reportPreviewRef}
+                  exportOnly
+                />
+              </div>
+            )}
           </>
         )}
 

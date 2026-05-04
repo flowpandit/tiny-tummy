@@ -1,6 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
 import type { GuidanceTip, HealthStatus } from "./types";
-import type { ReportPdfPayload } from "./report-pdf";
 
 export async function checkFrequencyAlert(
   childName: string,
@@ -60,10 +59,6 @@ export async function getGuidanceTips(): Promise<GuidanceTip[]> {
   } catch {
     return [];
   }
-}
-
-export async function generateReportPdf(payload: ReportPdfPayload): Promise<string> {
-  return await invoke("generate_report_pdf", { payload });
 }
 
 export interface SavedDownloadsPdf {
