@@ -1,6 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
 import { getDefaultReportDateRange, getReportDateRangeFromLatestActivity } from "../lib/report-view-model";
-import { defaultReportOptions, generateReportData, type ReportData, type ReportOptions } from "../lib/reporting";
+import {
+  DEFAULT_REPORT_KIND,
+  generateReportData,
+  getDefaultReportOptionsForKind,
+  type ReportData,
+  type ReportKind,
+  type ReportOptions,
+} from "../lib/reporting";
 import type { Child, UnitSystem } from "../lib/types";
 import { useDbClient } from "../contexts/DatabaseContext";
 
@@ -14,7 +21,8 @@ export function useReportPageState(
   const [endDate, setEndDate] = useState(today);
   const [reportData, setReportData] = useState<ReportData | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [options, setOptions] = useState<ReportOptions>(defaultReportOptions);
+  const [reportKind, setReportKindState] = useState<ReportKind>(DEFAULT_REPORT_KIND);
+  const [options, setOptions] = useState<ReportOptions>(() => getDefaultReportOptionsForKind(DEFAULT_REPORT_KIND));
 
   useEffect(() => {
     if (!activeChild) return;
@@ -44,6 +52,12 @@ export function useReportPageState(
     setReportData(null);
   }, []);
 
+  const handleReportKindChange = useCallback((value: ReportKind) => {
+    setReportKindState(value);
+    setOptions(getDefaultReportOptionsForKind(value));
+    setReportData(null);
+  }, []);
+
   const toggleOption = useCallback((key: keyof ReportOptions) => {
     setOptions((current) => ({
       ...current,
@@ -57,13 +71,13 @@ export function useReportPageState(
 
     setIsGenerating(true);
     try {
-      const data = await generateReportData(activeChild.id, startDate, endDate, options, unitSystem);
+      const data = await generateReportData(activeChild.id, startDate, endDate, options, unitSystem, reportKind);
       setReportData(data);
       return data;
     } finally {
       setIsGenerating(false);
     }
-  }, [activeChild, endDate, options, startDate, unitSystem]);
+  }, [activeChild, endDate, options, reportKind, startDate, unitSystem]);
 
   return {
     today,
@@ -73,6 +87,8 @@ export function useReportPageState(
     setEndDate: handleEndDateChange,
     reportData,
     isGenerating,
+    reportKind,
+    setReportKind: handleReportKindChange,
     options,
     toggleOption,
     handleGenerate,

@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useTrialAccess, useTrialActions } from "../../contexts/TrialContext";
+import { getPaywallNavigationState } from "../../lib/paywall-navigation";
+import { getPremiumFeatureCopy } from "../../lib/premium-feature-copy";
 import { Button } from "../ui/button";
 import { Logo } from "../ui/Logo";
 import { useToast } from "../ui/toast";
@@ -24,20 +26,24 @@ function LockIcon(props: React.ComponentProps<"svg">) {
 }
 
 const featureRows = [
-  "Unlimited reports you can share with your pediatrician",
-  "Dashboards for poop, feeding, sleep, growth, and milestones",
-  "No subscription pressure, ads, or cloud account",
-  "All records stay on this device unless you export them",
+  "Doctor-ready PDF reports for pediatrician visits",
+  "Full poop, diaper, and baby health history",
+  "Private stool photos and advanced trends",
+  "Multi-child support and smart local reminders",
+  "No subscription, ads, cloud account, or tracking",
 ];
 
 export function Paywall() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { daysRemaining } = useTrialAccess();
   const { restorePremium, unlockPremium } = useTrialActions();
   const { showError, showSuccess } = useToast();
   const [isProcessing, setIsProcessing] = useState(false);
   const checkoutTimerRef = useRef<number | null>(null);
   const isMountedRef = useRef(true);
+  const paywallState = getPaywallNavigationState(location.state);
+  const featureCopy = paywallState.featureId ? getPremiumFeatureCopy(paywallState.featureId) : null;
 
   useEffect(() => {
     return () => {
@@ -56,6 +62,7 @@ export function Paywall() {
       try {
         await unlockPremium();
         showSuccess("Tiny Tummy unlocked.");
+        navigate(paywallState.returnTo, { replace: true });
       } catch (error) {
         showError(error instanceof Error ? error.message : "Unlock failed. Please try again.");
       } finally {
@@ -70,6 +77,7 @@ export function Paywall() {
     try {
       await restorePremium();
       showSuccess("Purchase restored.");
+      navigate(paywallState.returnTo, { replace: true });
     } catch (error) {
       showError(error instanceof Error ? error.message : "Restore failed. Please try again.");
     }
@@ -137,16 +145,16 @@ export function Paywall() {
                 style={{ background: "var(--color-surface)" }}
               >
                 <LockIcon className="h-4 w-4 text-[var(--color-primary)]" />
-                Continue tracking with one purchase
+                {featureCopy ? featureCopy.label : "Continue tracking with one purchase"}
               </motion.div>
 
               <motion.h1
                 initial={{ opacity: 0, y: 22 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.55, delay: 0.14, ease: "easeOut" }}
-                className="max-w-[11ch] text-5xl font-semibold tracking-[-0.04em] text-[var(--color-text)] sm:text-6xl"
+                className="max-w-[12ch] text-5xl font-semibold tracking-[-0.04em] text-[var(--color-text)] sm:text-6xl"
               >
-                Keep every baby health record in one private place.
+                {featureCopy ? featureCopy.title : "Unlock Tiny Tummy Premium."}
               </motion.h1>
 
               <motion.p
@@ -155,7 +163,7 @@ export function Paywall() {
                 transition={{ duration: 0.55, delay: 0.2, ease: "easeOut" }}
                 className="mt-5 max-w-[34rem] text-lg leading-relaxed text-[var(--color-text-secondary)]"
               >
-                Tiny Tummy stays focused on the daily details that matter: logs, patterns, reports, and private records you can trust when something changes.
+                {featureCopy?.description ?? "Keep the full private poop, diaper, and baby health record ready for patterns, appointments, and peace of mind."}
               </motion.p>
 
               <motion.div
@@ -201,16 +209,16 @@ export function Paywall() {
                 <span className="pb-2 text-sm text-[var(--color-text-secondary)]">once</span>
               </div>
               <p className="mt-3 text-sm leading-6 text-[var(--color-text-secondary)]">
-                No monthly billing. No ads. No cloud account required.
+                Lifetime access after the 14-day full trial. No monthly billing. No ads. No cloud account required.
               </p>
 
               <div className="mt-8 space-y-3 border-y border-[var(--color-border)] py-5">
                 <div className="flex items-center justify-between gap-4 text-sm">
-                  <span className="text-[var(--color-text-secondary)]">Reports and exports</span>
+                  <span className="text-[var(--color-text-secondary)]">Doctor reports</span>
                   <span className="font-medium">Included</span>
                 </div>
                 <div className="flex items-center justify-between gap-4 text-sm">
-                  <span className="text-[var(--color-text-secondary)]">Offline storage</span>
+                  <span className="text-[var(--color-text-secondary)]">Full private history</span>
                   <span className="font-medium">Included</span>
                 </div>
                 <div className="flex items-center justify-between gap-4 text-sm">

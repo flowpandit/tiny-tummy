@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
+import type { NativeReportPdfPayload } from "./report-native-pdf";
 import type { GuidanceTip, HealthStatus } from "./types";
-import type { ReportPdfPayload } from "./report-pdf";
 
 export async function checkFrequencyAlert(
   childName: string,
@@ -62,10 +62,6 @@ export async function getGuidanceTips(): Promise<GuidanceTip[]> {
   }
 }
 
-export async function generateReportPdf(payload: ReportPdfPayload): Promise<string> {
-  return await invoke("generate_report_pdf", { payload });
-}
-
 export interface SavedDownloadsPdf {
   fileName: string;
   uri: string;
@@ -87,4 +83,8 @@ export async function sharePdfReport(fileName: string, base64Data: string): Prom
     fileName,
     base64Data,
   });
+}
+
+export async function generateNativeReportPdf(payload: NativeReportPdfPayload): Promise<string> {
+  return await invoke("generate_native_report_pdf", { payload });
 }

@@ -84,11 +84,6 @@ fn get_guidance_tips() -> Vec<engine::guidance::GuidanceTip> {
     engine::guidance::get_all_tips()
 }
 
-#[tauri::command]
-fn generate_report_pdf(payload: report_pdf::ReportPdfPayload) -> Result<String, String> {
-    report_pdf::generate_report_pdf(payload)
-}
-
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let migrations = vec![
@@ -193,9 +188,9 @@ pub fn run() {
             check_color_alert,
             get_child_status,
             get_guidance_tips,
-            generate_report_pdf,
             downloads::open_pdf_from_downloads,
             downloads::save_pdf_to_downloads,
+            report_pdf::generate_native_report_pdf,
             report_export::share_pdf_report,
             statusbar::set_status_bar_style,
         ])

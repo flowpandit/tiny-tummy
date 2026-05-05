@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useActiveChild } from "../../contexts/ChildContext";
 import { useTheme } from "../../contexts/ThemeContext";
 import { useUnits } from "../../contexts/UnitsContext";
-import { useTrialAccess, useTrialActions } from "../../contexts/TrialContext";
+import { usePremiumFeature, useTrialAccess, useTrialActions } from "../../contexts/TrialContext";
 import { useEliminationPreference } from "../../hooks/useEliminationPreference";
 import { Card, CardContent } from "../ui/card";
 import { Button } from "../ui/button";
@@ -13,6 +13,8 @@ import { FieldLabel } from "../ui/field";
 import { TimePicker } from "../ui/time-picker";
 import { useToast } from "../ui/toast";
 import { Avatar } from "../child/Avatar";
+import { PremiumBadge, PremiumInlineLock } from "../billing/PremiumLocks";
+import { SmartReminderRows, type SmartReminderKey, type SmartReminderSettings } from "./SmartReminderRows";
 import { HomeActionBottleIcon, HomeActionBreastfeedIcon, HomeActionDiaperIcon, HomeActionSymptomIcon, PoopIcon } from "../ui/icons";
 import { CHILD_SEX_OPTIONS, FEEDING_TYPES } from "../../lib/constants";
 import { getAgeLabelFromDob } from "../../lib/utils";
@@ -143,11 +145,13 @@ export function ChildrenSection({
   onEditChild,
   onOpenAllKids,
   onSetConfirmDelete,
+  isAddChildPremiumLocked = false,
 }: {
   activeChild: Child | null;
   children: Child[];
   className?: string;
   confirmDelete: string | null;
+  isAddChildPremiumLocked?: boolean;
   onAddChild: () => void;
   onConfirmDelete: (id: string) => void;
   onDelete: (id: string) => void;
@@ -252,7 +256,10 @@ export function ChildrenSection({
               <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--color-primary)]/10 text-[1.15rem] font-semibold leading-none">
                 +
               </span>
-              <span className="text-[0.92rem] font-semibold">Add Child</span>
+              <span className="flex min-w-0 items-center gap-2">
+                <span className="text-[0.92rem] font-semibold">{isAddChildPremiumLocked ? "Unlock to add child" : "Add Child"}</span>
+                {isAddChildPremiumLocked && <PremiumBadge featureId="multiChild" className="px-2 py-0.5 text-[0.58rem]" />}
+              </span>
             </button>
           </div>
         </CardContent>
@@ -263,8 +270,9 @@ export function ChildrenSection({
 
 export function NotificationSection({ children }: { children: Child[] }) {
   const { showError } = useToast();
+  const canUseSmartReminders = usePremiumFeature("smartReminders");
   const [enabled, setEnabled] = useState(false);
-  const [smartSettings, setSmartSettings] = useState({
+  const [smartSettings, setSmartSettings] = useState<SmartReminderSettings>({
     noPoop: false,
     redFlagFollowUp: false,
     episodeCheckIn: false,
@@ -291,7 +299,9 @@ export function NotificationSection({ children }: { children: Child[] }) {
     setLoading(false);
   };
 
-  const handleSmartToggle = async (key: keyof typeof smartSettings) => {
+  const handleSmartToggle = async (key: SmartReminderKey) => {
+    if (!canUseSmartReminders) return;
+
     setLoading(true);
     const nextValue = !smartSettings[key];
     const success = await setSmartReminderEnabled(key, nextValue);
@@ -308,12 +318,6 @@ export function NotificationSection({ children }: { children: Child[] }) {
     setLoading(false);
   };
 
-  const reminderRows: Array<{ key: keyof typeof smartSettings; title: string; description: string }> = [
-    { key: "noPoop", title: "No-poop threshold", description: "Review long gaps since the last poop." },
-    { key: "redFlagFollowUp", title: "Red-flag stool follow-up", description: "Follow up after urgent stool colors." },
-    { key: "episodeCheckIn", title: "Active episode check-in", description: "Nudge for another episode update." },
-  ];
-
   return (
     <section>
       <h3 className={SETTINGS_SECTION_TITLE_CLASS}>Notifications</h3>
@@ -327,19 +331,25 @@ export function NotificationSection({ children }: { children: Child[] }) {
             <Switch checked={enabled} onCheckedChange={handleToggle} disabled={loading} ariaLabel="Toggle daily reminder" />
           </div>
 
-          {reminderRows.map((row) => (
-            <div key={row.key} className="border-t border-[var(--color-border)]">
-              <div className="flex min-h-[56px] items-center justify-between gap-3 px-4 py-3">
-                <div className="min-w-0">
-                  <p className="truncate text-[0.9rem] font-semibold leading-tight text-[var(--color-text)]">{row.title}</p>
-                  <p className={SETTINGS_DESCRIPTION_CLASS}>{row.description}</p>
-                </div>
-                <Switch checked={smartSettings[row.key]} onCheckedChange={() => handleSmartToggle(row.key)} disabled={loading} ariaLabel={`Toggle ${row.title}`} />
-              </div>
-            </div>
-          ))}
+          <SmartReminderRows
+            canUseSmartReminders={canUseSmartReminders}
+            loading={loading}
+            onSmartToggle={(key) => { void handleSmartToggle(key); }}
+            smartSettings={smartSettings}
+          />
         </CardContent>
       </Card>
+      {!canUseSmartReminders && (
+        <div className="mt-3">
+          <PremiumInlineLock
+            featureId="smartReminders"
+            tone="compact"
+            title="Daily reminders stay free"
+            description="Unlock Premium for local no-poop, red-flag stool color, and active episode follow-up reminders."
+            actionLabel="Unlock smart reminders"
+          />
+        </div>
+      )}
     </section>
   );
 }
@@ -536,14 +546,21 @@ export function RecordsSupportSection() {
 }
 
 export function AccessSection() {
-  const { daysRemaining, isLocked } = useTrialAccess();
+  const { accessKind, daysRemaining, isLocked } = useTrialAccess();
   const { restorePremium } = useTrialActions();
   const { showError, showSuccess } = useToast();
   const navigate = useNavigate();
-  const accessTitle = isLocked ? "Unlock Tiny Tummy Premium" : "Unlock more with Tiny Tummy Premium";
-  const accessDetail = isLocked
-    ? "Your trial has ended. Premium keeps insights, trend reports, growth tracking & more available."
-    : "Advanced insights, trend reports, growth tracking & more.";
+  const isPremium = accessKind === "premium";
+  const accessTitle = isPremium
+    ? "Tiny Tummy Premium is unlocked"
+    : isLocked
+      ? "Free basic plan is active"
+      : "14-day full trial active";
+  const accessDetail = isPremium
+    ? "Doctor reports, full history, trends, photos, multi-child support, and smart reminders are available."
+    : isLocked
+      ? "Basic logging stays free. Premium unlocks reports, full history, trends, photos, extra children, and smart reminders."
+      : "Try every Premium feature before deciding. After the trial, basic logging remains free.";
 
   const handleRestore = async () => {
     try {
@@ -583,7 +600,7 @@ export function AccessSection() {
             <p className="mt-0.5 text-[0.74rem] leading-snug text-[var(--color-text-secondary)] md:text-[0.84rem]">
               {accessDetail}
             </p>
-            {!isLocked && (
+            {!isLocked && !isPremium && (
               <p className="mt-0.5 text-[0.68rem] font-semibold text-[var(--color-text-soft)] md:text-[0.74rem]">
                 {daysRemaining} day{daysRemaining === 1 ? "" : "s"} left in trial
               </p>
@@ -591,18 +608,20 @@ export function AccessSection() {
           </div>
         </div>
         <div className="relative mt-3 flex gap-2 md:mt-0 md:shrink-0">
-          <button
-            type="button"
-            onClick={() => navigate("/unlock")}
-            className="settings-access-card__unlock inline-flex h-10 flex-1 items-center justify-center gap-1.5 rounded-full border border-[#ffd6ad] bg-[var(--color-surface-strong)] px-3.5 text-[0.8rem] font-bold text-[var(--color-primary)] shadow-[var(--shadow-soft)] md:flex-none"
-          >
-            <svg viewBox="0 0 24 24" className="h-4.5 w-4.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <path d="m5 16 1.4-8 4 3.8L12 6l1.6 5.8 4-3.8L19 16H5Z" />
-              <path d="M5 18h14" />
-            </svg>
-            Unlock
-            <span aria-hidden="true" className="text-[1.1rem] leading-none">›</span>
-          </button>
+          {!isPremium && (
+            <button
+              type="button"
+              onClick={() => navigate("/unlock", { state: { returnTo: "/settings" } })}
+              className="settings-access-card__unlock inline-flex h-10 flex-1 items-center justify-center gap-1.5 rounded-full border border-[#ffd6ad] bg-[var(--color-surface-strong)] px-3.5 text-[0.8rem] font-bold text-[var(--color-primary)] shadow-[var(--shadow-soft)] md:flex-none"
+            >
+              <svg viewBox="0 0 24 24" className="h-4.5 w-4.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="m5 16 1.4-8 4 3.8L12 6l1.6 5.8 4-3.8L19 16H5Z" />
+                <path d="M5 18h14" />
+              </svg>
+              Unlock
+              <span aria-hidden="true" className="text-[1.1rem] leading-none">›</span>
+            </button>
+          )}
           <button
             type="button"
             onClick={() => { void handleRestore(); }}

@@ -25,7 +25,7 @@ export function invalidateAvatars() {
  * Automatically reloads when invalidateAvatars() is called.
  */
 export function useAvatar(childId: string | null): string | null {
-  const rev = useSyncExternalStore(subscribe, getSnapshot);
+  const rev = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
   const [url, setUrl] = useState<string | null>(null);
 
   useEffect(() => {

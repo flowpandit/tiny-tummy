@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { HashRouter, Routes, Route, Navigate } from "react-router-dom";
-import { ChildProvider, useChildActions, useChildLoadState, useChildren } from "./contexts/ChildContext";
+import { ChildProvider, useActiveChild, useChildActions, useChildLoadState, useChildren } from "./contexts/ChildContext";
 import { DatabaseProvider } from "./contexts/DatabaseContext";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { UnitsProvider } from "./contexts/UnitsContext";
@@ -28,6 +28,7 @@ import { Report } from "./pages/Report";
 import { AddChild } from "./pages/AddChild";
 import { AllKids } from "./pages/AllKids";
 import { Privacy } from "./pages/Privacy";
+import { getAllowedActiveChildId } from "./lib/feature-access";
 
 function StartupSetupScreen({ loadingParts, loadingForMs }: { loadingParts: string; loadingForMs: number }) {
   return (
@@ -62,8 +63,9 @@ function StartupSetupScreen({ loadingParts, loadingForMs }: { loadingParts: stri
 function AppRoutes() {
   const children = useChildren();
   const { isLoading, loadError: childLoadError } = useChildLoadState();
-  const { refreshChildren } = useChildActions();
-  const { isLocked, isLoading: isTrialLoading, loadError: trialLoadError } = useTrialAccess();
+  const activeChild = useActiveChild();
+  const { refreshChildren, setActiveChildId } = useChildActions();
+  const { entitlement, isLoading: isTrialLoading, loadError: trialLoadError } = useTrialAccess();
   const { refreshTrial } = useTrialActions();
   const [loadingForMs, setLoadingForMs] = useState(0);
 
@@ -82,6 +84,14 @@ function AppRoutes() {
       window.clearInterval(intervalId);
     };
   }, [isLoading, isTrialLoading]);
+
+  const allowedActiveChildId = getAllowedActiveChildId(activeChild?.id ?? null, children, entitlement);
+
+  useEffect(() => {
+    if (allowedActiveChildId && activeChild?.id !== allowedActiveChildId) {
+      setActiveChildId(allowedActiveChildId);
+    }
+  }, [activeChild?.id, allowedActiveChildId, setActiveChildId]);
 
   if (isLoading || isTrialLoading) {
     // Show nothing for the first 100ms to avoid a flash if loading is instant
@@ -124,26 +134,19 @@ function AppRoutes() {
     );
   }
 
-  if (isLocked) {
-    return (
-      <Routes>
-        <Route element={<AppShell />}>
-          <Route path="/settings" element={<Settings />} />
-        </Route>
-        <Route path="/unlock" element={<Paywall />} />
-        <Route path="/privacy" element={<Privacy />} />
-        <Route path="*" element={<Paywall />} />
-      </Routes>
-    );
-  }
-
   if (children.length === 0) {
     return (
       <Routes>
         <Route path="/onboarding" element={<Onboarding />} />
+        <Route path="/unlock" element={<Paywall />} />
+        <Route path="/privacy" element={<Privacy />} />
         <Route path="*" element={<Navigate to="/onboarding" replace />} />
       </Routes>
     );
+  }
+
+  if (allowedActiveChildId && activeChild?.id !== allowedActiveChildId) {
+    return <div className="min-h-screen bg-[var(--color-bg)]" />;
   }
 
   return (

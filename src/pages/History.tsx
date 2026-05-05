@@ -1,22 +1,24 @@
 import { useState, useEffect, useMemo } from "react";
 import { useActiveChild } from "../contexts/ChildContext";
+import { usePremiumFeature } from "../contexts/TrialContext";
 import { useUnits } from "../contexts/UnitsContext";
 import { useHistoryPageState } from "../hooks/useHistoryPageState";
 import { formatLocalDateKey } from "../lib/utils";
+import { getFreeHistoryStartDate } from "../lib/feature-access";
 import { DatePicker } from "../components/ui/date-picker";
+import { PremiumInlineLock } from "../components/billing/PremiumLocks";
 import { EditPoopSheet } from "../components/logging/EditPoopSheet";
 import { EditMealSheet } from "../components/logging/EditMealSheet";
 import { EditDiaperSheet } from "../components/logging/EditDiaperSheet";
 import { EditSleepSheet } from "../components/sleep/EditSleepSheet";
 import { EpisodeSheet } from "../components/episodes/EpisodeSheet";
 import { SymptomSheet } from "../components/symptoms/SymptomSheet";
+import { HistoryRangeSelector } from "../components/history/HistoryRangeSelector";
 import { HistoryTimeline, HistoryTodayOverview } from "../components/history/HistoryTimeline";
-import { cn } from "../lib/cn";
 import {
   formatHistoryDayHeader,
   getEarliestHistoryDate,
   getHistoryDisplayDays,
-  HISTORY_RANGE_OPTIONS,
   summarizeTimelineEvents,
 } from "../lib/history-timeline";
 import type {
@@ -28,38 +30,12 @@ import type {
   SymptomEntry,
 } from "../lib/types";
 
-function HistoryRangeSelector({
-  value,
-  onChange,
-}: {
-  value: 7 | 14 | 30;
-  onChange: (value: 7 | 14 | 30) => void;
-}) {
-  return (
-    <div className="flex shrink-0 rounded-full border border-[var(--color-border)] bg-[var(--color-bg-elevated)]/76 p-1 shadow-[var(--shadow-inner)]">
-      {HISTORY_RANGE_OPTIONS.map((option) => (
-        <button
-          key={option.value}
-          type="button"
-          onClick={() => onChange(option.value)}
-          className={cn(
-            "min-w-11 rounded-full px-3 py-1.5 text-[0.78rem] font-semibold leading-none transition-colors duration-150",
-            value === option.value
-              ? "bg-[var(--color-primary)] text-[var(--color-on-primary)] shadow-[0_6px_14px_rgba(95,74,60,0.16)]"
-              : "text-[var(--color-text-secondary)] hover:bg-[var(--color-surface)]",
-          )}
-        >
-          {option.label}
-        </button>
-      ))}
-    </div>
-  );
-}
-
 export function History() {
   const activeChild = useActiveChild();
   const { unitSystem, temperatureUnit } = useUnits();
+  const canUseFullHistory = usePremiumFeature("fullHistory");
   const today = formatLocalDateKey(new Date());
+  const freeHistoryStartDate = getFreeHistoryStartDate(today);
   const [expandedDay, setExpandedDay] = useState<string | null>(today);
   const [searchDate, setSearchDate] = useState<string | null>(null);
   const [quickRangeDays, setQuickRangeDays] = useState<7 | 14 | 30>(7);
@@ -101,6 +77,15 @@ export function History() {
   }, [searchDate]);
 
   useEffect(() => {
+    if (canUseFullHistory) return;
+    if (quickRangeDays !== 7) setQuickRangeDays(7);
+    if (searchDate && searchDate < freeHistoryStartDate) {
+      setSearchDate(null);
+      setExpandedDay(today);
+    }
+  }, [canUseFullHistory, freeHistoryStartDate, quickRangeDays, searchDate, today]);
+
+  useEffect(() => {
     setEditingDiaper(null);
     setEditingPoop(null);
     setEditingMeal(null);
@@ -127,7 +112,7 @@ export function History() {
     );
   }
 
-  const earliestDate = getEarliestHistoryDate(grouped, today);
+  const earliestDate = canUseFullHistory ? getEarliestHistoryDate(grouped, today) : freeHistoryStartDate;
 
   return (
     <div className="mx-auto flex w-full max-w-[760px] flex-col gap-3 px-4 pb-4 pt-2 md:max-w-[820px] md:px-10 md:pt-4">
@@ -142,6 +127,7 @@ export function History() {
             setExpandedDay(today);
             setQuickRangeDays(value);
           }}
+          canUseFullHistory={canUseFullHistory}
         />
       </div>
 
@@ -170,6 +156,15 @@ export function History() {
           </button>
         )}
       </div>
+
+      {!canUseFullHistory && (
+        <PremiumInlineLock
+          featureId="fullHistory"
+          tone="compact"
+          title="Last 7 days stay free"
+          description="Unlock Premium when you need older poop, diaper, feed, sleep, symptom, growth, or milestone records for longer patterns."
+        />
+      )}
 
       <HistoryTodayOverview summary={overviewSummary} title={overviewTitle} />
 

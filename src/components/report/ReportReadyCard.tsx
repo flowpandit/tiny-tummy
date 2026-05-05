@@ -6,6 +6,7 @@ export function ReportReadyCard({
   subtitle,
   detail,
   hasReportableData,
+  isSaving = false,
   saveHelpText,
   saveLabel,
   onSave,
@@ -14,6 +15,7 @@ export function ReportReadyCard({
   subtitle: string;
   detail: string;
   hasReportableData: boolean;
+  isSaving?: boolean;
   saveHelpText: string;
   saveLabel: string;
   onSave: () => void;
@@ -52,9 +54,13 @@ export function ReportReadyCard({
               variant="cta"
               className="w-full"
               onClick={onSave}
-              disabled={!hasReportableData}
+              disabled={!hasReportableData || isSaving}
+              aria-busy={isSaving}
             >
-              {saveLabel}
+              {isSaving && (
+                <span className="mr-2 h-4 w-4 rounded-full border-2 border-white/35 border-t-white animate-spin" aria-hidden="true" />
+              )}
+              <span>{saveLabel}</span>
             </Button>
             <p className="mt-2 text-center text-[0.68rem] leading-snug text-[var(--color-text-soft)] md:text-[0.72rem]">
               {saveHelpText}

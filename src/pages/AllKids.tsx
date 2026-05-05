@@ -3,11 +3,14 @@ import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useChildActions, useChildren } from "../contexts/ChildContext";
 import { useDbClient } from "../contexts/DatabaseContext";
+import { useTrialAccess } from "../contexts/TrialContext";
 import { getChildStatus } from "../lib/tauri";
 import { getAgeLabelFromDob, timeSince } from "../lib/utils";
+import { canAccessChild, canUsePremiumFeature } from "../lib/feature-access";
 import { Card, CardContent } from "../components/ui/card";
 import { Avatar } from "../components/child/Avatar";
 import { Badge } from "../components/ui/badge";
+import { PremiumBadge } from "../components/billing/PremiumLocks";
 import { Header } from "../components/layout/Header";
 import type { Child, HealthStatus } from "../lib/types";
 
@@ -21,6 +24,7 @@ interface ChildSummary {
 export function AllKids() {
   const db = useDbClient();
   const children = useChildren();
+  const { entitlement } = useTrialAccess();
   const { setActiveChildId } = useChildActions();
   const navigate = useNavigate();
   const [summaries, setSummaries] = useState<ChildSummary[]>([]);
@@ -66,8 +70,22 @@ export function AllKids() {
   }, [children]);
 
   const handleSelectChild = (childId: string) => {
+    if (!canAccessChild(childId, children, entitlement)) {
+      navigate("/unlock", { state: { featureId: "multiChild", returnTo: "/all-kids" } });
+      return;
+    }
+
     setActiveChildId(childId);
     navigate("/");
+  };
+
+  const handleAddChild = () => {
+    if (!canUsePremiumFeature(entitlement, "multiChild") && children.length > 0) {
+      navigate("/unlock", { state: { featureId: "multiChild", returnTo: "/all-kids" } });
+      return;
+    }
+
+    navigate("/add-child");
   };
 
   const statusColor: Record<HealthStatus, string> = {
@@ -130,6 +148,9 @@ export function AllKids() {
                         {summary.alertCount > 0 && (
                           <Badge variant="alert">{summary.alertCount} alert{summary.alertCount > 1 ? "s" : ""}</Badge>
                         )}
+                        {!canAccessChild(summary.child.id, children, entitlement) && (
+                          <PremiumBadge featureId="multiChild" className="px-2 py-0.5 text-[0.58rem]" />
+                        )}
                       </div>
                       <p className="text-xs text-[var(--color-text-secondary)]">
                         {getAgeLabelFromDob(summary.child.date_of_birth)}
@@ -168,13 +189,13 @@ export function AllKids() {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: summaries.length * 0.05 }}
-            onClick={() => navigate("/add-child")}
+            onClick={handleAddChild}
             className="flex items-center justify-center gap-2 py-4 rounded-[var(--radius-md)] border-2 border-dashed border-[var(--color-border)] text-sm text-[var(--color-text-secondary)] hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] cursor-pointer transition-colors"
           >
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
               <path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z" />
             </svg>
-            Add another child
+            {canUsePremiumFeature(entitlement, "multiChild") ? "Add another child" : "Unlock to add another child"}
           </motion.button>
         </div>
       )}

@@ -8,6 +8,8 @@ import { TrendSummaryTile } from "../components/trends/TrendSummaryTile";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { CompactPageHeader, EmptyState, PageBody } from "../components/ui/page-layout";
 import { useActiveChild } from "../contexts/ChildContext";
+import { usePremiumFeature } from "../contexts/TrialContext";
+import { PremiumInlineLock } from "../components/billing/PremiumLocks";
 import { useTrendsOverview } from "../hooks/useTrendsOverview";
 import type { TrendsTab } from "../lib/trends";
 
@@ -29,11 +31,35 @@ const PERIOD_OPTIONS = [
 
 export function Dashboard() {
   const activeChild = useActiveChild();
+  const canUseAdvancedInsights = usePremiumFeature("advancedInsights");
   const [days, setDays] = useState(7);
   const [activeTab, setActiveTab] = useState<TrendsTab>("overview");
   const { overview, poopStats } = useTrendsOverview(activeChild, days);
 
   if (!activeChild) return null;
+
+  if (!canUseAdvancedInsights) {
+    return (
+      <PageBody className="mt-0 space-y-4 px-4 pb-5 pt-0 md:px-6 lg:px-8">
+        <section className="border-b border-[var(--color-border)] pb-4">
+          <CompactPageHeader
+            eyebrow="Patterns"
+            title="Trends"
+            value={7}
+            options={[PERIOD_OPTIONS[0]]}
+            onChange={() => undefined}
+          />
+        </section>
+
+        <PremiumInlineLock
+          featureId="advancedInsights"
+          title="Advanced trends are Premium"
+          description="Today views and basic logging stay free. Unlock charts and pattern reads when you want to compare poop, diaper, feed, and sleep changes over time."
+          actionLabel="Unlock trends"
+        />
+      </PageBody>
+    );
+  }
 
   if (!overview?.hasAnyData) {
     return (
