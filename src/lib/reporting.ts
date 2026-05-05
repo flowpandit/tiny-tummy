@@ -448,12 +448,15 @@ export function normalizeReportOptions(
 ): ReportOptions {
   const mode = options.mode ?? context.mode ?? DEFAULT_REPORT_MODE;
   const defaults = getDefaultReportOptionsForMode(mode);
+  const dateRange = hasCompleteReportDateRange(options.dateRange)
+    ? options.dateRange
+    : context.dateRange ?? defaults.dateRange;
   const merged: ReportOptions = {
     ...defaults,
     ...options,
     mode,
     childId: options.childId ?? context.childId ?? defaults.childId,
-    dateRange: options.dateRange ?? context.dateRange ?? defaults.dateRange,
+    dateRange,
     generatedAt: options.generatedAt ?? context.generatedAt ?? defaults.generatedAt,
   };
 
@@ -473,6 +476,10 @@ export function normalizeReportOptions(
   }
 
   return merged;
+}
+
+function hasCompleteReportDateRange(dateRange: ReportDateRange | undefined): dateRange is ReportDateRange {
+  return Boolean(dateRange?.start.trim() && dateRange.end.trim());
 }
 
 function dateKey(isoString: string): string {

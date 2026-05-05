@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { buildNativeReportPdfPayload } from "../src/lib/report-native-pdf.ts";
-import { buildReportData } from "../src/lib/reporting.ts";
+import { buildReportData, getDefaultReportOptionsForKind } from "../src/lib/reporting.ts";
 import type { Child, DiaperEntry, PoopEntry } from "../src/lib/types.ts";
 
 const child: Child = {
@@ -69,8 +69,41 @@ test("native report payload reuses the preview model structure", () => {
 
   assert.equal(payload.title, "Poop & Tummy Report");
   assert.equal(payload.childName, "Maya");
+  assert.equal(payload.reportMode, data.report.mode);
+  assert.equal(payload.dataQuality.isSparse, data.report.dataQuality.isSparse);
+  assert.deepEqual(payload.brief.questions, data.report.questions);
+  assert.equal(payload.privacyFooter, data.report.privacyNote);
+  assert.equal(payload.includePhotos, false);
+  assert.equal(payload.includeAttachmentMetadata, false);
+  assert.match(payload.attachmentPolicySummary, /Photos and attachment metadata are excluded/);
   assert.equal(payload.pattern.dailyPoints.at(-1)?.stoolCount, 2);
   assert.equal(payload.pattern.dailyPoints.at(-1)?.mixed, 1);
   assert.equal(payload.context.diaperRows.some((row) => row.label === "Mixed diapers"), true);
   assert.equal(payload.timelineGroups.length > 0, true);
+});
+
+test("native report payload keeps selected date range when report-page default options have a blank range", () => {
+  const data = buildReportData({
+    child,
+    logs: [poop],
+    diaperLogs: [diaper],
+    feedingLogs: [],
+    growthLogs: [],
+    episodes: [],
+    episodeEvents: [],
+    symptomLogs: [],
+    milestoneLogs: [],
+  }, "2026-05-01", "2026-05-04", getDefaultReportOptionsForKind("poopTummy"));
+
+  const payload = buildNativeReportPdfPayload({
+    child,
+    startDate: "2026-05-01",
+    endDate: "2026-05-04",
+    reportData: data,
+    unitSystem: "metric",
+    generatedAt: new Date("2026-05-04T15:50:00"),
+  });
+
+  assert.equal(payload.dataQuality.totalDays, 4);
+  assert.equal(Number.isFinite(payload.dataQuality.totalDays), true);
 });

@@ -465,6 +465,7 @@ function buildLastImportantEvents(data: ReportData, unitSystem: UnitSystem): Rep
   const latestWet = sortNewest(data.diaperLogs.filter(hasUrineInDiaper))[0] ?? null;
   const latestSymptom = sortNewest(data.symptomLogs)[0] ?? null;
   const activeEpisode = data.activeEpisodeGroup;
+  const latestFeed = sortNewest(data.feedingLogs)[0] ?? null;
 
   return [
     latestStool
@@ -503,6 +504,14 @@ function buildLastImportantEvents(data: ReportData, unitSystem: UnitSystem): Rep
           tone: "caution",
         }
       : emptyEvent("Active episode", "No active episode"),
+    latestFeed
+      ? {
+          label: "Last feed",
+          value: formatDate(latestFeed.logged_at),
+          detail: getFeedingEntryDisplayLabel(latestFeed, unitSystem),
+          tone: "info",
+        }
+      : emptyEvent("Last feed", "No feed logged"),
   ];
 }
 
