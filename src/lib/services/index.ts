@@ -12,9 +12,11 @@ export interface AppServices {
 }
 
 export function createDomainServices(repositories: AppRepositories): AppServices {
+  const handoff = createHandoffService(repositories);
+
   return {
-    report: createReportService(repositories.reportSource),
-    handoff: createHandoffService(repositories),
+    report: createReportService(repositories.reportSource, handoff),
+    handoff,
     prediction: createPredictionService(),
     exportImport: createExportImportService(repositories.exportImport),
   };

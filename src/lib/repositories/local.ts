@@ -114,26 +114,34 @@ async function startEpisodeWithLinkedSymptoms(
 }
 
 async function getReportSourceData(
-  repositories: Pick<AppRepositories, "elimination" | "feeding" | "sleep" | "care" | "growth" | "milestones">,
+  repositories: Pick<AppRepositories, "children" | "elimination" | "feeding" | "sleep" | "care" | "growth" | "milestones">,
   input: ReportSourceRequest,
 ) {
-  const [logs, diaperLogs, feedingLogs, episodes, episodeEvents, symptomLogs, milestoneLogs, growthLogs] = await Promise.all([
+  const shouldLoadSleep = input.options.includeSleepContext || input.options.mode === "caregiver_handoff";
+  const shouldLoadGrowth = input.options.includeGrowth !== false && input.options.includeGrowthContext !== false;
+  const [children, logs, diaperLogs, feedingLogs, sleepLogs, episodes, episodeEvents, symptomLogs, milestoneLogs, growthLogs] = await Promise.all([
+    repositories.children.listActiveChildren(),
     repositories.elimination.listPoopLogsInRange(input.childId, input.startDate, input.endDate),
     repositories.elimination.listDiaperLogsInRange(input.childId, input.startDate, input.endDate),
     repositories.feeding.listFeedingLogsInRange(input.childId, input.startDate, input.endDate),
+    shouldLoadSleep
+      ? repositories.sleep.listSleepLogsInRange(input.childId, input.startDate, input.endDate)
+      : Promise.resolve([]),
     repositories.care.listEpisodesInRange(input.childId, input.startDate, input.endDate),
     repositories.care.listEpisodeEventsInRange(input.childId, input.startDate, input.endDate),
     repositories.care.listSymptomsInRange(input.childId, input.startDate, input.endDate),
     repositories.milestones.listMilestonesInRange(input.childId, input.startDate, input.endDate),
-    input.options.includeGrowth
+    shouldLoadGrowth
       ? repositories.growth.listGrowthLogsInRange(input.childId, input.startDate, input.endDate)
       : Promise.resolve([]),
   ]);
 
   return {
+    child: children.find((child) => child.id === input.childId) ?? null,
     logs,
     diaperLogs,
     feedingLogs,
+    sleepLogs,
     growthLogs,
     episodes,
     episodeEvents,

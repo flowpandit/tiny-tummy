@@ -4,6 +4,7 @@ import type {
   DiaperEntry,
   EpisodeEvent,
   PoopEntry,
+  SleepEntry,
   SymptomEntry,
 } from "../types";
 import type { AppRepositories } from "../repositories";
@@ -11,6 +12,7 @@ import type { AppRepositories } from "../repositories";
 export interface ChildSummarySnapshot extends ChildDailySummary {
   diaperLogs: DiaperEntry[];
   lastPoop: PoopEntry | null;
+  lastSleep: SleepEntry | null;
   alerts: Alert[];
   episodeEvents: EpisodeEvent[];
   symptomLogs: SymptomEntry[];
@@ -29,7 +31,7 @@ export interface HandoffService {
 }
 
 export function createHandoffService(
-  repositories: Pick<AppRepositories, "elimination" | "feeding" | "care">,
+  repositories: Pick<AppRepositories, "elimination" | "feeding" | "sleep" | "care">,
 ): HandoffService {
   return {
     async getChildSummarySnapshot(childId, options = {}) {
@@ -37,11 +39,12 @@ export function createHandoffService(
       const feedingLimit = options.feedingLimit ?? 100;
       const symptomLimit = options.symptomLimit ?? 10;
 
-      const [diaperLogs, poopLogs, lastPoop, feedingLogs, alerts, activeEpisode, symptomLogs] = await Promise.all([
+      const [diaperLogs, poopLogs, lastPoop, feedingLogs, sleepLogs, alerts, activeEpisode, symptomLogs] = await Promise.all([
         repositories.elimination.listDiaperLogs(childId, poopLimit),
         repositories.elimination.listPoopLogs(childId, poopLimit),
         repositories.elimination.getLastRealPoop(childId),
         repositories.feeding.listFeedingLogs(childId, feedingLimit),
+        repositories.sleep.listSleepLogs(childId, 1),
         repositories.care.listActiveAlerts(childId),
         repositories.care.getActiveEpisode(childId),
         repositories.care.listSymptoms(childId, symptomLimit),
@@ -66,6 +69,7 @@ export function createHandoffService(
         ...summary,
         diaperLogs,
         lastPoop,
+        lastSleep: sleepLogs[0] ?? null,
         alerts,
         episodeEvents,
         symptomLogs,

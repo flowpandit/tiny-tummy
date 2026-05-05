@@ -1,9 +1,9 @@
 import { formatLocalDateKey, getAgeLabelFromDob } from "./utils.ts";
 import type { Child } from "./types.ts";
-import { DEFAULT_REPORT_KIND, type ReportData, type ReportKind, type ReportOptions } from "./reporting.ts";
+import { DEFAULT_REPORT_KIND, type ReportBooleanOptionKey, type ReportData, type ReportKind } from "./reporting.ts";
 
 export interface ReportOptionToggle {
-  key: keyof ReportOptions;
+  key: ReportBooleanOptionKey;
   label: string;
 }
 
@@ -96,12 +96,13 @@ export function hasReportableData(reportData: ReportData | null) {
     reportData.diaperLogs,
     reportData.stoolEvents,
     reportData.feedingLogs,
+    reportData.sleepLogs,
     reportData.growthLogs,
     reportData.symptomLogs,
     reportData.milestoneLogs,
     reportData.episodeGroups,
     reportData.timeline,
-  ].some((items) => items.length > 0);
+  ].some((items) => (items ?? []).length > 0);
 }
 
 export function getReportSaveLabel(isAndroid: boolean) {

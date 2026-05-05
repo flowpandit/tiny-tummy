@@ -13,6 +13,7 @@ import type {
   FeedingEntry,
   MilestoneEntry,
   PoopEntry,
+  SleepEntry,
   SymptomEntry,
 } from "../src/lib/types.ts";
 
@@ -123,9 +124,21 @@ const event: EpisodeEvent = {
   source_id: symptom.id,
 };
 
+const sleep: SleepEntry = {
+  id: "sleep-1",
+  child_id: child.id,
+  sleep_type: "nap",
+  started_at: "2026-04-12T13:00:00.000Z",
+  ended_at: "2026-04-12T13:45:00.000Z",
+  notes: null,
+  created_at: "2026-04-12T13:00:00.000Z",
+  updated_at: "2026-04-12T13:00:00.000Z",
+};
+
 test("local ReportSourceRepository gathers active report rows and skips growth when excluded", async () => {
   const calls: string[] = [];
   const dbClient = {
+    getChildren: async () => [child],
     getPoopLogsForRange: async () => {
       calls.push("poop");
       return [poop];
@@ -137,6 +150,10 @@ test("local ReportSourceRepository gathers active report rows and skips growth w
     getFeedingLogsForRange: async () => {
       calls.push("feed");
       return [feed];
+    },
+    getSleepLogsForRange: async () => {
+      calls.push("sleep");
+      return [sleep];
     },
     getEpisodesForRange: async () => {
       calls.push("episodes");
@@ -172,9 +189,11 @@ test("local ReportSourceRepository gathers active report rows and skips growth w
   assert.deepEqual(source.logs.map((log) => log.id), [poop.id]);
   assert.deepEqual(source.diaperLogs.map((log) => log.id), [diaper.id]);
   assert.deepEqual(source.feedingLogs.map((log) => log.id), [feed.id]);
+  assert.deepEqual(source.sleepLogs, []);
   assert.deepEqual(source.episodeEvents.map((log) => log.id), [event.id]);
   assert.deepEqual(source.growthLogs, []);
   assert.equal(calls.includes("growth"), false);
+  assert.equal(calls.includes("sleep"), false);
   assert.equal(await repositories.reportSource.getLatestActivityDate(child.id), "2026-04-12T12:00:00.000Z");
 });
 
@@ -305,6 +324,9 @@ test("HandoffService prepares a local summary snapshot through repositories", as
     feeding: {
       listFeedingLogs: async () => [feed],
     },
+    sleep: {
+      listSleepLogs: async () => [sleep],
+    },
     care: {
       listActiveAlerts: async () => [alert],
       getActiveEpisode: async () => episode,
@@ -321,5 +343,6 @@ test("HandoffService prepares a local summary snapshot through repositories", as
   assert.equal(snapshot.todayDirtyDiapers, 1);
   assert.equal(snapshot.todayFeeds, 1);
   assert.equal(snapshot.lastPoop?.id, poop.id);
+  assert.equal(snapshot.lastSleep?.id, sleep.id);
   assert.deepEqual(snapshot.visibleAlerts.map((item) => item.id), [alert.id]);
 });

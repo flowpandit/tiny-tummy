@@ -3,6 +3,7 @@ import { getDefaultReportDateRange, getReportDateRangeFromLatestActivity } from 
 import {
   DEFAULT_REPORT_KIND,
   getDefaultReportOptionsForKind,
+  type ReportBooleanOptionKey,
   type ReportData,
   type ReportKind,
   type ReportOptions,
@@ -57,11 +58,18 @@ export function useReportPageState(
     setReportData(null);
   }, []);
 
-  const toggleOption = useCallback((key: keyof ReportOptions) => {
-    setOptions((current) => ({
-      ...current,
-      [key]: !current[key],
-    }));
+  const toggleOption = useCallback((key: ReportBooleanOptionKey) => {
+    setOptions((current) => {
+      const nextValue = !current[key];
+      return {
+        ...current,
+        [key]: nextValue,
+        ...(key === "includeFeeds" ? { includeFeedingContext: nextValue } : {}),
+        ...(key === "includeFeedingContext" ? { includeFeeds: nextValue } : {}),
+        ...(key === "includeGrowth" ? { includeGrowthContext: nextValue } : {}),
+        ...(key === "includeGrowthContext" ? { includeGrowth: nextValue } : {}),
+      };
+    });
     setReportData(null);
   }, []);
 

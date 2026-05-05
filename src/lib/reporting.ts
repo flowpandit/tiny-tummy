@@ -8,11 +8,14 @@ import { formatGrowthValue, formatTemperatureValue, formatVolumeValue, getDefaul
 import type {
   Episode,
   EpisodeEvent,
+  Attachment,
+  Child,
   DiaperEntry,
   FeedingEntry,
   GrowthEntry,
   MilestoneEntry,
   PoopEntry,
+  SleepEntry,
   SymptomEntry,
   UnitSystem,
 } from "./types";
@@ -28,11 +31,65 @@ export interface ReportHighlight {
   detail: string;
 }
 
+export type ReportMode =
+  | "pediatrician_full"
+  | "doctor_brief"
+  | "poop_diaper"
+  | "symptoms_episodes"
+  | "caregiver_handoff"
+  | "clinical_export";
+
+export const REPORT_MODES: ReportMode[] = [
+  "pediatrician_full",
+  "doctor_brief",
+  "poop_diaper",
+  "symptoms_episodes",
+  "caregiver_handoff",
+  "clinical_export",
+];
+
+export const DEFAULT_REPORT_MODE: ReportMode = "pediatrician_full";
+
 export type ReportKind = "poopTummy" | "fullHealth";
 
 export const DEFAULT_REPORT_KIND: ReportKind = "poopTummy";
 
+export interface ReportDateRange {
+  start: string;
+  end: string;
+}
+
+export type ReportBooleanOptionKey =
+  | "includeFeeds"
+  | "includeEpisodes"
+  | "includeEpisodeSummary"
+  | "includeSymptoms"
+  | "includeMilestones"
+  | "includeGrowth"
+  | "includeNotes"
+  | "includeTimeline"
+  | "includePhotos"
+  | "includeAttachmentMetadata"
+  | "includeDeleted"
+  | "includeFeedingContext"
+  | "includeSleepContext"
+  | "includeGrowthContext"
+  | "includeCaregiverAttribution";
+
 export interface ReportOptions {
+  mode?: ReportMode;
+  childId?: string;
+  dateRange?: ReportDateRange;
+  includeTimeline: boolean;
+  includePhotos: boolean;
+  includeAttachmentMetadata: boolean;
+  includeDeleted: boolean;
+  includeFeedingContext: boolean;
+  includeSleepContext: boolean;
+  includeGrowthContext: boolean;
+  includeCaregiverAttribution: boolean;
+  maxTimelineRows?: number;
+  generatedAt?: string;
   includeFeeds: boolean;
   includeEpisodes: boolean;
   includeEpisodeSummary: boolean;
@@ -40,7 +97,132 @@ export interface ReportOptions {
   includeMilestones: boolean;
   includeGrowth: boolean;
   includeNotes: boolean;
+}
+
+export type ReportSectionId =
+  | "poopSummary"
+  | "diaperSummary"
+  | "feedingContext"
+  | "sleepContext"
+  | "symptomsSummary"
+  | "episodeSummary"
+  | "growthContext"
+  | "milestonesContext"
+  | "caregiverHandoff"
+  | "charts"
+  | "notes";
+
+export type ReportSectionTone = "default" | "info" | "healthy" | "caution" | "alert";
+
+export interface ReportChildSummary {
+  id: string;
+  name: string | null;
+  dateOfBirth: string | null;
+  sex: Child["sex"] | null;
+  feedingType: Child["feeding_type"] | null;
+}
+
+export interface ReportDataQuality {
+  totalDays: number;
+  activeDays: number;
+  loggedEventCount: number;
+  isSparse: boolean;
+  includesDeleted: boolean;
+  notes: string[];
+}
+
+export interface ReportBrief {
+  title: string;
+  summary: string;
+  rows: ReportSectionRow[];
+}
+
+export interface ReportKeyMetric {
+  id: string;
+  label: string;
+  value: string;
+  detail?: string;
+  tone: ReportSectionTone;
+}
+
+export interface ReportSectionRow {
+  label: string;
+  value: string;
+  detail?: string;
+  at?: string;
+  sourceId?: string;
+  sourceType?: string;
+  caregiverId?: string | null;
+  tone?: ReportSectionTone;
+}
+
+export interface TinyTummyReportSection {
+  id: ReportSectionId;
+  title: string;
+  summary?: string;
+  rows: ReportSectionRow[];
+}
+
+export type TinyTummyReportSections = Partial<Record<ReportSectionId, TinyTummyReportSection>>;
+
+export interface TinyTummyReportTimelineRow extends ReportSectionRow {
+  eventType: string;
+}
+
+export interface ReportAttachmentMetadata {
+  ownerTable: string;
+  ownerId: string;
+  childId: string | null;
+  localPath: string;
+  mimeType: string | null;
+  fileSize: number | null;
+  createdAt: string | null;
+  policy: "local_only_metadata";
+}
+
+export interface ReportAttachmentPolicy {
   includePhotos: boolean;
+  includeAttachmentMetadata: boolean;
+  localOnly: boolean;
+  summary: string;
+  attachments: ReportAttachmentMetadata[];
+}
+
+export interface TinyTummyReportData {
+  schemaVersion: "tiny_tummy_report_v1";
+  reportId: string;
+  mode: ReportMode;
+  generatedAt: string;
+  child: ReportChildSummary;
+  dateRange: ReportDateRange;
+  dataQuality: ReportDataQuality;
+  disclaimer: string;
+  brief: ReportBrief;
+  keyMetrics: ReportKeyMetric[];
+  sections: TinyTummyReportSections;
+  timeline: TinyTummyReportTimelineRow[];
+  questions: string[];
+  privacyNote: string;
+  attachmentPolicy: ReportAttachmentPolicy;
+}
+
+export interface ReportHandoffSourceData {
+  dayKey: string;
+  lastPoop: PoopEntry | null;
+  lastDiaper: DiaperEntry | null;
+  lastWetDiaper: DiaperEntry | null;
+  lastFeed: FeedingEntry | null;
+  lastSleep: SleepEntry | null;
+  activeEpisode: Episode | null;
+  latestEpisodeUpdate: EpisodeEvent | null;
+  latestSymptom: SymptomEntry | null;
+  recentSymptoms: SymptomEntry[];
+  todayPoops: number;
+  todayWetDiapers: number;
+  todayDirtyDiapers: number;
+  todayFeeds: number;
+  hasNoPoopDay: boolean;
+  watchItems: string[];
 }
 
 export interface ReportDashboardStat {
@@ -99,11 +281,14 @@ export interface ReportDiaperStats {
 
 export interface ReportData {
   reportKind: ReportKind;
+  reportMode: ReportMode;
+  report: TinyTummyReportData;
   logs: PoopEntry[];
   diaperLogs: DiaperEntry[];
   stoolEvents: ReportStoolEvent[];
   diaperStats: ReportDiaperStats;
   feedingLogs: FeedingEntry[];
+  sleepLogs: SleepEntry[];
   growthLogs: GrowthEntry[];
   episodeGroups: EpisodeReportGroup[];
   activeEpisodeGroup: EpisodeReportGroup | null;
@@ -131,42 +316,163 @@ export interface ReportData {
 }
 
 export interface ReportSourceData {
+  child?: Pick<Child, "id" | "name" | "date_of_birth" | "sex" | "feeding_type"> | null;
   logs: PoopEntry[];
   diaperLogs: DiaperEntry[];
   feedingLogs: FeedingEntry[];
+  sleepLogs?: SleepEntry[];
   growthLogs: GrowthEntry[];
   episodes: Episode[];
   episodeEvents: EpisodeEvent[];
   symptomLogs: SymptomEntry[];
   milestoneLogs: MilestoneEntry[];
+  attachments?: Attachment[];
+  handoffSummary?: ReportHandoffSourceData | null;
 }
 
-export const defaultReportOptions: ReportOptions = {
-  includeFeeds: true,
-  includeEpisodes: true,
-  includeEpisodeSummary: true,
-  includeSymptoms: true,
-  includeMilestones: true,
-  includeGrowth: true,
-  includeNotes: true,
-  includePhotos: true,
-};
+function buildReportOptionsForMode(mode: ReportMode): ReportOptions {
+  const base: ReportOptions = {
+    mode,
+    childId: "",
+    dateRange: { start: "", end: "" },
+    includeTimeline: true,
+    includePhotos: false,
+    includeAttachmentMetadata: false,
+    includeDeleted: false,
+    includeFeedingContext: true,
+    includeSleepContext: false,
+    includeGrowthContext: false,
+    includeMilestones: false,
+    includeCaregiverAttribution: false,
+    includeFeeds: true,
+    includeEpisodes: true,
+    includeEpisodeSummary: true,
+    includeSymptoms: true,
+    includeGrowth: false,
+    includeNotes: true,
+  };
 
-export const defaultPoopTummyReportOptions: ReportOptions = {
-  includeFeeds: true,
-  includeEpisodes: true,
-  includeEpisodeSummary: true,
-  includeSymptoms: true,
-  includeMilestones: false,
-  includeGrowth: false,
-  includeNotes: true,
-  includePhotos: true,
-};
+  switch (mode) {
+    case "doctor_brief":
+      return {
+        ...base,
+        includeTimeline: false,
+        includeFeedingContext: false,
+        includeFeeds: false,
+        includeMilestones: false,
+        includeGrowthContext: false,
+        includeGrowth: false,
+        maxTimelineRows: 0,
+      };
+    case "poop_diaper":
+      return {
+        ...base,
+        includeSymptoms: false,
+        includeEpisodes: false,
+        includeEpisodeSummary: false,
+        includeMilestones: false,
+        includeGrowthContext: false,
+        includeGrowth: false,
+        maxTimelineRows: 80,
+      };
+    case "symptoms_episodes":
+      return {
+        ...base,
+        includeFeedingContext: false,
+        includeSleepContext: false,
+        includeFeeds: false,
+        includeMilestones: false,
+        includeGrowthContext: false,
+        includeGrowth: false,
+        maxTimelineRows: 80,
+      };
+    case "caregiver_handoff":
+      return {
+        ...base,
+        includeSleepContext: true,
+        includeMilestones: false,
+        includeGrowthContext: false,
+        includeGrowth: false,
+        maxTimelineRows: 12,
+      };
+    case "clinical_export":
+      return {
+        ...base,
+        includeGrowthContext: true,
+        includeGrowth: true,
+        includeMilestones: true,
+        maxTimelineRows: 250,
+      };
+    case "pediatrician_full":
+    default:
+      return {
+        ...base,
+        includeGrowthContext: true,
+        includeGrowth: true,
+        includeMilestones: true,
+        maxTimelineRows: 150,
+      };
+  }
+}
+
+export function getReportModeForKind(reportKind: ReportKind): ReportMode {
+  return reportKind === "poopTummy" ? "poop_diaper" : "pediatrician_full";
+}
+
+export function getReportKindForMode(mode: ReportMode): ReportKind {
+  return mode === "poop_diaper" ? "poopTummy" : "fullHealth";
+}
+
+export function getDefaultReportOptionsForMode(
+  mode: ReportMode = DEFAULT_REPORT_MODE,
+  input: Partial<Pick<ReportOptions, "childId" | "dateRange" | "generatedAt">> = {},
+): ReportOptions {
+  return {
+    ...buildReportOptionsForMode(mode),
+    ...input,
+    mode,
+  };
+}
+
+export const defaultReportOptions: ReportOptions = getDefaultReportOptionsForMode("pediatrician_full");
+
+export const defaultPoopTummyReportOptions: ReportOptions = getDefaultReportOptionsForMode("poop_diaper");
 
 export function getDefaultReportOptionsForKind(reportKind: ReportKind): ReportOptions {
-  return reportKind === "poopTummy"
-    ? { ...defaultPoopTummyReportOptions }
-    : { ...defaultReportOptions };
+  return getDefaultReportOptionsForMode(getReportModeForKind(reportKind));
+}
+
+export function normalizeReportOptions(
+  options: Partial<ReportOptions> = {},
+  context: Partial<Pick<ReportOptions, "mode" | "childId" | "dateRange" | "generatedAt">> = {},
+): ReportOptions {
+  const mode = options.mode ?? context.mode ?? DEFAULT_REPORT_MODE;
+  const defaults = getDefaultReportOptionsForMode(mode);
+  const merged: ReportOptions = {
+    ...defaults,
+    ...options,
+    mode,
+    childId: options.childId ?? context.childId ?? defaults.childId,
+    dateRange: options.dateRange ?? context.dateRange ?? defaults.dateRange,
+    generatedAt: options.generatedAt ?? context.generatedAt ?? defaults.generatedAt,
+  };
+
+  if (options.includeFeeds !== undefined || options.includeFeedingContext !== undefined) {
+    const nextIncludeFeeding = options.includeFeeds === false || options.includeFeedingContext === false
+      ? false
+      : options.includeFeeds === true || options.includeFeedingContext === true;
+    merged.includeFeeds = nextIncludeFeeding;
+    merged.includeFeedingContext = nextIncludeFeeding;
+  }
+  if (options.includeGrowth !== undefined || options.includeGrowthContext !== undefined) {
+    const nextIncludeGrowth = options.includeGrowth === false || options.includeGrowthContext === false
+      ? false
+      : options.includeGrowth === true || options.includeGrowthContext === true;
+    merged.includeGrowth = nextIncludeGrowth;
+    merged.includeGrowthContext = nextIncludeGrowth;
+  }
+
+  return merged;
 }
 
 function dateKey(isoString: string): string {
@@ -867,6 +1173,7 @@ function buildTimeline(input: {
   logs: PoopEntry[];
   diaperLogs: DiaperEntry[];
   feedingLogs: FeedingEntry[];
+  sleepLogs: SleepEntry[];
   symptomLogs: SymptomEntry[];
   milestoneLogs: MilestoneEntry[];
   growthLogs: GrowthEntry[];
@@ -926,6 +1233,22 @@ function buildTimeline(input: {
         eventType: "Feed",
         details: getFeedingEntryDisplayLabel(log, input.unitSystem),
         note: input.options.includeNotes ? log.reaction_notes ?? log.notes ?? undefined : undefined,
+      });
+    }
+  }
+
+  if (input.options.includeSleepContext) {
+    for (const log of input.sleepLogs) {
+      const durationMinutes = Math.max(0, Math.round((new Date(log.ended_at).getTime() - new Date(log.started_at).getTime()) / 60000));
+      rows.push({
+        sortAt: log.started_at,
+        dateTime: formatDate(log.started_at),
+        eventType: "Sleep",
+        details: [
+          log.sleep_type === "night" ? "Night sleep" : "Nap",
+          durationMinutes > 0 ? `${durationMinutes} min` : null,
+        ].filter(Boolean).join(" · "),
+        note: input.options.includeNotes ? log.notes ?? undefined : undefined,
       });
     }
   }
@@ -1007,14 +1330,62 @@ function buildTimeline(input: {
     .map(({ sortAt: _sortAt, ...row }) => row);
 }
 
-export function buildReportData(
-  source: ReportSourceData,
+type PreparedReportSourceData = {
+  child: ReportSourceData["child"];
+  logs: PoopEntry[];
+  diaperLogs: DiaperEntry[];
+  feedingLogs: FeedingEntry[];
+  sleepLogs: SleepEntry[];
+  growthLogs: GrowthEntry[];
+  episodes: Episode[];
+  episodeEvents: EpisodeEvent[];
+  symptomLogs: SymptomEntry[];
+  milestoneLogs: MilestoneEntry[];
+  attachments: Attachment[];
+  handoffSummary: ReportHandoffSourceData | null;
+};
+
+type LegacyReportDataFields = Omit<ReportData, "reportKind" | "reportMode" | "report">;
+
+function isIncludedRow(row: { deleted_at?: string | null }, options: ReportOptions): boolean {
+  return options.includeDeleted || !row.deleted_at;
+}
+
+function prepareReportSourceData(source: ReportSourceData, options: ReportOptions): PreparedReportSourceData {
+  return {
+    child: source.child ?? null,
+    logs: source.logs.filter((row) => isIncludedRow(row, options)),
+    diaperLogs: source.diaperLogs.filter((row) => isIncludedRow(row, options)),
+    feedingLogs: source.feedingLogs.filter((row) => isIncludedRow(row, options)),
+    sleepLogs: (source.sleepLogs ?? []).filter((row) => isIncludedRow(row, options)),
+    growthLogs: source.growthLogs.filter((row) => isIncludedRow(row, options)),
+    episodes: source.episodes.filter((row) => isIncludedRow(row, options)),
+    episodeEvents: source.episodeEvents.filter((row) => isIncludedRow(row, options)),
+    symptomLogs: source.symptomLogs.filter((row) => isIncludedRow(row, options)),
+    milestoneLogs: source.milestoneLogs.filter((row) => isIncludedRow(row, options)),
+    attachments: (source.attachments ?? []).filter((row) => isIncludedRow(row, options)),
+    handoffSummary: source.handoffSummary ?? null,
+  };
+}
+
+function scrubReportPhotos(source: PreparedReportSourceData, includePhotos: boolean): PreparedReportSourceData {
+  if (includePhotos) return source;
+
+  return {
+    ...source,
+    logs: source.logs.map((log) => ({ ...log, photo_path: null })),
+    diaperLogs: source.diaperLogs.map((log) => ({ ...log, photo_path: null })),
+  };
+}
+
+function buildLegacyReportDataFields(
+  source: PreparedReportSourceData,
   startDate: string,
   endDate: string,
-  options: ReportOptions = defaultReportOptions,
-  unitSystem: UnitSystem = "metric",
-  reportKind: ReportKind = DEFAULT_REPORT_KIND,
-): ReportData {
+  options: ReportOptions,
+  unitSystem: UnitSystem,
+  reportKind: ReportKind,
+): LegacyReportDataFields {
   const dayCount = getDateRangeLength(startDate, endDate);
   const stoolEvents = buildReportStoolEvents(source.logs, source.diaperLogs);
   const diaperStats = buildDiaperStats(source.diaperLogs);
@@ -1025,12 +1396,12 @@ export function buildReportData(
   const activeEpisodeGroup = episodeGroups.find((group) => group.episode.status === "active") ?? null;
 
   return {
-    reportKind,
     logs: source.logs,
     diaperLogs: source.diaperLogs,
     stoolEvents,
     diaperStats,
     feedingLogs: source.feedingLogs,
+    sleepLogs: source.sleepLogs,
     growthLogs: source.growthLogs,
     episodeGroups,
     activeEpisodeGroup,
@@ -1077,6 +1448,7 @@ export function buildReportData(
       logs: source.logs,
       diaperLogs: source.diaperLogs,
       feedingLogs: source.feedingLogs,
+      sleepLogs: source.sleepLogs,
       symptomLogs: source.symptomLogs,
       milestoneLogs: source.milestoneLogs,
       growthLogs: source.growthLogs,
@@ -1084,5 +1456,943 @@ export function buildReportData(
       options,
       unitSystem,
     }),
+  };
+}
+
+function collectReportDateKeys(source: ReportSourceData): string[] {
+  return [
+    ...source.logs.map((row) => dateKey(row.logged_at)),
+    ...source.diaperLogs.map((row) => dateKey(row.logged_at)),
+    ...source.feedingLogs.map((row) => dateKey(row.logged_at)),
+    ...(source.sleepLogs ?? []).map((row) => dateKey(row.started_at)),
+    ...source.growthLogs.map((row) => dateKey(row.measured_at)),
+    ...source.episodes.map((row) => dateKey(row.started_at)),
+    ...source.episodeEvents.map((row) => dateKey(row.logged_at)),
+    ...source.symptomLogs.map((row) => dateKey(row.logged_at)),
+    ...source.milestoneLogs.map((row) => dateKey(row.logged_at)),
+  ].filter(Boolean);
+}
+
+function resolveReportDateRange(source: ReportSourceData, options: Partial<ReportOptions>): ReportDateRange {
+  if (options.dateRange?.start && options.dateRange.end) return options.dateRange;
+
+  const dates = collectReportDateKeys(source).sort();
+  if (dates.length > 0) {
+    return {
+      start: dates[0],
+      end: dates[dates.length - 1],
+    };
+  }
+
+  const today = formatLocalDateKey(new Date());
+  return { start: today, end: today };
+}
+
+function countActiveDays(legacyData: LegacyReportDataFields): number {
+  return new Set([
+    ...legacyData.stoolEvents.map((row) => dateKey(row.logged_at)),
+    ...legacyData.diaperLogs.map((row) => dateKey(row.logged_at)),
+    ...legacyData.feedingLogs.map((row) => dateKey(row.logged_at)),
+    ...legacyData.sleepLogs.map((row) => dateKey(row.started_at)),
+    ...legacyData.growthLogs.map((row) => dateKey(row.measured_at)),
+    ...legacyData.symptomLogs.map((row) => dateKey(row.logged_at)),
+    ...legacyData.milestoneLogs.map((row) => dateKey(row.logged_at)),
+    ...legacyData.episodeGroups.map((group) => dateKey(group.episode.started_at)),
+    ...legacyData.episodeGroups.flatMap((group) => group.events.map((row) => dateKey(row.logged_at))),
+  ]).size;
+}
+
+function buildReportDataQuality(legacyData: LegacyReportDataFields, options: ReportOptions): ReportDataQuality {
+  const totalDays = getDateRangeLength(options.dateRange?.start ?? "", options.dateRange?.end ?? "");
+  const activeDays = countActiveDays(legacyData);
+  const loggedEventCount = legacyData.stoolEvents.length
+    + legacyData.diaperLogs.length
+    + legacyData.feedingLogs.length
+    + legacyData.sleepLogs.length
+    + legacyData.growthLogs.length
+    + legacyData.symptomLogs.length
+    + legacyData.milestoneLogs.length
+    + legacyData.episodeGroups.length
+    + legacyData.episodeGroups.reduce((sum, group) => sum + group.events.length, 0);
+  const sparseThreshold = Math.max(2, Math.ceil(totalDays / 3));
+  const isSparse = activeDays < sparseThreshold;
+  const notes = [
+    isSparse
+      ? "Logging is sparse for this date range; dated events may be more useful than averages."
+      : "Logging coverage supports short-term pattern review for the selected range.",
+    options.includeDeleted
+      ? "Soft-deleted rows were explicitly included."
+      : "Soft-deleted rows are excluded.",
+  ];
+
+  return {
+    totalDays,
+    activeDays,
+    loggedEventCount,
+    isSparse,
+    includesDeleted: options.includeDeleted,
+    notes,
+  };
+}
+
+function buildReportChildSummary(source: PreparedReportSourceData, options: ReportOptions): ReportChildSummary {
+  return {
+    id: source.child?.id ?? options.childId ?? "",
+    name: source.child?.name ?? null,
+    dateOfBirth: source.child?.date_of_birth ?? null,
+    sex: source.child?.sex ?? null,
+    feedingType: source.child?.feeding_type ?? null,
+  };
+}
+
+function buildReportId(options: ReportOptions): string {
+  const childId = options.childId || "child";
+  const start = options.dateRange?.start || "start";
+  const end = options.dateRange?.end || "end";
+  const generatedAt = (options.generatedAt ?? "").replace(/[^0-9A-Za-z]/g, "").slice(0, 14) || "local";
+  return `report-${options.mode}-${childId}-${start}-${end}-${generatedAt}`;
+}
+
+function makeSection(
+  id: ReportSectionId,
+  title: string,
+  rows: ReportSectionRow[],
+  summary?: string,
+): TinyTummyReportSection {
+  return { id, title, summary, rows };
+}
+
+function toneFromCount(count: number, cautionAt = 1): ReportSectionTone {
+  return count >= cautionAt ? "caution" : "healthy";
+}
+
+function getRedFlagStoolCount(stoolEvents: ReportStoolEvent[]): number {
+  return stoolEvents.filter((log) => {
+    const colorInfo = log.color ? STOOL_COLORS.find((item) => item.value === log.color) : null;
+    return log.is_no_poop === 0 && Boolean(colorInfo?.isRedFlag);
+  }).length;
+}
+
+function getStoolColorLabel(color: string | null): string {
+  if (!color) return "Color not recorded";
+  return STOOL_COLORS.find((item) => item.value === color)?.label ?? color;
+}
+
+function buildPoopSummarySection(legacyData: LegacyReportDataFields, options: ReportOptions): TinyTummyReportSection {
+  const actualStools = legacyData.stoolEvents.filter((log) => log.is_no_poop === 0);
+  const redFlagCount = getRedFlagStoolCount(legacyData.stoolEvents);
+  const latestStool = actualStools[0] ?? null;
+  const photoCount = actualStools.filter((log) => Boolean(log.photo_path)).length;
+
+  return makeSection("poopSummary", "Poop Summary", [
+    {
+      label: "Stool events",
+      value: String(actualStools.length),
+      detail: `${legacyData.stats.avgPerDay} average per day`,
+    },
+    {
+      label: "No-poop days",
+      value: String(legacyData.stats.totalNoPoop),
+      detail: `Longest marked streak ${getLongestNoPoopStreak(legacyData.stoolEvents)} day${getLongestNoPoopStreak(legacyData.stoolEvents) === 1 ? "" : "s"}`,
+      tone: toneFromCount(legacyData.stats.totalNoPoop),
+    },
+    {
+      label: "Most common type",
+      value: legacyData.stats.mostCommonType ? `Type ${legacyData.stats.mostCommonType}` : "Not recorded",
+      detail: "Based on logged stool type values",
+    },
+    {
+      label: "Most common colour",
+      value: getStoolColorLabel(legacyData.stats.mostCommonColor),
+      detail: redFlagCount > 0 ? `${redFlagCount} red-flag colour entr${redFlagCount === 1 ? "y" : "ies"}` : "No red-flag colours logged",
+      tone: redFlagCount > 0 ? "alert" : "healthy",
+    },
+    {
+      label: "Latest stool",
+      value: latestStool ? formatDate(latestStool.logged_at) : "None in range",
+      detail: latestStool
+        ? [
+            latestStool.stool_type ? `Type ${latestStool.stool_type}` : "Type not recorded",
+            getStoolColorLabel(latestStool.color),
+            latestStool.size ? `Size ${latestStool.size}` : null,
+          ].filter(Boolean).join(" · ")
+        : "No stool events were logged in this date range.",
+    },
+    {
+      label: "Photo policy",
+      value: options.includePhotos ? `${photoCount} photo reference${photoCount === 1 ? "" : "s"}` : "Photos excluded",
+      detail: "Photo bytes are not embedded in report data.",
+    },
+  ]);
+}
+
+function buildDiaperSummarySection(legacyData: LegacyReportDataFields): TinyTummyReportSection {
+  return makeSection("diaperSummary", "Diaper Summary", [
+    {
+      label: "Wet diapers",
+      value: String(legacyData.diaperStats.wet),
+      detail: "Wet or mixed diaper logs",
+    },
+    {
+      label: "Dirty diapers",
+      value: String(legacyData.diaperStats.dirty),
+      detail: "Dirty or mixed diaper logs",
+    },
+    {
+      label: "Mixed diapers",
+      value: String(legacyData.diaperStats.mixed),
+      detail: "Wet and dirty in the same change",
+    },
+    {
+      label: "Dark urine",
+      value: legacyData.diaperStats.darkUrine > 0 ? String(legacyData.diaperStats.darkUrine) : "None",
+      detail: "Urine colour is parent-observed and should be reviewed with context.",
+      tone: toneFromCount(legacyData.diaperStats.darkUrine),
+    },
+  ]);
+}
+
+function buildFeedingContextSection(legacyData: LegacyReportDataFields, unitSystem: UnitSystem): TinyTummyReportSection | undefined {
+  if (legacyData.feedingLogs.length === 0) return undefined;
+
+  const latestFeed = legacyData.feedingLogs[0];
+  return makeSection("feedingContext", "Feeding Context", [
+    {
+      label: "Feed logs",
+      value: String(legacyData.feedingLogs.length),
+      detail: "Included as context only.",
+    },
+    {
+      label: "Latest feed",
+      value: latestFeed ? formatDate(latestFeed.logged_at) : "None",
+      detail: latestFeed ? getFeedingEntryDisplayLabel(latestFeed, unitSystem) : undefined,
+    },
+  ]);
+}
+
+function buildSleepContextSection(legacyData: LegacyReportDataFields): TinyTummyReportSection | undefined {
+  if (legacyData.sleepLogs.length === 0) return undefined;
+
+  const latestSleep = legacyData.sleepLogs[0];
+  const totalMinutes = legacyData.sleepLogs.reduce((sum, log) => {
+    const started = new Date(log.started_at).getTime();
+    const ended = new Date(log.ended_at).getTime();
+    return sum + Math.max(0, Math.round((ended - started) / 60000));
+  }, 0);
+
+  return makeSection("sleepContext", "Sleep Context", [
+    {
+      label: "Sleep logs",
+      value: String(legacyData.sleepLogs.length),
+      detail: `${totalMinutes} total logged minutes`,
+    },
+    {
+      label: "Latest sleep",
+      value: latestSleep ? formatDate(latestSleep.started_at) : "None",
+      detail: latestSleep ? (latestSleep.sleep_type === "night" ? "Night sleep" : "Nap") : undefined,
+    },
+  ]);
+}
+
+function buildSymptomsSummarySection(
+  legacyData: LegacyReportDataFields,
+  options: ReportOptions,
+  unitSystem: UnitSystem,
+): TinyTummyReportSection | undefined {
+  if (legacyData.symptomLogs.length === 0) return undefined;
+
+  const severeCount = legacyData.symptomLogs.filter((log) => log.severity === "severe").length;
+  return makeSection("symptomsSummary", "Symptoms Summary", [
+    {
+      label: "Symptoms",
+      value: String(legacyData.symptomLogs.length),
+      detail: severeCount > 0 ? `${severeCount} marked severe` : "No severe symptoms logged",
+      tone: severeCount > 0 ? "alert" : "info",
+    },
+    ...legacyData.symptomLogs.slice(0, 5).map((log) => ({
+      label: getSymptomTypeLabel(log.symptom_type),
+      value: getSymptomSeverityLabel(log.severity),
+      detail: formatReportSymptom(log, unitSystem),
+      at: log.logged_at,
+      sourceId: log.id,
+      sourceType: "symptom",
+      caregiverId: options.includeCaregiverAttribution ? log.created_by_caregiver_id ?? null : undefined,
+      tone: log.severity === "severe" ? "alert" as const : log.severity === "moderate" ? "caution" as const : "info" as const,
+    })),
+  ]);
+}
+
+function buildEpisodeSummarySection(
+  legacyData: LegacyReportDataFields,
+  options: ReportOptions,
+): TinyTummyReportSection | undefined {
+  if (legacyData.episodeGroups.length === 0) return undefined;
+
+  return makeSection("episodeSummary", "Episode Summary", legacyData.episodeGroups.slice(0, 5).map((group) => ({
+    label: getEpisodeTypeLabel(group.episode.episode_type),
+    value: group.episode.status === "active" ? "Active" : "Resolved",
+    detail: [
+      `Started ${formatDate(group.episode.started_at)}`,
+      group.episode.ended_at ? `Ended ${formatDate(group.episode.ended_at)}` : null,
+      `${group.events.length} update${group.events.length === 1 ? "" : "s"}`,
+      group.episode.summary,
+      group.episode.outcome,
+    ].filter(Boolean).join(" · "),
+    at: group.episode.started_at,
+    sourceId: group.episode.id,
+    sourceType: "episode",
+    caregiverId: options.includeCaregiverAttribution ? group.episode.created_by_caregiver_id ?? null : undefined,
+    tone: group.episode.status === "active" ? "caution" : "info",
+  })));
+}
+
+function buildGrowthContextSection(
+  legacyData: LegacyReportDataFields,
+  options: ReportOptions,
+  unitSystem: UnitSystem,
+): TinyTummyReportSection | undefined {
+  if (legacyData.growthLogs.length === 0) return undefined;
+
+  return makeSection("growthContext", "Growth Context", legacyData.growthLogs.slice(0, 4).map((log) => ({
+    label: "Growth check-in",
+    value: formatDate(log.measured_at),
+    detail: [
+      log.weight_kg !== null ? formatGrowthValue("weight_kg", log.weight_kg, unitSystem, { maximumFractionDigits: 2 }) : null,
+      log.height_cm !== null ? formatGrowthValue("height_cm", log.height_cm, unitSystem, { maximumFractionDigits: 1 }) : null,
+      log.head_circumference_cm !== null ? `HC ${formatGrowthValue("head_circumference_cm", log.head_circumference_cm, unitSystem, { maximumFractionDigits: 1 })}` : null,
+      log.notes,
+    ].filter(Boolean).join(" · "),
+    at: log.measured_at,
+    sourceId: log.id,
+    sourceType: "growth",
+    caregiverId: options.includeCaregiverAttribution ? log.created_by_caregiver_id ?? null : undefined,
+  })));
+}
+
+function buildMilestonesContextSection(
+  legacyData: LegacyReportDataFields,
+  options: ReportOptions,
+): TinyTummyReportSection | undefined {
+  if (legacyData.milestoneLogs.length === 0) return undefined;
+
+  return makeSection("milestonesContext", "Milestones Context", legacyData.milestoneLogs.slice(0, 5).map((log) => ({
+    label: getMilestoneTypeLabel(log.milestone_type),
+    value: formatDate(log.logged_at),
+    detail: log.notes ?? undefined,
+    at: log.logged_at,
+    sourceId: log.id,
+    sourceType: "milestone",
+    caregiverId: options.includeCaregiverAttribution ? log.created_by_caregiver_id ?? null : undefined,
+  })));
+}
+
+function formatLastPoopForHandoff(log: PoopEntry | ReportStoolEvent | null): string {
+  if (!log) return "No poop logged";
+  return [
+    log.stool_type ? `Type ${log.stool_type}` : "Type not recorded",
+    getStoolColorLabel(log.color),
+    "size" in log && log.size ? `Size ${log.size}` : null,
+  ].filter(Boolean).join(" · ");
+}
+
+function buildCaregiverHandoffSection(
+  legacyData: LegacyReportDataFields,
+  source: PreparedReportSourceData,
+  unitSystem: UnitSystem,
+): TinyTummyReportSection {
+  const handoff = source.handoffSummary;
+  const lastPoop = handoff?.lastPoop ?? legacyData.stoolEvents.find((log) => log.is_no_poop === 0) ?? null;
+  const lastWetDiaper = handoff?.lastWetDiaper ?? legacyData.diaperLogs.find(hasUrineInDiaper) ?? null;
+  const lastFeed = handoff?.lastFeed ?? legacyData.feedingLogs[0] ?? null;
+  const lastSleep = handoff?.lastSleep ?? legacyData.sleepLogs[0] ?? null;
+  const activeEpisode = handoff?.activeEpisode ?? legacyData.activeEpisodeGroup?.episode ?? null;
+  const recentSymptoms = handoff?.recentSymptoms ?? legacyData.symptomLogs.slice(0, 3);
+  const dayLabel = handoff?.dayKey ?? source.handoffSummary?.dayKey ?? "Selected day";
+  const wetCount = handoff?.todayWetDiapers ?? legacyData.diaperStats.wet;
+  const dirtyCount = handoff?.todayDirtyDiapers ?? legacyData.diaperStats.dirty;
+  const poopCount = handoff?.todayPoops ?? legacyData.stats.totalPoops;
+  const feedCount = handoff?.todayFeeds ?? legacyData.feedingLogs.length;
+
+  return makeSection("caregiverHandoff", "Caregiver Handoff", [
+    {
+      label: "Today",
+      value: dayLabel,
+      detail: `${poopCount} poop${poopCount === 1 ? "" : "s"} · ${wetCount} wet · ${dirtyCount} dirty · ${feedCount} feed${feedCount === 1 ? "" : "s"}`,
+    },
+    {
+      label: "Last poop",
+      value: lastPoop ? formatDate(lastPoop.logged_at) : "None",
+      detail: formatLastPoopForHandoff(lastPoop),
+    },
+    {
+      label: "Last wet diaper",
+      value: lastWetDiaper ? formatDate(lastWetDiaper.logged_at) : "None",
+      detail: lastWetDiaper?.urine_color ? `Urine ${lastWetDiaper.urine_color}` : "Urine colour not recorded",
+    },
+    {
+      label: "Last feed",
+      value: lastFeed ? formatDate(lastFeed.logged_at) : "None",
+      detail: lastFeed ? getFeedingEntryDisplayLabel(lastFeed, unitSystem) : "No feed logged",
+    },
+    {
+      label: "Last sleep",
+      value: lastSleep ? formatDate(lastSleep.started_at) : "None",
+      detail: lastSleep ? (lastSleep.sleep_type === "night" ? "Night sleep" : "Nap") : "No sleep logged",
+    },
+    {
+      label: "Active episode",
+      value: activeEpisode ? getEpisodeTypeLabel(activeEpisode.episode_type) : "None",
+      detail: activeEpisode?.summary ?? "No active episode logged",
+      tone: activeEpisode ? "caution" : "healthy",
+    },
+    {
+      label: "Watch items",
+      value: [...(handoff?.watchItems ?? []), ...recentSymptoms.map((log) => getSymptomTypeLabel(log.symptom_type))].slice(0, 3).join(", ") || "None",
+      detail: "Observational handoff context for the next caregiver.",
+    },
+  ]);
+}
+
+function buildChartsSection(legacyData: LegacyReportDataFields): TinyTummyReportSection {
+  return makeSection("charts", "Charts", [
+    {
+      label: "Stool output",
+      value: `${legacyData.chartData.stoolOutput.length} points`,
+      detail: "Daily stool/no-poop counts",
+    },
+    {
+      label: "Diaper output",
+      value: `${legacyData.chartData.diaperOutput.length} points`,
+      detail: "Daily wet/dirty diaper counts",
+    },
+    {
+      label: "Stool consistency",
+      value: `${legacyData.chartData.stoolConsistency.length} points`,
+      detail: "Recent logged stool type sequence",
+    },
+  ]);
+}
+
+function buildNotesSection(dataQuality: ReportDataQuality, attachmentPolicy: ReportAttachmentPolicy): TinyTummyReportSection {
+  return makeSection("notes", "Report Note", [
+    {
+      label: "Disclaimer",
+      value: "Observational tracking summary",
+      detail: "This report does not diagnose or replace medical advice.",
+    },
+    {
+      label: "Data quality",
+      value: dataQuality.isSparse ? "Sparse logging" : "Logged activity present",
+      detail: dataQuality.notes.join(" "),
+      tone: dataQuality.isSparse ? "caution" : "info",
+    },
+    {
+      label: "Attachment policy",
+      value: attachmentPolicy.includeAttachmentMetadata ? "Metadata only" : "Excluded",
+      detail: attachmentPolicy.summary,
+    },
+  ]);
+}
+
+function buildAttachmentMetadataFromPhotos(source: PreparedReportSourceData, options: ReportOptions): ReportAttachmentMetadata[] {
+  if (!options.includeAttachmentMetadata) return [];
+
+  const photoRows: ReportAttachmentMetadata[] = [
+    ...source.logs
+      .filter((log) => Boolean(log.photo_path))
+      .map((log) => ({
+        ownerTable: "poop_logs",
+        ownerId: log.id,
+        childId: log.child_id,
+        localPath: log.photo_path ?? "",
+        mimeType: null,
+        fileSize: null,
+        createdAt: log.created_at,
+        policy: "local_only_metadata" as const,
+      })),
+    ...source.diaperLogs
+      .filter((log) => Boolean(log.photo_path))
+      .map((log) => ({
+        ownerTable: "diaper_logs",
+        ownerId: log.id,
+        childId: log.child_id,
+        localPath: log.photo_path ?? "",
+        mimeType: null,
+        fileSize: null,
+        createdAt: log.created_at,
+        policy: "local_only_metadata" as const,
+      })),
+  ];
+
+  const attachmentRows = source.attachments.map((attachment) => ({
+    ownerTable: attachment.owner_table,
+    ownerId: attachment.owner_id,
+    childId: attachment.child_id,
+    localPath: attachment.local_path,
+    mimeType: attachment.mime_type,
+    fileSize: attachment.file_size,
+    createdAt: attachment.created_at,
+    policy: "local_only_metadata" as const,
+  }));
+
+  return [...photoRows, ...attachmentRows];
+}
+
+function buildReportAttachmentPolicy(source: PreparedReportSourceData, options: ReportOptions): ReportAttachmentPolicy {
+  const attachments = buildAttachmentMetadataFromPhotos(source, options);
+
+  return {
+    includePhotos: options.includePhotos,
+    includeAttachmentMetadata: options.includeAttachmentMetadata,
+    localOnly: true,
+    summary: options.includeAttachmentMetadata
+      ? "Attachment metadata may include local file paths, but photo/file bytes are never embedded in the report DTO."
+      : "Photos and attachment metadata are excluded. Photo/file bytes are never embedded in the report DTO.",
+    attachments,
+  };
+}
+
+function shouldIncludeTimelineRow(mode: ReportMode, row: ReportTimelineRow): boolean {
+  if (mode === "poop_diaper") return ["Stool", "Stool + diaper", "Diaper"].includes(row.eventType);
+  if (mode === "symptoms_episodes") return ["Symptom", "Episode", "Episode update"].includes(row.eventType);
+  if (mode === "doctor_brief") return ["Stool", "Stool + diaper", "Diaper", "Symptom", "Episode", "Episode update"].includes(row.eventType);
+  return true;
+}
+
+function buildStableTimeline(legacyData: LegacyReportDataFields, options: ReportOptions): TinyTummyReportTimelineRow[] {
+  if (!options.includeTimeline) return [];
+
+  const mode = options.mode ?? DEFAULT_REPORT_MODE;
+  const rows = legacyData.timeline
+    .filter((row) => shouldIncludeTimelineRow(mode, row))
+    .slice(0, options.maxTimelineRows ?? legacyData.timeline.length);
+
+  return rows.map((row) => ({
+    label: row.eventType,
+    value: row.dateTime,
+    detail: row.details,
+    at: row.dateTime,
+    eventType: row.eventType,
+    tone: row.details.includes("Red-flag") ? "alert" : row.eventType.includes("Episode") || row.eventType === "Symptom" ? "caution" : "default",
+  }));
+}
+
+function buildQuestionsForReport(legacyData: LegacyReportDataFields, dataQuality: ReportDataQuality, mode: ReportMode): string[] {
+  const questions: string[] = [];
+  const redFlagCount = getRedFlagStoolCount(legacyData.stoolEvents);
+  const looseCount = legacyData.stoolEvents.filter((log) => log.is_no_poop === 0 && (log.stool_type ?? 0) >= 6).length;
+  const hardCount = legacyData.stoolEvents.filter((log) => log.is_no_poop === 0 && (log.stool_type ?? 99) <= 2).length;
+
+  if (redFlagCount > 0) {
+    questions.push("Which dated stool colour entries should we review together?");
+  }
+  if (looseCount >= 2 || hardCount >= 2) {
+    questions.push("Does the dated stool type pattern fit the child's recent feeding, illness, or medication context?");
+  }
+  if (legacyData.diaperStats.darkUrine > 0 || legacyData.diaperStats.wet <= 2) {
+    questions.push("Is the logged wet diaper output enough for this age and situation?");
+  }
+  if (legacyData.activeEpisodeGroup) {
+    questions.push("Which symptoms or episode changes should prompt same-day follow-up?");
+  }
+  if (dataQuality.isSparse) {
+    questions.push("Which specific events are most useful to keep logging before the visit?");
+  }
+  if (mode === "doctor_brief" || questions.length === 0) {
+    questions.push("What changes should we keep watching and documenting?");
+  }
+
+  return questions.slice(0, 5);
+}
+
+function getReportModeTitle(mode: ReportMode): string {
+  switch (mode) {
+    case "doctor_brief":
+      return "Doctor Brief";
+    case "poop_diaper":
+      return "Poop & Diaper Report";
+    case "symptoms_episodes":
+      return "Symptoms & Episodes Report";
+    case "caregiver_handoff":
+      return "Caregiver Handoff";
+    case "clinical_export":
+      return "Clinical Export";
+    case "pediatrician_full":
+    default:
+      return "Pediatrician Full Report";
+  }
+}
+
+function buildReportBrief(legacyData: LegacyReportDataFields, dataQuality: ReportDataQuality, mode: ReportMode): ReportBrief {
+  const actualStools = legacyData.stoolEvents.filter((log) => log.is_no_poop === 0);
+  const activeEpisode = legacyData.activeEpisodeGroup?.episode ?? null;
+  const recentSymptoms = legacyData.symptomLogs.slice(0, 3).map((log) => getSymptomTypeLabel(log.symptom_type)).join(", ");
+  const summaryParts = [
+    `${actualStools.length} stool event${actualStools.length === 1 ? "" : "s"}`,
+    `${legacyData.diaperStats.wet} wet diaper${legacyData.diaperStats.wet === 1 ? "" : "s"}`,
+    `${legacyData.symptomLogs.length} symptom${legacyData.symptomLogs.length === 1 ? "" : "s"}`,
+    activeEpisode ? `active ${getEpisodeTypeLabel(activeEpisode.episode_type)} episode` : null,
+  ].filter(Boolean);
+
+  return {
+    title: getReportModeTitle(mode),
+    summary: `${summaryParts.join(", ")}. ${dataQuality.notes[0]}`,
+    rows: [
+      {
+        label: "Report period",
+        value: `${dataQuality.totalDays} day${dataQuality.totalDays === 1 ? "" : "s"}`,
+        detail: `${dataQuality.activeDays} day${dataQuality.activeDays === 1 ? "" : "s"} with logged activity`,
+      },
+      {
+        label: "Key concern summary",
+        value: getRedFlagStoolCount(legacyData.stoolEvents) > 0 ? "Red-flag stool colour logged" : "No red-flag stool colour logged",
+        detail: recentSymptoms ? `Recent symptoms: ${recentSymptoms}` : "No recent symptoms in the selected range",
+        tone: getRedFlagStoolCount(legacyData.stoolEvents) > 0 ? "alert" : "info",
+      },
+      {
+        label: "Active episode",
+        value: activeEpisode ? getEpisodeTypeLabel(activeEpisode.episode_type) : "None",
+        detail: activeEpisode?.summary ?? "No active episode logged",
+        tone: activeEpisode ? "caution" : "healthy",
+      },
+      {
+        label: "Data quality",
+        value: dataQuality.isSparse ? "Sparse" : "Usable",
+        detail: dataQuality.notes.join(" "),
+        tone: dataQuality.isSparse ? "caution" : "info",
+      },
+    ],
+  };
+}
+
+function buildKeyMetricsForMode(legacyData: LegacyReportDataFields, dataQuality: ReportDataQuality, mode: ReportMode): ReportKeyMetric[] {
+  const actualStools = legacyData.stoolEvents.filter((log) => log.is_no_poop === 0);
+  const redFlagCount = getRedFlagStoolCount(legacyData.stoolEvents);
+  const severeSymptoms = legacyData.symptomLogs.filter((log) => log.severity === "severe").length;
+  const latestStool = actualStools[0] ?? null;
+  const latestWet = legacyData.diaperLogs.find(hasUrineInDiaper) ?? null;
+  const latestFeed = legacyData.feedingLogs[0] ?? null;
+  const latestSleep = legacyData.sleepLogs[0] ?? null;
+  const common: ReportKeyMetric[] = [
+    {
+      id: "stool_count",
+      label: "Stool count",
+      value: String(actualStools.length),
+      detail: `${legacyData.stats.avgPerDay} per day average`,
+      tone: "default",
+    },
+    {
+      id: "wet_diapers",
+      label: "Wet diapers",
+      value: String(legacyData.diaperStats.wet),
+      detail: legacyData.diaperStats.darkUrine > 0 ? "Dark urine logged" : "Wet or mixed diaper output",
+      tone: legacyData.diaperStats.darkUrine > 0 ? "caution" : "info",
+    },
+    {
+      id: "red_flag_stools",
+      label: "Red-flag stools",
+      value: String(redFlagCount),
+      detail: "Red, black, or white stool colour entries",
+      tone: redFlagCount > 0 ? "alert" : "healthy",
+    },
+  ];
+
+  if (mode === "doctor_brief") {
+    return [
+      {
+        id: "last_poop",
+        label: "Last poop",
+        value: latestStool ? formatDate(latestStool.logged_at) : "None",
+        detail: formatLastPoopForHandoff(latestStool),
+        tone: latestStool ? "default" : "caution",
+      },
+      {
+        id: "last_wet_diaper",
+        label: "Last wet diaper",
+        value: latestWet ? formatDate(latestWet.logged_at) : "None",
+        detail: latestWet?.urine_color ? `Urine ${latestWet.urine_color}` : "Urine colour not recorded",
+        tone: latestWet ? "info" : "caution",
+      },
+      {
+        id: "recent_symptoms",
+        label: "Recent symptoms",
+        value: String(legacyData.symptomLogs.length),
+        detail: severeSymptoms > 0 ? `${severeSymptoms} severe` : "No severe symptoms logged",
+        tone: severeSymptoms > 0 ? "alert" : "info",
+      },
+      {
+        id: "data_quality",
+        label: "Data quality",
+        value: dataQuality.isSparse ? "Sparse" : "Usable",
+        detail: `${dataQuality.activeDays}/${dataQuality.totalDays} days logged`,
+        tone: dataQuality.isSparse ? "caution" : "info",
+      },
+    ];
+  }
+
+  if (mode === "symptoms_episodes") {
+    return [
+      {
+        id: "symptoms",
+        label: "Symptoms",
+        value: String(legacyData.symptomLogs.length),
+        detail: severeSymptoms > 0 ? `${severeSymptoms} severe` : "Severity details included",
+        tone: severeSymptoms > 0 ? "alert" : "info",
+      },
+      {
+        id: "episodes",
+        label: "Episodes",
+        value: String(legacyData.episodeGroups.length),
+        detail: legacyData.activeEpisodeGroup ? "Active episode present" : "No active episode",
+        tone: legacyData.activeEpisodeGroup ? "caution" : "info",
+      },
+      {
+        id: "episode_updates",
+        label: "Episode updates",
+        value: String(legacyData.episodeGroups.reduce((sum, group) => sum + group.events.length, 0)),
+        detail: "Dated care-context updates",
+        tone: "default",
+      },
+    ];
+  }
+
+  if (mode === "caregiver_handoff") {
+    return [
+      {
+        id: "last_poop",
+        label: "Last poop",
+        value: latestStool ? formatDate(latestStool.logged_at) : "None",
+        detail: formatLastPoopForHandoff(latestStool),
+        tone: latestStool ? "default" : "caution",
+      },
+      {
+        id: "last_feed",
+        label: "Last feed",
+        value: latestFeed ? formatDate(latestFeed.logged_at) : "None",
+        detail: latestFeed ? "Feed context included" : "No feed logged",
+        tone: latestFeed ? "info" : "caution",
+      },
+      {
+        id: "last_sleep",
+        label: "Last sleep",
+        value: latestSleep ? formatDate(latestSleep.started_at) : "None",
+        detail: latestSleep ? (latestSleep.sleep_type === "night" ? "Night sleep" : "Nap") : "No sleep logged",
+        tone: latestSleep ? "info" : "caution",
+      },
+    ];
+  }
+
+  return [
+    ...common,
+    {
+      id: "symptoms",
+      label: "Symptoms",
+      value: String(legacyData.symptomLogs.length),
+      detail: severeSymptoms > 0 ? `${severeSymptoms} severe` : "Symptom context",
+      tone: severeSymptoms > 0 ? "alert" : "info",
+    },
+    {
+      id: "active_episode",
+      label: "Active episode",
+      value: legacyData.activeEpisodeGroup ? getEpisodeTypeLabel(legacyData.activeEpisodeGroup.episode.episode_type) : "None",
+      detail: legacyData.activeEpisodeGroup ? "Episode details included" : "No active episode",
+      tone: legacyData.activeEpisodeGroup ? "caution" : "healthy",
+    },
+  ];
+}
+
+function buildSectionsForMode(
+  legacyData: LegacyReportDataFields,
+  source: PreparedReportSourceData,
+  options: ReportOptions,
+  dataQuality: ReportDataQuality,
+  attachmentPolicy: ReportAttachmentPolicy,
+  unitSystem: UnitSystem,
+): TinyTummyReportSections {
+  const sections: TinyTummyReportSections = {};
+  const add = (section: TinyTummyReportSection | undefined) => {
+    if (section) sections[section.id] = section;
+  };
+
+  if (options.mode === "caregiver_handoff") {
+    add(buildCaregiverHandoffSection(legacyData, source, unitSystem));
+    add(buildPoopSummarySection(legacyData, options));
+    add(buildDiaperSummarySection(legacyData));
+    add(buildNotesSection(dataQuality, attachmentPolicy));
+    return sections;
+  }
+
+  if (options.mode === "symptoms_episodes") {
+    add(buildSymptomsSummarySection(legacyData, options, unitSystem));
+    add(buildEpisodeSummarySection(legacyData, options));
+    if (options.includeFeedingContext) add(buildFeedingContextSection(legacyData, unitSystem));
+    if (options.includeSleepContext) add(buildSleepContextSection(legacyData));
+    add(buildNotesSection(dataQuality, attachmentPolicy));
+    return sections;
+  }
+
+  add(buildPoopSummarySection(legacyData, options));
+  add(buildDiaperSummarySection(legacyData));
+
+  if (options.mode === "doctor_brief") {
+    add(buildSymptomsSummarySection(legacyData, options, unitSystem));
+    add(buildEpisodeSummarySection(legacyData, options));
+    add(buildNotesSection(dataQuality, attachmentPolicy));
+    return sections;
+  }
+
+  if (options.includeSymptoms) add(buildSymptomsSummarySection(legacyData, options, unitSystem));
+  if (options.includeEpisodes || options.includeEpisodeSummary) add(buildEpisodeSummarySection(legacyData, options));
+  if (options.includeFeedingContext) add(buildFeedingContextSection(legacyData, unitSystem));
+  if (options.includeSleepContext) add(buildSleepContextSection(legacyData));
+  if (options.includeGrowthContext) add(buildGrowthContextSection(legacyData, options, unitSystem));
+  if (options.includeMilestones) add(buildMilestonesContextSection(legacyData, options));
+
+  if (options.mode === "pediatrician_full" || options.mode === "poop_diaper" || options.mode === "clinical_export") {
+    add(buildChartsSection(legacyData));
+  }
+
+  add(buildNotesSection(dataQuality, attachmentPolicy));
+  return sections;
+}
+
+function buildTinyTummyReportDataFromLegacy(
+  source: PreparedReportSourceData,
+  legacyData: LegacyReportDataFields,
+  options: ReportOptions,
+  unitSystem: UnitSystem,
+): TinyTummyReportData {
+  const generatedAt = options.generatedAt ?? new Date().toISOString();
+  const resolvedOptions = { ...options, generatedAt };
+  const dataQuality = buildReportDataQuality(legacyData, resolvedOptions);
+  const attachmentPolicy = buildReportAttachmentPolicy(source, resolvedOptions);
+  const mode = resolvedOptions.mode ?? DEFAULT_REPORT_MODE;
+
+  return {
+    schemaVersion: "tiny_tummy_report_v1",
+    reportId: buildReportId(resolvedOptions),
+    mode,
+    generatedAt,
+    child: buildReportChildSummary(source, resolvedOptions),
+    dateRange: resolvedOptions.dateRange ?? { start: "", end: "" },
+    dataQuality,
+    disclaimer: "Tiny Tummy reports are observational tracking summaries. They do not diagnose, treat, or replace medical advice.",
+    brief: buildReportBrief(legacyData, dataQuality, mode),
+    keyMetrics: buildKeyMetricsForMode(legacyData, dataQuality, mode),
+    sections: buildSectionsForMode(legacyData, source, resolvedOptions, dataQuality, attachmentPolicy, unitSystem),
+    timeline: buildStableTimeline(legacyData, resolvedOptions),
+    questions: buildQuestionsForReport(legacyData, dataQuality, mode),
+    privacyNote: "Generated locally by Tiny Tummy. Data stays on this device unless a caregiver chooses to export or share it.",
+    attachmentPolicy,
+  };
+}
+
+function buildReportForMode(
+  mode: ReportMode,
+  source: ReportSourceData,
+  options: Partial<ReportOptions> = {},
+  unitSystem: UnitSystem = "metric",
+): TinyTummyReportData {
+  const dateRange = resolveReportDateRange(source, options);
+  const childId = options.childId ?? source.child?.id ?? source.logs[0]?.child_id ?? source.diaperLogs[0]?.child_id ?? "";
+  const normalizedOptions = normalizeReportOptions(options, {
+    mode,
+    childId,
+    dateRange,
+  });
+  const filteredSource = prepareReportSourceData(source, normalizedOptions);
+  const legacySource = scrubReportPhotos(filteredSource, normalizedOptions.includePhotos);
+  const legacyData = buildLegacyReportDataFields(
+    legacySource,
+    normalizedOptions.dateRange?.start ?? dateRange.start,
+    normalizedOptions.dateRange?.end ?? dateRange.end,
+    normalizedOptions,
+    unitSystem,
+    getReportKindForMode(mode),
+  );
+
+  return buildTinyTummyReportDataFromLegacy(filteredSource, legacyData, normalizedOptions, unitSystem);
+}
+
+export function buildPediatricianFullReport(
+  source: ReportSourceData,
+  options: Partial<ReportOptions> = {},
+  unitSystem: UnitSystem = "metric",
+): TinyTummyReportData {
+  return buildReportForMode("pediatrician_full", source, options, unitSystem);
+}
+
+export function buildDoctorBriefReport(
+  source: ReportSourceData,
+  options: Partial<ReportOptions> = {},
+  unitSystem: UnitSystem = "metric",
+): TinyTummyReportData {
+  return buildReportForMode("doctor_brief", source, options, unitSystem);
+}
+
+export function buildPoopDiaperReport(
+  source: ReportSourceData,
+  options: Partial<ReportOptions> = {},
+  unitSystem: UnitSystem = "metric",
+): TinyTummyReportData {
+  return buildReportForMode("poop_diaper", source, options, unitSystem);
+}
+
+export function buildSymptomsEpisodesReport(
+  source: ReportSourceData,
+  options: Partial<ReportOptions> = {},
+  unitSystem: UnitSystem = "metric",
+): TinyTummyReportData {
+  return buildReportForMode("symptoms_episodes", source, options, unitSystem);
+}
+
+export function buildCaregiverHandoffReport(
+  source: ReportSourceData,
+  options: Partial<ReportOptions> = {},
+  unitSystem: UnitSystem = "metric",
+): TinyTummyReportData {
+  return buildReportForMode("caregiver_handoff", source, options, unitSystem);
+}
+
+export function buildClinicalExportReport(
+  source: ReportSourceData,
+  options: Partial<ReportOptions> = {},
+  unitSystem: UnitSystem = "metric",
+): TinyTummyReportData {
+  return buildReportForMode("clinical_export", source, options, unitSystem);
+}
+
+export function buildReportData(
+  source: ReportSourceData,
+  startDate: string,
+  endDate: string,
+  options: Partial<ReportOptions> = {},
+  unitSystem: UnitSystem = "metric",
+  reportKind: ReportKind = DEFAULT_REPORT_KIND,
+): ReportData {
+  const hasExplicitOptions = Object.keys(options).length > 0;
+  const baseOptions = hasExplicitOptions ? options : defaultReportOptions;
+  const mode = baseOptions.mode ?? getReportModeForKind(reportKind);
+  const normalizedOptions = normalizeReportOptions(baseOptions, {
+    mode,
+    childId: baseOptions.childId ?? source.child?.id ?? source.logs[0]?.child_id ?? source.diaperLogs[0]?.child_id ?? "",
+    dateRange: { start: startDate, end: endDate },
+  });
+  const filteredSource = prepareReportSourceData(source, normalizedOptions);
+  const legacySource = scrubReportPhotos(filteredSource, normalizedOptions.includePhotos);
+  const legacyData = buildLegacyReportDataFields(
+    legacySource,
+    startDate,
+    endDate,
+    normalizedOptions,
+    unitSystem,
+    reportKind,
+  );
+
+  return {
+    reportKind,
+    reportMode: normalizedOptions.mode ?? mode,
+    report: buildTinyTummyReportDataFromLegacy(filteredSource, legacyData, normalizedOptions, unitSystem),
+    ...legacyData,
   };
 }

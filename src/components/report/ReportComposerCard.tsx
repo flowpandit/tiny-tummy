@@ -7,7 +7,7 @@ import {
   getReportKindOption,
   getReportOptionToggles,
 } from "../../lib/report-view-model";
-import type { ReportKind, ReportOptions } from "../../lib/reporting";
+import type { ReportBooleanOptionKey, ReportKind, ReportOptions } from "../../lib/reporting";
 
 export function ReportComposerCard({
   today,
@@ -32,7 +32,7 @@ export function ReportComposerCard({
   onStartDateChange: (value: string) => void;
   onEndDateChange: (value: string) => void;
   onGenerate: () => void;
-  onToggleOption: (key: keyof ReportOptions) => void;
+  onToggleOption: (key: ReportBooleanOptionKey) => void;
 }) {
   const selectedReportKind = getReportKindOption(reportKind);
   const coreItems = getReportCoreItems(reportKind);

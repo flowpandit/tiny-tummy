@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { buildReportPreviewModel, buildTimelineGroups } from "../src/lib/report-preview-model.ts";
-import { buildReportData } from "../src/lib/reporting.ts";
+import { buildReportData, defaultReportOptions } from "../src/lib/reporting.ts";
 import type { Child, DiaperEntry, Episode, EpisodeEvent, FeedingEntry, PoopEntry, SymptomEntry } from "../src/lib/types.ts";
 
 const child: Child = {
@@ -112,7 +112,7 @@ test("report preview model builds a front-page pediatrician summary from real re
     episodeEvents: [episodeEvent],
     symptomLogs: [symptom],
     milestoneLogs: [],
-  }, "2026-04-05", "2026-05-04");
+  }, "2026-04-05", "2026-05-04", { ...defaultReportOptions, includePhotos: true });
 
   const model = buildReportPreviewModel({
     child,
