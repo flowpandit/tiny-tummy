@@ -55,6 +55,7 @@ test("baseline preserves current feature tables", () => {
     "quick_presets",
     "alerts",
     "attachments",
+    "sync_outbox",
     "app_settings",
   ].forEach(getTableSql);
 });
@@ -106,6 +107,28 @@ test("baseline keeps local-only attachment metadata separate from log rows", () 
   assert.match(getTableSql("poop_logs"), /\bphoto_path\b/);
   assert.match(getTableSql("diaper_logs"), /\bphoto_path\b/);
 });
+
+test("baseline includes a local-only sync outbox for future optional sync", () => {
+  assertColumns("sync_outbox", [
+    "entity_table",
+    "entity_id",
+    "child_id",
+    "operation",
+    "payload_json",
+    "attempted_at",
+    "processed_at",
+    "status",
+    "retry_count",
+    "error_message",
+    "device_id",
+    "local_only",
+  ]);
+  assert.match(getTableSql("sync_outbox"), /DEFAULT 'pending'/);
+  assert.match(baselineSql, /idx_sync_outbox_status/);
+  assert.match(baselineSql, /idx_sync_outbox_entity/);
+  assert.match(baselineSql, /idx_sync_outbox_processed_at/);
+});
+
 
 test("log tables are ready for local caregiver attribution", () => {
   [

@@ -2,8 +2,16 @@ import type { ColorCount, ConsistencyPoint, DiaperEntry, DailyFrequency, PoopEnt
 import { combineLocalDateAndTimeToUtcIso, formatLocalDateKey, generateId, getUtcIsoBoundsForLocalDateRange, nowISO } from "../utils";
 import { getDb } from "./connection";
 import { executeMutation, softDeleteById, softDeleteWhere, withTransaction } from "./mutations";
+import { enqueueOutboxChangeWithConn, enqueueOutboxChangesWithConn } from "./sync-outbox";
 
 type DbConnection = Awaited<ReturnType<typeof getDb>>;
+
+function changedFields(updates: Record<string, unknown>): string[] {
+  return Object.entries(updates)
+    .filter(([key, value]) => key !== "child_id" && value !== undefined)
+    .map(([key]) => key)
+    .sort();
+}
 
 async function insertPoopLog(
   conn: DbConnection,
@@ -42,6 +50,17 @@ async function insertPoopLog(
       now,
     ],
   );
+  await enqueueOutboxChangeWithConn(conn, {
+    entity: "poop_log",
+    entityId: id,
+    childId: input.child_id,
+    operation: "create",
+    payload: {
+      logged_at: input.logged_at,
+      is_no_poop: 0,
+      has_photo: Boolean(input.photo_path),
+    },
+  }, now);
 
   return {
     id,
@@ -72,7 +91,7 @@ export async function createPoopLog(input: {
   updated_by_caregiver_id?: string | null;
 }): Promise<PoopEntry> {
   const conn = await getDb();
-  return insertPoopLog(conn, input);
+  return withTransaction(conn, () => insertPoopLog(conn, input));
 }
 
 async function createLinkedPoopLogWithConn(
@@ -98,11 +117,23 @@ export async function logNoPoop(childId: string): Promise<PoopEntry> {
   const id = generateId();
   const now = nowISO();
 
-  await executeMutation(
-    conn,
-    "INSERT INTO poop_logs (id, child_id, logged_at, is_no_poop, created_at, updated_at) VALUES (?, ?, ?, 1, ?, ?)",
-    [id, childId, now, now, now],
-  );
+  await withTransaction(conn, async () => {
+    await executeMutation(
+      conn,
+      "INSERT INTO poop_logs (id, child_id, logged_at, is_no_poop, created_at, updated_at) VALUES (?, ?, ?, 1, ?, ?)",
+      [id, childId, now, now, now],
+    );
+    await enqueueOutboxChangeWithConn(conn, {
+      entity: "poop_log",
+      entityId: id,
+      childId,
+      operation: "create",
+      payload: {
+        logged_at: now,
+        is_no_poop: 1,
+      },
+    }, now);
+  });
 
   return {
     id,
@@ -152,7 +183,9 @@ export async function updatePoopLog(
   },
 ): Promise<void> {
   const conn = await getDb();
-  await updatePoopLogWithConn(conn, id, updates);
+  await withTransaction(conn, async () => {
+    await updatePoopLogWithConn(conn, id, updates);
+  });
 }
 
 async function updatePoopLogWithConn(
@@ -169,7 +202,17 @@ async function updatePoopLogWithConn(
   },
   updatedAt = nowISO(),
 ): Promise<void> {
-  const sets: string[] = ["updated_at = ?"];
+  const fields = changedFields(updates);
+  if (fields.length === 0) return;
+
+  const rows = await conn.select<Array<{ child_id: string; local_only?: number | null }>>(
+    "SELECT child_id, local_only FROM poop_logs WHERE id = ? AND deleted_at IS NULL LIMIT 1",
+    [id],
+  );
+  const row = rows[0];
+  if (!row) return;
+
+  const sets: string[] = ["updated_at = ?", "sync_status = 'local'", "sync_version = sync_version + 1"];
   const params: unknown[] = [updatedAt];
 
   if (updates.logged_at !== undefined) { sets.push("logged_at = ?"); params.push(updates.logged_at); }
@@ -184,6 +227,14 @@ async function updatePoopLogWithConn(
 
   params.push(id);
   await executeMutation(conn, `UPDATE poop_logs SET ${sets.join(", ")} WHERE id = ? AND deleted_at IS NULL`, params);
+  await enqueueOutboxChangeWithConn(conn, {
+    entity: "poop_log",
+    entityId: id,
+    childId: updates.child_id ?? row.child_id,
+    operation: "update",
+    localOnly: row.local_only,
+    payload: { changed_fields: fields },
+  }, updatedAt);
 }
 
 export async function deletePoopLog(entry: Pick<PoopEntry, "id" | "photo_path"> | string): Promise<void> {
@@ -192,6 +243,15 @@ export async function deletePoopLog(entry: Pick<PoopEntry, "id" | "photo_path"> 
 
   await withTransaction(conn, async () => {
     const now = nowISO();
+    const poopRows = await conn.select<Array<{ child_id: string; local_only?: number | null }>>(
+      "SELECT child_id, local_only FROM poop_logs WHERE id = ? AND deleted_at IS NULL LIMIT 1",
+      [id],
+    );
+    const linkedDiapers = await conn.select<Array<{ id: string; child_id: string; local_only?: number | null }>>(
+      "SELECT id, child_id, local_only FROM diaper_logs WHERE linked_poop_log_id = ? AND deleted_at IS NULL",
+      [id],
+    );
+
     await executeMutation(
       conn,
       `UPDATE diaper_logs
@@ -203,6 +263,25 @@ export async function deletePoopLog(entry: Pick<PoopEntry, "id" | "photo_path"> 
       [now, id],
     );
     await softDeleteById(conn, "poop_logs", id, now);
+    await enqueueOutboxChangesWithConn(conn, [
+      ...linkedDiapers.map((diaper) => ({
+        entity: "diaper_log" as const,
+        entityId: diaper.id,
+        childId: diaper.child_id,
+        operation: "update" as const,
+        localOnly: diaper.local_only,
+        payload: { changed_fields: ["linked_poop_log_id"] },
+      })),
+      ...(poopRows[0]
+        ? [{
+          entity: "poop_log" as const,
+          entityId: id,
+          childId: poopRows[0].child_id,
+          operation: "delete" as const,
+          localOnly: poopRows[0].local_only,
+        }]
+        : []),
+    ], now);
   });
 }
 
@@ -211,8 +290,8 @@ export async function reconcileAutoNoPoopDays(childId: string): Promise<number> 
   const now = nowISO();
   const todayKey = formatLocalDateKey(new Date());
 
-  const redundantRows = await conn.select<{ cnt: number }[]>(
-    `SELECT COUNT(*) as cnt
+  const redundantRows = await conn.select<Array<{ id: string; local_only?: number | null }>>(
+    `SELECT id, local_only
      FROM poop_logs
      WHERE child_id = ?
        AND deleted_at IS NULL
@@ -221,24 +300,33 @@ export async function reconcileAutoNoPoopDays(childId: string): Promise<number> 
          SELECT DISTINCT date(logged_at, 'localtime')
          FROM poop_logs
          WHERE child_id = ? AND is_no_poop = 0 AND deleted_at IS NULL
-       )`,
+     )`,
     [childId, childId],
   );
-  const removedCount = redundantRows[0]?.cnt ?? 0;
+  const removedCount = redundantRows.length;
 
-  await softDeleteWhere(
-    conn,
-    "poop_logs",
-    `child_id = ?
-       AND is_no_poop = 1
-       AND date(logged_at, 'localtime') IN (
-         SELECT DISTINCT date(logged_at, 'localtime')
-         FROM poop_logs
-         WHERE child_id = ? AND is_no_poop = 0 AND deleted_at IS NULL
-       )`,
-    [childId, childId],
-    now,
-  );
+  await withTransaction(conn, async () => {
+    await softDeleteWhere(
+      conn,
+      "poop_logs",
+      `child_id = ?
+         AND is_no_poop = 1
+         AND date(logged_at, 'localtime') IN (
+           SELECT DISTINCT date(logged_at, 'localtime')
+           FROM poop_logs
+           WHERE child_id = ? AND is_no_poop = 0 AND deleted_at IS NULL
+         )`,
+      [childId, childId],
+      now,
+    );
+    await enqueueOutboxChangesWithConn(conn, redundantRows.map((row) => ({
+      entity: "poop_log",
+      entityId: row.id,
+      childId,
+      operation: "delete",
+      localOnly: row.local_only,
+    })), now);
+  });
 
   const candidateRows = await conn.select<{ day: string }[]>(
     `SELECT DISTINCT day
@@ -267,15 +355,29 @@ export async function reconcileAutoNoPoopDays(childId: string): Promise<number> 
     [childId, childId, childId, childId, childId, childId, childId, todayKey, childId],
   );
 
-  for (const row of candidateRows) {
-    await executeMutation(
-      conn,
-      `INSERT INTO poop_logs (
-        id, child_id, logged_at, stool_type, color, size, is_no_poop, notes, photo_path, created_at, updated_at
-      ) VALUES (?, ?, ?, NULL, NULL, NULL, 1, NULL, NULL, ?, ?)`,
-      [generateId(), childId, combineLocalDateAndTimeToUtcIso(row.day, "20:00"), now, now],
-    );
-  }
+  await withTransaction(conn, async () => {
+    for (const row of candidateRows) {
+      const id = generateId();
+      const loggedAt = combineLocalDateAndTimeToUtcIso(row.day, "20:00");
+      await executeMutation(
+        conn,
+        `INSERT INTO poop_logs (
+          id, child_id, logged_at, stool_type, color, size, is_no_poop, notes, photo_path, created_at, updated_at
+        ) VALUES (?, ?, ?, NULL, NULL, NULL, 1, NULL, NULL, ?, ?)`,
+        [id, childId, loggedAt, now, now],
+      );
+      await enqueueOutboxChangeWithConn(conn, {
+        entity: "poop_log",
+        entityId: id,
+        childId,
+        operation: "create",
+        payload: {
+          logged_at: loggedAt,
+          is_no_poop: 1,
+        },
+      }, now);
+    }
+  });
 
   return removedCount + candidateRows.length;
 }
@@ -338,6 +440,18 @@ export async function createDiaperLog(input: {
         now,
       ],
     );
+    await enqueueOutboxChangeWithConn(conn, {
+      entity: "diaper_log",
+      entityId: id,
+      childId: input.child_id,
+      operation: "create",
+      payload: {
+        logged_at: input.logged_at,
+        diaper_type: input.diaper_type,
+        has_photo: Boolean(input.photo_path),
+        linked_poop_log_id: linkedPoopLogId,
+      },
+    }, now);
 
     return {
       id,
@@ -470,10 +584,23 @@ async function updateDiaperLogWithConn(
     linkedPoopLogId = poopLog.id;
   } else if (!needsPoopLog && linkedPoopLogId) {
     await softDeleteById(conn, "poop_logs", linkedPoopLogId, now);
+    await enqueueOutboxChangeWithConn(conn, {
+      entity: "poop_log",
+      entityId: linkedPoopLogId,
+      childId: current.child_id,
+      operation: "delete",
+    }, now);
     linkedPoopLogId = null;
   }
 
-  const sets: string[] = ["updated_at = ?"];
+  const fields = changedFields(updates);
+  if (linkedPoopLogId !== current.linked_poop_log_id) {
+    fields.push("linked_poop_log_id");
+    fields.sort();
+  }
+  if (fields.length === 0) return;
+
+  const sets: string[] = ["updated_at = ?", "sync_status = 'local'", "sync_version = sync_version + 1"];
   const params: unknown[] = [now];
 
   if (updates.logged_at !== undefined) { sets.push("logged_at = ?"); params.push(next.logged_at); }
@@ -491,6 +618,14 @@ async function updateDiaperLogWithConn(
 
   params.push(id);
   await executeMutation(conn, `UPDATE diaper_logs SET ${sets.join(", ")} WHERE id = ? AND deleted_at IS NULL`, params);
+  await enqueueOutboxChangeWithConn(conn, {
+    entity: "diaper_log",
+    entityId: id,
+    childId: current.child_id,
+    operation: "update",
+    localOnly: current.local_only,
+    payload: { changed_fields: fields },
+  }, now);
 }
 
 export async function updateDiaperLog(
@@ -517,24 +652,34 @@ export async function deleteDiaperLog(entry: Pick<DiaperEntry, "id" | "photo_pat
   const conn = await getDb();
   await withTransaction(conn, async () => {
     const id = typeof entry === "string" ? entry : entry.id;
-    let linkedPoopLogId: string | null = null;
-
-    if (typeof entry === "string") {
-      const rows = await conn.select<DiaperEntry[]>(
-        "SELECT * FROM diaper_logs WHERE id = ? AND deleted_at IS NULL LIMIT 1",
-        [entry],
-      );
-      linkedPoopLogId = rows[0]?.linked_poop_log_id ?? null;
-    } else {
-      linkedPoopLogId = entry.linked_poop_log_id;
-    }
+    const rows = await conn.select<DiaperEntry[]>(
+      "SELECT * FROM diaper_logs WHERE id = ? AND deleted_at IS NULL LIMIT 1",
+      [id],
+    );
+    const current = rows[0];
+    const linkedPoopLogId = current?.linked_poop_log_id ?? null;
 
     const now = nowISO();
     if (linkedPoopLogId) {
       await softDeleteById(conn, "poop_logs", linkedPoopLogId, now);
+      await enqueueOutboxChangeWithConn(conn, {
+        entity: "poop_log",
+        entityId: linkedPoopLogId,
+        childId: current?.child_id ?? null,
+        operation: "delete",
+      }, now);
     }
 
     await softDeleteById(conn, "diaper_logs", id, now);
+    if (current) {
+      await enqueueOutboxChangeWithConn(conn, {
+        entity: "diaper_log",
+        entityId: id,
+        childId: current.child_id,
+        operation: "delete",
+        localOnly: current.local_only,
+      }, now);
+    }
   });
 }
 

@@ -1,7 +1,8 @@
 import type { Episode, EpisodeEvent } from "../types";
 import { generateId, getUtcIsoBoundsForLocalDateRange, nowISO } from "../utils";
 import { getDb } from "./connection";
-import { executeMutation, softDeleteWhere } from "./mutations";
+import { executeMutation, softDeleteWhere, withTransaction } from "./mutations";
+import { enqueueOutboxChangeWithConn, enqueueOutboxChangesWithConn } from "./sync-outbox";
 
 type CreateEpisodeEventInput = {
   episode_id: string;
@@ -22,6 +23,13 @@ type EpisodeEventInsertPlan = {
   storedSourceKind: string | null;
   storedSourceId: string | null;
 };
+
+function changedFields(updates: Record<string, unknown>): string[] {
+  return Object.entries(updates)
+    .filter(([key, value]) => key !== "child_id" && value !== undefined)
+    .map(([key]) => key)
+    .sort();
+}
 
 let canStoreEpisodeEventSourceColumnsCache: boolean | null = null;
 
@@ -105,24 +113,36 @@ export async function createEpisode(input: {
   const id = generateId();
   const now = nowISO();
 
-  await executeMutation(
-    conn,
-    `INSERT INTO episodes (
-      id, child_id, episode_type, status, started_at, ended_at, summary, outcome,
-      created_by_caregiver_id, updated_by_caregiver_id, created_at, updated_at
-    ) VALUES (?, ?, ?, 'active', ?, NULL, ?, NULL, ?, ?, ?, ?)`,
-    [
-      id,
-      input.child_id,
-      input.episode_type,
-      input.started_at,
-      input.summary ?? null,
-      input.created_by_caregiver_id ?? null,
-      input.updated_by_caregiver_id ?? null,
-      now,
-      now,
-    ],
-  );
+  await withTransaction(conn, async () => {
+    await executeMutation(
+      conn,
+      `INSERT INTO episodes (
+        id, child_id, episode_type, status, started_at, ended_at, summary, outcome,
+        created_by_caregiver_id, updated_by_caregiver_id, created_at, updated_at
+      ) VALUES (?, ?, ?, 'active', ?, NULL, ?, NULL, ?, ?, ?, ?)`,
+      [
+        id,
+        input.child_id,
+        input.episode_type,
+        input.started_at,
+        input.summary ?? null,
+        input.created_by_caregiver_id ?? null,
+        input.updated_by_caregiver_id ?? null,
+        now,
+        now,
+      ],
+    );
+    await enqueueOutboxChangeWithConn(conn, {
+      entity: "episode",
+      entityId: id,
+      childId: input.child_id,
+      operation: "create",
+      payload: {
+        episode_type: input.episode_type,
+        started_at: input.started_at,
+      },
+    }, now);
+  });
 
   return {
     id,
@@ -170,8 +190,23 @@ export async function closeEpisode(
   input: { child_id?: string; ended_at: string; outcome?: string | null; updated_by_caregiver_id?: string | null },
 ): Promise<void> {
   const conn = await getDb();
-  const sets = ["status = 'resolved'", "ended_at = ?", "outcome = ?", "updated_at = ?"];
-  const params: unknown[] = [input.ended_at, input.outcome ?? null, nowISO()];
+  const rows = await conn.select<Array<{ child_id: string; local_only?: number | null }>>(
+    "SELECT child_id, local_only FROM episodes WHERE id = ? AND deleted_at IS NULL LIMIT 1",
+    [id],
+  );
+  const row = rows[0];
+  if (!row) return;
+
+  const now = nowISO();
+  const sets = [
+    "status = 'resolved'",
+    "ended_at = ?",
+    "outcome = ?",
+    "updated_at = ?",
+    "sync_status = 'local'",
+    "sync_version = sync_version + 1",
+  ];
+  const params: unknown[] = [input.ended_at, input.outcome ?? null, now];
 
   if (input.updated_by_caregiver_id !== undefined) {
     sets.push("updated_by_caregiver_id = ?");
@@ -179,7 +214,17 @@ export async function closeEpisode(
   }
 
   params.push(id);
-  await executeMutation(conn, `UPDATE episodes SET ${sets.join(", ")} WHERE id = ? AND deleted_at IS NULL`, params);
+  await withTransaction(conn, async () => {
+    await executeMutation(conn, `UPDATE episodes SET ${sets.join(", ")} WHERE id = ? AND deleted_at IS NULL`, params);
+    await enqueueOutboxChangeWithConn(conn, {
+      entity: "episode",
+      entityId: id,
+      childId: input.child_id ?? row.child_id,
+      operation: "update",
+      localOnly: row.local_only,
+      payload: { changed_fields: ["ended_at", "outcome", "status"] },
+    }, now);
+  });
 }
 
 export async function updateEpisode(
@@ -192,7 +237,17 @@ export async function updateEpisode(
   },
 ): Promise<void> {
   const conn = await getDb();
-  const sets: string[] = [];
+  const fields = changedFields(updates);
+  if (fields.length === 0) return;
+
+  const rows = await conn.select<Array<{ child_id: string; local_only?: number | null }>>(
+    "SELECT child_id, local_only FROM episodes WHERE id = ? AND deleted_at IS NULL LIMIT 1",
+    [id],
+  );
+  const row = rows[0];
+  if (!row) return;
+
+  const sets: string[] = ["sync_status = 'local'", "sync_version = sync_version + 1"];
   const params: unknown[] = [];
 
   if (updates.started_at !== undefined) { sets.push("started_at = ?"); params.push(updates.started_at); }
@@ -202,11 +257,20 @@ export async function updateEpisode(
     params.push(updates.updated_by_caregiver_id);
   }
 
-  if (sets.length === 0) return;
-
   sets.push("updated_at = ?");
-  params.push(nowISO(), id);
-  await executeMutation(conn, `UPDATE episodes SET ${sets.join(", ")} WHERE id = ? AND deleted_at IS NULL`, params);
+  const now = nowISO();
+  params.push(now, id);
+  await withTransaction(conn, async () => {
+    await executeMutation(conn, `UPDATE episodes SET ${sets.join(", ")} WHERE id = ? AND deleted_at IS NULL`, params);
+    await enqueueOutboxChangeWithConn(conn, {
+      entity: "episode",
+      entityId: id,
+      childId: updates.child_id ?? row.child_id,
+      operation: "update",
+      localOnly: row.local_only,
+      payload: { changed_fields: fields },
+    }, now);
+  });
 }
 
 export async function createEpisodeEvent(input: CreateEpisodeEventInput): Promise<EpisodeEvent> {
@@ -216,7 +280,22 @@ export async function createEpisodeEvent(input: CreateEpisodeEventInput): Promis
   const canStoreSourceColumns = await canStoreEpisodeEventSourceColumns(conn);
   const insertPlan = buildEpisodeEventInsertPlan(input, id, now, canStoreSourceColumns);
 
-  await executeMutation(conn, insertPlan.sql, insertPlan.params);
+  await withTransaction(conn, async () => {
+    await executeMutation(conn, insertPlan.sql, insertPlan.params);
+    await enqueueOutboxChangeWithConn(conn, {
+      entity: "episode_event",
+      entityId: id,
+      childId: input.child_id,
+      operation: "create",
+      payload: {
+        logged_at: input.logged_at,
+        event_type: input.event_type,
+        episode_id: input.episode_id,
+        source_kind: insertPlan.storedSourceKind,
+        source_id: insertPlan.storedSourceId,
+      },
+    }, now);
+  });
 
   return {
     id,
@@ -246,12 +325,27 @@ export async function deleteGeneratedSymptomEpisodeEvent(input: {
   if (!canStoreSourceColumns) {
     if (!input.episodeId || !input.loggedAt) return;
 
-    await softDeleteWhere(
-      conn,
-      "episode_events",
-      "event_type = 'symptom' AND episode_id = ? AND logged_at = ?",
-      [input.episodeId, input.loggedAt],
-    );
+    await withTransaction(conn, async () => {
+      const now = nowISO();
+      const rows = await conn.select<Array<{ id: string; child_id: string; local_only?: number | null }>>(
+        "SELECT id, child_id, local_only FROM episode_events WHERE event_type = 'symptom' AND episode_id = ? AND logged_at = ? AND deleted_at IS NULL",
+        [input.episodeId, input.loggedAt],
+      );
+      await softDeleteWhere(
+        conn,
+        "episode_events",
+        "event_type = 'symptom' AND episode_id = ? AND logged_at = ?",
+        [input.episodeId, input.loggedAt],
+        now,
+      );
+      await enqueueOutboxChangesWithConn(conn, rows.map((row) => ({
+        entity: "episode_event",
+        entityId: row.id,
+        childId: row.child_id,
+        operation: "delete",
+        localOnly: row.local_only,
+      })), now);
+    });
     return;
   }
 
@@ -263,12 +357,28 @@ export async function deleteGeneratedSymptomEpisodeEvent(input: {
     params.push(input.episodeId, input.loggedAt);
   }
 
-  await softDeleteWhere(
-    conn,
-    "episode_events",
-    `((source_kind = ? AND source_id = ?)${fallback})`,
-    params,
-  );
+  await withTransaction(conn, async () => {
+    const now = nowISO();
+    const rows = await conn.select<Array<{ id: string; child_id: string; local_only?: number | null }>>(
+      `SELECT id, child_id, local_only FROM episode_events
+       WHERE ((source_kind = ? AND source_id = ?)${fallback}) AND deleted_at IS NULL`,
+      params,
+    );
+    await softDeleteWhere(
+      conn,
+      "episode_events",
+      `((source_kind = ? AND source_id = ?)${fallback})`,
+      params,
+      now,
+    );
+    await enqueueOutboxChangesWithConn(conn, rows.map((row) => ({
+      entity: "episode_event",
+      entityId: row.id,
+      childId: row.child_id,
+      operation: "delete",
+      localOnly: row.local_only,
+    })), now);
+  });
 }
 
 export async function getEpisodeEvents(episodeId: string): Promise<EpisodeEvent[]> {

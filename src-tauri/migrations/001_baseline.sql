@@ -444,6 +444,35 @@ CREATE INDEX IF NOT EXISTS idx_attachments_child
 CREATE INDEX IF NOT EXISTS idx_attachments_updated_at
     ON attachments(updated_at);
 
+CREATE TABLE IF NOT EXISTS sync_outbox (
+    id              TEXT PRIMARY KEY,
+    entity_table    TEXT NOT NULL,
+    entity_id       TEXT NOT NULL,
+    child_id        TEXT,
+    operation       TEXT NOT NULL CHECK (operation IN ('create', 'update', 'delete', 'link', 'unlink')),
+    payload_json    TEXT,
+    created_at      TEXT NOT NULL,
+    updated_at      TEXT NOT NULL,
+    attempted_at    TEXT,
+    processed_at    TEXT,
+    status          TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'processing', 'processed', 'failed', 'ignored')),
+    retry_count     INTEGER NOT NULL DEFAULT 0,
+    error_message   TEXT,
+    device_id       TEXT,
+    local_only      INTEGER NOT NULL DEFAULT 0 CHECK (local_only IN (0, 1))
+);
+
+CREATE INDEX IF NOT EXISTS idx_sync_outbox_status
+    ON sync_outbox(status);
+CREATE INDEX IF NOT EXISTS idx_sync_outbox_created_at
+    ON sync_outbox(created_at);
+CREATE INDEX IF NOT EXISTS idx_sync_outbox_entity
+    ON sync_outbox(entity_table, entity_id);
+CREATE INDEX IF NOT EXISTS idx_sync_outbox_child
+    ON sync_outbox(child_id);
+CREATE INDEX IF NOT EXISTS idx_sync_outbox_processed_at
+    ON sync_outbox(processed_at);
+
 CREATE TABLE IF NOT EXISTS app_settings (
     key   TEXT PRIMARY KEY,
     value TEXT NOT NULL

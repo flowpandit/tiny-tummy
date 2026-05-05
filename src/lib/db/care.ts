@@ -1,7 +1,15 @@
 import type { Alert, GrowthEntry, MilestoneEntry, SleepEntry, SymptomEntry } from "../types";
 import { generateId, getUtcIsoBoundsForLocalDateRange, nowISO } from "../utils";
 import { getDb } from "./connection";
-import { executeMutation, softDeleteById } from "./mutations";
+import { executeMutation, softDeleteById, withTransaction } from "./mutations";
+import { enqueueOutboxChangeWithConn } from "./sync-outbox";
+
+function changedFields(updates: Record<string, unknown>): string[] {
+  return Object.entries(updates)
+    .filter(([key, value]) => key !== "child_id" && value !== undefined)
+    .map(([key]) => key)
+    .sort();
+}
 
 export async function createSymptomLog(input: {
   child_id: string;
@@ -19,28 +27,41 @@ export async function createSymptomLog(input: {
   const id = generateId();
   const now = nowISO();
 
-  await executeMutation(
-    conn,
-    `INSERT INTO symptom_logs (
-      id, child_id, episode_id, symptom_type, severity, temperature_c, temperature_method, logged_at, notes,
-      created_by_caregiver_id, updated_by_caregiver_id, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [
-      id,
-      input.child_id,
-      input.episode_id ?? null,
-      input.symptom_type,
-      input.severity,
-      input.temperature_c ?? null,
-      input.temperature_method ?? null,
-      input.logged_at,
-      input.notes ?? null,
-      input.created_by_caregiver_id ?? null,
-      input.updated_by_caregiver_id ?? null,
-      now,
-      now,
-    ],
-  );
+  await withTransaction(conn, async () => {
+    await executeMutation(
+      conn,
+      `INSERT INTO symptom_logs (
+        id, child_id, episode_id, symptom_type, severity, temperature_c, temperature_method, logged_at, notes,
+        created_by_caregiver_id, updated_by_caregiver_id, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        id,
+        input.child_id,
+        input.episode_id ?? null,
+        input.symptom_type,
+        input.severity,
+        input.temperature_c ?? null,
+        input.temperature_method ?? null,
+        input.logged_at,
+        input.notes ?? null,
+        input.created_by_caregiver_id ?? null,
+        input.updated_by_caregiver_id ?? null,
+        now,
+        now,
+      ],
+    );
+    await enqueueOutboxChangeWithConn(conn, {
+      entity: "symptom_log",
+      entityId: id,
+      childId: input.child_id,
+      operation: "create",
+      payload: {
+        logged_at: input.logged_at,
+        symptom_type: input.symptom_type,
+        episode_id: input.episode_id ?? null,
+      },
+    }, now);
+  });
 
   return {
     id,
@@ -74,7 +95,17 @@ export async function updateSymptomLog(
   },
 ): Promise<void> {
   const conn = await getDb();
-  const sets: string[] = [];
+  const fields = changedFields(updates);
+  if (fields.length === 0) return;
+
+  const rows = await conn.select<Array<{ child_id: string; local_only?: number | null }>>(
+    "SELECT child_id, local_only FROM symptom_logs WHERE id = ? AND deleted_at IS NULL LIMIT 1",
+    [id],
+  );
+  const row = rows[0];
+  if (!row) return;
+
+  const sets: string[] = ["sync_status = 'local'", "sync_version = sync_version + 1"];
   const params: unknown[] = [];
 
   if (updates.episode_id !== undefined) { sets.push("episode_id = ?"); params.push(updates.episode_id); }
@@ -89,16 +120,41 @@ export async function updateSymptomLog(
     params.push(updates.updated_by_caregiver_id);
   }
 
-  if (sets.length === 0) return;
-
   sets.push("updated_at = ?");
-  params.push(nowISO(), id);
-  await executeMutation(conn, `UPDATE symptom_logs SET ${sets.join(", ")} WHERE id = ? AND deleted_at IS NULL`, params);
+  const now = nowISO();
+  params.push(now, id);
+  await withTransaction(conn, async () => {
+    await executeMutation(conn, `UPDATE symptom_logs SET ${sets.join(", ")} WHERE id = ? AND deleted_at IS NULL`, params);
+    await enqueueOutboxChangeWithConn(conn, {
+      entity: "symptom_log",
+      entityId: id,
+      childId: updates.child_id ?? row.child_id,
+      operation: "update",
+      localOnly: row.local_only,
+      payload: { changed_fields: fields },
+    }, now);
+  });
 }
 
 export async function deleteSymptomLog(id: string): Promise<void> {
   const conn = await getDb();
-  await softDeleteById(conn, "symptom_logs", id);
+  await withTransaction(conn, async () => {
+    const now = nowISO();
+    const rows = await conn.select<Array<{ child_id: string; local_only?: number | null }>>(
+      "SELECT child_id, local_only FROM symptom_logs WHERE id = ? AND deleted_at IS NULL LIMIT 1",
+      [id],
+    );
+    await softDeleteById(conn, "symptom_logs", id, now);
+    if (rows[0]) {
+      await enqueueOutboxChangeWithConn(conn, {
+        entity: "symptom_log",
+        entityId: id,
+        childId: rows[0].child_id,
+        operation: "delete",
+        localOnly: rows[0].local_only,
+      }, now);
+    }
+  });
 }
 
 export async function getSymptoms(
@@ -141,26 +197,35 @@ export async function createGrowthLog(input: {
   const id = generateId();
   const now = nowISO();
 
-  await executeMutation(
-    conn,
-    `INSERT INTO growth_logs (
-      id, child_id, measured_at, weight_kg, height_cm, head_circumference_cm, notes,
-      created_by_caregiver_id, updated_by_caregiver_id, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [
-      id,
-      input.child_id,
-      input.measured_at,
-      input.weight_kg ?? null,
-      input.height_cm ?? null,
-      input.head_circumference_cm ?? null,
-      input.notes ?? null,
-      input.created_by_caregiver_id ?? null,
-      input.updated_by_caregiver_id ?? null,
-      now,
-      now,
-    ],
-  );
+  await withTransaction(conn, async () => {
+    await executeMutation(
+      conn,
+      `INSERT INTO growth_logs (
+        id, child_id, measured_at, weight_kg, height_cm, head_circumference_cm, notes,
+        created_by_caregiver_id, updated_by_caregiver_id, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        id,
+        input.child_id,
+        input.measured_at,
+        input.weight_kg ?? null,
+        input.height_cm ?? null,
+        input.head_circumference_cm ?? null,
+        input.notes ?? null,
+        input.created_by_caregiver_id ?? null,
+        input.updated_by_caregiver_id ?? null,
+        now,
+        now,
+      ],
+    );
+    await enqueueOutboxChangeWithConn(conn, {
+      entity: "growth_log",
+      entityId: id,
+      childId: input.child_id,
+      operation: "create",
+      payload: { measured_at: input.measured_at },
+    }, now);
+  });
 
   return {
     id,
@@ -222,8 +287,19 @@ export async function updateGrowthLog(
   },
 ): Promise<void> {
   const conn = await getDb();
-  const sets: string[] = ["updated_at = ?"];
-  const params: unknown[] = [nowISO()];
+  const fields = changedFields(updates);
+  if (fields.length === 0) return;
+
+  const rows = await conn.select<Array<{ child_id: string; local_only?: number | null }>>(
+    "SELECT child_id, local_only FROM growth_logs WHERE id = ? AND deleted_at IS NULL LIMIT 1",
+    [id],
+  );
+  const row = rows[0];
+  if (!row) return;
+
+  const now = nowISO();
+  const sets: string[] = ["updated_at = ?", "sync_status = 'local'", "sync_version = sync_version + 1"];
+  const params: unknown[] = [now];
 
   if (updates.measured_at !== undefined) { sets.push("measured_at = ?"); params.push(updates.measured_at); }
   if (updates.weight_kg !== undefined) { sets.push("weight_kg = ?"); params.push(updates.weight_kg); }
@@ -235,15 +311,39 @@ export async function updateGrowthLog(
     params.push(updates.updated_by_caregiver_id);
   }
 
-  if (sets.length === 1) return;
-
   params.push(id);
-  await executeMutation(conn, `UPDATE growth_logs SET ${sets.join(", ")} WHERE id = ? AND deleted_at IS NULL`, params);
+  await withTransaction(conn, async () => {
+    await executeMutation(conn, `UPDATE growth_logs SET ${sets.join(", ")} WHERE id = ? AND deleted_at IS NULL`, params);
+    await enqueueOutboxChangeWithConn(conn, {
+      entity: "growth_log",
+      entityId: id,
+      childId: updates.child_id ?? row.child_id,
+      operation: "update",
+      localOnly: row.local_only,
+      payload: { changed_fields: fields },
+    }, now);
+  });
 }
 
 export async function deleteGrowthLog(id: string): Promise<void> {
   const conn = await getDb();
-  await softDeleteById(conn, "growth_logs", id);
+  await withTransaction(conn, async () => {
+    const now = nowISO();
+    const rows = await conn.select<Array<{ child_id: string; local_only?: number | null }>>(
+      "SELECT child_id, local_only FROM growth_logs WHERE id = ? AND deleted_at IS NULL LIMIT 1",
+      [id],
+    );
+    await softDeleteById(conn, "growth_logs", id, now);
+    if (rows[0]) {
+      await enqueueOutboxChangeWithConn(conn, {
+        entity: "growth_log",
+        entityId: id,
+        childId: rows[0].child_id,
+        operation: "delete",
+        localOnly: rows[0].local_only,
+      }, now);
+    }
+  });
 }
 
 export async function createSleepLog(input: {
@@ -259,25 +359,37 @@ export async function createSleepLog(input: {
   const id = generateId();
   const now = nowISO();
 
-  await executeMutation(
-    conn,
-    `INSERT INTO sleep_logs (
-      id, child_id, sleep_type, started_at, ended_at, notes,
-      created_by_caregiver_id, updated_by_caregiver_id, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [
-      id,
-      input.child_id,
-      input.sleep_type,
-      input.started_at,
-      input.ended_at,
-      input.notes ?? null,
-      input.created_by_caregiver_id ?? null,
-      input.updated_by_caregiver_id ?? null,
-      now,
-      now,
-    ],
-  );
+  await withTransaction(conn, async () => {
+    await executeMutation(
+      conn,
+      `INSERT INTO sleep_logs (
+        id, child_id, sleep_type, started_at, ended_at, notes,
+        created_by_caregiver_id, updated_by_caregiver_id, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        id,
+        input.child_id,
+        input.sleep_type,
+        input.started_at,
+        input.ended_at,
+        input.notes ?? null,
+        input.created_by_caregiver_id ?? null,
+        input.updated_by_caregiver_id ?? null,
+        now,
+        now,
+      ],
+    );
+    await enqueueOutboxChangeWithConn(conn, {
+      entity: "sleep_log",
+      entityId: id,
+      childId: input.child_id,
+      operation: "create",
+      payload: {
+        sleep_type: input.sleep_type,
+        started_at: input.started_at,
+      },
+    }, now);
+  });
 
   return {
     id,
@@ -328,8 +440,19 @@ export async function updateSleepLog(
   },
 ): Promise<void> {
   const conn = await getDb();
-  const sets: string[] = ["updated_at = ?"];
-  const params: unknown[] = [nowISO()];
+  const fields = changedFields(updates);
+  if (fields.length === 0) return;
+
+  const rows = await conn.select<Array<{ child_id: string; local_only?: number | null }>>(
+    "SELECT child_id, local_only FROM sleep_logs WHERE id = ? AND deleted_at IS NULL LIMIT 1",
+    [id],
+  );
+  const row = rows[0];
+  if (!row) return;
+
+  const now = nowISO();
+  const sets: string[] = ["updated_at = ?", "sync_status = 'local'", "sync_version = sync_version + 1"];
+  const params: unknown[] = [now];
 
   if (updates.sleep_type !== undefined) { sets.push("sleep_type = ?"); params.push(updates.sleep_type); }
   if (updates.started_at !== undefined) { sets.push("started_at = ?"); params.push(updates.started_at); }
@@ -340,14 +463,39 @@ export async function updateSleepLog(
     params.push(updates.updated_by_caregiver_id);
   }
 
-  if (sets.length === 1) return;
   params.push(id);
-  await executeMutation(conn, `UPDATE sleep_logs SET ${sets.join(", ")} WHERE id = ? AND deleted_at IS NULL`, params);
+  await withTransaction(conn, async () => {
+    await executeMutation(conn, `UPDATE sleep_logs SET ${sets.join(", ")} WHERE id = ? AND deleted_at IS NULL`, params);
+    await enqueueOutboxChangeWithConn(conn, {
+      entity: "sleep_log",
+      entityId: id,
+      childId: updates.child_id ?? row.child_id,
+      operation: "update",
+      localOnly: row.local_only,
+      payload: { changed_fields: fields },
+    }, now);
+  });
 }
 
 export async function deleteSleepLog(id: string): Promise<void> {
   const conn = await getDb();
-  await softDeleteById(conn, "sleep_logs", id);
+  await withTransaction(conn, async () => {
+    const now = nowISO();
+    const rows = await conn.select<Array<{ child_id: string; local_only?: number | null }>>(
+      "SELECT child_id, local_only FROM sleep_logs WHERE id = ? AND deleted_at IS NULL LIMIT 1",
+      [id],
+    );
+    await softDeleteById(conn, "sleep_logs", id, now);
+    if (rows[0]) {
+      await enqueueOutboxChangeWithConn(conn, {
+        entity: "sleep_log",
+        entityId: id,
+        childId: rows[0].child_id,
+        operation: "delete",
+        localOnly: rows[0].local_only,
+      }, now);
+    }
+  });
 }
 
 export async function createMilestoneLog(input: {
@@ -362,24 +510,36 @@ export async function createMilestoneLog(input: {
   const id = generateId();
   const now = nowISO();
 
-  await executeMutation(
-    conn,
-    `INSERT INTO milestone_logs (
-      id, child_id, milestone_type, logged_at, notes,
-      created_by_caregiver_id, updated_by_caregiver_id, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [
-      id,
-      input.child_id,
-      input.milestone_type,
-      input.logged_at,
-      input.notes ?? null,
-      input.created_by_caregiver_id ?? null,
-      input.updated_by_caregiver_id ?? null,
-      now,
-      now,
-    ],
-  );
+  await withTransaction(conn, async () => {
+    await executeMutation(
+      conn,
+      `INSERT INTO milestone_logs (
+        id, child_id, milestone_type, logged_at, notes,
+        created_by_caregiver_id, updated_by_caregiver_id, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        id,
+        input.child_id,
+        input.milestone_type,
+        input.logged_at,
+        input.notes ?? null,
+        input.created_by_caregiver_id ?? null,
+        input.updated_by_caregiver_id ?? null,
+        now,
+        now,
+      ],
+    );
+    await enqueueOutboxChangeWithConn(conn, {
+      entity: "milestone_log",
+      entityId: id,
+      childId: input.child_id,
+      operation: "create",
+      payload: {
+        milestone_type: input.milestone_type,
+        logged_at: input.logged_at,
+      },
+    }, now);
+  });
 
   return {
     id,
@@ -419,7 +579,23 @@ export async function getMilestonesForRange(
 
 export async function deleteMilestoneLog(id: string): Promise<void> {
   const conn = await getDb();
-  await softDeleteById(conn, "milestone_logs", id);
+  await withTransaction(conn, async () => {
+    const now = nowISO();
+    const rows = await conn.select<Array<{ child_id: string; local_only?: number | null }>>(
+      "SELECT child_id, local_only FROM milestone_logs WHERE id = ? AND deleted_at IS NULL LIMIT 1",
+      [id],
+    );
+    await softDeleteById(conn, "milestone_logs", id, now);
+    if (rows[0]) {
+      await enqueueOutboxChangeWithConn(conn, {
+        entity: "milestone_log",
+        entityId: id,
+        childId: rows[0].child_id,
+        operation: "delete",
+        localOnly: rows[0].local_only,
+      }, now);
+    }
+  });
 }
 
 export async function createAlert(input: {
@@ -480,5 +656,9 @@ export async function hasAlertForLog(
 
 export async function dismissAlert(id: string): Promise<void> {
   const conn = await getDb();
-  await executeMutation(conn, "UPDATE alerts SET is_dismissed = 1, updated_at = ? WHERE id = ? AND deleted_at IS NULL", [nowISO(), id]);
+  await executeMutation(
+    conn,
+    "UPDATE alerts SET is_dismissed = 1, updated_at = ?, sync_status = 'local', sync_version = sync_version + 1 WHERE id = ? AND deleted_at IS NULL",
+    [nowISO(), id],
+  );
 }

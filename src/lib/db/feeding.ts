@@ -1,7 +1,15 @@
 import type { FeedingEntry } from "../types";
 import { generateId, getUtcIsoBoundsForLocalDateRange, nowISO } from "../utils";
 import { getDb } from "./connection";
-import { executeMutation, softDeleteById } from "./mutations";
+import { executeMutation, softDeleteById, withTransaction } from "./mutations";
+import { enqueueOutboxChangeWithConn } from "./sync-outbox";
+
+function changedFields(updates: Record<string, unknown>): string[] {
+  return Object.entries(updates)
+    .filter(([key, value]) => key !== "child_id" && value !== undefined)
+    .map(([key]) => key)
+    .sort();
+}
 
 export async function createFeedingLog(input: {
   child_id: string;
@@ -22,32 +30,44 @@ export async function createFeedingLog(input: {
   const id = generateId();
   const now = nowISO();
 
-  await executeMutation(
-    conn,
-    `INSERT INTO diet_logs (
-      id, child_id, logged_at, food_type, food_name, amount_ml, duration_minutes,
-      breast_side, bottle_content, reaction_notes, is_constipation_support, notes,
-      created_by_caregiver_id, updated_by_caregiver_id, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [
-      id,
-      input.child_id,
-      input.logged_at,
-      input.food_type,
-      input.food_name ?? null,
-      input.amount_ml ?? null,
-      input.duration_minutes ?? null,
-      input.breast_side ?? null,
-      input.bottle_content ?? null,
-      input.reaction_notes ?? null,
-      input.is_constipation_support ?? 0,
-      input.notes ?? null,
-      input.created_by_caregiver_id ?? null,
-      input.updated_by_caregiver_id ?? null,
-      now,
-      now,
-    ],
-  );
+  await withTransaction(conn, async () => {
+    await executeMutation(
+      conn,
+      `INSERT INTO diet_logs (
+        id, child_id, logged_at, food_type, food_name, amount_ml, duration_minutes,
+        breast_side, bottle_content, reaction_notes, is_constipation_support, notes,
+        created_by_caregiver_id, updated_by_caregiver_id, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        id,
+        input.child_id,
+        input.logged_at,
+        input.food_type,
+        input.food_name ?? null,
+        input.amount_ml ?? null,
+        input.duration_minutes ?? null,
+        input.breast_side ?? null,
+        input.bottle_content ?? null,
+        input.reaction_notes ?? null,
+        input.is_constipation_support ?? 0,
+        input.notes ?? null,
+        input.created_by_caregiver_id ?? null,
+        input.updated_by_caregiver_id ?? null,
+        now,
+        now,
+      ],
+    );
+    await enqueueOutboxChangeWithConn(conn, {
+      entity: "diet_log",
+      entityId: id,
+      childId: input.child_id,
+      operation: "create",
+      payload: {
+        logged_at: input.logged_at,
+        food_type: input.food_type,
+      },
+    }, now);
+  });
 
   return {
     id,
@@ -113,8 +133,19 @@ export async function updateDietLog(
   },
 ): Promise<void> {
   const conn = await getDb();
-  const sets: string[] = ["updated_at = ?"];
-  const params: unknown[] = [nowISO()];
+  const fields = changedFields(updates);
+  if (fields.length === 0) return;
+
+  const rows = await conn.select<Array<{ child_id: string; local_only?: number | null }>>(
+    "SELECT child_id, local_only FROM diet_logs WHERE id = ? AND deleted_at IS NULL LIMIT 1",
+    [id],
+  );
+  const row = rows[0];
+  if (!row) return;
+
+  const now = nowISO();
+  const sets: string[] = ["updated_at = ?", "sync_status = 'local'", "sync_version = sync_version + 1"];
+  const params: unknown[] = [now];
 
   if (updates.logged_at !== undefined) { sets.push("logged_at = ?"); params.push(updates.logged_at); }
   if (updates.food_type !== undefined) { sets.push("food_type = ?"); params.push(updates.food_type); }
@@ -131,14 +162,39 @@ export async function updateDietLog(
     params.push(updates.updated_by_caregiver_id);
   }
 
-  if (sets.length === 1) return;
   params.push(id);
-  await executeMutation(conn, `UPDATE diet_logs SET ${sets.join(", ")} WHERE id = ? AND deleted_at IS NULL`, params);
+  await withTransaction(conn, async () => {
+    await executeMutation(conn, `UPDATE diet_logs SET ${sets.join(", ")} WHERE id = ? AND deleted_at IS NULL`, params);
+    await enqueueOutboxChangeWithConn(conn, {
+      entity: "diet_log",
+      entityId: id,
+      childId: updates.child_id ?? row.child_id,
+      operation: "update",
+      localOnly: row.local_only,
+      payload: { changed_fields: fields },
+    }, now);
+  });
 }
 
 export async function deleteDietLog(id: string): Promise<void> {
   const conn = await getDb();
-  await softDeleteById(conn, "diet_logs", id);
+  await withTransaction(conn, async () => {
+    const now = nowISO();
+    const rows = await conn.select<Array<{ child_id: string; local_only?: number | null }>>(
+      "SELECT child_id, local_only FROM diet_logs WHERE id = ? AND deleted_at IS NULL LIMIT 1",
+      [id],
+    );
+    await softDeleteById(conn, "diet_logs", id, now);
+    if (rows[0]) {
+      await enqueueOutboxChangeWithConn(conn, {
+        entity: "diet_log",
+        entityId: id,
+        childId: rows[0].child_id,
+        operation: "delete",
+        localOnly: rows[0].local_only,
+      }, now);
+    }
+  });
 }
 
 export const createDietLog = createFeedingLog;

@@ -36,3 +36,8 @@ export async function getDb(): Promise<Database> {
 
   return dbPromise;
 }
+
+export function setDbConnectionForTests(conn: Database | null): void {
+  db = conn;
+  dbPromise = null;
+}

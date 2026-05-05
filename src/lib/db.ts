@@ -7,4 +7,6 @@ export * from "./db/reports";
 export * from "./db/settings";
 export * from "./db/caregivers";
 export * from "./db/snapshot";
+export * from "./db/sync-outbox";
+export * from "./sync-outbox";
 export { runDbTransaction } from "./db/mutations";

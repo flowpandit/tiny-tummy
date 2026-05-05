@@ -2,6 +2,7 @@ import type { QuickPresetEntry } from "../types";
 import { generateId, nowISO } from "../utils";
 import { getDb } from "./connection";
 import { executeMutation, softDeleteWhere, withTransaction } from "./mutations";
+import { enqueueOutboxChangeWithConn, enqueueOutboxChangesWithConn } from "./sync-outbox";
 
 export async function getSetting(key: string): Promise<string | null> {
   const conn = await getDb();
@@ -52,16 +53,28 @@ export async function replaceQuickPresets(
   const conn = await getDb();
   await withTransaction(conn, async () => {
     const now = nowISO();
+    const existingRows = await conn.select<Array<{ id: string; local_only?: number | null }>>(
+      "SELECT id, local_only FROM quick_presets WHERE child_id = ? AND kind = ? AND deleted_at IS NULL",
+      [childId, kind],
+    );
     await softDeleteWhere(conn, "quick_presets", "child_id = ? AND kind = ?", [childId, kind], now);
+    await enqueueOutboxChangesWithConn(conn, existingRows.map((row) => ({
+      entity: "quick_preset",
+      entityId: row.id,
+      childId,
+      operation: "delete",
+      localOnly: row.local_only,
+    })), now);
 
     for (const preset of presets) {
+      const id = generateId();
       await executeMutation(
         conn,
         `INSERT INTO quick_presets (
           id, child_id, kind, label, description, draft_json, sort_order, is_enabled, created_at, updated_at
         ) VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?)`,
         [
-          generateId(),
+          id,
           childId,
           kind,
           preset.label,
@@ -72,6 +85,16 @@ export async function replaceQuickPresets(
           now,
         ],
       );
+      await enqueueOutboxChangeWithConn(conn, {
+        entity: "quick_preset",
+        entityId: id,
+        childId,
+        operation: "create",
+        payload: {
+          kind,
+          sort_order: preset.sort_order,
+        },
+      }, now);
     }
   });
 }
