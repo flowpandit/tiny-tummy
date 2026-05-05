@@ -107,6 +107,11 @@ function TimelineRow({ item }: { item: HandoffTimelineItem }) {
       <div className="min-w-0 flex-1">
         <p className="text-[0.94rem] font-semibold leading-snug text-[var(--color-text)]">{item.title}</p>
         <p className="mt-0.5 text-[0.82rem] leading-snug text-[var(--color-text-secondary)]">{item.detail}</p>
+        {item.attributionLabel && (
+          <p className="mt-1 text-[0.74rem] font-medium leading-snug text-[var(--color-text-soft)]">
+            {item.attributionLabel}
+          </p>
+        )}
       </div>
     </li>
   );

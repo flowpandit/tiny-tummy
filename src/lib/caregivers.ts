@@ -1,4 +1,4 @@
-import type { Caregiver, ChildCaregiver } from "./types";
+import type { Caregiver, CaregiverAttribution, ChildCaregiver } from "./types";
 
 export const CURRENT_CAREGIVER_SETTING_KEY = "current_caregiver_id";
 
@@ -35,6 +35,12 @@ export interface ChildCaregiverProfile extends Caregiver {
   link_updated_at: string;
 }
 
+export interface CaregiverAttributionDisplay {
+  createdByCaregiverName?: string;
+  updatedByCaregiverName?: string;
+  attributionLabel?: string;
+}
+
 export type CaregiverDraft = {
   display_name: string;
   role: CaregiverRole;
@@ -61,6 +67,32 @@ export function parseCaregiverRole(value: string | null | undefined): CaregiverR
 
 export function getCaregiverRoleLabel(value: string | null | undefined): string {
   return ROLE_LABELS.get(parseCaregiverRole(value)) ?? "Other";
+}
+
+export function getCaregiverAttributionDisplay(
+  entry: CaregiverAttribution,
+  caregiverDisplayNames: Record<string, string>,
+): CaregiverAttributionDisplay {
+  const createdName = entry.created_by_caregiver_id
+    ? caregiverDisplayNames[entry.created_by_caregiver_id]?.trim() || null
+    : null;
+  const updatedName = entry.updated_by_caregiver_id
+    ? caregiverDisplayNames[entry.updated_by_caregiver_id]?.trim() || null
+    : null;
+  const display: CaregiverAttributionDisplay = {};
+
+  if (createdName) display.createdByCaregiverName = createdName;
+  if (updatedName) display.updatedByCaregiverName = updatedName;
+
+  if (updatedName && entry.updated_by_caregiver_id !== entry.created_by_caregiver_id) {
+    display.attributionLabel = `Updated by ${updatedName}`;
+  } else if (createdName) {
+    display.attributionLabel = `Logged by ${createdName}`;
+  } else if (updatedName) {
+    display.attributionLabel = `Updated by ${updatedName}`;
+  }
+
+  return display;
 }
 
 export function buildCaregiverDraft(input: {

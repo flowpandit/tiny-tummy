@@ -18,10 +18,11 @@ import {
 } from "./sleep-insights";
 import { getSymptomSeverityLabel, getSymptomTypeLabel } from "./symptom-constants";
 import { formatLocalDateKey, isOnLocalDay } from "./utils";
-import { getCaregiverRoleLabel } from "./caregivers";
+import { getCaregiverAttributionDisplay, getCaregiverRoleLabel, type CaregiverAttributionDisplay } from "./caregivers";
 import type {
   Alert,
   Caregiver,
+  CaregiverAttribution,
   Child,
   DiaperEntry,
   Episode,
@@ -57,6 +58,9 @@ export interface HandoffEventSummary {
   occurredAt: string;
   title: string;
   detail: string;
+  createdByCaregiverName?: string;
+  updatedByCaregiverName?: string;
+  attributionLabel?: string;
 }
 
 export interface HandoffEpisodeSummary {
@@ -113,6 +117,9 @@ export interface HandoffTimelineItem {
   occurredAt: string;
   title: string;
   detail: string;
+  createdByCaregiverName?: string;
+  updatedByCaregiverName?: string;
+  attributionLabel?: string;
 }
 
 export interface HandoffPreparedBy {
@@ -148,6 +155,7 @@ export interface BuildHandoffSummaryInput {
   generatedAt?: string;
   parentNote?: string | null;
   preparedByCaregiver?: Pick<Caregiver, "display_name" | "role"> | null;
+  linkedCaregivers?: Array<Pick<Caregiver, "id" | "display_name" | "deleted_at">>;
   now?: Date;
   timelineLimit?: number;
 }
@@ -192,6 +200,28 @@ function getStoolColorLabel(color: StoolColor | string | null): string | null {
   return color;
 }
 
+function buildLinkedCaregiverDisplayNames(
+  caregivers: BuildHandoffSummaryInput["linkedCaregivers"] = [],
+): Record<string, string> {
+  const displayNames: Record<string, string> = {};
+
+  for (const caregiver of caregivers) {
+    if (!isActiveRow(caregiver)) continue;
+    const displayName = caregiver.display_name.trim();
+    if (!displayName) continue;
+    displayNames[caregiver.id] = displayName;
+  }
+
+  return displayNames;
+}
+
+function getHandoffCaregiverAttribution(
+  entry: CaregiverAttribution,
+  caregiverDisplayNames: Record<string, string>,
+): CaregiverAttributionDisplay {
+  return getCaregiverAttributionDisplay(entry, caregiverDisplayNames);
+}
+
 function formatStoolDetails(log: StoolLikeLog): string {
   return [
     getStoolColorLabel(log.color),
@@ -200,25 +230,27 @@ function formatStoolDetails(log: StoolLikeLog): string {
   ].filter(Boolean).join(", ") || "Details not recorded";
 }
 
-function toPoopEvent(log: PoopEntry): HandoffEventSummary {
+function toPoopEvent(log: PoopEntry, caregiverDisplayNames: Record<string, string>): HandoffEventSummary {
   return {
     kind: "poop",
     occurredAt: log.logged_at,
     title: "Poop",
     detail: formatStoolDetails(log),
+    ...getHandoffCaregiverAttribution(log, caregiverDisplayNames),
   };
 }
 
-function toDirtyDiaperPoopEvent(log: DiaperEntry): HandoffEventSummary {
+function toDirtyDiaperPoopEvent(log: DiaperEntry, caregiverDisplayNames: Record<string, string>): HandoffEventSummary {
   return {
     kind: "poop",
     occurredAt: log.logged_at,
     title: "Dirty diaper",
     detail: formatStoolDetails(log),
+    ...getHandoffCaregiverAttribution(log, caregiverDisplayNames),
   };
 }
 
-function toDiaperEvent(log: DiaperEntry): HandoffEventSummary {
+function toDiaperEvent(log: DiaperEntry, caregiverDisplayNames: Record<string, string>): HandoffEventSummary {
   const urine = getUrineColorLabel(log.urine_color);
   const stool = diaperIncludesStool(log.diaper_type) ? formatStoolDetails(log) : null;
 
@@ -227,33 +259,37 @@ function toDiaperEvent(log: DiaperEntry): HandoffEventSummary {
     occurredAt: log.logged_at,
     title: getDiaperTypeLabel(log.diaper_type),
     detail: [urine, stool].filter(Boolean).join(", ") || "Details not recorded",
+    ...getHandoffCaregiverAttribution(log, caregiverDisplayNames),
   };
 }
 
-function toFeedEvent(log: FeedingEntry): HandoffEventSummary {
+function toFeedEvent(log: FeedingEntry, caregiverDisplayNames: Record<string, string>): HandoffEventSummary {
   return {
     kind: "feed",
     occurredAt: log.logged_at,
     title: "Feed",
     detail: getFeedingEntryDisplayLabel(log),
+    ...getHandoffCaregiverAttribution(log, caregiverDisplayNames),
   };
 }
 
-function toSleepEvent(log: SleepEntry): HandoffEventSummary {
+function toSleepEvent(log: SleepEntry, caregiverDisplayNames: Record<string, string>): HandoffEventSummary {
   return {
     kind: "sleep",
     occurredAt: log.ended_at,
     title: log.sleep_type === "night" ? "Night sleep" : "Nap",
     detail: formatSleepDuration(getDurationMinutes(log)),
+    ...getHandoffCaregiverAttribution(log, caregiverDisplayNames),
   };
 }
 
-function toSymptomEvent(log: SymptomEntry): HandoffEventSummary {
+function toSymptomEvent(log: SymptomEntry, caregiverDisplayNames: Record<string, string>): HandoffEventSummary {
   return {
     kind: "symptom",
     occurredAt: log.logged_at,
     title: getSymptomTypeLabel(log.symptom_type),
     detail: getSymptomSeverityLabel(log.severity),
+    ...getHandoffCaregiverAttribution(log, caregiverDisplayNames),
   };
 }
 
@@ -277,9 +313,16 @@ function getVisibleDirectPoopLogs(poopLogs: PoopEntry[], diaperLogs: DiaperEntry
   return poopLogs.filter((log) => log.is_no_poop === 0 && !linkedPoopIds.has(log.id));
 }
 
-function getPoopEvents(poopLogs: PoopEntry[], diaperLogs: DiaperEntry[]): HandoffEventSummary[] {
-  const directPoops = getVisibleDirectPoopLogs(poopLogs, diaperLogs).map(toPoopEvent);
-  const diaperPoops = diaperLogs.filter((log) => diaperIncludesStool(log.diaper_type)).map(toDirtyDiaperPoopEvent);
+function getPoopEvents(
+  poopLogs: PoopEntry[],
+  diaperLogs: DiaperEntry[],
+  caregiverDisplayNames: Record<string, string>,
+): HandoffEventSummary[] {
+  const directPoops = getVisibleDirectPoopLogs(poopLogs, diaperLogs)
+    .map((log) => toPoopEvent(log, caregiverDisplayNames));
+  const diaperPoops = diaperLogs
+    .filter((log) => diaperIncludesStool(log.diaper_type))
+    .map((log) => toDirtyDiaperPoopEvent(log, caregiverDisplayNames));
   return sortByNewest([...directPoops, ...diaperPoops], (event) => event.occurredAt);
 }
 
@@ -482,25 +525,27 @@ function buildTimeline(input: {
   activeEpisode: Episode | null;
   dayKey: string;
   limit: number;
+  caregiverDisplayNames: Record<string, string>;
 }): HandoffTimelineItem[] {
   const diaperEvents = input.diaperLogs
     .filter((log) => isOnLocalDay(log.logged_at, input.dayKey))
-    .map(toDiaperEvent);
+    .map((log) => toDiaperEvent(log, input.caregiverDisplayNames));
   const feedEvents = input.feedingLogs
     .filter((log) => isOnLocalDay(log.logged_at, input.dayKey))
-    .map(toFeedEvent);
+    .map((log) => toFeedEvent(log, input.caregiverDisplayNames));
   const sleepEvents = input.sleepLogs
     .filter((log) => isOnLocalDay(log.ended_at, input.dayKey))
-    .map(toSleepEvent);
+    .map((log) => toSleepEvent(log, input.caregiverDisplayNames));
   const symptomEvents = input.symptomLogs
     .filter((log) => isOnLocalDay(log.logged_at, input.dayKey))
-    .map(toSymptomEvent);
+    .map((log) => toSymptomEvent(log, input.caregiverDisplayNames));
   const episodeEvents = input.activeEpisode && isOnLocalDay(input.activeEpisode.started_at, input.dayKey)
     ? [{
         kind: "episode" as const,
         occurredAt: input.activeEpisode.started_at,
         title: `${getEpisodeTypeLabel(input.activeEpisode.episode_type)} started`,
         detail: input.activeEpisode.summary ?? "Episode opened",
+        ...getHandoffCaregiverAttribution(input.activeEpisode, input.caregiverDisplayNames),
       }]
     : [];
 
@@ -521,6 +566,7 @@ export function buildHandoffSummary(input: BuildHandoffSummaryInput): HandoffSum
   const dayKey = input.dayKey ?? formatLocalDateKey(now);
   const generatedAt = input.generatedAt ?? now.toISOString();
   const parentNote = input.parentNote?.trim() || null;
+  const caregiverDisplayNames = buildLinkedCaregiverDisplayNames(input.linkedCaregivers);
   const preparedBy = input.preparedByCaregiver
     ? {
         displayName: input.preparedByCaregiver.display_name,
@@ -534,7 +580,7 @@ export function buildHandoffSummary(input: BuildHandoffSummaryInput): HandoffSum
   const symptomLogs = sortByNewest(input.symptomLogs.filter(isActiveRow), (log) => log.logged_at);
   const alerts = input.alerts.filter(isActiveRow);
   const activeEpisode = input.activeEpisode && isActiveRow(input.activeEpisode) ? input.activeEpisode : null;
-  const poopEvents = getPoopEvents(poopLogs, diaperLogs);
+  const poopEvents = getPoopEvents(poopLogs, diaperLogs, caregiverDisplayNames);
   const wetDiapers = sortByNewest(diaperLogs.filter((log) => diaperIncludesWet(log.diaper_type)), (log) => log.logged_at);
   const dirtyDiapers = sortByNewest(diaperLogs.filter((log) => diaperIncludesStool(log.diaper_type)), (log) => log.logged_at);
   const todayDiaperLogs = diaperLogs.filter((log) => isOnLocalDay(log.logged_at, dayKey));
@@ -549,13 +595,14 @@ export function buildHandoffSummary(input: BuildHandoffSummaryInput): HandoffSum
     activeEpisode,
     dayKey,
     limit: input.timelineLimit ?? 8,
+    caregiverDisplayNames,
   });
   const lastPoop = poopEvents[0] ?? null;
-  const lastWetDiaper = wetDiapers[0] ? toDiaperEvent(wetDiapers[0]) : null;
-  const lastDirtyDiaper = dirtyDiapers[0] ? toDiaperEvent(dirtyDiapers[0]) : null;
-  const lastFeed = feedingLogs[0] ? toFeedEvent(feedingLogs[0]) : null;
-  const lastSleep = sleepLogs[0] ? toSleepEvent(sleepLogs[0]) : null;
-  const lastSymptom = symptomLogs[0] ? toSymptomEvent(symptomLogs[0]) : null;
+  const lastWetDiaper = wetDiapers[0] ? toDiaperEvent(wetDiapers[0], caregiverDisplayNames) : null;
+  const lastDirtyDiaper = dirtyDiapers[0] ? toDiaperEvent(dirtyDiapers[0], caregiverDisplayNames) : null;
+  const lastFeed = feedingLogs[0] ? toFeedEvent(feedingLogs[0], caregiverDisplayNames) : null;
+  const lastSleep = sleepLogs[0] ? toSleepEvent(sleepLogs[0], caregiverDisplayNames) : null;
+  const lastSymptom = symptomLogs[0] ? toSymptomEvent(symptomLogs[0], caregiverDisplayNames) : null;
   const sleepTotalMinutes = sleepLogs.reduce((sum, log) => sum + getOverlapMinutesForDay(log, dayKey), 0);
 
   return {
@@ -614,7 +661,11 @@ export function buildHandoffSummary(input: BuildHandoffSummaryInput): HandoffSum
 
 function formatEventForText(event: HandoffEventSummary | null, options: HandoffTextFormatOptions): string {
   if (!event) return "No log yet";
-  return `${formatHandoffTime(event.occurredAt, options)} - ${event.detail}`;
+  return [
+    formatHandoffTime(event.occurredAt, options),
+    event.detail,
+    event.attributionLabel,
+  ].filter(Boolean).join(" - ");
 }
 
 function formatDueItemForText(item: HandoffDueItem, options: HandoffTextFormatOptions): string {
@@ -661,7 +712,11 @@ export function formatHandoffSummaryText(
     "",
     "What happened today:",
     ...(summary.timeline.length > 0
-      ? summary.timeline.map((item) => `- ${formatHandoffTime(item.occurredAt, options)} - ${item.title}: ${item.detail}`)
+      ? summary.timeline.map((item) => `- ${[
+          formatHandoffTime(item.occurredAt, options),
+          `${item.title}: ${item.detail}`,
+          item.attributionLabel,
+        ].filter(Boolean).join(" - ")}`)
       : ["- No events logged yet."]),
   ];
 

@@ -301,6 +301,97 @@ test("formatHandoffSummaryText includes current caregiver without contact detail
   assert.equal(text.includes("phone"), false);
 });
 
+test("buildHandoffSummary includes display-name-only attribution for linked caregivers", () => {
+  const linkedCaregivers = [
+    {
+      id: "caregiver-mum",
+      display_name: "Mum",
+      deleted_at: null,
+      email: "mum@example.com",
+      phone: "0400 000 000",
+    },
+    {
+      id: "caregiver-dad",
+      display_name: "Dad",
+      deleted_at: null,
+      email: "dad@example.com",
+      phone: "0400 000 001",
+    },
+  ];
+  const summary = buildHandoffSummary({
+    child,
+    dayKey: "2026-05-04",
+    generatedAt: "2026-05-04T15:50:00",
+    poopLogs: [poop({
+      created_by_caregiver_id: "caregiver-mum",
+      updated_by_caregiver_id: "caregiver-mum",
+    })],
+    diaperLogs: [],
+    feedingLogs: [feed({
+      created_by_caregiver_id: "caregiver-mum",
+      updated_by_caregiver_id: "caregiver-dad",
+    })],
+    sleepLogs: [],
+    alerts: [],
+    activeEpisode: null,
+    episodeEvents: [],
+    symptomLogs: [],
+    linkedCaregivers,
+    now: new Date("2026-05-04T15:50:00"),
+  });
+  const text = formatHandoffSummaryText(summary, { locale: "en-AU", timeZone: "UTC" });
+  const serialized = JSON.stringify(summary);
+
+  assert.equal(summary.lastEvents.lastPoop?.createdByCaregiverName, "Mum");
+  assert.equal(summary.lastEvents.lastPoop?.updatedByCaregiverName, "Mum");
+  assert.equal(summary.lastEvents.lastPoop?.attributionLabel, "Logged by Mum");
+  assert.equal(summary.lastEvents.lastFeed?.attributionLabel, "Updated by Dad");
+  assert.deepEqual(
+    summary.timeline.map((item) => item.attributionLabel),
+    ["Logged by Mum", "Updated by Dad"],
+  );
+  assert.match(text, /Last poop: .* - Logged by Mum/);
+  assert.match(text, /Last feed: .* - Updated by Dad/);
+  assert.equal(serialized.includes("mum@example.com"), false);
+  assert.equal(serialized.includes("0400 000 000"), false);
+  assert.equal(serialized.includes("caregiver-mum"), false);
+});
+
+test("buildHandoffSummary omits attribution for deleted or unlinked caregivers", () => {
+  const summary = buildHandoffSummary({
+    child,
+    dayKey: "2026-05-04",
+    generatedAt: "2026-05-04T15:50:00",
+    poopLogs: [poop({
+      created_by_caregiver_id: "deleted-caregiver",
+      updated_by_caregiver_id: "deleted-caregiver",
+    })],
+    diaperLogs: [],
+    feedingLogs: [feed({
+      created_by_caregiver_id: "unlinked-caregiver",
+      updated_by_caregiver_id: "unlinked-caregiver",
+    })],
+    sleepLogs: [],
+    alerts: [],
+    activeEpisode: null,
+    episodeEvents: [],
+    symptomLogs: [],
+    linkedCaregivers: [{
+      id: "deleted-caregiver",
+      display_name: "Former sitter",
+      deleted_at: "2026-05-04T14:00:00",
+    }],
+    now: new Date("2026-05-04T15:50:00"),
+  });
+  const text = formatHandoffSummaryText(summary, { locale: "en-AU", timeZone: "UTC" });
+
+  assert.equal(summary.lastEvents.lastPoop?.attributionLabel, undefined);
+  assert.equal(summary.lastEvents.lastFeed?.attributionLabel, undefined);
+  assert.equal(summary.timeline.every((item) => item.attributionLabel === undefined), true);
+  assert.equal(text.includes("Former sitter"), false);
+  assert.equal(text.includes("unlinked-caregiver"), false);
+});
+
 test("buildHandoffSummary excludes soft-deleted rows defensively", () => {
   const summary = buildHandoffSummary({
     child,

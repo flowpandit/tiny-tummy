@@ -234,9 +234,11 @@ test("report mode defaults keep privacy and mode-specific context explicit", () 
   assert.equal(pediatrician.includeAttachmentMetadata, false);
   assert.equal(pediatrician.includeFeedingContext, true);
   assert.equal(pediatrician.includeTimeline, true);
+  assert.equal(pediatrician.includeCaregiverAttribution, false);
   assert.equal(poopDiaper.includeSymptoms, false);
   assert.equal(poopDiaper.includeGrowthContext, false);
   assert.equal(handoff.includeSleepContext, true);
+  assert.equal(handoff.includeCaregiverAttribution, false);
   assert.equal(handoff.maxTimelineRows, 12);
 });
 

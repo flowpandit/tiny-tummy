@@ -3,6 +3,7 @@ import {
   getBreastfeedContextHistorySummary,
   getBreastfeedContextHistoryTitle,
 } from "./breastfeed-insights.ts";
+import { getCaregiverAttributionDisplay } from "./caregivers.ts";
 import { getFeedingEntryDetailParts, getFeedingEntryPrimaryLabel, getFeedingEntrySecondaryText } from "./feeding.ts";
 import type {
   DiaperEntry,
@@ -116,20 +117,7 @@ export function getHistoryCaregiverAttributionLabel(
   entry: CaregiverAttribution,
   caregiverDisplayNames: Record<string, string>,
 ): string | null {
-  const createdName = entry.created_by_caregiver_id
-    ? caregiverDisplayNames[entry.created_by_caregiver_id] ?? null
-    : null;
-  const updatedName = entry.updated_by_caregiver_id
-    ? caregiverDisplayNames[entry.updated_by_caregiver_id] ?? null
-    : null;
-
-  if (updatedName && entry.updated_by_caregiver_id !== entry.created_by_caregiver_id) {
-    return `Updated by ${updatedName}`;
-  }
-
-  if (createdName) return `Logged by ${createdName}`;
-  if (updatedName) return `Updated by ${updatedName}`;
-  return null;
+  return getCaregiverAttributionDisplay(entry, caregiverDisplayNames).attributionLabel ?? null;
 }
 
 export function addDaysToDateKey(dateKey: string, days: number): string {

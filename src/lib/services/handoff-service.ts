@@ -132,6 +132,7 @@ export function createHandoffService(
         generatedAt: options.generatedAt,
         parentNote: options.parentNote,
         preparedByCaregiver,
+        linkedCaregivers: childCaregivers,
       });
     },
   };

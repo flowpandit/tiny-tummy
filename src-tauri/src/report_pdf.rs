@@ -226,11 +226,14 @@ pub struct TimelineGroup {
 }
 
 #[derive(Debug, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct TimelineRow {
     pub time: String,
     pub event: String,
     pub details: String,
     pub note: String,
+    #[serde(default)]
+    pub attribution_label: Option<String>,
     pub tone: String,
 }
 
@@ -1069,15 +1072,26 @@ impl PdfLayout {
 
         rows.iter()
             .take(8)
-            .map(|row| InfoRow {
-                label: row.time.clone(),
-                value: row.event.clone(),
-                detail: Some(if row.note.trim().is_empty() {
+            .map(|row| {
+                let detail = if row.note.trim().is_empty() {
                     row.details.clone()
                 } else {
                     format!("{} - {}", row.details, row.note)
-                }),
-                tone: Some(row.tone.clone()),
+                };
+                let attributed_detail = row
+                    .attribution_label
+                    .as_deref()
+                    .map(str::trim)
+                    .filter(|label| !label.is_empty())
+                    .map(|label| format!("{} - {}", detail, label))
+                    .unwrap_or(detail);
+
+                InfoRow {
+                    label: row.time.clone(),
+                    value: row.event.clone(),
+                    detail: Some(attributed_detail),
+                    tone: Some(row.tone.clone()),
+                }
             })
             .collect()
     }
@@ -4006,7 +4020,7 @@ mod tests {
             },
             timeline_groups: vec![TimelineGroup {
                 date_label: "May 1".to_string(),
-                rows: vec![TimelineRow { time: "9:00 AM".to_string(), event: "Stool".to_string(), details: "Type 4 - Color yellow".to_string(), note: "Soft yellow stool".to_string(), tone: "default".to_string() }],
+                rows: vec![TimelineRow { time: "9:00 AM".to_string(), event: "Stool".to_string(), details: "Type 4 - Color yellow".to_string(), note: "Soft yellow stool".to_string(), attribution_label: None, tone: "default".to_string() }],
             }],
             handoff: None,
         }
@@ -4035,7 +4049,12 @@ mod tests {
                 metric("Sleep", "2h 10m"),
             ],
             last_event_rows: vec![
-                row("Last poop", "8:20 AM"),
+                InfoRow {
+                    label: "Last poop".to_string(),
+                    value: "8:20 AM".to_string(),
+                    detail: Some("yellow, Type 4, medium - Logged by Mum".to_string()),
+                    tone: Some("default".to_string()),
+                },
                 row("Last wet diaper", "11:20 AM"),
                 row("Last feed", "2:43 PM"),
             ],
@@ -4057,6 +4076,7 @@ mod tests {
                 event: "Poop".to_string(),
                 details: "yellow, Type 4, medium".to_string(),
                 note: "".to_string(),
+                attribution_label: Some("Logged by Mum".to_string()),
                 tone: "default".to_string(),
             }],
         });
@@ -4109,6 +4129,7 @@ mod tests {
             event: "Stool".to_string(),
             details: "Type 4 - yellow".to_string(),
             note: "Soft".to_string(),
+            attribution_label: None,
             tone: "default".to_string(),
         };
         let long = TimelineRow {
@@ -4130,6 +4151,7 @@ mod tests {
                 event: "Stool".to_string(),
                 details: "Type 4 - yellow - medium".to_string(),
                 note: "Parent note wraps cleanly.".to_string(),
+                attribution_label: None,
                 tone: "default".to_string(),
             })
             .collect();
@@ -4184,6 +4206,7 @@ mod tests {
                     details: "Observed log details with stool, diaper, and tummy context."
                         .to_string(),
                     note: long_note.to_string(),
+                    attribution_label: None,
                     tone: if index % 3 == 0 { "caution" } else { "default" }.to_string(),
                 })
                 .collect(),

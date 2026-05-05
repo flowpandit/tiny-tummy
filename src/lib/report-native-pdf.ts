@@ -14,6 +14,7 @@ export interface NativeHandoffTimelineRow {
   event: string;
   details: string;
   note: string;
+  attributionLabel?: string | null;
   tone: ReportPreviewTone;
 }
 
@@ -161,6 +162,7 @@ function buildNativeHandoffPdfModel(
     event: row.eventType,
     details: row.details,
     note: row.note ?? "",
+    attributionLabel: null,
     tone: (index === 0 ? "info" : "default") as ReportPreviewTone,
   }));
 
@@ -285,9 +287,14 @@ function buildNativeHandoffPdfModelFromSummary(summary: HandoffSummary): NativeC
       event: item.title,
       details: item.detail,
       note: "",
+      attributionLabel: item.attributionLabel ?? null,
       tone: "default" as ReportPreviewTone,
     })),
   };
+}
+
+function formatHandoffPdfDetail(detail: string, attributionLabel: string | null | undefined): string {
+  return [detail, attributionLabel].filter(Boolean).join(" - ");
 }
 
 function handoffEventRow(
@@ -306,7 +313,7 @@ function handoffEventRow(
   return {
     label,
     value: formatHandoffTime(event.occurredAt),
-    detail: event.detail,
+    detail: formatHandoffPdfDetail(event.detail, event.attributionLabel),
     tone: event.kind === "symptom" ? "caution" : "default",
   };
 }

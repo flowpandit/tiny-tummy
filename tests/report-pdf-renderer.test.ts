@@ -118,11 +118,20 @@ test("native caregiver handoff payload includes parent note and excludes photo/f
   const photoPoop = {
     ...poop,
     photo_path: "/private/tiny-tummy/poop.jpg",
+    created_by_caregiver_id: "caregiver-mum",
   };
   const photoDiaper = {
     ...diaper,
     photo_path: "/private/tiny-tummy/diaper.jpg",
+    created_by_caregiver_id: "caregiver-mum",
   };
+  const linkedCaregivers = [{
+    id: "caregiver-mum",
+    display_name: "Mum",
+    deleted_at: null,
+    email: "mum@example.com",
+    phone: "0400 000 000",
+  }];
   const options = {
     ...getDefaultReportOptionsForMode("caregiver_handoff", {
       childId: child.id,
@@ -177,6 +186,7 @@ test("native caregiver handoff payload includes parent note and excludes photo/f
     dayKey: "2026-05-04",
     generatedAt: "2026-05-04T15:50:00.000Z",
     parentNote,
+    linkedCaregivers,
   });
 
   const payload = buildNativeReportPdfPayload({
@@ -197,7 +207,12 @@ test("native caregiver handoff payload includes parent note and excludes photo/f
   assert.equal(payload.includeAttachmentMetadata, false);
   assert.equal(payload.handoff?.parentNoteRows.at(0)?.detail, parentNote);
   assert.equal(payload.handoff?.nextDueRows.length, 3);
+  assert.equal(payload.handoff?.timelineRows.at(0)?.attributionLabel, "Logged by Mum");
+  assert.match(payload.handoff?.lastEventRows.find((row) => row.label === "Last poop")?.detail ?? "", /Logged by Mum/);
   assert.equal(serializedPayload.includes("/private/tiny-tummy"), false);
   assert.equal(serializedPayload.includes("photo_path"), false);
+  assert.equal(serializedPayload.includes("caregiver-mum"), false);
+  assert.equal(serializedPayload.includes("mum@example.com"), false);
+  assert.equal(serializedPayload.includes("0400 000 000"), false);
   assert.doesNotMatch(serializedPayload, /diagnose|medical advice|treat/i);
 });
