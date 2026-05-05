@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { writeFile } from "@tauri-apps/plugin-fs";
 import { save } from "@tauri-apps/plugin-dialog";
 import { platform } from "@tauri-apps/plugin-os";
@@ -11,12 +11,8 @@ import { ScenicHero } from "../components/layout/ScenicHero";
 import { PremiumInlineLock } from "../components/billing/PremiumLocks";
 import { ReportComposerCard } from "../components/report/ReportComposerCard";
 import { PageBody } from "../components/ui/page-layout";
-import { ReportPreview } from "../components/report/ReportPreview";
 import { ReportReadyCard } from "../components/report/ReportReadyCard";
-import {
-  getReportPdfRenderer,
-  renderReportPdfBase64,
-} from "../lib/report-pdf-renderer";
+import { renderReportPdfBase64 } from "../lib/report-pdf-renderer";
 import {
   buildReportPatientSummary,
   getReportSaveHelpText,
@@ -45,14 +41,6 @@ function buildPdfFileName(reportKind: "poopTummy" | "fullHealth", startDate: str
   return `tiny-tummy-${reportSlug}-${startDate}-to-${endDate}-${timestamp}.pdf`;
 }
 
-function waitForRenderedReportPreview() {
-  return new Promise<void>((resolve) => {
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => resolve());
-    });
-  });
-}
-
 export function Report() {
   const activeChild = useActiveChild();
   const { unitSystem } = useUnits();
@@ -65,7 +53,6 @@ export function Report() {
   const [isAutoSavingReport, setIsAutoSavingReport] = useState(false);
   const [isSavingReport, setIsSavingReport] = useState(false);
   const [pendingAndroidAutoSave, setPendingAndroidAutoSave] = useState(false);
-  const reportPreviewRef = useRef<HTMLElement | null>(null);
   const {
     today,
     startDate,
@@ -94,7 +81,6 @@ export function Report() {
     }
 
     const result = await renderReportPdfBase64({
-      previewRoot: reportPreviewRef.current,
       child: activeChild,
       startDate,
       endDate,
@@ -127,9 +113,6 @@ export function Report() {
     async function runPendingAndroidSave() {
       try {
         setIsAutoSavingReport(true);
-        if (getReportPdfRenderer() === "react") {
-          await waitForRenderedReportPreview();
-        }
         if (!cancelled) {
           await saveAndroidReportToDownloads(reportData);
         }
@@ -208,9 +191,6 @@ export function Report() {
 
     try {
       setIsSavingReport(true);
-      if (getReportPdfRenderer() === "react") {
-        await waitForRenderedReportPreview();
-      }
 
       if (isAndroid) {
         await saveAndroidReportToDownloads(reportData);
@@ -328,20 +308,6 @@ export function Report() {
               saveHelpText={reportActionHelpText}
               onSave={handleReportCardAction}
             />
-
-            {hasGeneratedReportData && (
-              <div className="tt-report-export-stage" aria-hidden="true">
-                <ReportPreview
-                  child={activeChild}
-                  startDate={startDate}
-                  endDate={endDate}
-                  reportData={reportData}
-                  unitSystem={unitSystem}
-                  previewRef={reportPreviewRef}
-                  exportOnly
-                />
-              </div>
-            )}
           </>
         )}
 

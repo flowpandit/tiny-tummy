@@ -1,9 +1,5 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {
-  normalizeReportPdfRenderer,
-  REPORT_PDF_RENDERER_STORAGE_KEY,
-} from "../src/lib/report-pdf-renderer.ts";
 import { buildNativeReportPdfPayload } from "../src/lib/report-native-pdf.ts";
 import { buildReportData } from "../src/lib/reporting.ts";
 import type { Child, DiaperEntry, PoopEntry } from "../src/lib/types.ts";
@@ -49,15 +45,6 @@ const diaper: DiaperEntry = {
   created_at: "2026-05-04T09:00:00",
   updated_at: "2026-05-04T09:00:00",
 };
-
-test("normalizes supported PDF renderer switch values", () => {
-  assert.equal(normalizeReportPdfRenderer("react"), "react");
-  assert.equal(normalizeReportPdfRenderer("html"), "react");
-  assert.equal(normalizeReportPdfRenderer("rust"), "rust");
-  assert.equal(normalizeReportPdfRenderer("native"), "rust");
-  assert.equal(normalizeReportPdfRenderer("browser"), null);
-  assert.equal(REPORT_PDF_RENDERER_STORAGE_KEY, "tt.reportPdfRenderer");
-});
 
 test("native report payload reuses the preview model structure", () => {
   const data = buildReportData({
