@@ -42,10 +42,12 @@ function buildPdfFileName(reportKind: "poopTummy" | "fullHealth", startDate: str
 }
 
 function ReportReadyBanner({
-  onOpen,
+  actionLabel,
+  onAction,
   onDismiss,
 }: {
-  onOpen: () => void;
+  actionLabel: string;
+  onAction: () => void;
   onDismiss: () => void;
 }) {
   return (
@@ -66,10 +68,10 @@ function ReportReadyBanner({
         </p>
         <button
           type="button"
-          onClick={onOpen}
+          onClick={onAction}
           className="min-h-9 rounded-full bg-[var(--color-primary)] px-4 text-sm font-semibold text-[var(--color-on-primary)] shadow-[var(--shadow-soft)] transition-transform active:scale-[0.98]"
         >
-          Open
+          {actionLabel}
         </button>
         <button
           type="button"
@@ -95,6 +97,7 @@ export function Report() {
   const isAndroid = currentPlatform === "android";
   const isIos = currentPlatform === "ios";
   const [savedAndroidReport, setSavedAndroidReport] = useState<{ fileName: string; uri: string } | null>(null);
+  const [sharedIosReport, setSharedIosReport] = useState<{ fileName: string; base64Data: string } | null>(null);
   const [isReportReadyBannerVisible, setIsReportReadyBannerVisible] = useState(false);
   const [isAutoSavingReport, setIsAutoSavingReport] = useState(false);
   const [isSavingReport, setIsSavingReport] = useState(false);
@@ -214,6 +217,7 @@ export function Report() {
   const handleGenerateReport = async () => {
     try {
       setSavedAndroidReport(null);
+      setSharedIosReport(null);
       setIsReportReadyBannerVisible(false);
       const data = await handleGenerate();
 
@@ -247,7 +251,10 @@ export function Report() {
       const encodedPdf = await createEncodedReportPdf();
 
       if (isIos) {
-        await sharePdfReport(getPdfFileName(), encodedPdf);
+        const fileName = getPdfFileName();
+        await sharePdfReport(fileName, encodedPdf);
+        setSharedIosReport({ fileName, base64Data: encodedPdf });
+        setIsReportReadyBannerVisible(true);
         return;
       }
 
@@ -288,11 +295,28 @@ export function Report() {
     }
   };
 
+  const handleShareSavedIosReport = async () => {
+    if (!sharedIosReport) return;
+
+    try {
+      await sharePdfReport(sharedIosReport.fileName, sharedIosReport.base64Data);
+      setIsReportReadyBannerVisible(false);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      showError(message || "Could not share the PDF report.");
+    }
+  };
+
   const handleReportCardAction = () => {
     if (isSavingReport) return;
 
     if (isAndroid && savedAndroidReport) {
       void handleOpenSavedAndroidReport();
+      return;
+    }
+
+    if (isIos && sharedIosReport) {
+      void handleShareSavedIosReport();
       return;
     }
 
@@ -321,7 +345,15 @@ export function Report() {
     <PageBody className="-mt-8 space-y-0 px-0 py-0">
       {isAndroid && savedAndroidReport && isReportReadyBannerVisible && (
         <ReportReadyBanner
-          onOpen={() => { void handleOpenSavedAndroidReport(); }}
+          actionLabel="Open"
+          onAction={() => { void handleOpenSavedAndroidReport(); }}
+          onDismiss={() => setIsReportReadyBannerVisible(false)}
+        />
+      )}
+      {isIos && sharedIosReport && isReportReadyBannerVisible && (
+        <ReportReadyBanner
+          actionLabel="Share"
+          onAction={() => { void handleShareSavedIosReport(); }}
           onDismiss={() => setIsReportReadyBannerVisible(false)}
         />
       )}
