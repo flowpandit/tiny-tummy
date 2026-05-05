@@ -41,6 +41,51 @@ function buildPdfFileName(reportKind: "poopTummy" | "fullHealth", startDate: str
   return `tiny-tummy-${reportSlug}-${startDate}-to-${endDate}-${timestamp}.pdf`;
 }
 
+function ReportReadyBanner({
+  onOpen,
+  onDismiss,
+}: {
+  onOpen: () => void;
+  onDismiss: () => void;
+}) {
+  return (
+    <div
+      className="fixed inset-x-0 z-40 px-4 md:px-6"
+      style={{ top: "calc(var(--safe-area-top) + 80px)" }}
+      role="status"
+      aria-live="polite"
+    >
+      <div className="mx-auto flex max-w-[520px] items-center gap-3 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)]/95 px-3 py-2.5 shadow-[var(--shadow-medium)] backdrop-blur-[18px]">
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--color-healthy-bg)] text-[var(--color-healthy)]">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="none" className="h-4 w-4" aria-hidden="true">
+            <path d="m5 10.4 3.1 3.1L15.2 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </div>
+        <p className="min-w-0 flex-1 text-sm font-semibold text-[var(--color-text)]">
+          Report is ready
+        </p>
+        <button
+          type="button"
+          onClick={onOpen}
+          className="min-h-9 rounded-full bg-[var(--color-primary)] px-4 text-sm font-semibold text-[var(--color-on-primary)] shadow-[var(--shadow-soft)] transition-transform active:scale-[0.98]"
+        >
+          Open
+        </button>
+        <button
+          type="button"
+          onClick={onDismiss}
+          className="flex min-h-9 min-w-9 items-center justify-center rounded-full text-[var(--color-muted)] transition-colors hover:bg-[var(--color-home-hover-surface)] hover:text-[var(--color-text-secondary)]"
+          aria-label="Dismiss report ready banner"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4" aria-hidden="true">
+            <path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" />
+          </svg>
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export function Report() {
   const activeChild = useActiveChild();
   const { unitSystem } = useUnits();
@@ -50,6 +95,7 @@ export function Report() {
   const isAndroid = currentPlatform === "android";
   const isIos = currentPlatform === "ios";
   const [savedAndroidReport, setSavedAndroidReport] = useState<{ fileName: string; uri: string } | null>(null);
+  const [isReportReadyBannerVisible, setIsReportReadyBannerVisible] = useState(false);
   const [isAutoSavingReport, setIsAutoSavingReport] = useState(false);
   const [isSavingReport, setIsSavingReport] = useState(false);
   const [pendingAndroidAutoSave, setPendingAndroidAutoSave] = useState(false);
@@ -101,9 +147,9 @@ export function Report() {
 
     const savedReport = await savePdfToDownloads(getPdfFileName(), encodedPdf);
     setSavedAndroidReport(savedReport);
-    showSuccess("Report saved to Downloads.");
+    setIsReportReadyBannerVisible(true);
     return savedReport;
-  }, [createEncodedReportPdf, getPdfFileName, reportData, showSuccess]);
+  }, [createEncodedReportPdf, getPdfFileName, reportData]);
 
   useEffect(() => {
     if (!pendingAndroidAutoSave || !isAndroid || !reportData || !hasGeneratedReportData) return;
@@ -168,6 +214,7 @@ export function Report() {
   const handleGenerateReport = async () => {
     try {
       setSavedAndroidReport(null);
+      setIsReportReadyBannerVisible(false);
       const data = await handleGenerate();
 
       if (!isAndroid || !data || !hasReportableData(data)) {
@@ -234,6 +281,7 @@ export function Report() {
 
     try {
       await openPdfFromDownloads(savedAndroidReport.uri);
+      setIsReportReadyBannerVisible(false);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       showError(message || "Could not open the saved PDF report.");
@@ -271,6 +319,13 @@ export function Report() {
 
   return (
     <PageBody className="-mt-8 space-y-0 px-0 py-0">
+      {isAndroid && savedAndroidReport && isReportReadyBannerVisible && (
+        <ReportReadyBanner
+          onOpen={() => { void handleOpenSavedAndroidReport(); }}
+          onDismiss={() => setIsReportReadyBannerVisible(false)}
+        />
+      )}
+
       <ScenicHero
         child={activeChild}
         title="Report"
