@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useActiveChild } from "../contexts/ChildContext";
-import { usePremiumFeature } from "../contexts/TrialContext";
+import { useFeatureGate } from "../contexts/TrialContext";
 import { useUnits } from "../contexts/UnitsContext";
 import { useHistoryPageState } from "../hooks/useHistoryPageState";
 import { formatLocalDateKey } from "../lib/utils";
@@ -33,7 +33,7 @@ import type {
 export function History() {
   const activeChild = useActiveChild();
   const { unitSystem, temperatureUnit } = useUnits();
-  const canUseFullHistory = usePremiumFeature("fullHistory");
+  const canUseFullHistory = useFeatureGate("unlimited_history");
   const today = formatLocalDateKey(new Date());
   const freeHistoryStartDate = getFreeHistoryStartDate(today);
   const [expandedDay, setExpandedDay] = useState<string | null>(today);
@@ -159,7 +159,7 @@ export function History() {
 
       {!canUseFullHistory && (
         <PremiumInlineLock
-          featureId="fullHistory"
+          featureId="unlimited_history"
           tone="compact"
           title="Last 7 days stay free"
           description="Unlock Premium when you need older poop, diaper, feed, sleep, symptom, growth, or milestone records for longer patterns."

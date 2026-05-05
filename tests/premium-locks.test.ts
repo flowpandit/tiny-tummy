@@ -31,7 +31,7 @@ test("PremiumInlineLock routes to unlock with feature context and return path", 
         React.createElement(Route, {
           path: "/history",
           element: React.createElement(PremiumInlineLock, {
-            featureId: "fullHistory",
+            featureId: "unlimited_history",
             title: "Last 7 days stay free",
           }),
         }),
@@ -46,21 +46,25 @@ test("PremiumInlineLock routes to unlock with feature context and return path", 
   fireEvent.click(screen.getByRole("button", { name: "Unlock" }));
 
   assert.equal(screen.getByTestId("pathname").textContent, "/unlock");
-  assert.equal(screen.getByTestId("feature-id").textContent, "fullHistory");
+  assert.equal(screen.getByTestId("feature-id").textContent, "unlimited_history");
   assert.equal(screen.getByTestId("return-to").textContent, "/history");
 });
 
-test("Paywall navigation state accepts only app return paths and known features", () => {
+test("Paywall navigation state accepts only app return paths and known canonical features", () => {
+  assert.deepEqual(getPaywallNavigationState({ featureId: "pediatrician_report", returnTo: "/report" }), {
+    featureId: "pediatrician_report",
+    returnTo: "/report",
+  });
   assert.deepEqual(getPaywallNavigationState({ featureId: "doctorReports", returnTo: "/report" }), {
-    featureId: "doctorReports",
+    featureId: "pediatrician_report",
     returnTo: "/report",
   });
   assert.deepEqual(getPaywallNavigationState({ featureId: "unknown", returnTo: "https://example.com" }), {
     featureId: null,
     returnTo: "/",
   });
-  assert.deepEqual(getPaywallNavigationState({ featureId: "multiChild", returnTo: "/unlock" }), {
-    featureId: "multiChild",
+  assert.deepEqual(getPaywallNavigationState({ featureId: "multi_child", returnTo: "/unlock" }), {
+    featureId: "multi_child",
     returnTo: "/",
   });
 });

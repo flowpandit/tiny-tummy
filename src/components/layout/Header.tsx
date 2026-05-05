@@ -43,7 +43,7 @@ export function Header({ showBackButton = false, fallbackTo = "/", visible = tru
 
   const handleSelectChild = (childId: string) => {
     if (!canAccessChild(childId, children, entitlement)) {
-      navigate("/unlock", { state: { featureId: "multiChild", returnTo: location.pathname } });
+      navigate("/unlock", { state: { featureId: "multi_child", returnTo: location.pathname } });
       return;
     }
 

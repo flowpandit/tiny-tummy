@@ -9,6 +9,7 @@ import { PageBody } from "../components/ui/page-layout";
 import { useToast } from "../components/ui/toast";
 import { useActiveChild } from "../contexts/ChildContext";
 import { useServices } from "../contexts/DatabaseContext";
+import { useFeatureGate } from "../contexts/TrialContext";
 import { useUnits } from "../contexts/UnitsContext";
 import { useCaregiverHandoff } from "../hooks/useCaregiverHandoff";
 import {
@@ -101,6 +102,7 @@ export function CaregiverHandoff() {
   const { unitSystem } = useUnits();
   const navigate = useNavigate();
   const { showError, showSuccess } = useToast();
+  const canGenerateHandoffPdf = useFeatureGate("caregiver_handoff_pdf");
   const currentPlatform = platform();
   const isAndroid = currentPlatform === "android";
   const isIos = currentPlatform === "ios";
@@ -174,6 +176,10 @@ export function CaregiverHandoff() {
 
   const handleGeneratePdf = async () => {
     if (!activeChild || !displaySummary || isGeneratingPdf) return;
+    if (!canGenerateHandoffPdf) {
+      navigate("/unlock", { state: { featureId: "caregiver_handoff_pdf", returnTo: "/handoff" } });
+      return;
+    }
 
     const dayKey = displaySummary.handoffWindow.end || displaySummary.handoffWindow.start;
     const generatedAt = displaySummary.generatedAt;

@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useActiveChild } from "../../contexts/ChildContext";
 import { useTheme } from "../../contexts/ThemeContext";
 import { useUnits } from "../../contexts/UnitsContext";
-import { usePremiumFeature, useTrialAccess, useTrialActions } from "../../contexts/TrialContext";
+import { useFeatureGate, useTrialAccess, useTrialActions } from "../../contexts/TrialContext";
 import { useEliminationPreference } from "../../hooks/useEliminationPreference";
 import { Card, CardContent } from "../ui/card";
 import { Button } from "../ui/button";
@@ -30,6 +30,10 @@ import {
   getAllowedEliminationViewPreferences,
   type EliminationViewPreference,
 } from "../../lib/diaper";
+import {
+  DEVELOPER_FEATURE_ENTITLEMENT_PRESETS,
+} from "../../lib/developer-feature-entitlements";
+import type { EntitlementId } from "../../lib/feature-access";
 import type { Child, TemperatureUnit, UnitSystem } from "../../lib/types";
 
 const THEME_OPTIONS: { value: "system" | "light" | "dark"; label: string }[] = [
@@ -258,7 +262,7 @@ export function ChildrenSection({
               </span>
               <span className="flex min-w-0 items-center gap-2">
                 <span className="text-[0.92rem] font-semibold">{isAddChildPremiumLocked ? "Unlock to add child" : "Add Child"}</span>
-                {isAddChildPremiumLocked && <PremiumBadge featureId="multiChild" className="px-2 py-0.5 text-[0.58rem]" />}
+                {isAddChildPremiumLocked && <PremiumBadge featureId="multi_child" className="px-2 py-0.5 text-[0.58rem]" />}
               </span>
             </button>
           </div>
@@ -270,7 +274,7 @@ export function ChildrenSection({
 
 export function NotificationSection({ children }: { children: Child[] }) {
   const { showError } = useToast();
-  const canUseSmartReminders = usePremiumFeature("smartReminders");
+  const canUseSmartReminders = useFeatureGate("smart_reminders");
   const [enabled, setEnabled] = useState(false);
   const [smartSettings, setSmartSettings] = useState<SmartReminderSettings>({
     noPoop: false,
@@ -342,7 +346,7 @@ export function NotificationSection({ children }: { children: Child[] }) {
       {!canUseSmartReminders && (
         <div className="mt-3">
           <PremiumInlineLock
-            featureId="smartReminders"
+            featureId="smart_reminders"
             tone="compact"
             title="Daily reminders stay free"
             description="Unlock Premium for local no-poop, red-flag stool color, and active episode follow-up reminders."
@@ -641,14 +645,18 @@ export function DeveloperToolsSection({
   onSetTrialDaysAgo,
   onClearPremium,
   onSimulatePremiumUnlock,
+  onSetDeveloperEntitlements,
+  onClearDeveloperEntitlements,
 }: {
   onSimulateExpiration: () => Promise<void> | void;
   onResetTrial: () => Promise<void> | void;
   onSetTrialDaysAgo: (daysAgo: number) => Promise<void> | void;
   onClearPremium: () => Promise<void> | void;
   onSimulatePremiumUnlock: () => Promise<void> | void;
+  onSetDeveloperEntitlements: (entitlements: readonly EntitlementId[]) => Promise<void> | void;
+  onClearDeveloperEntitlements: () => Promise<void> | void;
 }) {
-  const { daysRemaining, isLocked } = useTrialAccess();
+  const { daysRemaining, developerEntitlements, isLocked } = useTrialAccess();
   const { showError, showSuccess } = useToast();
 
   if (!import.meta.env.DEV) {
@@ -664,6 +672,18 @@ export function DeveloperToolsSection({
     }
   };
 
+  const formatSimulatedEntitlements = () => {
+    if (developerEntitlements.length === 0) return "None";
+
+    return developerEntitlements.map((entitlement) => {
+      if (entitlement === "report_pack") return "Report pack";
+      if (entitlement === "sync_addon") return "Sync add-on";
+      if (entitlement === "family_lifetime") return "Family lifetime";
+      if (entitlement === "developer_override") return "Developer override";
+      return entitlement.replace(/_/g, " ");
+    }).join(", ");
+  };
+
   return (
     <section className="pb-4">
       <h3 className="mb-3 px-1 text-[0.74rem] font-bold uppercase tracking-[0.18em] text-[var(--color-alert)] md:text-[0.78rem]">Developer Tools</h3>
@@ -672,6 +692,9 @@ export function DeveloperToolsSection({
           <p className="text-xs text-[var(--color-text-secondary)]">These tools only appear during local development.</p>
           <p className="rounded-[var(--radius-sm)] bg-[var(--color-alert)]/8 px-3 py-2 text-xs text-[var(--color-text)]">
             Current access state: {isLocked ? "Trial expired" : `${daysRemaining} day${daysRemaining === 1 ? "" : "s"} left in trial`}
+          </p>
+          <p className="rounded-[var(--radius-sm)] bg-[var(--color-alert)]/8 px-3 py-2 text-xs text-[var(--color-text)]">
+            Feature simulation: {formatSimulatedEntitlements()}
           </p>
           <Button
             variant="secondary"
@@ -717,6 +740,75 @@ export function DeveloperToolsSection({
             }}
           >
             Simulate Premium Unlock
+          </Button>
+          <Button
+            variant="secondary"
+            className="w-full border border-[var(--color-alert)]/30 text-[var(--color-alert)] hover:bg-[var(--color-alert)]/10"
+            onClick={() => {
+              void runAction(
+                () => onSetDeveloperEntitlements(DEVELOPER_FEATURE_ENTITLEMENT_PRESETS.reportPack),
+                "Report pack simulation enabled.",
+              );
+            }}
+          >
+            Simulate Report Pack
+          </Button>
+          <Button
+            variant="secondary"
+            className="w-full border border-[var(--color-alert)]/30 text-[var(--color-alert)] hover:bg-[var(--color-alert)]/10"
+            onClick={() => {
+              void runAction(
+                () => onSetDeveloperEntitlements(DEVELOPER_FEATURE_ENTITLEMENT_PRESETS.syncAddon),
+                "Sync add-on simulation enabled.",
+              );
+            }}
+          >
+            Simulate Sync Add-on
+          </Button>
+          <Button
+            variant="secondary"
+            className="w-full border border-[var(--color-alert)]/30 text-[var(--color-alert)] hover:bg-[var(--color-alert)]/10"
+            onClick={() => {
+              void runAction(
+                () => onSetDeveloperEntitlements(DEVELOPER_FEATURE_ENTITLEMENT_PRESETS.familyLifetime),
+                "Family lifetime simulation enabled.",
+              );
+            }}
+          >
+            Simulate Family Lifetime
+          </Button>
+          <Button
+            variant="secondary"
+            className="w-full border border-[var(--color-alert)]/30 text-[var(--color-alert)] hover:bg-[var(--color-alert)]/10"
+            onClick={() => {
+              void runAction(
+                () => onSetDeveloperEntitlements(DEVELOPER_FEATURE_ENTITLEMENT_PRESETS.reportAndSync),
+                "Report and sync simulation enabled.",
+              );
+            }}
+          >
+            Simulate Report + Sync
+          </Button>
+          <Button
+            variant="secondary"
+            className="w-full border border-[var(--color-alert)]/30 text-[var(--color-alert)] hover:bg-[var(--color-alert)]/10"
+            onClick={() => {
+              void runAction(
+                () => onSetDeveloperEntitlements(DEVELOPER_FEATURE_ENTITLEMENT_PRESETS.allFeatureAccess),
+                "All feature simulation enabled.",
+              );
+            }}
+          >
+            Simulate All Feature Access
+          </Button>
+          <Button
+            variant="secondary"
+            className="w-full border border-[var(--color-alert)]/30 text-[var(--color-alert)] hover:bg-[var(--color-alert)]/10"
+            onClick={() => {
+              void runAction(onClearDeveloperEntitlements, "Feature simulation cleared.");
+            }}
+          >
+            Clear Feature Simulations
           </Button>
         </CardContent>
       </Card>

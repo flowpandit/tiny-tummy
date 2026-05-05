@@ -1,8 +1,8 @@
 import type { ReactNode } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { usePremiumFeature } from "../../contexts/TrialContext";
+import { useFeatureGate } from "../../contexts/TrialContext";
 import { cn } from "../../lib/cn";
-import type { PremiumFeatureId } from "../../lib/feature-access";
+import type { FeatureIdentifier } from "../../lib/feature-access";
 import { getPremiumFeatureCopy } from "../../lib/premium-feature-copy";
 import { Button } from "../ui/button";
 
@@ -21,7 +21,7 @@ export function PremiumBadge({
   featureId,
   className,
 }: {
-  featureId?: PremiumFeatureId;
+  featureId?: FeatureIdentifier;
   className?: string;
 }) {
   const label = featureId ? getPremiumFeatureCopy(featureId).label : "Premium";
@@ -45,7 +45,7 @@ export function PremiumInlineLock({
   className,
   actionLabel = "Unlock",
 }: {
-  featureId: PremiumFeatureId;
+  featureId: FeatureIdentifier;
   title?: string;
   description?: string;
   tone?: PremiumLockTone;
@@ -107,11 +107,11 @@ export function PremiumFeatureGate({
   children,
   fallback,
 }: {
-  featureId: PremiumFeatureId;
+  featureId: FeatureIdentifier;
   children: ReactNode;
   fallback?: ReactNode;
 }) {
-  const canUseFeature = usePremiumFeature(featureId);
+  const canUseFeature = useFeatureGate(featureId);
   if (canUseFeature) return <>{children}</>;
   return <>{fallback ?? <PremiumInlineLock featureId={featureId} />}</>;
 }

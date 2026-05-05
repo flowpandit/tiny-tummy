@@ -82,7 +82,7 @@ export function ScenicHero({
     }
 
     if (!canAccessChild(childId, children, entitlement)) {
-      navigate("/unlock", { state: { featureId: "multiChild", returnTo: location.pathname } });
+      navigate("/unlock", { state: { featureId: "multi_child", returnTo: location.pathname } });
       return;
     }
 

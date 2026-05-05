@@ -31,7 +31,7 @@ export function SmartReminderRows({
             <div className="min-w-0">
               <div className="flex min-w-0 items-center gap-2">
                 <p className="truncate text-[0.9rem] font-semibold leading-tight text-[var(--color-text)]">{row.title}</p>
-                {!canUseSmartReminders && <PremiumBadge featureId="smartReminders" className="shrink-0 px-2 py-0.5 text-[0.58rem]" />}
+                {!canUseSmartReminders && <PremiumBadge featureId="smart_reminders" className="shrink-0 px-2 py-0.5 text-[0.58rem]" />}
               </div>
               <p className={SETTINGS_DESCRIPTION_CLASS}>{row.description}</p>
             </div>

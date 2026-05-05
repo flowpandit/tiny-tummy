@@ -161,6 +161,7 @@ const SNAPSHOT_EXCLUDED_SETTING_KEYS = new Set([
   "premium_product_id",
   "trial_started_at",
   "trial_last_seen_at",
+  "developer_feature_entitlements",
   "app_is_premium",
   "app_first_launched_at",
 ])

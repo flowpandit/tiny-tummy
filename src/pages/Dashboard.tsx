@@ -8,7 +8,7 @@ import { TrendSummaryTile } from "../components/trends/TrendSummaryTile";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { CompactPageHeader, EmptyState, PageBody } from "../components/ui/page-layout";
 import { useActiveChild } from "../contexts/ChildContext";
-import { usePremiumFeature } from "../contexts/TrialContext";
+import { useFeatureGate } from "../contexts/TrialContext";
 import { PremiumInlineLock } from "../components/billing/PremiumLocks";
 import { useTrendsOverview } from "../hooks/useTrendsOverview";
 import type { TrendsTab } from "../lib/trends";
@@ -31,7 +31,7 @@ const PERIOD_OPTIONS = [
 
 export function Dashboard() {
   const activeChild = useActiveChild();
-  const canUseAdvancedInsights = usePremiumFeature("advancedInsights");
+  const canUseAdvancedInsights = useFeatureGate("advanced_trends");
   const [days, setDays] = useState(7);
   const [activeTab, setActiveTab] = useState<TrendsTab>("overview");
   const { overview, poopStats } = useTrendsOverview(activeChild, days);
@@ -52,7 +52,7 @@ export function Dashboard() {
         </section>
 
         <PremiumInlineLock
-          featureId="advancedInsights"
+          featureId="advanced_trends"
           title="Advanced trends are Premium"
           description="Today views and basic logging stay free. Unlock charts and pattern reads when you want to compare poop, diaper, feed, and sleep changes over time."
           actionLabel="Unlock trends"

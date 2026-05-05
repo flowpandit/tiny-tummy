@@ -3,7 +3,7 @@ import { writeFile } from "@tauri-apps/plugin-fs";
 import { save } from "@tauri-apps/plugin-dialog";
 import { platform } from "@tauri-apps/plugin-os";
 import { useActiveChild } from "../contexts/ChildContext";
-import { usePremiumFeature } from "../contexts/TrialContext";
+import { useFeatureGate } from "../contexts/TrialContext";
 import { useUnits } from "../contexts/UnitsContext";
 import { useReportPageState } from "../hooks/useReportPageState";
 import { CareToolsSection } from "../components/care/CareToolsSection";
@@ -19,6 +19,7 @@ import {
   getReportSaveLabel,
   hasReportableData,
 } from "../lib/report-view-model";
+import { getReportFeatureIdForKind } from "../lib/feature-access";
 import { useToast } from "../components/ui/toast";
 import {
   openPdfFromDownloads,
@@ -91,7 +92,8 @@ function ReportReadyBanner({
 export function Report() {
   const activeChild = useActiveChild();
   const { unitSystem } = useUnits();
-  const canUseReports = usePremiumFeature("doctorReports");
+  const reportFeatureId = getReportFeatureIdForKind("fullHealth");
+  const canUseReports = useFeatureGate(reportFeatureId);
   const { showError, showSuccess } = useToast();
   const currentPlatform = platform();
   const isAndroid = currentPlatform === "android";
@@ -200,7 +202,7 @@ export function Report() {
 
         <div className="-mt-28 px-4 md:-mt-24 md:px-10">
           <PremiumInlineLock
-            featureId="doctorReports"
+            featureId={reportFeatureId}
             title="Doctor-ready PDFs are Premium"
             description="Basic logging stays free. Unlock when you want a clean report with poop, diaper, feeding, symptoms, and timeline context for a visit."
             actionLabel="Unlock reports"

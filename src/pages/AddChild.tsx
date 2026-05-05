@@ -11,7 +11,7 @@ import { FEEDING_TYPES, AVATAR_COLORS, CHILD_SEX_OPTIONS } from "../lib/constant
 import { cn } from "../lib/cn";
 import { useCreateChildAction } from "../hooks/useCreateChildAction";
 import { useChildActions, useChildren } from "../contexts/ChildContext";
-import { usePremiumFeature } from "../contexts/TrialContext";
+import { useFeatureGate } from "../contexts/TrialContext";
 import { useToast } from "../components/ui/toast";
 import { Header } from "../components/layout/Header";
 import { getCurrentLocalDate } from "../lib/utils";
@@ -20,7 +20,7 @@ import type { ChildSex, FeedingType } from "../lib/types";
 export function AddChild() {
   const navigate = useNavigate();
   const children = useChildren();
-  const canUseMultiChild = usePremiumFeature("multiChild");
+  const canUseMultiChild = useFeatureGate("multi_child");
   const { refreshChildren, setActiveChildId } = useChildActions();
   const { showError } = useToast();
   const createChild = useCreateChildAction();
@@ -78,7 +78,7 @@ export function AddChild() {
         </p>
 
         <PremiumInlineLock
-          featureId="multiChild"
+          featureId="multi_child"
           title="Multi-child tracking is Premium"
           description="Your existing records stay private on this device. Unlock once to add and switch between more children."
           actionLabel="Unlock multi-child"

@@ -1,10 +1,10 @@
 import {
-  isPremiumFeatureId,
-  type PremiumFeatureId,
+  parseFeatureId,
+  type FeatureId,
 } from "./feature-access";
 
 export interface PaywallNavigationState {
-  featureId: PremiumFeatureId | null;
+  featureId: FeatureId | null;
   returnTo: string;
 }
 
@@ -19,7 +19,7 @@ export function getPaywallNavigationState(state: unknown): PaywallNavigationStat
     : "/";
 
   return {
-    featureId: isPremiumFeatureId(raw.featureId) ? raw.featureId : null,
+    featureId: parseFeatureId(raw.featureId),
     returnTo,
   };
 }

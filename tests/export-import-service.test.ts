@@ -333,6 +333,7 @@ const settings: AppSettingSnapshot[] = [
   { key: `elimination_view:${child.id}`, value: "diaper" },
   { key: "premium_unlocked", value: "1" },
   { key: "trial_started_at", value: "2026-04-01T00:00:00.000Z" },
+  { key: "developer_feature_entitlements", value: "[\"sync_addon\"]" },
   { key: `sleep_timer:session:${child.id}`, value: "{}" },
 ]
 
@@ -498,6 +499,7 @@ test("keeps photo file contents out of the snapshot JSON", async () => {
   assert.doesNotMatch(jsonExport.json, /base64/i)
   assert.doesNotMatch(jsonExport.json, /file_contents/i)
   assert.doesNotMatch(jsonExport.json, /premium_unlocked/)
+  assert.doesNotMatch(jsonExport.json, /developer_feature_entitlements/)
   assert.equal(jsonExport.summary.attachmentCount, 1)
 })
 

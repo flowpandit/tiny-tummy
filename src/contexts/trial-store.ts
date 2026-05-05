@@ -7,13 +7,20 @@ import {
   setTrialDaysAgoForDebug,
   simulateExpiredTrial,
 } from "../lib/entitlements";
+import {
+  clearDeveloperFeatureEntitlements,
+  getDeveloperFeatureEntitlements,
+  setDeveloperFeatureEntitlements,
+} from "../lib/developer-feature-entitlements";
 import { purchasePremium, restorePurchases, syncOwnedPurchase } from "../lib/billing-service";
+import type { EntitlementId } from "../lib/feature-access";
 import { createExternalStore, type ExternalStore } from "../lib/store";
 
 const STARTUP_LOAD_TIMEOUT_MS = 30000;
 
 interface TrialStoreState {
   entitlement: EntitlementState | null;
+  developerEntitlements: EntitlementId[];
   isLoading: boolean;
   loadError: string | null;
 }
@@ -28,12 +35,15 @@ export interface TrialStore extends ExternalStore<TrialStoreState> {
     setTrialDaysAgo: (daysAgo: number) => Promise<void>;
     clearPremium: () => Promise<void>;
     simulateExpiration: () => Promise<void>;
+    setDeveloperEntitlements: (entitlements: readonly EntitlementId[]) => Promise<void>;
+    clearDeveloperEntitlements: () => Promise<void>;
   };
 }
 
 export function createTrialStore(): TrialStore {
   const store = createExternalStore<TrialStoreState>({
     entitlement: null,
+    developerEntitlements: [],
     isLoading: true,
     loadError: null,
   });
@@ -51,10 +61,18 @@ export function createTrialStore(): TrialStore {
     try {
       // Tauri desktop startup can be noticeably slower in CI while the WebView,
       // plugin-sql, and app-data SQLite file initialize for the first time.
-      const entitlement = await withTimeout(getEntitlementState(), STARTUP_LOAD_TIMEOUT_MS, "Loading access state");
+      const [entitlement, developerEntitlements] = await withTimeout(
+        Promise.all([
+          getEntitlementState(),
+          import.meta.env.DEV ? getDeveloperFeatureEntitlements() : Promise.resolve([]),
+        ]),
+        STARTUP_LOAD_TIMEOUT_MS,
+        "Loading access state",
+      );
       store.setState((state) => ({
         ...state,
         entitlement,
+        developerEntitlements,
         isLoading: false,
         loadError: null,
       }));
@@ -105,6 +123,16 @@ export function createTrialStore(): TrialStore {
     await refreshTrial();
   };
 
+  const setSimulatedDeveloperEntitlements = async (entitlements: readonly EntitlementId[]) => {
+    await setDeveloperFeatureEntitlements(entitlements);
+    await refreshTrial();
+  };
+
+  const clearSimulatedDeveloperEntitlements = async () => {
+    await clearDeveloperFeatureEntitlements();
+    await refreshTrial();
+  };
+
   return {
     ...store,
     initialize() {
@@ -122,6 +150,8 @@ export function createTrialStore(): TrialStore {
       setTrialDaysAgo,
       clearPremium,
       simulateExpiration,
+      setDeveloperEntitlements: setSimulatedDeveloperEntitlements,
+      clearDeveloperEntitlements: clearSimulatedDeveloperEntitlements,
     },
   };
 }

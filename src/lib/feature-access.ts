@@ -1,22 +1,44 @@
 import type { EntitlementState } from "./entitlements";
 import type { Child } from "./types";
+import {
+  LEGACY_PREMIUM_FEATURE_IDS,
+  createFeatureGateService,
+  isFeatureIdentifier,
+  type FeatureAccess,
+  type FeatureGateContext,
+  type FeatureIdentifier,
+  type LegacyPremiumFeatureId,
+} from "./feature-gate-service";
 
 export const FREE_HISTORY_WINDOW_DAYS = 7;
 
-export const PREMIUM_FEATURE_IDS = [
-  "doctorReports",
-  "fullHistory",
-  "advancedInsights",
-  "photoCapture",
-  "multiChild",
-  "smartReminders",
-] as const;
+export {
+  FEATURE_IDS,
+  createFeatureGateService,
+  getFeatureDefinition,
+  getReportFeatureIdForKind,
+  getReportFeatureIdForMode,
+  isEntitlementId,
+  isFeatureId,
+  normalizeFeatureId,
+  parseFeatureId,
+  type CurrentEntitlement,
+  type EntitlementId,
+  type FeatureAccess,
+  type FeatureAccessReason,
+  type FeatureAccessSource,
+  type FeatureGateContext,
+  type FeatureId,
+  type FeatureIdentifier,
+} from "./feature-gate-service";
 
-export type PremiumFeatureId = (typeof PREMIUM_FEATURE_IDS)[number];
+export const PREMIUM_FEATURE_IDS = LEGACY_PREMIUM_FEATURE_IDS;
+
+export type PremiumFeatureId = LegacyPremiumFeatureId;
 export type AccessKind = "trial" | "premium" | "free";
 
-export function isPremiumFeatureId(value: unknown): value is PremiumFeatureId {
-  return typeof value === "string" && PREMIUM_FEATURE_IDS.includes(value as PremiumFeatureId);
+export function isPremiumFeatureId(value: unknown): value is FeatureIdentifier {
+  return isFeatureIdentifier(value);
 }
 
 export function getAccessKind(entitlement: EntitlementState | null): AccessKind {
@@ -29,11 +51,28 @@ export function hasFullAccess(entitlement: EntitlementState | null): boolean {
   return getAccessKind(entitlement) !== "free";
 }
 
+export function getFeatureAccess(
+  entitlement: EntitlementState | null,
+  featureId: FeatureIdentifier,
+  context?: FeatureGateContext,
+): FeatureAccess {
+  return createFeatureGateService(entitlement).getFeatureAccess(featureId, context);
+}
+
+export function canUseFeature(
+  entitlement: EntitlementState | null,
+  featureId: FeatureIdentifier,
+  context?: FeatureGateContext,
+): boolean {
+  return createFeatureGateService(entitlement).canUseFeature(featureId, context);
+}
+
 export function canUsePremiumFeature(
   entitlement: EntitlementState | null,
-  _featureId: PremiumFeatureId,
+  featureId: FeatureIdentifier,
+  context?: FeatureGateContext,
 ): boolean {
-  return hasFullAccess(entitlement);
+  return canUseFeature(entitlement, featureId, context);
 }
 
 function parseDateKey(value: string): Date {
@@ -73,7 +112,7 @@ export function canAccessChild(
   children: readonly Child[],
   entitlement: EntitlementState | null,
 ): boolean {
-  if (hasFullAccess(entitlement)) return true;
+  if (canUseFeature(entitlement, "multi_child")) return true;
   return isChildIncludedInFreePlan(childId, children);
 }
 

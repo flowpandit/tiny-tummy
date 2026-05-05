@@ -13,7 +13,7 @@ import {
 } from "../components/settings/SettingsSections";
 import { PageBody } from "../components/ui/page-layout";
 import { useDeleteChildAction } from "../hooks/useSettingsActions";
-import { canUsePremiumFeature } from "../lib/feature-access";
+import { canUseFeature } from "../lib/feature-access";
 import type { Child } from "../lib/types";
 
 function SettingsHeroArt() {
@@ -72,7 +72,15 @@ export function Settings() {
   const activeChild = useActiveChild();
   const { refreshChildren } = useChildActions();
   const { entitlement } = useTrialAccess();
-  const { clearPremium, resetTrial, setTrialDaysAgo, simulateExpiration, unlockPremium } = useTrialActions();
+  const {
+    clearDeveloperEntitlements,
+    clearPremium,
+    resetTrial,
+    setDeveloperEntitlements,
+    setTrialDaysAgo,
+    simulateExpiration,
+    unlockPremium,
+  } = useTrialActions();
   const navigate = useNavigate();
   const deleteChild = useDeleteChildAction(refreshChildren);
   const [editingChild, setEditingChild] = useState<Child | null>(null);
@@ -84,14 +92,14 @@ export function Settings() {
   };
 
   const handleAddChild = () => {
-    if (!canUsePremiumFeature(entitlement, "multiChild") && children.length > 0) {
-      navigate("/unlock", { state: { featureId: "multiChild", returnTo: "/settings" } });
+    if (!canUseFeature(entitlement, "multi_child") && children.length > 0) {
+      navigate("/unlock", { state: { featureId: "multi_child", returnTo: "/settings" } });
       return;
     }
 
     navigate("/add-child");
   };
-  const isAddChildPremiumLocked = !canUsePremiumFeature(entitlement, "multiChild") && children.length > 0;
+  const isAddChildPremiumLocked = !canUseFeature(entitlement, "multi_child") && children.length > 0;
 
   return (
     <PageBody className="-mt-8 space-y-0 px-0 py-0">
@@ -138,6 +146,12 @@ export function Settings() {
           }}
           onSimulatePremiumUnlock={() => {
             void unlockPremium();
+          }}
+          onSetDeveloperEntitlements={(entitlements) => {
+            void setDeveloperEntitlements(entitlements);
+          }}
+          onClearDeveloperEntitlements={() => {
+            void clearDeveloperEntitlements();
           }}
         />
       </div>

@@ -12,7 +12,7 @@ import { ColorPicker } from "./ColorPicker";
 import { SizePicker } from "./SizePicker";
 import { FieldLabel, Textarea } from "../ui/field";
 import { useTheme } from "../../contexts/ThemeContext";
-import { usePremiumFeature } from "../../contexts/TrialContext";
+import { useFeatureGate } from "../../contexts/TrialContext";
 import { PremiumInlineLock } from "../billing/PremiumLocks";
 import { cn } from "../../lib/cn";
 import { diaperIncludesStool, diaperIncludesWet } from "../../lib/diaper";
@@ -44,7 +44,7 @@ export function DiaperLogForm({
 }: DiaperLogFormProps) {
   const { showError } = useToast();
   const { resolved } = useTheme();
-  const canAddPhoto = usePremiumFeature("photoCapture");
+  const canAddPhoto = useFeatureGate("stool_photo_capture");
   const nightMode = resolved === "night";
   const photoInputCapture = platform() === "ios" ? undefined : "environment";
   const { fileInputRef, photoFile, photoPreview, resetPhoto, setPhotoFromChange } = usePhotoField();
@@ -138,7 +138,7 @@ export function DiaperLogForm({
                   </div>
                 ) : !canAddPhoto ? (
                   <PremiumInlineLock
-                    featureId="photoCapture"
+                    featureId="stool_photo_capture"
                     tone="compact"
                     title="Photos are Premium"
                     description="Wet and dirty diaper logging stays free. Unlock Premium when you want private stool photos saved with entries."

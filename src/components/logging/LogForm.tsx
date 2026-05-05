@@ -10,7 +10,7 @@ import { LogSuccess } from "./LogSuccess";
 import { LogDateTimeFields } from "./LogDateTimeFields";
 import { cn } from "../../lib/cn";
 import { useTheme } from "../../contexts/ThemeContext";
-import { usePremiumFeature } from "../../contexts/TrialContext";
+import { useFeatureGate } from "../../contexts/TrialContext";
 import { FieldLabel, Textarea } from "../ui/field";
 import { PremiumInlineLock } from "../billing/PremiumLocks";
 import { useLogFormState } from "../../hooks/useLogFormState";
@@ -32,7 +32,7 @@ interface LogFormProps extends SheetVisibilityProps {
 export function LogForm({ open, onClose, childId, onLogged, initialDraft = null }: LogFormProps) {
   const { showError } = useToast();
   const { resolved } = useTheme();
-  const canAddPhoto = usePremiumFeature("photoCapture");
+  const canAddPhoto = useFeatureGate("stool_photo_capture");
   const nightMode = resolved === "night";
   const photoInputCapture = platform() === "ios" ? undefined : "environment";
   const { fileInputRef, photoFile, photoPreview, resetPhoto, setPhotoFromChange } = usePhotoField();
@@ -126,7 +126,7 @@ export function LogForm({ open, onClose, childId, onLogged, initialDraft = null 
                 </div>
               ) : !canAddPhoto ? (
                 <PremiumInlineLock
-                  featureId="photoCapture"
+                  featureId="stool_photo_capture"
                   tone="compact"
                   title="Photos are Premium"
                   description="Keep logging poop for free. Unlock Premium when you want private stool photos saved with entries."

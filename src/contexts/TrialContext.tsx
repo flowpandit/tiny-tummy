@@ -2,16 +2,19 @@ import { createContext, useContext, useEffect, useMemo, useRef, type ReactNode }
 import { useStoreSelector } from "../lib/store";
 import { createTrialStore, type TrialStore } from "./trial-store";
 import {
+  createFeatureGateService,
   canUsePremiumFeature,
   getAccessKind,
   hasFullAccess,
   type AccessKind,
-  type PremiumFeatureId,
+  type EntitlementId,
+  type FeatureIdentifier,
 } from "../lib/feature-access";
 import type { EntitlementState } from "../lib/entitlements";
 
 interface TrialContextState {
   entitlement: EntitlementState | null;
+  developerEntitlements: EntitlementId[];
   accessKind: AccessKind;
   hasFullAccess: boolean;
   isFreeBasic: boolean;
@@ -25,6 +28,8 @@ interface TrialContextState {
   setTrialDaysAgo: (daysAgo: number) => Promise<void>;
   clearPremium: () => Promise<void>;
   simulateExpiration: () => Promise<void>;
+  setDeveloperEntitlements: (entitlements: readonly EntitlementId[]) => Promise<void>;
+  clearDeveloperEntitlements: () => Promise<void>;
   refreshTrial: () => Promise<void>;
 }
 
@@ -53,6 +58,7 @@ function useTrialStore() {
 export function useTrialAccess() {
   const store = useTrialStore();
   const entitlement = useStoreSelector(store, (state) => state.entitlement);
+  const developerEntitlements = useStoreSelector(store, (state) => state.developerEntitlements);
   const isLoading = useStoreSelector(store, (state) => state.isLoading);
   const loadError = useStoreSelector(store, (state) => state.loadError);
   const accessKind = getAccessKind(entitlement);
@@ -63,6 +69,7 @@ export function useTrialAccess() {
 
   return useMemo(() => ({
     entitlement,
+    developerEntitlements,
     accessKind,
     hasFullAccess: hasFullPlanAccess,
     isFreeBasic,
@@ -70,7 +77,7 @@ export function useTrialAccess() {
     daysRemaining,
     isLoading,
     loadError,
-  }), [accessKind, daysRemaining, entitlement, hasFullPlanAccess, isFreeBasic, isLoading, isLocked, loadError]);
+  }), [accessKind, daysRemaining, developerEntitlements, entitlement, hasFullPlanAccess, isFreeBasic, isLoading, isLocked, loadError]);
 }
 
 export function useTrialActions() {
@@ -78,10 +85,22 @@ export function useTrialActions() {
   return store.actions;
 }
 
-export function usePremiumFeature(featureId: PremiumFeatureId) {
+export function usePremiumFeature(featureId: FeatureIdentifier) {
   const store = useTrialStore();
   const entitlement = useStoreSelector(store, (state) => state.entitlement);
-  return canUsePremiumFeature(entitlement, featureId);
+  const developerEntitlements = useStoreSelector(store, (state) => state.developerEntitlements);
+  return canUsePremiumFeature(entitlement, featureId, { entitlements: developerEntitlements });
+}
+
+export function useFeatureAccess(featureId: FeatureIdentifier) {
+  const store = useTrialStore();
+  const entitlement = useStoreSelector(store, (state) => state.entitlement);
+  const developerEntitlements = useStoreSelector(store, (state) => state.developerEntitlements);
+  return createFeatureGateService(entitlement, { entitlements: developerEntitlements }).getFeatureAccess(featureId);
+}
+
+export function useFeatureGate(featureId: FeatureIdentifier) {
+  return useFeatureAccess(featureId).allowed;
 }
 
 export function useTrial() {
