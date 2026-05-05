@@ -1,4 +1,52 @@
-export interface Child {
+export type SyncStatus = "local" | "pending_sync" | "synced" | "sync_error";
+
+export interface SyncMetadata {
+  deleted_at?: string | null;
+  device_id?: string | null;
+  sync_status?: SyncStatus;
+  sync_version?: number;
+  local_only?: number;
+}
+
+export interface Caregiver extends SyncMetadata {
+  id: string;
+  display_name: string;
+  role: string;
+  relationship: string | null;
+  email: string | null;
+  phone: string | null;
+  avatar_color: string | null;
+  is_primary: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ChildCaregiver extends SyncMetadata {
+  id: string;
+  child_id: string;
+  caregiver_id: string;
+  relationship_to_child: string | null;
+  permissions: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Attachment {
+  id: string;
+  owner_table: string;
+  owner_id: string;
+  child_id: string | null;
+  local_path: string;
+  mime_type: string | null;
+  file_size: number | null;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
+  local_only: number;
+  attachment_sync_policy: "local_only" | "metadata_only" | "sync";
+}
+
+export interface Child extends SyncMetadata {
   id: string;
   name: string;
   date_of_birth: string;
@@ -16,7 +64,12 @@ export type ChildSex = "male" | "female";
 
 export type FeedingType = "breast" | "formula" | "mixed" | "solids";
 
-export interface PoopEntry {
+export interface CaregiverAttribution {
+  created_by_caregiver_id?: string | null;
+  updated_by_caregiver_id?: string | null;
+}
+
+export interface PoopEntry extends SyncMetadata, CaregiverAttribution {
   id: string;
   child_id: string;
   logged_at: string;
@@ -34,7 +87,7 @@ export type DiaperType = "wet" | "dirty" | "mixed";
 
 export type UrineColor = "pale" | "normal" | "dark";
 
-export interface DiaperEntry {
+export interface DiaperEntry extends SyncMetadata, CaregiverAttribution {
   id: string;
   child_id: string;
   logged_at: string;
@@ -77,7 +130,7 @@ export type StoolColor =
 
 export type StoolSize = "small" | "medium" | "large";
 
-export interface Alert {
+export interface Alert extends SyncMetadata {
   id: string;
   child_id: string;
   alert_type: string;
@@ -87,6 +140,8 @@ export interface Alert {
   is_dismissed: number;
   triggered_at: string;
   related_log_id: string | null;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface GuidanceTip {
@@ -99,7 +154,7 @@ export interface GuidanceTip {
 
 export type HealthStatus = "healthy" | "caution" | "alert" | "unknown";
 
-export interface SymptomEntry {
+export interface SymptomEntry extends SyncMetadata, CaregiverAttribution {
   id: string;
   child_id: string;
   episode_id: string | null;
@@ -138,7 +193,7 @@ export type TemperatureMethod =
   | "oral"
   | "other";
 
-export interface GrowthEntry {
+export interface GrowthEntry extends SyncMetadata, CaregiverAttribution {
   id: string;
   child_id: string;
   measured_at: string;
@@ -147,6 +202,7 @@ export interface GrowthEntry {
   head_circumference_cm: number | null;
   notes: string | null;
   created_at: string;
+  updated_at?: string;
 }
 
 export interface GrowthLogDraft {
@@ -156,7 +212,7 @@ export interface GrowthLogDraft {
   notes: string;
 }
 
-export interface SleepEntry {
+export interface SleepEntry extends SyncMetadata, CaregiverAttribution {
   id: string;
   child_id: string;
   sleep_type: SleepType;
@@ -164,6 +220,7 @@ export interface SleepEntry {
   ended_at: string;
   notes: string | null;
   created_at: string;
+  updated_at?: string;
   merged_duration_minutes?: number;
   merged_segments?: Array<{ started_at: string; ended_at: string }>;
   source_log_ids?: string[];
@@ -176,13 +233,14 @@ export interface SleepLogDraft {
 
 export type SleepType = "nap" | "night";
 
-export interface MilestoneEntry {
+export interface MilestoneEntry extends SyncMetadata, CaregiverAttribution {
   id: string;
   child_id: string;
   milestone_type: MilestoneType;
   logged_at: string;
   notes: string | null;
   created_at: string;
+  updated_at?: string;
 }
 
 export interface MilestoneLogDraft {
@@ -199,7 +257,7 @@ export type MilestoneType =
   | "travel_or_daycare_change"
   | "toilet_training_interest";
 
-export interface FeedingEntry {
+export interface FeedingEntry extends SyncMetadata, CaregiverAttribution {
   id: string;
   child_id: string;
   logged_at: string;
@@ -213,6 +271,7 @@ export interface FeedingEntry {
   is_constipation_support: number;
   notes: string | null;
   created_at: string;
+  updated_at?: string;
 }
 
 export interface FeedingLogDraft {
@@ -243,7 +302,7 @@ export type BreastSide = "left" | "right" | "both";
 
 export type BottleContent = "breast_milk" | "formula" | "mixed";
 
-export interface Episode {
+export interface Episode extends SyncMetadata, CaregiverAttribution {
   id: string;
   child_id: string;
   episode_type: EpisodeType;
@@ -268,7 +327,7 @@ export type EpisodeType =
 
 export type EpisodeStatus = "active" | "resolved";
 
-export interface EpisodeEvent {
+export interface EpisodeEvent extends SyncMetadata, CaregiverAttribution {
   id: string;
   episode_id: string;
   child_id: string;
@@ -277,6 +336,7 @@ export interface EpisodeEvent {
   notes: string | null;
   logged_at: string;
   created_at: string;
+  updated_at?: string;
   source_kind: string | null;
   source_id: string | null;
 }
@@ -307,7 +367,7 @@ export interface ColorCount {
 
 export type QuickPresetKind = "poop" | "feed";
 
-export interface QuickPresetEntry {
+export interface QuickPresetEntry extends SyncMetadata {
   id: string;
   child_id: string;
   kind: QuickPresetKind;

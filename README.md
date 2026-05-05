@@ -89,7 +89,7 @@ tiny-tummy/
 │   │       ├── normal_range.rs   # Age-adjusted frequency thresholds
 │   │       └── guidance.rs       # Evidence-based guidance content
 │   ├── migrations/
-│   │   └── 001_initial.sql       # SQLite schema
+│   │   └── 001_baseline.sql      # SQLite schema
 │   ├── Cargo.toml
 │   └── tauri.conf.json
 ├── index.html
@@ -429,7 +429,7 @@ SQLite database stored at the platform's app data directory:
 
 ### Schema
 
-5 tables: `children`, `poop_logs`, `diet_logs`, `alerts`, `app_settings`. See `src-tauri/migrations/001_initial.sql` for full schema.
+Local-first baseline schema covering child profiles, poop, diaper, feed, sleep, symptoms, episodes, growth, milestones, quick presets, alerts, local caregivers, local-only attachments, and app settings. See `src-tauri/migrations/001_baseline.sql` for the full schema.
 
 ## Privacy
 

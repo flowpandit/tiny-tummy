@@ -74,9 +74,9 @@ export function buildEpisodeEventInsertPlan(
 
   return {
     sql: `INSERT INTO episode_events (
-      id, episode_id, child_id, event_type, title, notes, logged_at, created_at, source_kind, source_id
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    params: [...baseParams, storedSourceKind, storedSourceId],
+      id, episode_id, child_id, event_type, title, notes, logged_at, created_at, updated_at, source_kind, source_id
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    params: [...baseParams, now, storedSourceKind, storedSourceId],
     storedSourceKind,
     storedSourceId,
   };
@@ -116,7 +116,7 @@ export async function createEpisode(input: {
 export async function getActiveEpisode(childId: string): Promise<Episode | null> {
   const conn = await getDb();
   const rows = await conn.select<Episode[]>(
-    "SELECT * FROM episodes WHERE child_id = ? AND status = 'active' ORDER BY started_at DESC LIMIT 1",
+    "SELECT * FROM episodes WHERE child_id = ? AND status = 'active' AND deleted_at IS NULL ORDER BY started_at DESC LIMIT 1",
     [childId],
   );
   return rows[0] ?? null;
@@ -125,7 +125,7 @@ export async function getActiveEpisode(childId: string): Promise<Episode | null>
 export async function getActiveEpisodes(childId: string): Promise<Episode[]> {
   const conn = await getDb();
   return conn.select<Episode[]>(
-    "SELECT * FROM episodes WHERE child_id = ? AND status = 'active' ORDER BY started_at DESC",
+    "SELECT * FROM episodes WHERE child_id = ? AND status = 'active' AND deleted_at IS NULL ORDER BY started_at DESC",
     [childId],
   );
 }
@@ -133,7 +133,7 @@ export async function getActiveEpisodes(childId: string): Promise<Episode[]> {
 export async function getEpisodes(childId: string, limit = 10): Promise<Episode[]> {
   const conn = await getDb();
   return conn.select<Episode[]>(
-    "SELECT * FROM episodes WHERE child_id = ? ORDER BY started_at DESC LIMIT ?",
+    "SELECT * FROM episodes WHERE child_id = ? AND deleted_at IS NULL ORDER BY started_at DESC LIMIT ?",
     [childId, limit],
   );
 }
@@ -144,7 +144,7 @@ export async function closeEpisode(
 ): Promise<void> {
   const conn = await getDb();
   await conn.execute(
-    "UPDATE episodes SET status = 'resolved', ended_at = ?, outcome = ?, updated_at = ? WHERE id = ?",
+    "UPDATE episodes SET status = 'resolved', ended_at = ?, outcome = ?, updated_at = ? WHERE id = ? AND deleted_at IS NULL",
     [input.ended_at, input.outcome ?? null, nowISO(), id],
   );
 }
@@ -167,7 +167,7 @@ export async function updateEpisode(
 
   sets.push("updated_at = ?");
   params.push(nowISO(), id);
-  await conn.execute(`UPDATE episodes SET ${sets.join(", ")} WHERE id = ?`, params);
+  await conn.execute(`UPDATE episodes SET ${sets.join(", ")} WHERE id = ? AND deleted_at IS NULL`, params);
 }
 
 export async function createEpisodeEvent(input: CreateEpisodeEventInput): Promise<EpisodeEvent> {
@@ -188,6 +188,7 @@ export async function createEpisodeEvent(input: CreateEpisodeEventInput): Promis
     notes: input.notes ?? null,
     logged_at: input.logged_at,
     created_at: now,
+    updated_at: now,
     source_kind: insertPlan.storedSourceKind,
     source_id: insertPlan.storedSourceId,
   };
@@ -228,7 +229,7 @@ export async function deleteGeneratedSymptomEpisodeEvent(input: {
 export async function getEpisodeEvents(episodeId: string): Promise<EpisodeEvent[]> {
   const conn = await getDb();
   const rows = await conn.select<EpisodeEvent[]>(
-    "SELECT * FROM episode_events WHERE episode_id = ? ORDER BY logged_at DESC",
+    "SELECT * FROM episode_events WHERE episode_id = ? AND deleted_at IS NULL ORDER BY logged_at DESC",
     [episodeId],
   );
   return rows.map(normalizeEpisodeEvent);
@@ -237,7 +238,7 @@ export async function getEpisodeEvents(episodeId: string): Promise<EpisodeEvent[
 export async function getEpisodeEventsByChild(childId: string, limit = 100): Promise<EpisodeEvent[]> {
   const conn = await getDb();
   const rows = await conn.select<EpisodeEvent[]>(
-    "SELECT * FROM episode_events WHERE child_id = ? ORDER BY logged_at DESC LIMIT ?",
+    "SELECT * FROM episode_events WHERE child_id = ? AND deleted_at IS NULL ORDER BY logged_at DESC LIMIT ?",
     [childId, limit],
   );
   return rows.map(normalizeEpisodeEvent);
@@ -253,6 +254,7 @@ export async function getEpisodesForRange(
   return conn.select<Episode[]>(
     `SELECT * FROM episodes
      WHERE child_id = ?
+       AND deleted_at IS NULL
        AND started_at <= ?
        AND (ended_at IS NULL OR ended_at >= ?)
      ORDER BY started_at DESC`,
@@ -269,7 +271,7 @@ export async function getEpisodeEventsForRange(
   const { startUtcIso, endUtcIso } = getUtcIsoBoundsForLocalDateRange(startDate, endDate);
   const rows = await conn.select<EpisodeEvent[]>(
     `SELECT * FROM episode_events
-     WHERE child_id = ? AND logged_at >= ? AND logged_at <= ?
+     WHERE child_id = ? AND deleted_at IS NULL AND logged_at >= ? AND logged_at <= ?
      ORDER BY logged_at DESC`,
     [childId, startUtcIso, endUtcIso],
   );

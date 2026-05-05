@@ -149,7 +149,7 @@ export function formatDate(dateStr: string): string {
 }
 
 export function nowISO(): string {
-  return new Date().toISOString().replace("Z", "").split(".")[0];
+  return new Date().toISOString();
 }
 
 export function generateId(): string {

@@ -86,80 +86,12 @@ fn get_guidance_tips() -> Vec<engine::guidance::GuidanceTip> {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    let migrations = vec![
-        Migration {
-            version: 1,
-            description: "create initial tables",
-            sql: include_str!("../migrations/001_initial.sql"),
-            kind: MigrationKind::Up,
-        },
-        Migration {
-            version: 2,
-            description: "add rich feeding fields",
-            sql: include_str!("../migrations/002_rich_feeding.sql"),
-            kind: MigrationKind::Up,
-        },
-        Migration {
-            version: 3,
-            description: "add episode mode",
-            sql: include_str!("../migrations/003_episode_mode.sql"),
-            kind: MigrationKind::Up,
-        },
-        Migration {
-            version: 4,
-            description: "add symptom logs",
-            sql: include_str!("../migrations/004_symptom_logs.sql"),
-            kind: MigrationKind::Up,
-        },
-        Migration {
-            version: 5,
-            description: "add growth logs",
-            sql: include_str!("../migrations/005_growth_logs.sql"),
-            kind: MigrationKind::Up,
-        },
-        Migration {
-            version: 6,
-            description: "add sleep logs",
-            sql: include_str!("../migrations/006_sleep_logs.sql"),
-            kind: MigrationKind::Up,
-        },
-        Migration {
-            version: 7,
-            description: "add milestone logs",
-            sql: include_str!("../migrations/007_milestone_logs.sql"),
-            kind: MigrationKind::Up,
-        },
-        Migration {
-            version: 8,
-            description: "add quick presets",
-            sql: include_str!("../migrations/008_quick_presets.sql"),
-            kind: MigrationKind::Up,
-        },
-        Migration {
-            version: 9,
-            description: "add diaper logs",
-            sql: include_str!("../migrations/009_diaper_logs.sql"),
-            kind: MigrationKind::Up,
-        },
-        Migration {
-            version: 10,
-            description: "add child sex",
-            sql: include_str!("../migrations/010_child_sex.sql"),
-            kind: MigrationKind::Up,
-        },
-        Migration {
-            version: 11,
-            description: "add symptom temperature",
-            sql: include_str!("../migrations/011_symptom_temperature.sql"),
-            kind: MigrationKind::Up,
-        },
-        Migration {
-            version: 12,
-            description: "add symptom method and episode event source",
-            sql: include_str!("../migrations/012_symptom_method_and_updated_at.sql"),
-            kind: MigrationKind::Up,
-        },
-    ];
+    let migrations = vec![Migration {
+        version: 1,
+        description: "create baseline local-first schema",
+        sql: include_str!("../migrations/001_baseline.sql"),
+        kind: MigrationKind::Up,
+    }];
 
     tauri::Builder::default()
         .setup(|app| {

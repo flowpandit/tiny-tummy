@@ -78,7 +78,7 @@ export async function updateSymptomLog(
 
   sets.push("updated_at = ?");
   params.push(nowISO(), id);
-  await conn.execute(`UPDATE symptom_logs SET ${sets.join(", ")} WHERE id = ?`, params);
+  await conn.execute(`UPDATE symptom_logs SET ${sets.join(", ")} WHERE id = ? AND deleted_at IS NULL`, params);
 }
 
 export async function deleteSymptomLog(id: string): Promise<void> {
@@ -92,7 +92,7 @@ export async function getSymptoms(
 ): Promise<SymptomEntry[]> {
   const conn = await getDb();
   return conn.select<SymptomEntry[]>(
-    "SELECT * FROM symptom_logs WHERE child_id = ? ORDER BY logged_at DESC LIMIT ?",
+    "SELECT * FROM symptom_logs WHERE child_id = ? AND deleted_at IS NULL ORDER BY logged_at DESC LIMIT ?",
     [childId, limit],
   );
 }
@@ -106,7 +106,7 @@ export async function getSymptomsForRange(
   const { startUtcIso, endUtcIso } = getUtcIsoBoundsForLocalDateRange(startDate, endDate);
   return conn.select<SymptomEntry[]>(
     `SELECT * FROM symptom_logs
-     WHERE child_id = ? AND logged_at >= ? AND logged_at <= ?
+     WHERE child_id = ? AND deleted_at IS NULL AND logged_at >= ? AND logged_at <= ?
      ORDER BY logged_at DESC`,
     [childId, startUtcIso, endUtcIso],
   );
@@ -126,8 +126,8 @@ export async function createGrowthLog(input: {
 
   await conn.execute(
     `INSERT INTO growth_logs (
-      id, child_id, measured_at, weight_kg, height_cm, head_circumference_cm, notes, created_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      id, child_id, measured_at, weight_kg, height_cm, head_circumference_cm, notes, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       id,
       input.child_id,
@@ -136,6 +136,7 @@ export async function createGrowthLog(input: {
       input.height_cm ?? null,
       input.head_circumference_cm ?? null,
       input.notes ?? null,
+      now,
       now,
     ],
   );
@@ -149,13 +150,14 @@ export async function createGrowthLog(input: {
     head_circumference_cm: input.head_circumference_cm ?? null,
     notes: input.notes ?? null,
     created_at: now,
+    updated_at: now,
   };
 }
 
 export async function getGrowthLogs(childId: string, limit = 50): Promise<GrowthEntry[]> {
   const conn = await getDb();
   return conn.select<GrowthEntry[]>(
-    "SELECT * FROM growth_logs WHERE child_id = ? ORDER BY measured_at DESC LIMIT ?",
+    "SELECT * FROM growth_logs WHERE child_id = ? AND deleted_at IS NULL ORDER BY measured_at DESC LIMIT ?",
     [childId, limit],
   );
 }
@@ -169,7 +171,7 @@ export async function getGrowthLogsForRange(
   const { startUtcIso, endUtcIso } = getUtcIsoBoundsForLocalDateRange(startDate, endDate);
   return conn.select<GrowthEntry[]>(
     `SELECT * FROM growth_logs
-     WHERE child_id = ? AND measured_at >= ? AND measured_at <= ?
+     WHERE child_id = ? AND deleted_at IS NULL AND measured_at >= ? AND measured_at <= ?
      ORDER BY measured_at DESC`,
     [childId, startUtcIso, endUtcIso],
   );
@@ -178,7 +180,7 @@ export async function getGrowthLogsForRange(
 export async function getLatestGrowthLog(childId: string): Promise<GrowthEntry | null> {
   const conn = await getDb();
   const rows = await conn.select<GrowthEntry[]>(
-    "SELECT * FROM growth_logs WHERE child_id = ? ORDER BY measured_at DESC LIMIT 1",
+    "SELECT * FROM growth_logs WHERE child_id = ? AND deleted_at IS NULL ORDER BY measured_at DESC LIMIT 1",
     [childId],
   );
   return rows[0] ?? null;
@@ -195,8 +197,8 @@ export async function updateGrowthLog(
   },
 ): Promise<void> {
   const conn = await getDb();
-  const sets: string[] = [];
-  const params: unknown[] = [];
+  const sets: string[] = ["updated_at = ?"];
+  const params: unknown[] = [nowISO()];
 
   if (updates.measured_at !== undefined) { sets.push("measured_at = ?"); params.push(updates.measured_at); }
   if (updates.weight_kg !== undefined) { sets.push("weight_kg = ?"); params.push(updates.weight_kg); }
@@ -204,10 +206,10 @@ export async function updateGrowthLog(
   if (updates.head_circumference_cm !== undefined) { sets.push("head_circumference_cm = ?"); params.push(updates.head_circumference_cm); }
   if (updates.notes !== undefined) { sets.push("notes = ?"); params.push(updates.notes); }
 
-  if (sets.length === 0) return;
+  if (sets.length === 1) return;
 
   params.push(id);
-  await conn.execute(`UPDATE growth_logs SET ${sets.join(", ")} WHERE id = ?`, params);
+  await conn.execute(`UPDATE growth_logs SET ${sets.join(", ")} WHERE id = ? AND deleted_at IS NULL`, params);
 }
 
 export async function deleteGrowthLog(id: string): Promise<void> {
@@ -228,8 +230,8 @@ export async function createSleepLog(input: {
 
   await conn.execute(
     `INSERT INTO sleep_logs (
-      id, child_id, sleep_type, started_at, ended_at, notes, created_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      id, child_id, sleep_type, started_at, ended_at, notes, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       id,
       input.child_id,
@@ -237,6 +239,7 @@ export async function createSleepLog(input: {
       input.started_at,
       input.ended_at,
       input.notes ?? null,
+      now,
       now,
     ],
   );
@@ -249,13 +252,14 @@ export async function createSleepLog(input: {
     ended_at: input.ended_at,
     notes: input.notes ?? null,
     created_at: now,
+    updated_at: now,
   };
 }
 
 export async function getSleepLogs(childId: string, limit = 50): Promise<SleepEntry[]> {
   const conn = await getDb();
   return conn.select<SleepEntry[]>(
-    "SELECT * FROM sleep_logs WHERE child_id = ? ORDER BY started_at DESC LIMIT ?",
+    "SELECT * FROM sleep_logs WHERE child_id = ? AND deleted_at IS NULL ORDER BY started_at DESC LIMIT ?",
     [childId, limit],
   );
 }
@@ -269,7 +273,7 @@ export async function getSleepLogsForRange(
   const { startUtcIso, endUtcIso } = getUtcIsoBoundsForLocalDateRange(startDate, endDate);
   return conn.select<SleepEntry[]>(
     `SELECT * FROM sleep_logs
-     WHERE child_id = ? AND started_at >= ? AND started_at <= ?
+     WHERE child_id = ? AND deleted_at IS NULL AND started_at >= ? AND started_at <= ?
      ORDER BY started_at DESC`,
     [childId, startUtcIso, endUtcIso],
   );
@@ -285,17 +289,17 @@ export async function updateSleepLog(
   },
 ): Promise<void> {
   const conn = await getDb();
-  const sets: string[] = [];
-  const params: unknown[] = [];
+  const sets: string[] = ["updated_at = ?"];
+  const params: unknown[] = [nowISO()];
 
   if (updates.sleep_type !== undefined) { sets.push("sleep_type = ?"); params.push(updates.sleep_type); }
   if (updates.started_at !== undefined) { sets.push("started_at = ?"); params.push(updates.started_at); }
   if (updates.ended_at !== undefined) { sets.push("ended_at = ?"); params.push(updates.ended_at); }
   if (updates.notes !== undefined) { sets.push("notes = ?"); params.push(updates.notes); }
 
-  if (sets.length === 0) return;
+  if (sets.length === 1) return;
   params.push(id);
-  await conn.execute(`UPDATE sleep_logs SET ${sets.join(", ")} WHERE id = ?`, params);
+  await conn.execute(`UPDATE sleep_logs SET ${sets.join(", ")} WHERE id = ? AND deleted_at IS NULL`, params);
 }
 
 export async function deleteSleepLog(id: string): Promise<void> {
@@ -314,8 +318,8 @@ export async function createMilestoneLog(input: {
   const now = nowISO();
 
   await conn.execute(
-    "INSERT INTO milestone_logs (id, child_id, milestone_type, logged_at, notes, created_at) VALUES (?, ?, ?, ?, ?, ?)",
-    [id, input.child_id, input.milestone_type, input.logged_at, input.notes ?? null, now],
+    "INSERT INTO milestone_logs (id, child_id, milestone_type, logged_at, notes, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+    [id, input.child_id, input.milestone_type, input.logged_at, input.notes ?? null, now, now],
   );
 
   return {
@@ -325,13 +329,14 @@ export async function createMilestoneLog(input: {
     logged_at: input.logged_at,
     notes: input.notes ?? null,
     created_at: now,
+    updated_at: now,
   };
 }
 
 export async function getMilestoneLogs(childId: string, limit = 50): Promise<MilestoneEntry[]> {
   const conn = await getDb();
   return conn.select<MilestoneEntry[]>(
-    "SELECT * FROM milestone_logs WHERE child_id = ? ORDER BY logged_at DESC LIMIT ?",
+    "SELECT * FROM milestone_logs WHERE child_id = ? AND deleted_at IS NULL ORDER BY logged_at DESC LIMIT ?",
     [childId, limit],
   );
 }
@@ -345,7 +350,7 @@ export async function getMilestonesForRange(
   const { startUtcIso, endUtcIso } = getUtcIsoBoundsForLocalDateRange(startDate, endDate);
   return conn.select<MilestoneEntry[]>(
     `SELECT * FROM milestone_logs
-     WHERE child_id = ? AND logged_at >= ? AND logged_at <= ?
+     WHERE child_id = ? AND deleted_at IS NULL AND logged_at >= ? AND logged_at <= ?
      ORDER BY logged_at DESC`,
     [childId, startUtcIso, endUtcIso],
   );
@@ -364,8 +369,8 @@ export async function createAlert(input: {
   const now = nowISO();
 
   await conn.execute(
-    "INSERT INTO alerts (id, child_id, alert_type, severity, title, message, triggered_at, related_log_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-    [id, input.child_id, input.alert_type, input.severity, input.title, input.message, now, input.related_log_id ?? null],
+    "INSERT INTO alerts (id, child_id, alert_type, severity, title, message, triggered_at, related_log_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+    [id, input.child_id, input.alert_type, input.severity, input.title, input.message, now, input.related_log_id ?? null, now, now],
   );
 
   return {
@@ -378,13 +383,15 @@ export async function createAlert(input: {
     is_dismissed: 0,
     triggered_at: now,
     related_log_id: input.related_log_id ?? null,
+    created_at: now,
+    updated_at: now,
   };
 }
 
 export async function getActiveAlerts(childId: string): Promise<Alert[]> {
   const conn = await getDb();
   return conn.select<Alert[]>(
-    "SELECT * FROM alerts WHERE child_id = ? AND is_dismissed = 0 ORDER BY triggered_at DESC",
+    "SELECT * FROM alerts WHERE child_id = ? AND is_dismissed = 0 AND deleted_at IS NULL ORDER BY triggered_at DESC",
     [childId],
   );
 }
@@ -398,7 +405,7 @@ export async function hasAlertForLog(
   const rows = await conn.select<{ cnt: number }[]>(
     `SELECT COUNT(*) as cnt
      FROM alerts
-     WHERE child_id = ? AND alert_type = ? AND related_log_id = ?`,
+     WHERE child_id = ? AND alert_type = ? AND related_log_id = ? AND deleted_at IS NULL`,
     [childId, alertType, relatedLogId],
   );
   return (rows[0]?.cnt ?? 0) > 0;
@@ -406,5 +413,5 @@ export async function hasAlertForLog(
 
 export async function dismissAlert(id: string): Promise<void> {
   const conn = await getDb();
-  await conn.execute("UPDATE alerts SET is_dismissed = 1 WHERE id = ?", [id]);
+  await conn.execute("UPDATE alerts SET is_dismissed = 1, updated_at = ? WHERE id = ? AND deleted_at IS NULL", [nowISO(), id]);
 }

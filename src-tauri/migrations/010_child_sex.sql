@@ -1,1 +1,0 @@
-ALTER TABLE children ADD COLUMN sex TEXT;

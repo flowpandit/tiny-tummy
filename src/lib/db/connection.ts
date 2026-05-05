@@ -18,6 +18,9 @@ export async function getDb(): Promise<Database> {
       "Database connection",
     )
       .then(async (conn) => {
+        // Enforce declared foreign keys for local integrity. Delete flows explicitly
+        // remove child-owned rows so future sync metadata is not hidden by cascades.
+        await conn.execute("PRAGMA foreign_keys = ON;");
         // WAL mode is much faster for concurrent access and prevents many locking issues
         await conn.execute("PRAGMA journal_mode = WAL;");
         // Set a busy timeout so SQLite waits if another write is in progress

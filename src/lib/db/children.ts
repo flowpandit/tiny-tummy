@@ -32,13 +32,18 @@ export async function createChild(input: {
     is_active: 1,
     created_at: now,
     updated_at: now,
+    deleted_at: null,
+    device_id: null,
+    sync_status: "local",
+    sync_version: 1,
+    local_only: 0,
   };
 }
 
 export async function getChildren(): Promise<Child[]> {
   const conn = await getDb();
   return conn.select<Child[]>(
-    "SELECT * FROM children WHERE is_active = 1 ORDER BY created_at ASC",
+    "SELECT * FROM children WHERE is_active = 1 AND deleted_at IS NULL ORDER BY created_at ASC",
   );
 }
 
@@ -57,7 +62,7 @@ export async function updateChild(
     }
   }
   params.push(id);
-  await conn.execute(`UPDATE children SET ${sets.join(", ")} WHERE id = ?`, params);
+  await conn.execute(`UPDATE children SET ${sets.join(", ")} WHERE id = ? AND deleted_at IS NULL`, params);
 }
 
 export async function deleteChild(id: string): Promise<void> {
@@ -98,6 +103,8 @@ export async function deleteChild(id: string): Promise<void> {
   await conn.execute("DELETE FROM diet_logs WHERE child_id = ?", [id]);
   await conn.execute("DELETE FROM diaper_logs WHERE child_id = ?", [id]);
   await conn.execute("DELETE FROM poop_logs WHERE child_id = ?", [id]);
+  await conn.execute("DELETE FROM attachments WHERE child_id = ?", [id]);
+  await conn.execute("DELETE FROM child_caregivers WHERE child_id = ?", [id]);
   await conn.execute("DELETE FROM children WHERE id = ?", [id]);
 
   await deleteSetting(getBreastfeedingSessionSettingKey(id));

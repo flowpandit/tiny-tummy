@@ -22,8 +22,8 @@ export async function createFeedingLog(input: {
   await conn.execute(
     `INSERT INTO diet_logs (
       id, child_id, logged_at, food_type, food_name, amount_ml, duration_minutes,
-      breast_side, bottle_content, reaction_notes, is_constipation_support, notes, created_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      breast_side, bottle_content, reaction_notes, is_constipation_support, notes, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       id,
       input.child_id,
@@ -37,6 +37,7 @@ export async function createFeedingLog(input: {
       input.reaction_notes ?? null,
       input.is_constipation_support ?? 0,
       input.notes ?? null,
+      now,
       now,
     ],
   );
@@ -55,6 +56,7 @@ export async function createFeedingLog(input: {
     is_constipation_support: input.is_constipation_support ?? 0,
     notes: input.notes ?? null,
     created_at: now,
+    updated_at: now,
   };
 }
 
@@ -64,7 +66,7 @@ export async function getFeedingLogs(
 ): Promise<FeedingEntry[]> {
   const conn = await getDb();
   return conn.select<FeedingEntry[]>(
-    "SELECT * FROM diet_logs WHERE child_id = ? ORDER BY logged_at DESC LIMIT ?",
+    "SELECT * FROM diet_logs WHERE child_id = ? AND deleted_at IS NULL ORDER BY logged_at DESC LIMIT ?",
     [childId, limit],
   );
 }
@@ -78,7 +80,7 @@ export async function getFeedingLogsForRange(
   const { startUtcIso, endUtcIso } = getUtcIsoBoundsForLocalDateRange(startDate, endDate);
   return conn.select<FeedingEntry[]>(
     `SELECT * FROM diet_logs
-     WHERE child_id = ? AND logged_at >= ? AND logged_at <= ?
+     WHERE child_id = ? AND deleted_at IS NULL AND logged_at >= ? AND logged_at <= ?
      ORDER BY logged_at DESC`,
     [childId, startUtcIso, endUtcIso],
   );
@@ -100,8 +102,8 @@ export async function updateDietLog(
   },
 ): Promise<void> {
   const conn = await getDb();
-  const sets: string[] = [];
-  const params: unknown[] = [];
+  const sets: string[] = ["updated_at = ?"];
+  const params: unknown[] = [nowISO()];
 
   if (updates.logged_at !== undefined) { sets.push("logged_at = ?"); params.push(updates.logged_at); }
   if (updates.food_type !== undefined) { sets.push("food_type = ?"); params.push(updates.food_type); }
@@ -114,9 +116,9 @@ export async function updateDietLog(
   if (updates.is_constipation_support !== undefined) { sets.push("is_constipation_support = ?"); params.push(updates.is_constipation_support); }
   if (updates.notes !== undefined) { sets.push("notes = ?"); params.push(updates.notes); }
 
-  if (sets.length === 0) return;
+  if (sets.length === 1) return;
   params.push(id);
-  await conn.execute(`UPDATE diet_logs SET ${sets.join(", ")} WHERE id = ?`, params);
+  await conn.execute(`UPDATE diet_logs SET ${sets.join(", ")} WHERE id = ? AND deleted_at IS NULL`, params);
 }
 
 export async function deleteDietLog(id: string): Promise<void> {

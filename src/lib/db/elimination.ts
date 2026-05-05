@@ -90,7 +90,7 @@ export async function getPoopLogs(
 ): Promise<PoopEntry[]> {
   const conn = await getDb();
   return conn.select<PoopEntry[]>(
-    "SELECT * FROM poop_logs WHERE child_id = ? ORDER BY logged_at DESC LIMIT ?",
+    "SELECT * FROM poop_logs WHERE child_id = ? AND deleted_at IS NULL ORDER BY logged_at DESC LIMIT ?",
     [childId, limit],
   );
 }
@@ -98,7 +98,7 @@ export async function getPoopLogs(
 export async function getLastRealPoop(childId: string): Promise<PoopEntry | null> {
   const conn = await getDb();
   const rows = await conn.select<PoopEntry[]>(
-    "SELECT * FROM poop_logs WHERE child_id = ? AND is_no_poop = 0 ORDER BY logged_at DESC LIMIT 1",
+    "SELECT * FROM poop_logs WHERE child_id = ? AND is_no_poop = 0 AND deleted_at IS NULL ORDER BY logged_at DESC LIMIT 1",
     [childId],
   );
   return rows[0] ?? null;
@@ -125,7 +125,7 @@ export async function updatePoopLog(
   if (updates.notes !== undefined) { sets.push("notes = ?"); params.push(updates.notes); }
 
   params.push(id);
-  await conn.execute(`UPDATE poop_logs SET ${sets.join(", ")} WHERE id = ?`, params);
+  await conn.execute(`UPDATE poop_logs SET ${sets.join(", ")} WHERE id = ? AND deleted_at IS NULL`, params);
 }
 
 export async function deletePoopLog(entry: Pick<PoopEntry, "id" | "photo_path"> | string): Promise<void> {
@@ -153,11 +153,12 @@ export async function reconcileAutoNoPoopDays(childId: string): Promise<number> 
     `SELECT COUNT(*) as cnt
      FROM poop_logs
      WHERE child_id = ?
+       AND deleted_at IS NULL
        AND is_no_poop = 1
        AND date(logged_at, 'localtime') IN (
          SELECT DISTINCT date(logged_at, 'localtime')
          FROM poop_logs
-         WHERE child_id = ? AND is_no_poop = 0
+         WHERE child_id = ? AND is_no_poop = 0 AND deleted_at IS NULL
        )`,
     [childId, childId],
   );
@@ -166,11 +167,12 @@ export async function reconcileAutoNoPoopDays(childId: string): Promise<number> 
   await conn.execute(
     `DELETE FROM poop_logs
      WHERE child_id = ?
+       AND deleted_at IS NULL
        AND is_no_poop = 1
        AND date(logged_at, 'localtime') IN (
          SELECT DISTINCT date(logged_at, 'localtime')
          FROM poop_logs
-         WHERE child_id = ? AND is_no_poop = 0
+         WHERE child_id = ? AND is_no_poop = 0 AND deleted_at IS NULL
        )`,
     [childId, childId],
   );
@@ -178,25 +180,25 @@ export async function reconcileAutoNoPoopDays(childId: string): Promise<number> 
   const candidateRows = await conn.select<{ day: string }[]>(
     `SELECT DISTINCT day
      FROM (
-       SELECT date(logged_at, 'localtime') AS day FROM diet_logs WHERE child_id = ?
+       SELECT date(logged_at, 'localtime') AS day FROM diet_logs WHERE child_id = ? AND deleted_at IS NULL
        UNION
-       SELECT date(logged_at, 'localtime') AS day FROM symptom_logs WHERE child_id = ?
+       SELECT date(logged_at, 'localtime') AS day FROM symptom_logs WHERE child_id = ? AND deleted_at IS NULL
        UNION
-       SELECT date(logged_at, 'localtime') AS day FROM milestone_logs WHERE child_id = ?
+       SELECT date(logged_at, 'localtime') AS day FROM milestone_logs WHERE child_id = ? AND deleted_at IS NULL
        UNION
-       SELECT date(started_at, 'localtime') AS day FROM sleep_logs WHERE child_id = ?
+       SELECT date(started_at, 'localtime') AS day FROM sleep_logs WHERE child_id = ? AND deleted_at IS NULL
        UNION
-       SELECT date(measured_at, 'localtime') AS day FROM growth_logs WHERE child_id = ?
+       SELECT date(measured_at, 'localtime') AS day FROM growth_logs WHERE child_id = ? AND deleted_at IS NULL
        UNION
-       SELECT date(started_at, 'localtime') AS day FROM episodes WHERE child_id = ?
+       SELECT date(started_at, 'localtime') AS day FROM episodes WHERE child_id = ? AND deleted_at IS NULL
        UNION
-       SELECT date(logged_at, 'localtime') AS day FROM episode_events WHERE child_id = ?
+       SELECT date(logged_at, 'localtime') AS day FROM episode_events WHERE child_id = ? AND deleted_at IS NULL
      )
      WHERE day < ?
        AND day NOT IN (
          SELECT DISTINCT date(logged_at, 'localtime')
          FROM poop_logs
-         WHERE child_id = ?
+         WHERE child_id = ? AND deleted_at IS NULL
        )
      ORDER BY day ASC`,
     [childId, childId, childId, childId, childId, childId, childId, todayKey, childId],
@@ -285,7 +287,7 @@ export async function createDiaperLog(input: {
 export async function getDiaperLogs(childId: string, limit = 100): Promise<DiaperEntry[]> {
   const conn = await getDb();
   return conn.select<DiaperEntry[]>(
-    "SELECT * FROM diaper_logs WHERE child_id = ? ORDER BY logged_at DESC LIMIT ?",
+    "SELECT * FROM diaper_logs WHERE child_id = ? AND deleted_at IS NULL ORDER BY logged_at DESC LIMIT ?",
     [childId, limit],
   );
 }
@@ -299,7 +301,7 @@ export async function getDiaperLogsForRange(
   const { startUtcIso, endUtcIso } = getUtcIsoBoundsForLocalDateRange(startDate, endDate);
   return conn.select<DiaperEntry[]>(
     `SELECT * FROM diaper_logs
-     WHERE child_id = ? AND logged_at >= ? AND logged_at <= ?
+     WHERE child_id = ? AND deleted_at IS NULL AND logged_at >= ? AND logged_at <= ?
      ORDER BY logged_at DESC`,
     [childId, startUtcIso, endUtcIso],
   );
@@ -308,7 +310,7 @@ export async function getDiaperLogsForRange(
 export async function getLastDiaperLog(childId: string): Promise<DiaperEntry | null> {
   const conn = await getDb();
   const rows = await conn.select<DiaperEntry[]>(
-    "SELECT * FROM diaper_logs WHERE child_id = ? ORDER BY logged_at DESC LIMIT 1",
+    "SELECT * FROM diaper_logs WHERE child_id = ? AND deleted_at IS NULL ORDER BY logged_at DESC LIMIT 1",
     [childId],
   );
   return rows[0] ?? null;
@@ -317,7 +319,7 @@ export async function getLastDiaperLog(childId: string): Promise<DiaperEntry | n
 export async function getLastWetDiaper(childId: string): Promise<DiaperEntry | null> {
   const conn = await getDb();
   const rows = await conn.select<DiaperEntry[]>(
-    "SELECT * FROM diaper_logs WHERE child_id = ? AND diaper_type IN ('wet', 'mixed') ORDER BY logged_at DESC LIMIT 1",
+    "SELECT * FROM diaper_logs WHERE child_id = ? AND deleted_at IS NULL AND diaper_type IN ('wet', 'mixed') ORDER BY logged_at DESC LIMIT 1",
     [childId],
   );
   return rows[0] ?? null;
@@ -326,7 +328,7 @@ export async function getLastWetDiaper(childId: string): Promise<DiaperEntry | n
 export async function getLastDirtyDiaper(childId: string): Promise<DiaperEntry | null> {
   const conn = await getDb();
   const rows = await conn.select<DiaperEntry[]>(
-    "SELECT * FROM diaper_logs WHERE child_id = ? AND diaper_type IN ('dirty', 'mixed') ORDER BY logged_at DESC LIMIT 1",
+    "SELECT * FROM diaper_logs WHERE child_id = ? AND deleted_at IS NULL AND diaper_type IN ('dirty', 'mixed') ORDER BY logged_at DESC LIMIT 1",
     [childId],
   );
   return rows[0] ?? null;
@@ -346,7 +348,7 @@ export async function updateDiaperLog(
 ): Promise<void> {
   const conn = await getDb();
   const rows = await conn.select<DiaperEntry[]>(
-    "SELECT * FROM diaper_logs WHERE id = ? LIMIT 1",
+    "SELECT * FROM diaper_logs WHERE id = ? AND deleted_at IS NULL LIMIT 1",
     [id],
   );
   const current = rows[0];
@@ -406,7 +408,7 @@ export async function updateDiaperLog(
   if (linkedPoopLogId !== current.linked_poop_log_id) { sets.push("linked_poop_log_id = ?"); params.push(linkedPoopLogId); }
 
   params.push(id);
-  await conn.execute(`UPDATE diaper_logs SET ${sets.join(", ")} WHERE id = ?`, params);
+  await conn.execute(`UPDATE diaper_logs SET ${sets.join(", ")} WHERE id = ? AND deleted_at IS NULL`, params);
 }
 
 export async function deleteDiaperLog(entry: Pick<DiaperEntry, "id" | "photo_path" | "linked_poop_log_id"> | string): Promise<void> {
@@ -417,7 +419,7 @@ export async function deleteDiaperLog(entry: Pick<DiaperEntry, "id" | "photo_pat
 
   if (typeof entry === "string") {
     const rows = await conn.select<DiaperEntry[]>(
-      "SELECT * FROM diaper_logs WHERE id = ? LIMIT 1",
+      "SELECT * FROM diaper_logs WHERE id = ? AND deleted_at IS NULL LIMIT 1",
       [entry],
     );
     linkedPoopLogId = rows[0]?.linked_poop_log_id ?? null;
@@ -442,14 +444,15 @@ export async function getFrequencyStats(
   days: number,
 ): Promise<DailyFrequency[]> {
   const conn = await getDb();
+  const since = new Date(Date.now() - (days * 86400000)).toISOString();
   return conn.select<DailyFrequency[]>(
     `SELECT date(logged_at) as date, COUNT(*) as count
      FROM poop_logs
-     WHERE child_id = ? AND is_no_poop = 0
-       AND logged_at >= datetime('now', ?)
+     WHERE child_id = ? AND deleted_at IS NULL AND is_no_poop = 0
+       AND logged_at >= ?
      GROUP BY date(logged_at)
      ORDER BY date ASC`,
-    [childId, `-${days} days`],
+    [childId, since],
   );
 }
 
@@ -458,13 +461,14 @@ export async function getConsistencyTrend(
   days: number,
 ): Promise<ConsistencyPoint[]> {
   const conn = await getDb();
+  const since = new Date(Date.now() - (days * 86400000)).toISOString();
   return conn.select<ConsistencyPoint[]>(
     `SELECT logged_at, stool_type
      FROM poop_logs
-     WHERE child_id = ? AND is_no_poop = 0 AND stool_type IS NOT NULL
-       AND logged_at >= datetime('now', ?)
+     WHERE child_id = ? AND deleted_at IS NULL AND is_no_poop = 0 AND stool_type IS NOT NULL
+       AND logged_at >= ?
      ORDER BY logged_at ASC`,
-    [childId, `-${days} days`],
+    [childId, since],
   );
 }
 
@@ -473,14 +477,15 @@ export async function getColorDistribution(
   days: number,
 ): Promise<ColorCount[]> {
   const conn = await getDb();
+  const since = new Date(Date.now() - (days * 86400000)).toISOString();
   return conn.select<ColorCount[]>(
     `SELECT color, COUNT(*) as count
      FROM poop_logs
-     WHERE child_id = ? AND is_no_poop = 0 AND color IS NOT NULL
-       AND logged_at >= datetime('now', ?)
+     WHERE child_id = ? AND deleted_at IS NULL AND is_no_poop = 0 AND color IS NOT NULL
+       AND logged_at >= ?
      GROUP BY color
      ORDER BY count DESC`,
-    [childId, `-${days} days`],
+    [childId, since],
   );
 }
 
@@ -493,7 +498,7 @@ export async function getPoopLogsForRange(
   const { startUtcIso, endUtcIso } = getUtcIsoBoundsForLocalDateRange(startDate, endDate);
   return conn.select<PoopEntry[]>(
     `SELECT * FROM poop_logs
-     WHERE child_id = ? AND logged_at >= ? AND logged_at <= ?
+     WHERE child_id = ? AND deleted_at IS NULL AND logged_at >= ? AND logged_at <= ?
      ORDER BY logged_at DESC`,
     [childId, startUtcIso, endUtcIso],
   );

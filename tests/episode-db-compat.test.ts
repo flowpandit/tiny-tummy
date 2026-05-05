@@ -27,7 +27,7 @@ test("episode event inserts omit source columns when the local table has not mig
   assert.equal(plan.sql.includes("source_id"), false);
 });
 
-test("episode event inserts include source columns after migration 12 is available", () => {
+test("episode event inserts include source columns and updated_at in the baseline schema", () => {
   const input = {
     episode_id: "episode-1",
     child_id: "child-1",
@@ -41,9 +41,10 @@ test("episode event inserts include source columns after migration 12 is availab
 
   const plan = buildEpisodeEventInsertPlan(input, "event-1", "2026-05-03T10:01:00.000Z", true);
 
-  assert.equal(plan.params.length, 10);
+  assert.equal(plan.params.length, 11);
   assert.equal(plan.storedSourceKind, "symptom");
   assert.equal(plan.storedSourceId, "symptom-1");
+  assert.equal(plan.sql.includes("updated_at"), true);
   assert.equal(plan.sql.includes("source_kind"), true);
   assert.equal(plan.sql.includes("source_id"), true);
 });

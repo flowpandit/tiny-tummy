@@ -31,7 +31,7 @@ export async function getQuickPresets(
   const conn = await getDb();
   return conn.select<QuickPresetEntry[]>(
     `SELECT * FROM quick_presets
-     WHERE child_id = ? AND kind = ? AND is_enabled = 1
+     WHERE child_id = ? AND kind = ? AND is_enabled = 1 AND deleted_at IS NULL
      ORDER BY sort_order ASC, created_at ASC`,
     [childId, kind],
   );
