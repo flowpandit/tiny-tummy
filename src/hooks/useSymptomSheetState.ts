@@ -153,61 +153,63 @@ export function useSymptomSheetState({
         ? new Date(loggedAt).getTime() < new Date(selectedEpisode.started_at).getTime()
         : false;
 
-      if (episodeId && useSymptomTimeAsEpisodeStart && loggedBeforeEpisode) {
-        await db.updateEpisode(episodeId, { started_at: loggedAt });
-      }
+      await db.runDbTransaction(async () => {
+        if (episodeId && useSymptomTimeAsEpisodeStart && loggedBeforeEpisode) {
+          await db.updateEpisode(episodeId, { started_at: loggedAt });
+        }
 
-      if (entry) {
-        await db.updateSymptomLog(entry.id, {
-          episode_id: episodeId,
-          symptom_type: symptomType,
-          severity,
-          temperature_c: temperatureCelsius,
-          temperature_method: nextTemperatureMethod,
-          logged_at: loggedAt,
-          notes: notes.trim() || null,
-        });
-        await db.deleteGeneratedSymptomEpisodeEvent({
-          symptomId: entry.id,
-          episodeId: entry.episode_id,
-          loggedAt: entry.logged_at,
-        });
-        if (episodeId) {
-          await db.createEpisodeEvent({
+        if (entry) {
+          await db.updateSymptomLog(entry.id, {
             episode_id: episodeId,
-            child_id: childId,
-            event_type: "symptom",
-            title: eventTitle,
-            notes: notes.trim() || null,
+            symptom_type: symptomType,
+            severity,
+            temperature_c: temperatureCelsius,
+            temperature_method: nextTemperatureMethod,
             logged_at: loggedAt,
-            source_kind: "symptom",
-            source_id: entry.id,
+            notes: notes.trim() || null,
           });
-        }
-      } else {
-        const symptom = await db.createSymptomLog({
-          child_id: childId,
-          episode_id: episodeId,
-          symptom_type: symptomType,
-          severity,
-          temperature_c: temperatureCelsius,
-          temperature_method: nextTemperatureMethod,
-          logged_at: loggedAt,
-          notes: notes.trim() || null,
-        });
-        if (episodeId) {
-          await db.createEpisodeEvent({
+          await db.deleteGeneratedSymptomEpisodeEvent({
+            symptomId: entry.id,
+            episodeId: entry.episode_id,
+            loggedAt: entry.logged_at,
+          });
+          if (episodeId) {
+            await db.createEpisodeEvent({
+              episode_id: episodeId,
+              child_id: childId,
+              event_type: "symptom",
+              title: eventTitle,
+              notes: notes.trim() || null,
+              logged_at: loggedAt,
+              source_kind: "symptom",
+              source_id: entry.id,
+            });
+          }
+        } else {
+          const symptom = await db.createSymptomLog({
+            child_id: childId,
             episode_id: episodeId,
-            child_id: childId,
-            event_type: "symptom",
-            title: eventTitle,
-            notes: notes.trim() || null,
+            symptom_type: symptomType,
+            severity,
+            temperature_c: temperatureCelsius,
+            temperature_method: nextTemperatureMethod,
             logged_at: loggedAt,
-            source_kind: "symptom",
-            source_id: symptom.id,
+            notes: notes.trim() || null,
           });
+          if (episodeId) {
+            await db.createEpisodeEvent({
+              episode_id: episodeId,
+              child_id: childId,
+              event_type: "symptom",
+              title: eventTitle,
+              notes: notes.trim() || null,
+              logged_at: loggedAt,
+              source_kind: "symptom",
+              source_id: symptom.id,
+            });
+          }
         }
-      }
+      });
 
       if (episodeId) {
         const episodeType = episodeChoices.find((episode) => episode.id === episodeId)?.episode_type;
@@ -241,12 +243,14 @@ export function useSymptomSheetState({
 
     setIsDeleting(true);
     try {
-      await db.deleteGeneratedSymptomEpisodeEvent({
-        symptomId: entry.id,
-        episodeId: entry.episode_id,
-        loggedAt: entry.logged_at,
+      await db.runDbTransaction(async () => {
+        await db.deleteGeneratedSymptomEpisodeEvent({
+          symptomId: entry.id,
+          episodeId: entry.episode_id,
+          loggedAt: entry.logged_at,
+        });
+        await db.deleteSymptomLog(entry.id);
       });
-      await db.deleteSymptomLog(entry.id);
       await onDeleted?.();
       await onLogged();
       onSuccess("Symptom deleted.");

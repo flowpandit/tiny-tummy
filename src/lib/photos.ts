@@ -76,16 +76,6 @@ export async function loadPhotoDataUrl(relativePath: string): Promise<string> {
   return `data:${getMimeTypeFromPath(relativePath)};base64,${btoa(binary)}`;
 }
 
-/**
- * Delete a photo from the app's data directory.
- */
-export async function deletePhoto(relativePath: string): Promise<void> {
-  const fileExists = await exists(relativePath, { baseDir: BaseDirectory.AppData });
-  if (fileExists) {
-    await remove(relativePath, { baseDir: BaseDirectory.AppData });
-  }
-}
-
 // --- Avatar photos ---
 
 function avatarPath(childId: string): string {

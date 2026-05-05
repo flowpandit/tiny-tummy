@@ -1,6 +1,7 @@
 import type { FeedingEntry } from "../types";
 import { generateId, getUtcIsoBoundsForLocalDateRange, nowISO } from "../utils";
 import { getDb } from "./connection";
+import { executeMutation, softDeleteById } from "./mutations";
 
 export async function createFeedingLog(input: {
   child_id: string;
@@ -19,7 +20,8 @@ export async function createFeedingLog(input: {
   const id = generateId();
   const now = nowISO();
 
-  await conn.execute(
+  await executeMutation(
+    conn,
     `INSERT INTO diet_logs (
       id, child_id, logged_at, food_type, food_name, amount_ml, duration_minutes,
       breast_side, bottle_content, reaction_notes, is_constipation_support, notes, created_at, updated_at
@@ -118,12 +120,12 @@ export async function updateDietLog(
 
   if (sets.length === 1) return;
   params.push(id);
-  await conn.execute(`UPDATE diet_logs SET ${sets.join(", ")} WHERE id = ? AND deleted_at IS NULL`, params);
+  await executeMutation(conn, `UPDATE diet_logs SET ${sets.join(", ")} WHERE id = ? AND deleted_at IS NULL`, params);
 }
 
 export async function deleteDietLog(id: string): Promise<void> {
   const conn = await getDb();
-  await conn.execute("DELETE FROM diet_logs WHERE id = ?", [id]);
+  await softDeleteById(conn, "diet_logs", id);
 }
 
 export const createDietLog = createFeedingLog;

@@ -1,4 +1,5 @@
 mod billing;
+mod db_transaction;
 mod downloads;
 mod engine;
 mod report_export;
@@ -118,6 +119,7 @@ pub fn run() {
             billing::billing_check_owned_premium,
             check_frequency_alert,
             check_color_alert,
+            db_transaction::execute_sqlite_transaction,
             get_child_status,
             get_guidance_tips,
             downloads::open_pdf_from_downloads,

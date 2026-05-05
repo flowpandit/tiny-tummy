@@ -1,6 +1,7 @@
 import type { Alert, GrowthEntry, MilestoneEntry, SleepEntry, SymptomEntry } from "../types";
 import { generateId, getUtcIsoBoundsForLocalDateRange, nowISO } from "../utils";
 import { getDb } from "./connection";
+import { executeMutation, softDeleteById } from "./mutations";
 
 export async function createSymptomLog(input: {
   child_id: string;
@@ -16,7 +17,8 @@ export async function createSymptomLog(input: {
   const id = generateId();
   const now = nowISO();
 
-  await conn.execute(
+  await executeMutation(
+    conn,
     `INSERT INTO symptom_logs (
       id, child_id, episode_id, symptom_type, severity, temperature_c, temperature_method, logged_at, notes, created_at, updated_at
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -78,12 +80,12 @@ export async function updateSymptomLog(
 
   sets.push("updated_at = ?");
   params.push(nowISO(), id);
-  await conn.execute(`UPDATE symptom_logs SET ${sets.join(", ")} WHERE id = ? AND deleted_at IS NULL`, params);
+  await executeMutation(conn, `UPDATE symptom_logs SET ${sets.join(", ")} WHERE id = ? AND deleted_at IS NULL`, params);
 }
 
 export async function deleteSymptomLog(id: string): Promise<void> {
   const conn = await getDb();
-  await conn.execute("DELETE FROM symptom_logs WHERE id = ?", [id]);
+  await softDeleteById(conn, "symptom_logs", id);
 }
 
 export async function getSymptoms(
@@ -124,7 +126,8 @@ export async function createGrowthLog(input: {
   const id = generateId();
   const now = nowISO();
 
-  await conn.execute(
+  await executeMutation(
+    conn,
     `INSERT INTO growth_logs (
       id, child_id, measured_at, weight_kg, height_cm, head_circumference_cm, notes, created_at, updated_at
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -209,12 +212,12 @@ export async function updateGrowthLog(
   if (sets.length === 1) return;
 
   params.push(id);
-  await conn.execute(`UPDATE growth_logs SET ${sets.join(", ")} WHERE id = ? AND deleted_at IS NULL`, params);
+  await executeMutation(conn, `UPDATE growth_logs SET ${sets.join(", ")} WHERE id = ? AND deleted_at IS NULL`, params);
 }
 
 export async function deleteGrowthLog(id: string): Promise<void> {
   const conn = await getDb();
-  await conn.execute("DELETE FROM growth_logs WHERE id = ?", [id]);
+  await softDeleteById(conn, "growth_logs", id);
 }
 
 export async function createSleepLog(input: {
@@ -228,7 +231,8 @@ export async function createSleepLog(input: {
   const id = generateId();
   const now = nowISO();
 
-  await conn.execute(
+  await executeMutation(
+    conn,
     `INSERT INTO sleep_logs (
       id, child_id, sleep_type, started_at, ended_at, notes, created_at, updated_at
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -299,12 +303,12 @@ export async function updateSleepLog(
 
   if (sets.length === 1) return;
   params.push(id);
-  await conn.execute(`UPDATE sleep_logs SET ${sets.join(", ")} WHERE id = ? AND deleted_at IS NULL`, params);
+  await executeMutation(conn, `UPDATE sleep_logs SET ${sets.join(", ")} WHERE id = ? AND deleted_at IS NULL`, params);
 }
 
 export async function deleteSleepLog(id: string): Promise<void> {
   const conn = await getDb();
-  await conn.execute("DELETE FROM sleep_logs WHERE id = ?", [id]);
+  await softDeleteById(conn, "sleep_logs", id);
 }
 
 export async function createMilestoneLog(input: {
@@ -317,7 +321,8 @@ export async function createMilestoneLog(input: {
   const id = generateId();
   const now = nowISO();
 
-  await conn.execute(
+  await executeMutation(
+    conn,
     "INSERT INTO milestone_logs (id, child_id, milestone_type, logged_at, notes, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
     [id, input.child_id, input.milestone_type, input.logged_at, input.notes ?? null, now, now],
   );
@@ -356,6 +361,11 @@ export async function getMilestonesForRange(
   );
 }
 
+export async function deleteMilestoneLog(id: string): Promise<void> {
+  const conn = await getDb();
+  await softDeleteById(conn, "milestone_logs", id);
+}
+
 export async function createAlert(input: {
   child_id: string;
   alert_type: string;
@@ -368,7 +378,8 @@ export async function createAlert(input: {
   const id = generateId();
   const now = nowISO();
 
-  await conn.execute(
+  await executeMutation(
+    conn,
     "INSERT INTO alerts (id, child_id, alert_type, severity, title, message, triggered_at, related_log_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
     [id, input.child_id, input.alert_type, input.severity, input.title, input.message, now, input.related_log_id ?? null, now, now],
   );
@@ -413,5 +424,5 @@ export async function hasAlertForLog(
 
 export async function dismissAlert(id: string): Promise<void> {
   const conn = await getDb();
-  await conn.execute("UPDATE alerts SET is_dismissed = 1, updated_at = ? WHERE id = ? AND deleted_at IS NULL", [nowISO(), id]);
+  await executeMutation(conn, "UPDATE alerts SET is_dismissed = 1, updated_at = ? WHERE id = ? AND deleted_at IS NULL", [nowISO(), id]);
 }

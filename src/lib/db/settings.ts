@@ -1,6 +1,7 @@
 import type { QuickPresetEntry } from "../types";
 import { generateId, nowISO } from "../utils";
 import { getDb } from "./connection";
+import { executeMutation, softDeleteWhere, withTransaction } from "./mutations";
 
 export async function getSetting(key: string): Promise<string | null> {
   const conn = await getDb();
@@ -13,7 +14,8 @@ export async function getSetting(key: string): Promise<string | null> {
 
 export async function setSetting(key: string, value: string): Promise<void> {
   const conn = await getDb();
-  await conn.execute(
+  await executeMutation(
+    conn,
     "INSERT OR REPLACE INTO app_settings (key, value) VALUES (?, ?)",
     [key, value],
   );
@@ -21,7 +23,7 @@ export async function setSetting(key: string, value: string): Promise<void> {
 
 export async function deleteSetting(key: string): Promise<void> {
   const conn = await getDb();
-  await conn.execute("DELETE FROM app_settings WHERE key = ?", [key]);
+  await executeMutation(conn, "DELETE FROM app_settings WHERE key = ?", [key]);
 }
 
 export async function getQuickPresets(
@@ -48,25 +50,28 @@ export async function replaceQuickPresets(
   }>,
 ): Promise<void> {
   const conn = await getDb();
-  await conn.execute("DELETE FROM quick_presets WHERE child_id = ? AND kind = ?", [childId, kind]);
+  await withTransaction(conn, async () => {
+    const now = nowISO();
+    await softDeleteWhere(conn, "quick_presets", "child_id = ? AND kind = ?", [childId, kind], now);
 
-  const now = nowISO();
-  for (const preset of presets) {
-    await conn.execute(
-      `INSERT INTO quick_presets (
-        id, child_id, kind, label, description, draft_json, sort_order, is_enabled, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?)`,
-      [
-        generateId(),
-        childId,
-        kind,
-        preset.label,
-        preset.description ?? null,
-        preset.draft_json,
-        preset.sort_order,
-        now,
-        now,
-      ],
-    );
-  }
+    for (const preset of presets) {
+      await executeMutation(
+        conn,
+        `INSERT INTO quick_presets (
+          id, child_id, kind, label, description, draft_json, sort_order, is_enabled, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?)`,
+        [
+          generateId(),
+          childId,
+          kind,
+          preset.label,
+          preset.description ?? null,
+          preset.draft_json,
+          preset.sort_order,
+          now,
+          now,
+        ],
+      );
+    }
+  });
 }

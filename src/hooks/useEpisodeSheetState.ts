@@ -78,38 +78,41 @@ export function useEpisodeSheetState({
     if (!episodeType || isSubmitting) return false;
     setIsSubmitting(true);
     try {
-      const episode = await db.createEpisode({
-        child_id: childId,
-        episode_type: episodeType,
-        started_at: combineLocalDateAndTimeToUtcIso(episodeDate, episodeTime),
-        summary: summary.trim() || null,
-      });
-      for (const symptomId of linkedRecentSymptomIds) {
-        const symptom = recentSymptoms?.find((item) => item.id === symptomId);
-        if (!symptom) continue;
-        const title = [
-          getSymptomTypeLabel(symptom.symptom_type),
-          getSymptomSeverityLabel(symptom.severity),
-          symptom.temperature_c !== null ? formatTemperatureValue(symptom.temperature_c, temperatureUnit) : null,
-        ].filter(Boolean).join(" · ");
-
-        await db.updateSymptomLog(symptom.id, { episode_id: episode.id });
-        await db.deleteGeneratedSymptomEpisodeEvent({
-          symptomId: symptom.id,
-          episodeId: symptom.episode_id,
-          loggedAt: symptom.logged_at,
-        });
-        await db.createEpisodeEvent({
-          episode_id: episode.id,
+      const episode = await db.runDbTransaction(async () => {
+        const created = await db.createEpisode({
           child_id: childId,
-          event_type: "symptom",
-          title,
-          notes: symptom.notes,
-          logged_at: symptom.logged_at,
-          source_kind: "symptom",
-          source_id: symptom.id,
+          episode_type: episodeType,
+          started_at: combineLocalDateAndTimeToUtcIso(episodeDate, episodeTime),
+          summary: summary.trim() || null,
         });
-      }
+        for (const symptomId of linkedRecentSymptomIds) {
+          const symptom = recentSymptoms?.find((item) => item.id === symptomId);
+          if (!symptom) continue;
+          const title = [
+            getSymptomTypeLabel(symptom.symptom_type),
+            getSymptomSeverityLabel(symptom.severity),
+            symptom.temperature_c !== null ? formatTemperatureValue(symptom.temperature_c, temperatureUnit) : null,
+          ].filter(Boolean).join(" · ");
+
+          await db.updateSymptomLog(symptom.id, { episode_id: created.id });
+          await db.deleteGeneratedSymptomEpisodeEvent({
+            symptomId: symptom.id,
+            episodeId: symptom.episode_id,
+            loggedAt: symptom.logged_at,
+          });
+          await db.createEpisodeEvent({
+            episode_id: created.id,
+            child_id: childId,
+            event_type: "symptom",
+            title,
+            notes: symptom.notes,
+            logged_at: symptom.logged_at,
+            source_kind: "symptom",
+            source_id: symptom.id,
+          });
+        }
+        return created;
+      });
       setCreatedEpisode(episode);
       await onUpdated();
       onSuccess("Episode started.");

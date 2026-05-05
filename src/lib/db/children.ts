@@ -1,9 +1,8 @@
 import type { Child } from "../types";
 import { getBreastfeedingLastSideSettingKey, getBreastfeedingSessionSettingKey } from "../breastfeeding";
-import { deleteAvatar, deletePhoto } from "../photos";
 import { generateId, nowISO } from "../utils";
 import { getDb } from "./connection";
-import { deleteSetting } from "./settings";
+import { executeMutation, softDeleteById, softDeleteChildScopedRows, withTransaction } from "./mutations";
 
 export async function createChild(input: {
   name: string;
@@ -17,7 +16,8 @@ export async function createChild(input: {
   const now = nowISO();
   const avatarColor = input.avatar_color ?? "#2563EB";
 
-  await conn.execute(
+  await executeMutation(
+    conn,
     "INSERT INTO children (id, name, date_of_birth, sex, feeding_type, avatar_color, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
     [id, input.name, input.date_of_birth, input.sex ?? null, input.feeding_type, avatarColor, now, now],
   );
@@ -62,51 +62,20 @@ export async function updateChild(
     }
   }
   params.push(id);
-  await conn.execute(`UPDATE children SET ${sets.join(", ")} WHERE id = ? AND deleted_at IS NULL`, params);
+  await executeMutation(conn, `UPDATE children SET ${sets.join(", ")} WHERE id = ? AND deleted_at IS NULL`, params);
 }
 
 export async function deleteChild(id: string): Promise<void> {
   const conn = await getDb();
 
-  const poopPhotoRows = await conn.select<{ photo_path: string | null }[]>(
-    "SELECT photo_path FROM poop_logs WHERE child_id = ? AND photo_path IS NOT NULL",
-    [id],
-  );
-  const diaperPhotoRows = await conn.select<{ photo_path: string | null }[]>(
-    "SELECT photo_path FROM diaper_logs WHERE child_id = ? AND photo_path IS NOT NULL",
-    [id],
-  );
-
-  for (const row of [...poopPhotoRows, ...diaperPhotoRows]) {
-    if (!row.photo_path) continue;
-    try {
-      await deletePhoto(row.photo_path);
-    } catch {
-      // Best-effort cleanup before removing DB rows.
-    }
-  }
-
-  try {
-    await deleteAvatar(id);
-  } catch {
-    // Best-effort cleanup before removing DB rows.
-  }
-
-  await conn.execute("DELETE FROM alerts WHERE child_id = ?", [id]);
-  await conn.execute("DELETE FROM symptom_logs WHERE child_id = ?", [id]);
-  await conn.execute("DELETE FROM episode_events WHERE child_id = ?", [id]);
-  await conn.execute("DELETE FROM episodes WHERE child_id = ?", [id]);
-  await conn.execute("DELETE FROM growth_logs WHERE child_id = ?", [id]);
-  await conn.execute("DELETE FROM sleep_logs WHERE child_id = ?", [id]);
-  await conn.execute("DELETE FROM milestone_logs WHERE child_id = ?", [id]);
-  await conn.execute("DELETE FROM quick_presets WHERE child_id = ?", [id]);
-  await conn.execute("DELETE FROM diet_logs WHERE child_id = ?", [id]);
-  await conn.execute("DELETE FROM diaper_logs WHERE child_id = ?", [id]);
-  await conn.execute("DELETE FROM poop_logs WHERE child_id = ?", [id]);
-  await conn.execute("DELETE FROM attachments WHERE child_id = ?", [id]);
-  await conn.execute("DELETE FROM child_caregivers WHERE child_id = ?", [id]);
-  await conn.execute("DELETE FROM children WHERE id = ?", [id]);
-
-  await deleteSetting(getBreastfeedingSessionSettingKey(id));
-  await deleteSetting(getBreastfeedingLastSideSettingKey(id));
+  await withTransaction(conn, async () => {
+    const now = nowISO();
+    await softDeleteChildScopedRows(conn, id, now);
+    await softDeleteById(conn, "children", id, now, { includeChildDeactivation: true });
+    await executeMutation(
+      conn,
+      "DELETE FROM app_settings WHERE key IN (?, ?)",
+      [getBreastfeedingSessionSettingKey(id), getBreastfeedingLastSideSettingKey(id)],
+    );
+  });
 }

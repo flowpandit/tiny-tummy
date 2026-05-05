@@ -1,6 +1,7 @@
 import type { Episode, EpisodeEvent } from "../types";
 import { generateId, getUtcIsoBoundsForLocalDateRange, nowISO } from "../utils";
 import { getDb } from "./connection";
+import { executeMutation, softDeleteWhere } from "./mutations";
 
 type CreateEpisodeEventInput = {
   episode_id: string;
@@ -92,7 +93,8 @@ export async function createEpisode(input: {
   const id = generateId();
   const now = nowISO();
 
-  await conn.execute(
+  await executeMutation(
+    conn,
     `INSERT INTO episodes (
       id, child_id, episode_type, status, started_at, ended_at, summary, outcome, created_at, updated_at
     ) VALUES (?, ?, ?, 'active', ?, NULL, ?, NULL, ?, ?)`,
@@ -143,7 +145,8 @@ export async function closeEpisode(
   input: { ended_at: string; outcome?: string | null },
 ): Promise<void> {
   const conn = await getDb();
-  await conn.execute(
+  await executeMutation(
+    conn,
     "UPDATE episodes SET status = 'resolved', ended_at = ?, outcome = ?, updated_at = ? WHERE id = ? AND deleted_at IS NULL",
     [input.ended_at, input.outcome ?? null, nowISO(), id],
   );
@@ -167,7 +170,7 @@ export async function updateEpisode(
 
   sets.push("updated_at = ?");
   params.push(nowISO(), id);
-  await conn.execute(`UPDATE episodes SET ${sets.join(", ")} WHERE id = ? AND deleted_at IS NULL`, params);
+  await executeMutation(conn, `UPDATE episodes SET ${sets.join(", ")} WHERE id = ? AND deleted_at IS NULL`, params);
 }
 
 export async function createEpisodeEvent(input: CreateEpisodeEventInput): Promise<EpisodeEvent> {
@@ -177,7 +180,7 @@ export async function createEpisodeEvent(input: CreateEpisodeEventInput): Promis
   const canStoreSourceColumns = await canStoreEpisodeEventSourceColumns(conn);
   const insertPlan = buildEpisodeEventInsertPlan(input, id, now, canStoreSourceColumns);
 
-  await conn.execute(insertPlan.sql, insertPlan.params);
+  await executeMutation(conn, insertPlan.sql, insertPlan.params);
 
   return {
     id,
@@ -205,8 +208,10 @@ export async function deleteGeneratedSymptomEpisodeEvent(input: {
   if (!canStoreSourceColumns) {
     if (!input.episodeId || !input.loggedAt) return;
 
-    await conn.execute(
-      "DELETE FROM episode_events WHERE event_type = 'symptom' AND episode_id = ? AND logged_at = ?",
+    await softDeleteWhere(
+      conn,
+      "episode_events",
+      "event_type = 'symptom' AND episode_id = ? AND logged_at = ?",
       [input.episodeId, input.loggedAt],
     );
     return;
@@ -220,8 +225,10 @@ export async function deleteGeneratedSymptomEpisodeEvent(input: {
     params.push(input.episodeId, input.loggedAt);
   }
 
-  await conn.execute(
-    `DELETE FROM episode_events WHERE (source_kind = ? AND source_id = ?)${fallback}`,
+  await softDeleteWhere(
+    conn,
+    "episode_events",
+    `((source_kind = ? AND source_id = ?)${fallback})`,
     params,
   );
 }
