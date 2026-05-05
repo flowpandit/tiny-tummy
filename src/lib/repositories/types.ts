@@ -25,6 +25,7 @@ import type {
   SnapshotSourceData,
 } from "../db/snapshot";
 import type { TinyTummySnapshotV1 } from "../export-import-snapshot";
+import type { CaregiverDraft, ChildCaregiverProfile } from "../caregivers";
 
 export type CreateChildInput = {
   name: string;
@@ -44,6 +45,18 @@ export interface ChildRepository {
 }
 
 export interface CaregiverRepository {
+  createCaregiver(input: CaregiverDraft): Promise<Caregiver>;
+  getCaregiver(caregiverId: string): Promise<Caregiver | null>;
+  listActiveCaregivers(): Promise<Caregiver[]>;
+  listCaregiversForChild(childId: string): Promise<ChildCaregiverProfile[]>;
+  updateCaregiver(caregiverId: string, updates: Partial<CaregiverDraft>): Promise<void>;
+  linkCaregiverToChild(input: {
+    childId: string;
+    caregiverId: string;
+    relationshipToChild?: string | null;
+    permissions?: string | null;
+  }): Promise<ChildCaregiver>;
+  setPrimaryCaregiver(caregiverId: string | null): Promise<void>;
   deleteCaregiver(caregiverId: string): Promise<void>;
   deleteChildCaregiverLink(linkId: string): Promise<void>;
 }

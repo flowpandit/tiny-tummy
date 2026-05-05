@@ -159,6 +159,13 @@ export function createLocalRepositories(client: LocalDbClient = defaultDbClient)
   };
 
   const caregivers: AppRepositories["caregivers"] = {
+    createCaregiver: (input) => client.createCaregiver(input),
+    getCaregiver: (caregiverId) => client.getCaregiver(caregiverId),
+    listActiveCaregivers: () => client.getCaregivers(),
+    listCaregiversForChild: (childId) => client.getCaregiversForChild(childId),
+    updateCaregiver: (caregiverId, updates) => client.updateCaregiver(caregiverId, updates),
+    linkCaregiverToChild: (input) => client.linkCaregiverToChild(input),
+    setPrimaryCaregiver: (caregiverId) => client.setPrimaryCaregiver(caregiverId),
     deleteCaregiver: (caregiverId) => client.deleteCaregiver(caregiverId),
     deleteChildCaregiverLink: (linkId) => client.deleteChildCaregiverLink(linkId),
   };

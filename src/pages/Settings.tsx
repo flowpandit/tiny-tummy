@@ -4,6 +4,7 @@ import { useActiveChild, useChildActions, useChildren } from "../contexts/ChildC
 import { useTrialAccess, useTrialActions } from "../contexts/TrialContext";
 import { EditChildSheet } from "../components/settings/EditChildSheet";
 import { BackupRestoreSection } from "../components/settings/BackupRestoreSection";
+import { FamilyCaregiversSection } from "../components/settings/FamilyCaregiversSection";
 import {
   AccessSection,
   ChildrenSection,
@@ -128,6 +129,8 @@ export function Settings() {
       </div>
 
       <div className="space-y-3 px-4 pb-12 pt-3 md:space-y-5 md:px-10 md:pb-16 md:pt-4">
+        <FamilyCaregiversSection activeChild={activeChild} />
+
         <AccessSection />
 
         <ThemeSection child={activeChild} />

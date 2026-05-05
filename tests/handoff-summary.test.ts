@@ -203,6 +203,7 @@ test("buildHandoffSummary builds a full caregiver handoff without photo content"
   assert.equal(summary.lastEvents.lastFeed?.detail.includes("Left"), true);
   assert.equal(summary.lastEvents.lastSleep?.detail, "1h 10m");
   assert.equal(summary.lastEvents.activeEpisode?.title, "Fever / illness");
+  assert.equal(summary.preparedBy, null);
   assert.equal(summary.nextDue.nextFeed.status, "based_on_recent_logs");
   assert.equal(summary.nextDue.nextSleep.status, "based_on_recent_logs");
   assert.equal(summary.watchItems.some((item) => item.label === "red stool was logged today."), true);
@@ -271,6 +272,33 @@ test("formatHandoffSummaryText includes parent note and privacy note without hid
   assert.equal(text.includes("poop-1"), false);
   assert.equal(text.includes("diaper-1"), false);
   assert.equal(text.includes(child.id), false);
+});
+
+test("formatHandoffSummaryText includes current caregiver without contact details", () => {
+  const summary = buildHandoffSummary({
+    child,
+    dayKey: "2026-05-04",
+    generatedAt: "2026-05-04T15:50:00",
+    poopLogs: [],
+    diaperLogs: [],
+    feedingLogs: [],
+    sleepLogs: [],
+    alerts: [],
+    activeEpisode: null,
+    episodeEvents: [],
+    symptomLogs: [],
+    preparedByCaregiver: {
+      display_name: "Dad",
+      role: "parent",
+    },
+    now: new Date("2026-05-04T15:50:00"),
+  });
+  const text = formatHandoffSummaryText(summary, { locale: "en-AU", timeZone: "UTC" });
+
+  assert.deepEqual(summary.preparedBy, { displayName: "Dad", roleLabel: "Parent" });
+  assert.match(text, /Prepared by: Dad \(Parent\)/);
+  assert.equal(text.includes("email"), false);
+  assert.equal(text.includes("phone"), false);
 });
 
 test("buildHandoffSummary excludes soft-deleted rows defensively", () => {

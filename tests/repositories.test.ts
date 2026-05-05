@@ -6,6 +6,7 @@ import { createHandoffService } from "../src/lib/services/handoff-service.ts";
 import { defaultReportOptions, type ReportSourceData } from "../src/lib/reporting.ts";
 import type {
   Alert,
+  Caregiver,
   Child,
   DiaperEntry,
   Episode,
@@ -25,6 +26,19 @@ const child: Child = {
   feeding_type: "mixed",
   avatar_color: "#d45aa3",
   is_active: 1,
+  created_at: "2026-04-01T00:00:00.000Z",
+  updated_at: "2026-04-01T00:00:00.000Z",
+};
+
+const caregiver: Caregiver = {
+  id: "caregiver-1",
+  display_name: "Mum",
+  role: "parent",
+  relationship: "parent",
+  email: null,
+  phone: null,
+  avatar_color: "#7c3aed",
+  is_primary: 1,
   created_at: "2026-04-01T00:00:00.000Z",
   updated_at: "2026-04-01T00:00:00.000Z",
 };
@@ -319,6 +333,17 @@ test("HandoffService prepares a local summary snapshot through repositories", as
     children: {
       listActiveChildren: async () => [child],
     },
+    caregivers: {
+      listCaregiversForChild: async () => [{
+        ...caregiver,
+        child_caregiver_id: "child-caregiver-1",
+        child_id: child.id,
+        relationship_to_child: "parent",
+        permissions: null,
+        link_created_at: "2026-04-01T00:00:00.000Z",
+        link_updated_at: "2026-04-01T00:00:00.000Z",
+      }],
+    },
     elimination: {
       listDiaperLogs: async () => [diaper],
       listPoopLogs: async () => [poop],
@@ -335,6 +360,9 @@ test("HandoffService prepares a local summary snapshot through repositories", as
       getActiveEpisode: async () => episode,
       listSymptoms: async () => [symptom],
       listEpisodeEvents: async () => [event],
+    },
+    settings: {
+      getSetting: async () => caregiver.id,
     },
   } as Parameters<typeof createHandoffService>[0]);
 
@@ -359,6 +387,7 @@ test("HandoffService prepares a local summary snapshot through repositories", as
   assert.equal(handoff.todaySummary.wetDiaperCount, 1);
   assert.equal(handoff.lastEvents.lastPoop?.detail, "brown, Type 5, large");
   assert.equal(handoff.lastEvents.activeEpisode?.title, "Constipation concern");
+  assert.deepEqual(handoff.preparedBy, { displayName: "Mum", roleLabel: "Parent" });
   assert.equal(handoff.parentNote, "Nana is taking over after lunch.");
   assert.equal(JSON.stringify(handoff).includes("photo_path"), false);
 });

@@ -18,8 +18,10 @@ import {
 } from "./sleep-insights";
 import { getSymptomSeverityLabel, getSymptomTypeLabel } from "./symptom-constants";
 import { formatLocalDateKey, isOnLocalDay } from "./utils";
+import { getCaregiverRoleLabel } from "./caregivers";
 import type {
   Alert,
+  Caregiver,
   Child,
   DiaperEntry,
   Episode,
@@ -113,9 +115,15 @@ export interface HandoffTimelineItem {
   detail: string;
 }
 
+export interface HandoffPreparedBy {
+  displayName: string;
+  roleLabel: string;
+}
+
 export interface HandoffSummary {
   child: HandoffChild;
   generatedAt: string;
+  preparedBy: HandoffPreparedBy | null;
   handoffWindow: HandoffWindow;
   lastEvents: HandoffLastEvents;
   todaySummary: HandoffTodaySummary;
@@ -139,6 +147,7 @@ export interface BuildHandoffSummaryInput {
   dayKey?: string;
   generatedAt?: string;
   parentNote?: string | null;
+  preparedByCaregiver?: Pick<Caregiver, "display_name" | "role"> | null;
   now?: Date;
   timelineLimit?: number;
 }
@@ -512,6 +521,12 @@ export function buildHandoffSummary(input: BuildHandoffSummaryInput): HandoffSum
   const dayKey = input.dayKey ?? formatLocalDateKey(now);
   const generatedAt = input.generatedAt ?? now.toISOString();
   const parentNote = input.parentNote?.trim() || null;
+  const preparedBy = input.preparedByCaregiver
+    ? {
+        displayName: input.preparedByCaregiver.display_name,
+        roleLabel: getCaregiverRoleLabel(input.preparedByCaregiver.role),
+      }
+    : null;
   const poopLogs = input.poopLogs.filter(isActiveRow);
   const diaperLogs = input.diaperLogs.filter(isActiveRow);
   const feedingLogs = getUnifiedFeedTimeline(input.feedingLogs.filter(isActiveRow));
@@ -551,6 +566,7 @@ export function buildHandoffSummary(input: BuildHandoffSummaryInput): HandoffSum
       feedingType: input.child.feeding_type,
     },
     generatedAt,
+    preparedBy,
     handoffWindow: {
       start: dayKey,
       end: dayKey,
@@ -615,6 +631,7 @@ export function formatHandoffSummaryText(
   const lines = [
     `Tiny Tummy handoff for ${summary.child.name}`,
     `Generated: ${formatHandoffDateTime(summary.generatedAt, options)}`,
+    ...(summary.preparedBy ? [`Prepared by: ${summary.preparedBy.displayName} (${summary.preparedBy.roleLabel})`] : []),
     "",
     "Today so far:",
     `- Poops: ${summary.todaySummary.poopCount}`,

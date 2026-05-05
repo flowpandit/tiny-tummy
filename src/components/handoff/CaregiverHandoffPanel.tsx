@@ -151,6 +151,11 @@ export function CaregiverHandoffPanel({
               <p className="mt-1 text-[0.78rem] text-[var(--color-text-soft)]">
                 Generated {formatHandoffDateTime(summary.generatedAt)}
               </p>
+              {summary.preparedBy && (
+                <p className="mt-1 text-[0.78rem] font-semibold text-[var(--color-text-secondary)]">
+                  Prepared by {summary.preparedBy.displayName} · {summary.preparedBy.roleLabel}
+                </p>
+              )}
             </div>
             <Button type="button" variant="secondary" size="sm" className="self-start" onClick={onRefresh}>
               Refresh

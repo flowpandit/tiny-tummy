@@ -262,14 +262,24 @@ function buildNativeHandoffPdfModelFromSummary(summary: HandoffSummary): NativeC
           detail: "No watch items logged for this window.",
           tone: "healthy" as ReportPreviewTone,
         }],
-    parentNoteRows: summary.parentNote
-      ? [{
+    parentNoteRows: [
+      ...(summary.preparedBy
+        ? [{
+            label: "Prepared by",
+            value: summary.preparedBy.displayName,
+            detail: summary.preparedBy.roleLabel,
+            tone: "info" as ReportPreviewTone,
+          }]
+        : []),
+      ...(summary.parentNote
+        ? [{
           label: "Parent note",
           value: "Provided",
           detail: summary.parentNote,
           tone: "info" as ReportPreviewTone,
         }]
-      : [],
+        : []),
+    ],
     timelineRows: summary.timeline.map((item) => ({
       time: formatHandoffTime(item.occurredAt),
       event: item.title,

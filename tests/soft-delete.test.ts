@@ -223,6 +223,41 @@ SELECT 'sync_versions_incremented=' || (
   }
 });
 
+test("caregiver deletion soft deletes links while preserving historical log attribution", { skip: !hasSqlite3 }, () => {
+  const { dbPath, cleanup } = createTempDb();
+  const deletedAt = "2026-05-05T12:00:00.000Z";
+
+  try {
+    const output = runSql(dbPath, `${baselineSql}
+PRAGMA foreign_keys = ON;
+
+INSERT INTO children (id, name, date_of_birth, feeding_type)
+VALUES ('child-1', 'Tiny', '2026-04-01', 'mixed');
+INSERT INTO caregivers (id, display_name, role, relationship, is_primary)
+VALUES ('caregiver-1', 'Primary', 'parent', 'parent', 1);
+INSERT INTO child_caregivers (id, child_id, caregiver_id, relationship_to_child, permissions)
+VALUES ('child-caregiver-1', 'child-1', 'caregiver-1', 'parent', '{}');
+INSERT INTO poop_logs (id, child_id, logged_at, is_no_poop, created_by_caregiver_id)
+VALUES ('poop-1', 'child-1', '2026-05-05T08:00:00.000Z', 0, 'caregiver-1');
+
+${softDeleteStatement("child_caregivers", "caregiver_id = ?", ["caregiver-1"], deletedAt)}
+${softDeleteStatement("caregivers", "id = ?", ["caregiver-1"], deletedAt)}
+
+SELECT 'active_links=' || COUNT(*) FROM child_caregivers WHERE caregiver_id = 'caregiver-1' AND deleted_at IS NULL;
+SELECT 'deleted_caregiver=' || COUNT(*) FROM caregivers WHERE id = 'caregiver-1' AND deleted_at = '${deletedAt}';
+SELECT 'historical_log=' || COUNT(*) FROM poop_logs WHERE id = 'poop-1' AND created_by_caregiver_id = 'caregiver-1' AND deleted_at IS NULL;
+`);
+
+    assert.deepEqual(output, [
+      "active_links=0",
+      "deleted_caregiver=1",
+      "historical_log=1",
+    ]);
+  } finally {
+    cleanup();
+  }
+});
+
 test("mixed diaper linked poop creation is atomic at the SQLite transaction boundary", { skip: !hasSqlite3 }, () => {
   const { dbPath, cleanup } = createTempDb();
 

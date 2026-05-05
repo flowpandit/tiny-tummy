@@ -1,4 +1,5 @@
 import { buildChildDailySummary, type ChildDailySummary } from "../child-summary";
+import { CURRENT_CAREGIVER_SETTING_KEY } from "../caregivers";
 import { buildHandoffSummary, type HandoffSummary } from "../handoff-summary";
 import type {
   Alert,
@@ -44,7 +45,7 @@ export interface HandoffService {
 }
 
 export function createHandoffService(
-  repositories: Pick<AppRepositories, "children" | "elimination" | "feeding" | "sleep" | "care">,
+  repositories: Pick<AppRepositories, "children" | "caregivers" | "elimination" | "feeding" | "sleep" | "care" | "settings">,
 ): HandoffService {
   return {
     async getChildSummarySnapshot(childId, options = {}) {
@@ -94,7 +95,7 @@ export function createHandoffService(
       const sleepLimit = options.sleepLimit ?? 50;
       const symptomLimit = options.symptomLimit ?? 20;
 
-      const [children, diaperLogs, poopLogs, feedingLogs, sleepLogs, alerts, activeEpisode, symptomLogs] = await Promise.all([
+      const [children, diaperLogs, poopLogs, feedingLogs, sleepLogs, alerts, activeEpisode, symptomLogs, currentCaregiverId, childCaregivers] = await Promise.all([
         repositories.children.listActiveChildren(),
         repositories.elimination.listDiaperLogs(childId, poopLimit),
         repositories.elimination.listPoopLogs(childId, poopLimit),
@@ -103,6 +104,8 @@ export function createHandoffService(
         repositories.care.listActiveAlerts(childId),
         repositories.care.getActiveEpisode(childId),
         repositories.care.listSymptoms(childId, symptomLimit),
+        repositories.settings.getSetting(CURRENT_CAREGIVER_SETTING_KEY),
+        repositories.caregivers.listCaregiversForChild(childId),
       ]);
       const child = children.find((item) => item.id === childId) ?? null;
 
@@ -113,6 +116,9 @@ export function createHandoffService(
       const episodeEvents = activeEpisode
         ? await repositories.care.listEpisodeEvents(activeEpisode.id)
         : [];
+      const preparedByCaregiver = currentCaregiverId
+        ? childCaregivers.find((caregiver) => caregiver.id === currentCaregiverId) ?? null
+        : null;
 
       return buildHandoffSummary({
         child,
@@ -127,6 +133,7 @@ export function createHandoffService(
         dayKey: options.dayKey,
         generatedAt: options.generatedAt,
         parentNote: options.parentNote,
+        preparedByCaregiver,
       });
     },
   };
