@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { CURRENT_CAREGIVER_SETTING_KEY, type ChildCaregiverProfile } from "../src/lib/caregivers.ts";
 import { createLocalRepositories, type LocalDbClient } from "../src/lib/repositories/index.ts";
 import { createReportService } from "../src/lib/services/report-service.ts";
 import { createHandoffService } from "../src/lib/services/handoff-service.ts";
@@ -41,6 +42,16 @@ const caregiver: Caregiver = {
   is_primary: 1,
   created_at: "2026-04-01T00:00:00.000Z",
   updated_at: "2026-04-01T00:00:00.000Z",
+};
+
+const childCaregiverProfile: ChildCaregiverProfile = {
+  ...caregiver,
+  child_caregiver_id: "child-caregiver-1",
+  child_id: child.id,
+  relationship_to_child: "parent",
+  permissions: null,
+  link_created_at: "2026-04-01T00:00:00.000Z",
+  link_updated_at: "2026-04-01T00:00:00.000Z",
 };
 
 const poop: PoopEntry = {
@@ -272,6 +283,214 @@ test("EliminationRepository exposes mixed diaper operations without leaking DB h
 
   assert.equal(created.linked_poop_log_id, "poop-from-diaper");
   assert.deepEqual(calls, ["create:mixed", "update:diaper-1", "delete:diaper-1"]);
+});
+
+test("local repositories add linked current caregiver attribution to create and update flows", async () => {
+  const creates: Array<{ kind: string; input: Record<string, unknown> }> = [];
+  const updates: Array<{ kind: string; id: string; input: Record<string, unknown> }> = [];
+  const dbClient = {
+    getSetting: async (key: string) => key === CURRENT_CAREGIVER_SETTING_KEY ? caregiver.id : null,
+    getCaregiversForChild: async (childId: string) => childId === child.id ? [childCaregiverProfile] : [],
+    runDbTransaction: async <T>(action: () => Promise<T>) => action(),
+    createPoopLog: async (input: Record<string, unknown>) => {
+      creates.push({ kind: "poop", input });
+      return { ...poop, ...input, id: "poop-created" };
+    },
+    updatePoopLog: async (id: string, input: Record<string, unknown>) => {
+      updates.push({ kind: "poop", id, input });
+    },
+    createDiaperLog: async (input: Record<string, unknown>) => {
+      creates.push({ kind: "diaper", input });
+      return { ...diaper, ...input, id: "diaper-created", linked_poop_log_id: "poop-from-diaper" };
+    },
+    updateDiaperLog: async (id: string, input: Record<string, unknown>) => {
+      updates.push({ kind: "diaper", id, input });
+    },
+    createFeedingLog: async (input: Record<string, unknown>) => {
+      creates.push({ kind: "feed", input });
+      return { ...feed, ...input, id: "feed-created" };
+    },
+    updateDietLog: async (id: string, input: Record<string, unknown>) => {
+      updates.push({ kind: "feed", id, input });
+    },
+    createSleepLog: async (input: Record<string, unknown>) => {
+      creates.push({ kind: "sleep", input });
+      return { ...sleep, ...input, id: "sleep-created" };
+    },
+    updateSleepLog: async (id: string, input: Record<string, unknown>) => {
+      updates.push({ kind: "sleep", id, input });
+    },
+    createSymptomLog: async (input: Record<string, unknown>) => {
+      creates.push({ kind: "symptom", input });
+      return { ...symptom, ...input, id: "symptom-created" };
+    },
+    updateSymptomLog: async (id: string, input: Record<string, unknown>) => {
+      updates.push({ kind: "symptom", id, input });
+    },
+    createEpisode: async (input: Record<string, unknown>) => {
+      creates.push({ kind: "episode", input });
+      return { ...episode, ...input, id: "episode-created" };
+    },
+    updateEpisode: async (id: string, input: Record<string, unknown>) => {
+      updates.push({ kind: "episode", id, input });
+    },
+    closeEpisode: async (id: string, input: Record<string, unknown>) => {
+      updates.push({ kind: "episode-resolve", id, input });
+    },
+    createEpisodeEvent: async (input: Record<string, unknown>) => {
+      creates.push({ kind: "episode-event", input });
+      return { ...event, ...input, id: "event-created" };
+    },
+    deleteGeneratedSymptomEpisodeEvent: async () => {},
+    createGrowthLog: async (input: Record<string, unknown>) => {
+      creates.push({ kind: "growth", input });
+      return { id: "growth-created", child_id: child.id, measured_at: input.measured_at, weight_kg: null, height_cm: null, head_circumference_cm: null, notes: null, created_at: "now", updated_at: "now", ...input };
+    },
+    updateGrowthLog: async (id: string, input: Record<string, unknown>) => {
+      updates.push({ kind: "growth", id, input });
+    },
+    createMilestoneLog: async (input: Record<string, unknown>) => {
+      creates.push({ kind: "milestone", input });
+      return { ...milestone, ...input, id: "milestone-created" };
+    },
+  } as unknown as LocalDbClient;
+
+  const repositories = createLocalRepositories(dbClient);
+
+  await repositories.elimination.recordPoop({
+    child_id: child.id,
+    logged_at: poop.logged_at,
+    stool_type: 4,
+  });
+  await repositories.elimination.updatePoop(poop.id, {
+    child_id: child.id,
+    notes: "Edited",
+  });
+  await repositories.elimination.recordDiaper({
+    child_id: child.id,
+    logged_at: diaper.logged_at,
+    diaper_type: "mixed",
+  });
+  await repositories.elimination.updateDiaper(diaper.id, {
+    child_id: child.id,
+    diaper_type: "wet",
+  });
+  await repositories.feeding.recordFeed({
+    child_id: child.id,
+    logged_at: feed.logged_at,
+    food_type: "breast_milk",
+  });
+  await repositories.feeding.updateFeed(feed.id, {
+    child_id: child.id,
+    notes: "Edited feed",
+  });
+  await repositories.sleep.recordSleep({
+    child_id: child.id,
+    sleep_type: "nap",
+    started_at: sleep.started_at,
+    ended_at: sleep.ended_at,
+  });
+  await repositories.sleep.updateSleep(sleep.id, {
+    child_id: child.id,
+    notes: "Edited sleep",
+  });
+  await repositories.care.recordSymptom({
+    child_id: child.id,
+    symptom_type: "straining",
+    severity: "mild",
+    logged_at: symptom.logged_at,
+  });
+  await repositories.care.saveSymptomWithEpisodeEvent({
+    childId: child.id,
+    existingSymptom: null,
+    symptom: {
+      child_id: child.id,
+      symptom_type: "straining",
+      severity: "mild",
+      logged_at: symptom.logged_at,
+    },
+    episodeEvent: {
+      episode_id: episode.id,
+      event_type: "symptom",
+      title: "Straining",
+      logged_at: symptom.logged_at,
+      source_kind: "symptom",
+    },
+  });
+  await repositories.care.startEpisode({
+    child_id: child.id,
+    episode_type: "constipation",
+    started_at: episode.started_at,
+  });
+  await repositories.care.addEpisodeEvent({
+    episode_id: episode.id,
+    child_id: child.id,
+    event_type: "progress",
+    title: "Settled",
+    logged_at: event.logged_at,
+  });
+  await repositories.care.resolveEpisode(episode.id, {
+    child_id: child.id,
+    ended_at: "2026-04-12T14:00:00.000Z",
+    outcome: "Resolved",
+  });
+  await repositories.growth.recordGrowth({
+    child_id: child.id,
+    measured_at: "2026-04-12T15:00:00.000Z",
+    weight_kg: 5.1,
+  });
+  await repositories.growth.updateGrowth("growth-1", {
+    child_id: child.id,
+    notes: "Edited growth",
+  });
+  await repositories.milestones.recordMilestone({
+    child_id: child.id,
+    milestone_type: "started_solids",
+    logged_at: milestone.logged_at,
+  });
+
+  for (const { input } of creates) {
+    assert.equal(input.created_by_caregiver_id, caregiver.id);
+    assert.equal(input.updated_by_caregiver_id, caregiver.id);
+  }
+
+  for (const { input } of updates) {
+    assert.equal(input.updated_by_caregiver_id, caregiver.id);
+    assert.equal(Object.hasOwn(input, "created_by_caregiver_id"), false);
+  }
+
+  assert.equal(creates.some((call) => call.kind === "diaper" && call.input.diaper_type === "mixed"), true);
+  assert.equal(creates.some((call) => call.kind === "episode-event" && call.input.source_id === "symptom-created"), true);
+});
+
+test("local repositories leave attribution null when no linked current caregiver is available", async () => {
+  const createdInputs: Record<string, unknown>[] = [];
+  const createDbClient = (currentCaregiverId: string | null, linkedProfiles: ChildCaregiverProfile[]) => ({
+    getSetting: async () => currentCaregiverId,
+    getCaregiversForChild: async () => linkedProfiles,
+    createPoopLog: async (input: Record<string, unknown>) => {
+      createdInputs.push(input);
+      return { ...poop, ...input };
+    },
+  }) as unknown as LocalDbClient;
+  const unlinkedRepository = createLocalRepositories(createDbClient(caregiver.id, [])).elimination;
+
+  await unlinkedRepository.recordPoop({
+    child_id: child.id,
+    logged_at: poop.logged_at,
+  });
+
+  assert.equal(createdInputs[0]?.created_by_caregiver_id, null);
+  assert.equal(createdInputs[0]?.updated_by_caregiver_id, null);
+
+  const noCurrentRepository = createLocalRepositories(createDbClient(null, [childCaregiverProfile])).elimination;
+  await noCurrentRepository.recordPoop({
+    child_id: child.id,
+    logged_at: poop.logged_at,
+  });
+
+  assert.equal(createdInputs[1]?.created_by_caregiver_id, null);
+  assert.equal(createdInputs[1]?.updated_by_caregiver_id, null);
 });
 
 test("CareRepository keeps symptom and generated episode event changes in one aggregate operation", async () => {

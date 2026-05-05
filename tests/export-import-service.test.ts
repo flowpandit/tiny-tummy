@@ -450,6 +450,8 @@ test("builds a full snapshot with portable child data, caregivers, safe settings
   assert.deepEqual(snapshot.caregivers.map((row) => row.id).sort(), [caregiver.id, otherCaregiver.id])
   assert.deepEqual(snapshot.child_caregivers.map((row) => row.id).sort(), [childCaregiver.id, otherChildCaregiver.id])
   assert.equal(snapshot.logs.poop_logs.length, 2)
+  assert.equal(snapshot.logs.poop_logs[0]?.created_by_caregiver_id, caregiver.id)
+  assert.equal(snapshot.logs.poop_logs[0]?.updated_by_caregiver_id, caregiver.id)
   assert.equal(snapshot.logs.diaper_logs.length, 1)
   assert.equal(snapshot.logs.diet_logs.length, 1)
   assert.equal(snapshot.logs.sleep_logs.length, 1)

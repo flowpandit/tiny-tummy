@@ -14,6 +14,7 @@ import {
   getHistoryFeedingPresentation,
   formatHistorySleepDuration,
   formatHistoryTime,
+  getHistoryCaregiverAttributionLabel,
   isHistoryBreastfeedEntry,
   type TimelineEvent,
   type TimelineEventSummary,
@@ -278,6 +279,7 @@ function BaseItem({
   time,
   title,
   subtitle,
+  attributionLabel,
   tagLabel,
   media,
   onTap,
@@ -287,6 +289,7 @@ function BaseItem({
   time: string;
   title: string;
   subtitle?: string | null;
+  attributionLabel?: string | null;
   tagLabel?: string;
   media?: ReactNode;
   onTap?: () => void;
@@ -317,6 +320,11 @@ function BaseItem({
         {subtitle && (
           <p className="mt-0.5 line-clamp-2 text-[0.8rem] leading-snug text-[var(--color-text-secondary)]">
             {subtitle}
+          </p>
+        )}
+        {attributionLabel && (
+          <p className="mt-0.5 text-[0.74rem] font-medium leading-snug text-[var(--color-text-soft)]">
+            {attributionLabel}
           </p>
         )}
       </div>
@@ -366,7 +374,7 @@ function getEventTone(event: TimelineEvent): HistoryTone {
   }
 }
 
-function DiaperItem({ entry, onTap }: { entry: DiaperEntry; onTap: () => void }) {
+function DiaperItem({ entry, attributionLabel, onTap }: { entry: DiaperEntry; attributionLabel?: string | null; onTap: () => void }) {
   const tone = entry.diaper_type === "wet" ? "wet" : "poop";
   const stoolLabel = entry.stool_type ? BITSS_TYPES.find((item) => item.type === entry.stool_type)?.label : null;
   const details = [
@@ -383,12 +391,13 @@ function DiaperItem({ entry, onTap }: { entry: DiaperEntry; onTap: () => void })
       time={formatHistoryTime(entry.logged_at)}
       title={getDiaperTypeLabel(entry.diaper_type)}
       subtitle={details || null}
+      attributionLabel={attributionLabel}
       tagLabel={tone === "wet" ? "wet" : "poop"}
     />
   );
 }
 
-function PoopItem({ log, onTap }: { log: PoopEntry; onTap: () => void }) {
+function PoopItem({ log, attributionLabel, onTap }: { log: PoopEntry; attributionLabel?: string | null; onTap: () => void }) {
   const typeInfo = log.stool_type ? BITSS_TYPES.find((item) => item.type === log.stool_type) : null;
   const colorInfo = log.color ? STOOL_COLORS.find((item) => item.value === log.color) : null;
   const details = [
@@ -409,13 +418,14 @@ function PoopItem({ log, onTap }: { log: PoopEntry; onTap: () => void }) {
       time={formatHistoryTime(log.logged_at)}
       title={log.is_no_poop ? "No poop day" : "Poop"}
       subtitle={details || null}
+      attributionLabel={attributionLabel}
       tagLabel="poop"
       media={log.photo_path ? <PhotoThumbnail photoPath={log.photo_path} /> : null}
     />
   );
 }
 
-function MealItem({ meal, unitSystem, onTap }: { meal: FeedingEntry; unitSystem: "metric" | "imperial"; onTap: () => void }) {
+function MealItem({ meal, attributionLabel, unitSystem, onTap }: { meal: FeedingEntry; attributionLabel?: string | null; unitSystem: "metric" | "imperial"; onTap: () => void }) {
   const presentation = getHistoryFeedingPresentation(meal, unitSystem);
   const isBreastfeed = presentation.kind === "breastfeed";
   const tone = isBreastfeed ? getBreastfeedHistoryTone(meal) : "feed";
@@ -439,12 +449,13 @@ function MealItem({ meal, unitSystem, onTap }: { meal: FeedingEntry; unitSystem:
       time={formatHistoryTime(meal.logged_at)}
       title={presentation.title}
       subtitle={presentation.subtitle}
+      attributionLabel={attributionLabel}
       tagLabel={presentation.tagLabel}
     />
   );
 }
 
-function SleepItem({ entry, onTap }: { entry: SleepEntry; onTap: () => void }) {
+function SleepItem({ entry, attributionLabel, onTap }: { entry: SleepEntry; attributionLabel?: string | null; onTap: () => void }) {
   return (
     <BaseItem
       onTap={onTap}
@@ -453,12 +464,13 @@ function SleepItem({ entry, onTap }: { entry: SleepEntry; onTap: () => void }) {
       time={formatHistoryTime(entry.started_at)}
       title={entry.sleep_type === "night" ? "Night sleep" : "Nap"}
       subtitle={`${formatHistorySleepDuration(entry)} · ${formatHistoryTime(entry.started_at)} - ${formatHistoryTime(entry.ended_at)}${entry.notes ? ` · ${entry.notes}` : ""}`}
+      attributionLabel={attributionLabel}
       tagLabel="sleep"
     />
   );
 }
 
-function SymptomItem({ entry, temperatureUnit, onTap }: { entry: SymptomEntry; temperatureUnit: TemperatureUnit; onTap: () => void }) {
+function SymptomItem({ entry, attributionLabel, temperatureUnit, onTap }: { entry: SymptomEntry; attributionLabel?: string | null; temperatureUnit: TemperatureUnit; onTap: () => void }) {
   const temperatureLabel = entry.temperature_c !== null
     ? formatTemperatureValue(entry.temperature_c, temperatureUnit)
     : null;
@@ -471,12 +483,13 @@ function SymptomItem({ entry, temperatureUnit, onTap }: { entry: SymptomEntry; t
       time={formatHistoryTime(entry.logged_at)}
       title={getSymptomTypeLabel(entry.symptom_type)}
       subtitle={[getSymptomSeverityLabel(entry.severity), temperatureLabel, getTemperatureMethodLabel(entry.temperature_method), entry.notes, entry.episode_id ? "in episode" : null].filter(Boolean).join(" · ")}
+      attributionLabel={attributionLabel}
       tagLabel="symptom"
     />
   );
 }
 
-function GrowthItem({ entry, unitSystem }: { entry: GrowthEntry; unitSystem: "metric" | "imperial" }) {
+function GrowthItem({ entry, attributionLabel, unitSystem }: { entry: GrowthEntry; attributionLabel?: string | null; unitSystem: "metric" | "imperial" }) {
   return (
     <BaseItem
       tone="milestone"
@@ -484,12 +497,13 @@ function GrowthItem({ entry, unitSystem }: { entry: GrowthEntry; unitSystem: "me
       time={formatHistoryTime(entry.measured_at)}
       title="Growth check"
       subtitle={[formatGrowthSummaryWithUnits(entry, unitSystem), entry.notes].filter(Boolean).join(" · ")}
+      attributionLabel={attributionLabel}
       tagLabel="milestone"
     />
   );
 }
 
-function MilestoneItem({ entry }: { entry: MilestoneEntry }) {
+function MilestoneItem({ entry, attributionLabel }: { entry: MilestoneEntry; attributionLabel?: string | null }) {
   return (
     <BaseItem
       tone="milestone"
@@ -497,12 +511,13 @@ function MilestoneItem({ entry }: { entry: MilestoneEntry }) {
       time={formatHistoryTime(entry.logged_at)}
       title={getMilestoneTypeLabel(entry.milestone_type)}
       subtitle={entry.notes}
+      attributionLabel={attributionLabel}
       tagLabel="milestone"
     />
   );
 }
 
-function EpisodeItem({ entry, onTap }: { entry: Episode; onTap: () => void }) {
+function EpisodeItem({ entry, attributionLabel, onTap }: { entry: Episode; attributionLabel?: string | null; onTap: () => void }) {
   const statusText = entry.status === "resolved"
     ? `Resolved ${entry.ended_at ? formatHistoryDateTime(entry.ended_at) : ""}`.trim()
     : "Active episode";
@@ -515,12 +530,13 @@ function EpisodeItem({ entry, onTap }: { entry: Episode; onTap: () => void }) {
       time={formatHistoryTime(entry.started_at)}
       title={`${getEpisodeTypeLabel(entry.episode_type)} episode`}
       subtitle={[statusText, entry.summary ?? entry.outcome].filter(Boolean).join(" · ")}
+      attributionLabel={attributionLabel}
       tagLabel="episode"
     />
   );
 }
 
-function EpisodeEventItem({ entry, onTap }: { entry: EpisodeEvent; onTap: () => void }) {
+function EpisodeEventItem({ entry, attributionLabel, onTap }: { entry: EpisodeEvent; attributionLabel?: string | null; onTap: () => void }) {
   return (
     <BaseItem
       onTap={onTap}
@@ -529,6 +545,7 @@ function EpisodeEventItem({ entry, onTap }: { entry: EpisodeEvent; onTap: () => 
       time={formatHistoryTime(entry.logged_at)}
       title={entry.title}
       subtitle={[getEpisodeEventTypeLabel(entry.event_type), entry.notes].filter(Boolean).join(" · ")}
+      attributionLabel={attributionLabel}
       tagLabel="episode"
     />
   );
@@ -548,6 +565,7 @@ function renderEventItem({
   onOpenEpisode,
   unitSystem,
   temperatureUnit,
+  caregiverDisplayNames,
 }: {
   event: TimelineEvent;
   onDeleteDiaper: (entry: DiaperEntry) => void;
@@ -562,26 +580,29 @@ function renderEventItem({
   onOpenEpisode: (episodeId: string) => void;
   unitSystem: "metric" | "imperial";
   temperatureUnit: TemperatureUnit;
+  caregiverDisplayNames: Record<string, string>;
 }) {
+  const attributionLabel = getHistoryCaregiverAttributionLabel(event.entry, caregiverDisplayNames);
+
   switch (event.kind) {
     case "diaper":
-      return <SwipeableItem onDelete={() => onDeleteDiaper(event.entry)}><DiaperItem entry={event.entry} onTap={() => onEditDiaper(event.entry)} /></SwipeableItem>;
+      return <SwipeableItem onDelete={() => onDeleteDiaper(event.entry)}><DiaperItem entry={event.entry} attributionLabel={attributionLabel} onTap={() => onEditDiaper(event.entry)} /></SwipeableItem>;
     case "poop":
-      return <SwipeableItem onDelete={() => onDeletePoop(event.entry.id)}><PoopItem log={event.entry} onTap={() => onEditPoop(event.entry)} /></SwipeableItem>;
+      return <SwipeableItem onDelete={() => onDeletePoop(event.entry.id)}><PoopItem log={event.entry} attributionLabel={attributionLabel} onTap={() => onEditPoop(event.entry)} /></SwipeableItem>;
     case "meal":
-      return <SwipeableItem onDelete={() => onDeleteMeal(event.entry.id)}><MealItem meal={event.entry} unitSystem={unitSystem} onTap={() => onEditMeal(event.entry)} /></SwipeableItem>;
+      return <SwipeableItem onDelete={() => onDeleteMeal(event.entry.id)}><MealItem meal={event.entry} attributionLabel={attributionLabel} unitSystem={unitSystem} onTap={() => onEditMeal(event.entry)} /></SwipeableItem>;
     case "sleep":
-      return <SwipeableItem onDelete={() => onDeleteSleep(event.entry.id)}><SleepItem entry={event.entry} onTap={() => onEditSleep(event.entry)} /></SwipeableItem>;
+      return <SwipeableItem onDelete={() => onDeleteSleep(event.entry.id)}><SleepItem entry={event.entry} attributionLabel={attributionLabel} onTap={() => onEditSleep(event.entry)} /></SwipeableItem>;
     case "symptom":
-      return <SymptomItem entry={event.entry} temperatureUnit={temperatureUnit} onTap={() => onEditSymptom(event.entry)} />;
+      return <SymptomItem entry={event.entry} attributionLabel={attributionLabel} temperatureUnit={temperatureUnit} onTap={() => onEditSymptom(event.entry)} />;
     case "growth":
-      return <GrowthItem entry={event.entry} unitSystem={unitSystem} />;
+      return <GrowthItem entry={event.entry} attributionLabel={attributionLabel} unitSystem={unitSystem} />;
     case "milestone":
-      return <MilestoneItem entry={event.entry} />;
+      return <MilestoneItem entry={event.entry} attributionLabel={attributionLabel} />;
     case "episode":
-      return <EpisodeItem entry={event.entry} onTap={() => onOpenEpisode(event.entry.id)} />;
+      return <EpisodeItem entry={event.entry} attributionLabel={attributionLabel} onTap={() => onOpenEpisode(event.entry.id)} />;
     case "episode_event":
-      return <EpisodeEventItem entry={event.entry} onTap={() => onOpenEpisode(event.entry.episode_id)} />;
+      return <EpisodeEventItem entry={event.entry} attributionLabel={attributionLabel} onTap={() => onOpenEpisode(event.entry.episode_id)} />;
   }
 }
 
@@ -628,6 +649,7 @@ function TimelineRail({
 function DayCard({
   date,
   events,
+  caregiverDisplayNames,
   isExpanded,
   onToggle,
   onDeleteDiaper,
@@ -645,6 +667,7 @@ function DayCard({
 }: {
   date: string;
   events: TimelineEvent[];
+  caregiverDisplayNames: Record<string, string>;
   isExpanded: boolean;
   onToggle: () => void;
   onDeleteDiaper: (entry: DiaperEntry) => void;
@@ -719,6 +742,7 @@ function DayCard({
                       onOpenEpisode,
                       unitSystem,
                       temperatureUnit,
+                      caregiverDisplayNames,
                     })}
                   </div>
                 </div>
@@ -776,6 +800,7 @@ export function HistoryTodayOverview({
 
 export function HistoryTimeline({
   displayDays,
+  caregiverDisplayNames,
   expandedDay,
   onDeleteDiaper,
   onDeleteMeal,
@@ -792,6 +817,7 @@ export function HistoryTimeline({
   temperatureUnit,
 }: {
   displayDays: Array<[string, TimelineEvent[]]>;
+  caregiverDisplayNames: Record<string, string>;
   expandedDay: string | null;
   onDeleteDiaper: (entry: DiaperEntry) => void;
   onDeleteMeal: (id: string) => void;
@@ -814,6 +840,7 @@ export function HistoryTimeline({
           key={date}
           date={date}
           events={events}
+          caregiverDisplayNames={caregiverDisplayNames}
           isExpanded={expandedDay === date}
           onToggle={() => onSetExpandedDay(expandedDay === date ? null : date)}
           onDeleteDiaper={onDeleteDiaper}

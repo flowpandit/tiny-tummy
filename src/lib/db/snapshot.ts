@@ -397,6 +397,34 @@ function getSnapshotChildIds(source: Pick<SnapshotSourceData, "children">): Set<
   return new Set(source.children.map((child) => child.id))
 }
 
+function addCaregiverId(target: Set<string>, caregiverId: string | null | undefined): void {
+  if (caregiverId) target.add(caregiverId)
+}
+
+function getAttributedCaregiverIds(logs: SnapshotSourceData["logs"]): string[] {
+  const caregiverIds = new Set<string>()
+  const groups = [
+    logs.poop_logs,
+    logs.diaper_logs,
+    logs.diet_logs,
+    logs.sleep_logs,
+    logs.symptoms,
+    logs.health_episodes,
+    logs.episode_events,
+    logs.growth_logs,
+    logs.milestone_logs,
+  ]
+
+  for (const rows of groups) {
+    for (const row of rows) {
+      addCaregiverId(caregiverIds, row.created_by_caregiver_id)
+      addCaregiverId(caregiverIds, row.updated_by_caregiver_id)
+    }
+  }
+
+  return [...caregiverIds]
+}
+
 function getFirstDeviceId(source: SnapshotSourceData): string | null {
   const groups = [
     source.children,
@@ -431,10 +459,28 @@ export async function loadSnapshotSourceData(input: SnapshotLoadInput): Promise<
   const conn = await getDb()
   const children = await selectRows<ChildSnapshot>(conn, "children", input, input.childId ? "id" : undefined)
   const child_caregivers = await selectRows<ChildCaregiverSnapshot>(conn, "child_caregivers", input, input.childId ? "child_id" : undefined)
+  const logs: SnapshotSourceData["logs"] = {
+    poop_logs: await selectRows<PoopLogSnapshot>(conn, "poop_logs", input, input.childId ? "child_id" : undefined),
+    diaper_logs: await selectRows<DiaperLogSnapshot>(conn, "diaper_logs", input, input.childId ? "child_id" : undefined),
+    diet_logs: await selectRows<DietLogSnapshot>(conn, "diet_logs", input, input.childId ? "child_id" : undefined),
+    sleep_logs: await selectRows<SleepLogSnapshot>(conn, "sleep_logs", input, input.childId ? "child_id" : undefined),
+    symptoms: await selectRows<SymptomLogSnapshot>(conn, "symptom_logs", input, input.childId ? "child_id" : undefined),
+    health_episodes: await selectRows<HealthEpisodeSnapshot>(conn, "episodes", input, input.childId ? "child_id" : undefined),
+    episode_events: await selectRows<EpisodeEventSnapshot>(conn, "episode_events", input, input.childId ? "child_id" : undefined),
+    growth_logs: await selectRows<GrowthLogSnapshot>(conn, "growth_logs", input, input.childId ? "child_id" : undefined),
+    milestone_logs: await selectRows<MilestoneLogSnapshot>(conn, "milestone_logs", input, input.childId ? "child_id" : undefined),
+    quick_presets: await selectRows<QuickPresetSnapshot>(conn, "quick_presets", input, input.childId ? "child_id" : undefined),
+    alerts: await selectRows<AlertSnapshot>(conn, "alerts", input, input.childId ? "child_id" : undefined),
+  }
   const caregivers = input.childId
     ? await selectCaregiversForChild(
       conn,
-      [...new Set(child_caregivers.map((link) => link.caregiver_id))],
+      [
+        ...new Set([
+          ...child_caregivers.map((link) => link.caregiver_id),
+          ...getAttributedCaregiverIds(logs),
+        ]),
+      ],
       input.includeDeleted,
     )
     : await selectRows<CaregiverSnapshot>(conn, "caregivers", input)
@@ -443,19 +489,7 @@ export async function loadSnapshotSourceData(input: SnapshotLoadInput): Promise<
     children,
     caregivers,
     child_caregivers,
-    logs: {
-      poop_logs: await selectRows<PoopLogSnapshot>(conn, "poop_logs", input, input.childId ? "child_id" : undefined),
-      diaper_logs: await selectRows<DiaperLogSnapshot>(conn, "diaper_logs", input, input.childId ? "child_id" : undefined),
-      diet_logs: await selectRows<DietLogSnapshot>(conn, "diet_logs", input, input.childId ? "child_id" : undefined),
-      sleep_logs: await selectRows<SleepLogSnapshot>(conn, "sleep_logs", input, input.childId ? "child_id" : undefined),
-      symptoms: await selectRows<SymptomLogSnapshot>(conn, "symptom_logs", input, input.childId ? "child_id" : undefined),
-      health_episodes: await selectRows<HealthEpisodeSnapshot>(conn, "episodes", input, input.childId ? "child_id" : undefined),
-      episode_events: await selectRows<EpisodeEventSnapshot>(conn, "episode_events", input, input.childId ? "child_id" : undefined),
-      growth_logs: await selectRows<GrowthLogSnapshot>(conn, "growth_logs", input, input.childId ? "child_id" : undefined),
-      milestone_logs: await selectRows<MilestoneLogSnapshot>(conn, "milestone_logs", input, input.childId ? "child_id" : undefined),
-      quick_presets: await selectRows<QuickPresetSnapshot>(conn, "quick_presets", input, input.childId ? "child_id" : undefined),
-      alerts: await selectRows<AlertSnapshot>(conn, "alerts", input, input.childId ? "child_id" : undefined),
-    },
+    logs,
     attachments: input.includeAttachmentMetadata
       ? await selectRows<AttachmentSnapshot>(conn, "attachments", input, input.childId ? "child_id" : undefined)
       : [],

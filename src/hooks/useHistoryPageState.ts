@@ -21,6 +21,7 @@ import type {
 } from "../lib/types";
 
 type HistoryPageData = {
+  caregiverDisplayNames: Record<string, string>;
   diaperLogs: DiaperEntry[];
   poopLogs: PoopEntry[];
   feedingLogs: FeedingEntry[];
@@ -34,6 +35,7 @@ type HistoryPageData = {
 
 function getEmptyHistoryPageData(): HistoryPageData {
   return {
+    caregiverDisplayNames: {},
     diaperLogs: [],
     poopLogs: [],
     feedingLogs: [],
@@ -52,7 +54,7 @@ export function useHistoryPageState(
   quickRangeDays: 7 | 14 | 30,
   searchDate: string | null,
 ) {
-  const { care, elimination, feeding, growth, milestones, sleep } = useRepositories();
+  const { care, caregivers, elimination, feeding, growth, milestones, sleep } = useRepositories();
   const [data, setData] = useState<HistoryPageData>(getEmptyHistoryPageData);
   const [isLoading, setIsLoading] = useState(false);
   const requestIdRef = useRef(0);
@@ -81,6 +83,7 @@ export function useHistoryPageState(
         milestoneLogs,
         episodes,
         episodeEvents,
+        childCaregivers,
       ] = await Promise.all([
         elimination.listDiaperLogsInRange(activeChild.id, rangeStart, rangeEnd),
         elimination.listPoopLogsInRange(activeChild.id, rangeStart, rangeEnd),
@@ -91,11 +94,15 @@ export function useHistoryPageState(
         milestones.listMilestonesInRange(activeChild.id, rangeStart, rangeEnd),
         care.listEpisodesInRange(activeChild.id, rangeStart, rangeEnd),
         care.listEpisodeEventsInRange(activeChild.id, rangeStart, rangeEnd),
+        caregivers.listCaregiversForChild(activeChild.id),
       ]);
 
       if (requestId !== requestIdRef.current) return;
 
       setData({
+        caregiverDisplayNames: Object.fromEntries(
+          childCaregivers.map((caregiver) => [caregiver.id, caregiver.display_name]),
+        ),
         diaperLogs,
         poopLogs,
         feedingLogs,
@@ -114,7 +121,7 @@ export function useHistoryPageState(
     if (requestId === requestIdRef.current) {
       setIsLoading(false);
     }
-  }, [activeChild, care, elimination, feeding, growth, milestones, quickRangeDays, searchDate, sleep, today]);
+  }, [activeChild, care, caregivers, elimination, feeding, growth, milestones, quickRangeDays, searchDate, sleep, today]);
 
   useEffect(() => {
     void refreshHistory();

@@ -15,13 +15,18 @@ async function insertPoopLog(
     size?: string | null;
     notes?: string | null;
     photo_path?: string | null;
+    created_by_caregiver_id?: string | null;
+    updated_by_caregiver_id?: string | null;
   },
   id = generateId(),
   now = nowISO(),
 ): Promise<PoopEntry> {
   await executeMutation(
     conn,
-    "INSERT INTO poop_logs (id, child_id, logged_at, stool_type, color, size, is_no_poop, notes, photo_path, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?)",
+    `INSERT INTO poop_logs (
+      id, child_id, logged_at, stool_type, color, size, is_no_poop, notes, photo_path,
+      created_by_caregiver_id, updated_by_caregiver_id, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?)`,
     [
       id,
       input.child_id,
@@ -31,6 +36,8 @@ async function insertPoopLog(
       input.size ?? null,
       input.notes ?? null,
       input.photo_path ?? null,
+      input.created_by_caregiver_id ?? null,
+      input.updated_by_caregiver_id ?? null,
       now,
       now,
     ],
@@ -46,6 +53,8 @@ async function insertPoopLog(
     is_no_poop: 0,
     notes: input.notes ?? null,
     photo_path: input.photo_path ?? null,
+    created_by_caregiver_id: input.created_by_caregiver_id ?? null,
+    updated_by_caregiver_id: input.updated_by_caregiver_id ?? null,
     created_at: now,
     updated_at: now,
   };
@@ -59,6 +68,8 @@ export async function createPoopLog(input: {
   size?: string | null;
   notes?: string | null;
   photo_path?: string | null;
+  created_by_caregiver_id?: string | null;
+  updated_by_caregiver_id?: string | null;
 }): Promise<PoopEntry> {
   const conn = await getDb();
   return insertPoopLog(conn, input);
@@ -74,6 +85,8 @@ async function createLinkedPoopLogWithConn(
     size?: string | null;
     notes?: string | null;
     photo_path?: string | null;
+    created_by_caregiver_id?: string | null;
+    updated_by_caregiver_id?: string | null;
   },
   now = nowISO(),
 ): Promise<PoopEntry> {
@@ -129,11 +142,13 @@ export async function getLastRealPoop(childId: string): Promise<PoopEntry | null
 export async function updatePoopLog(
   id: string,
   updates: {
+    child_id?: string;
     logged_at?: string;
     stool_type?: number | null;
     color?: string | null;
     size?: string | null;
     notes?: string | null;
+    updated_by_caregiver_id?: string | null;
   },
 ): Promise<void> {
   const conn = await getDb();
@@ -144,11 +159,13 @@ async function updatePoopLogWithConn(
   conn: DbConnection,
   id: string,
   updates: {
+    child_id?: string;
     logged_at?: string;
     stool_type?: number | null;
     color?: string | null;
     size?: string | null;
     notes?: string | null;
+    updated_by_caregiver_id?: string | null;
   },
   updatedAt = nowISO(),
 ): Promise<void> {
@@ -160,6 +177,10 @@ async function updatePoopLogWithConn(
   if (updates.color !== undefined) { sets.push("color = ?"); params.push(updates.color); }
   if (updates.size !== undefined) { sets.push("size = ?"); params.push(updates.size); }
   if (updates.notes !== undefined) { sets.push("notes = ?"); params.push(updates.notes); }
+  if (updates.updated_by_caregiver_id !== undefined) {
+    sets.push("updated_by_caregiver_id = ?");
+    params.push(updates.updated_by_caregiver_id);
+  }
 
   params.push(id);
   await executeMutation(conn, `UPDATE poop_logs SET ${sets.join(", ")} WHERE id = ? AND deleted_at IS NULL`, params);
@@ -269,6 +290,8 @@ export async function createDiaperLog(input: {
   size?: string | null;
   notes?: string | null;
   photo_path?: string | null;
+  created_by_caregiver_id?: string | null;
+  updated_by_caregiver_id?: string | null;
 }): Promise<DiaperEntry> {
   const conn = await getDb();
   const id = generateId();
@@ -285,6 +308,8 @@ export async function createDiaperLog(input: {
         size: input.size ?? null,
         notes: input.notes ?? null,
         photo_path: input.photo_path ?? null,
+        created_by_caregiver_id: input.created_by_caregiver_id ?? null,
+        updated_by_caregiver_id: input.updated_by_caregiver_id ?? null,
       }, now);
       linkedPoopLogId = poopLog.id;
     }
@@ -293,8 +318,8 @@ export async function createDiaperLog(input: {
       conn,
       `INSERT INTO diaper_logs (
         id, child_id, logged_at, diaper_type, urine_color, stool_type, color, size, notes,
-        photo_path, linked_poop_log_id, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        photo_path, linked_poop_log_id, created_by_caregiver_id, updated_by_caregiver_id, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         id,
         input.child_id,
@@ -307,6 +332,8 @@ export async function createDiaperLog(input: {
         input.notes ?? null,
         input.photo_path ?? null,
         linkedPoopLogId,
+        input.created_by_caregiver_id ?? null,
+        input.updated_by_caregiver_id ?? null,
         now,
         now,
       ],
@@ -324,6 +351,8 @@ export async function createDiaperLog(input: {
       notes: input.notes ?? null,
       photo_path: input.photo_path ?? null,
       linked_poop_log_id: linkedPoopLogId,
+      created_by_caregiver_id: input.created_by_caregiver_id ?? null,
+      updated_by_caregiver_id: input.updated_by_caregiver_id ?? null,
       created_at: now,
       updated_at: now,
     };
@@ -384,6 +413,7 @@ async function updateDiaperLogWithConn(
   conn: DbConnection,
   id: string,
   updates: {
+    child_id?: string;
     logged_at?: string;
     diaper_type?: DiaperEntry["diaper_type"];
     urine_color?: string | null;
@@ -391,6 +421,7 @@ async function updateDiaperLogWithConn(
     color?: string | null;
     size?: string | null;
     notes?: string | null;
+    updated_by_caregiver_id?: string | null;
   },
 ): Promise<void> {
   const rows = await conn.select<DiaperEntry[]>(
@@ -422,6 +453,7 @@ async function updateDiaperLogWithConn(
       color: next.color,
       size: next.size,
       notes: next.notes,
+      updated_by_caregiver_id: updates.updated_by_caregiver_id,
     }, now);
   } else if (needsPoopLog && !linkedPoopLogId) {
     const poopLog = await createLinkedPoopLogWithConn(conn, {
@@ -432,6 +464,8 @@ async function updateDiaperLogWithConn(
       size: next.size,
       notes: next.notes,
       photo_path: current.photo_path,
+      created_by_caregiver_id: updates.updated_by_caregiver_id ?? null,
+      updated_by_caregiver_id: updates.updated_by_caregiver_id ?? null,
     }, now);
     linkedPoopLogId = poopLog.id;
   } else if (!needsPoopLog && linkedPoopLogId) {
@@ -450,6 +484,10 @@ async function updateDiaperLogWithConn(
   if (updates.size !== undefined) { sets.push("size = ?"); params.push(next.size); }
   if (updates.notes !== undefined) { sets.push("notes = ?"); params.push(next.notes); }
   if (linkedPoopLogId !== current.linked_poop_log_id) { sets.push("linked_poop_log_id = ?"); params.push(linkedPoopLogId); }
+  if (updates.updated_by_caregiver_id !== undefined) {
+    sets.push("updated_by_caregiver_id = ?");
+    params.push(updates.updated_by_caregiver_id);
+  }
 
   params.push(id);
   await executeMutation(conn, `UPDATE diaper_logs SET ${sets.join(", ")} WHERE id = ? AND deleted_at IS NULL`, params);
@@ -458,6 +496,7 @@ async function updateDiaperLogWithConn(
 export async function updateDiaperLog(
   id: string,
   updates: {
+    child_id?: string;
     logged_at?: string;
     diaper_type?: DiaperEntry["diaper_type"];
     urine_color?: string | null;
@@ -465,6 +504,7 @@ export async function updateDiaperLog(
     color?: string | null;
     size?: string | null;
     notes?: string | null;
+    updated_by_caregiver_id?: string | null;
   },
 ): Promise<void> {
   const conn = await getDb();

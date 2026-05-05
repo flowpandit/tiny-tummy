@@ -2,6 +2,7 @@ import {
   CAREGIVER_AVATAR_COLORS,
   CURRENT_CAREGIVER_SETTING_KEY,
   buildCaregiverDraft,
+  findLinkedCurrentCaregiverForChild,
   parseCaregiverRole,
   type CaregiverDraft,
   type ChildCaregiverProfile,
@@ -30,6 +31,7 @@ export interface CaregiverService {
   deleteCaregiver(caregiverId: string): Promise<void>;
   setPrimaryCaregiver(caregiverId: string | null): Promise<void>;
   getCurrentCaregiver(): Promise<Caregiver | null>;
+  getCurrentCaregiverForChild(childId: string): Promise<ChildCaregiverProfile | null>;
   setCurrentCaregiver(caregiverId: string | null): Promise<void>;
 }
 
@@ -167,6 +169,14 @@ export function createCaregiverService(
       const caregiverId = await repositories.settings.getSetting(CURRENT_CAREGIVER_SETTING_KEY);
       if (!caregiverId) return null;
       return repositories.caregivers.getCaregiver(caregiverId);
+    },
+
+    async getCurrentCaregiverForChild(childId) {
+      const caregiverId = await repositories.settings.getSetting(CURRENT_CAREGIVER_SETTING_KEY);
+      if (!caregiverId) return null;
+
+      const childCaregivers = await repositories.caregivers.listCaregiversForChild(childId);
+      return findLinkedCurrentCaregiverForChild(caregiverId, childCaregivers);
     },
 
     async setCurrentCaregiver(caregiverId) {

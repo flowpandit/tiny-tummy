@@ -46,6 +46,7 @@ export function History() {
   const [editingSymptom, setEditingSymptom] = useState<SymptomEntry | null>(null);
   const [selectedEpisode, setSelectedEpisode] = useState<Episode | null>(null);
   const {
+    caregiverDisplayNames,
     episodes,
     episodeEvents,
     symptomLogs,
@@ -175,6 +176,7 @@ export function History() {
       ) : (
         <HistoryTimeline
           displayDays={displayDays}
+          caregiverDisplayNames={caregiverDisplayNames}
           expandedDay={expandedDay}
           onDeleteDiaper={deleteDiaper}
           onDeletePoop={deletePoop}

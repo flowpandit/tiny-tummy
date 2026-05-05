@@ -16,6 +16,8 @@ test("episode event inserts omit source columns when the local table has not mig
     logged_at: "2026-05-03T10:00:00.000Z",
     source_kind: "symptom",
     source_id: "symptom-1",
+    created_by_caregiver_id: "caregiver-1",
+    updated_by_caregiver_id: "caregiver-1",
   };
 
   const plan = buildEpisodeEventInsertPlan(input, "event-1", "2026-05-03T10:01:00.000Z", false);
@@ -37,16 +39,20 @@ test("episode event inserts include source columns and updated_at in the baselin
     logged_at: "2026-05-03T10:00:00.000Z",
     source_kind: "symptom",
     source_id: "symptom-1",
+    created_by_caregiver_id: "caregiver-1",
+    updated_by_caregiver_id: "caregiver-1",
   };
 
   const plan = buildEpisodeEventInsertPlan(input, "event-1", "2026-05-03T10:01:00.000Z", true);
 
-  assert.equal(plan.params.length, 11);
+  assert.equal(plan.params.length, 13);
   assert.equal(plan.storedSourceKind, "symptom");
   assert.equal(plan.storedSourceId, "symptom-1");
   assert.equal(plan.sql.includes("updated_at"), true);
   assert.equal(plan.sql.includes("source_kind"), true);
   assert.equal(plan.sql.includes("source_id"), true);
+  assert.equal(plan.sql.includes("created_by_caregiver_id"), true);
+  assert.equal(plan.sql.includes("updated_by_caregiver_id"), true);
 });
 
 test("every Tauri SQL migration file is registered", () => {

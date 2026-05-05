@@ -95,6 +95,14 @@ export function getCaregiverInitial(name: string): string {
   return name.trim().charAt(0).toUpperCase() || "?";
 }
 
+export function findLinkedCurrentCaregiverForChild(
+  currentCaregiverId: string | null | undefined,
+  childCaregivers: ChildCaregiverProfile[],
+): ChildCaregiverProfile | null {
+  if (!currentCaregiverId) return null;
+  return childCaregivers.find((caregiver) => caregiver.id === currentCaregiverId) ?? null;
+}
+
 export function getRelationshipLabel(
   caregiver: Pick<Caregiver, "role" | "relationship"> | Pick<ChildCaregiver, "relationship_to_child">,
 ): string {

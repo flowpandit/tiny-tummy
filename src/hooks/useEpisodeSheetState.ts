@@ -152,6 +152,7 @@ export function useEpisodeSheetState({
     setIsResolving(true);
     try {
       await care.resolveEpisode(currentEpisode.id, {
+        child_id: currentEpisode.child_id,
         ended_at: endedAt,
         outcome: outcome.trim() || null,
       });

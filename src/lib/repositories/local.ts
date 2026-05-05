@@ -1,4 +1,5 @@
 import * as defaultDbClient from "../db";
+import { CURRENT_CAREGIVER_SETTING_KEY, findLinkedCurrentCaregiverForChild } from "../caregivers";
 import type {
   AppRepositories,
   CreateEpisodeEventInput,
@@ -12,23 +13,104 @@ import type {
 
 export type LocalDbClient = typeof defaultDbClient;
 
+type AttributableCreateInput = {
+  child_id: string;
+  created_by_caregiver_id?: string | null;
+  updated_by_caregiver_id?: string | null;
+};
+
+type AttributableUpdateInput = {
+  child_id?: string;
+  updated_by_caregiver_id?: string | null;
+};
+
 function createFeedingLog(client: LocalDbClient, input: CreateFeedingInput) {
   return (client.createFeedingLog ?? client.createDietLog)(input);
+}
+
+async function resolveCurrentCaregiverIdForChild(client: LocalDbClient, childId: string): Promise<string | null> {
+  try {
+    if (typeof client.getSetting !== "function" || typeof client.getCaregiversForChild !== "function") {
+      return null;
+    }
+
+    const currentCaregiverId = await client.getSetting(CURRENT_CAREGIVER_SETTING_KEY);
+    if (!currentCaregiverId) return null;
+
+    const childCaregivers = await client.getCaregiversForChild(childId);
+    return findLinkedCurrentCaregiverForChild(currentCaregiverId, childCaregivers)?.id ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function applyCreateAttribution<T extends AttributableCreateInput>(
+  input: T,
+  caregiverId: string | null,
+): T {
+  return {
+    ...input,
+    created_by_caregiver_id: input.created_by_caregiver_id !== undefined
+      ? input.created_by_caregiver_id
+      : caregiverId,
+    updated_by_caregiver_id: input.updated_by_caregiver_id !== undefined
+      ? input.updated_by_caregiver_id
+      : caregiverId,
+  };
+}
+
+async function withCreateAttribution<T extends AttributableCreateInput>(
+  client: LocalDbClient,
+  input: T,
+): Promise<T> {
+  const caregiverId = await resolveCurrentCaregiverIdForChild(client, input.child_id);
+  return applyCreateAttribution(input, caregiverId);
+}
+
+function applyUpdateAttribution<T extends AttributableUpdateInput>(
+  input: T,
+  caregiverId: string | null,
+): T {
+  return {
+    ...input,
+    updated_by_caregiver_id: input.updated_by_caregiver_id !== undefined
+      ? input.updated_by_caregiver_id
+      : caregiverId,
+  };
+}
+
+async function withUpdateAttribution<T extends AttributableUpdateInput>(
+  client: LocalDbClient,
+  input: T,
+): Promise<T> {
+  if (input.updated_by_caregiver_id !== undefined || !input.child_id) {
+    return input;
+  }
+
+  const caregiverId = await resolveCurrentCaregiverIdForChild(client, input.child_id);
+  return applyUpdateAttribution(input, caregiverId);
 }
 
 async function saveSymptomWithEpisodeEvent(
   client: LocalDbClient,
   input: SaveSymptomWithEpisodeEventInput,
 ) {
+  const caregiverId = await resolveCurrentCaregiverIdForChild(client, input.childId);
+
   return client.runDbTransaction(async () => {
     if (input.updateEpisodeStartedAt) {
       await client.updateEpisode(input.updateEpisodeStartedAt.episodeId, {
+        child_id: input.childId,
         started_at: input.updateEpisodeStartedAt.startedAt,
+        updated_by_caregiver_id: caregiverId,
       });
     }
 
     if (input.existingSymptom) {
-      await client.updateSymptomLog(input.existingSymptom.id, input.symptom);
+      await client.updateSymptomLog(input.existingSymptom.id, applyUpdateAttribution({
+        child_id: input.childId,
+        ...input.symptom,
+      }, caregiverId));
       await client.deleteGeneratedSymptomEpisodeEvent({
         symptomId: input.existingSymptom.id,
         episodeId: input.existingSymptom.episode_id,
@@ -36,24 +118,33 @@ async function saveSymptomWithEpisodeEvent(
       });
 
       if (input.episodeEvent) {
-        await client.createEpisodeEvent({
-          ...input.episodeEvent,
-          child_id: input.childId,
-          source_id: input.existingSymptom.id,
-        });
+        await client.createEpisodeEvent(applyCreateAttribution(
+          {
+            ...input.episodeEvent,
+            child_id: input.childId,
+            source_id: input.existingSymptom.id,
+          },
+          caregiverId,
+        ));
       }
 
       return null;
     }
 
-    const symptom = await client.createSymptomLog(input.symptom as Parameters<LocalDbClient["createSymptomLog"]>[0]);
+    const symptom = await client.createSymptomLog(applyCreateAttribution(
+      input.symptom as Parameters<LocalDbClient["createSymptomLog"]>[0],
+      caregiverId,
+    ));
 
     if (input.episodeEvent) {
-      await client.createEpisodeEvent({
-        ...input.episodeEvent,
-        child_id: input.childId,
-        source_id: symptom.id,
-      });
+      await client.createEpisodeEvent(applyCreateAttribution(
+        {
+          ...input.episodeEvent,
+          child_id: input.childId,
+          source_id: symptom.id,
+        },
+        caregiverId,
+      ));
     }
 
     return symptom;
@@ -95,18 +186,26 @@ async function startEpisodeWithLinkedSymptoms(
   client: LocalDbClient,
   input: StartEpisodeWithLinkedSymptomsInput,
 ) {
+  const caregiverId = await resolveCurrentCaregiverIdForChild(client, input.episode.child_id);
+
   return client.runDbTransaction(async () => {
-    const episode = await client.createEpisode(input.episode);
+    const episode = await client.createEpisode(applyCreateAttribution(input.episode, caregiverId));
 
     for (const linkedSymptom of input.linkedSymptoms) {
       const symptom = linkedSymptom.symptom;
-      await client.updateSymptomLog(symptom.id, { episode_id: episode.id });
+      await client.updateSymptomLog(symptom.id, applyUpdateAttribution({
+        child_id: input.episode.child_id,
+        episode_id: episode.id,
+      }, caregiverId));
       await client.deleteGeneratedSymptomEpisodeEvent({
         symptomId: symptom.id,
         episodeId: symptom.episode_id,
         loggedAt: symptom.logged_at,
       });
-      await client.createEpisodeEvent(buildLinkedSymptomEvent(input.episode.child_id, episode.id, linkedSymptom));
+      await client.createEpisodeEvent(applyCreateAttribution(
+        buildLinkedSymptomEvent(input.episode.child_id, episode.id, linkedSymptom),
+        caregiverId,
+      ));
     }
 
     return episode;
@@ -171,21 +270,21 @@ export function createLocalRepositories(client: LocalDbClient = defaultDbClient)
   };
 
   const elimination: AppRepositories["elimination"] = {
-    recordPoop: (input) => client.createPoopLog(input),
+    recordPoop: async (input) => client.createPoopLog(await withCreateAttribution(client, input)),
     markNoPoopDay: (childId) => client.logNoPoop(childId),
     listPoopLogs: (childId, limit) => client.getPoopLogs(childId, limit),
     listPoopLogsInRange: (childId, startDate, endDate) => client.getPoopLogsForRange(childId, startDate, endDate),
     getLastRealPoop: (childId) => client.getLastRealPoop(childId),
-    updatePoop: (entryId, updates) => client.updatePoopLog(entryId, updates),
+    updatePoop: async (entryId, updates) => client.updatePoopLog(entryId, await withUpdateAttribution(client, updates)),
     deletePoop: (entry) => client.deletePoopLog(entry),
     reconcileAutoNoPoopDays: (childId) => client.reconcileAutoNoPoopDays(childId),
-    recordDiaper: (input) => client.createDiaperLog(input),
+    recordDiaper: async (input) => client.createDiaperLog(await withCreateAttribution(client, input)),
     listDiaperLogs: (childId, limit) => client.getDiaperLogs(childId, limit),
     listDiaperLogsInRange: (childId, startDate, endDate) => client.getDiaperLogsForRange(childId, startDate, endDate),
     getLastDiaper: (childId) => client.getLastDiaperLog(childId),
     getLastWetDiaper: (childId) => client.getLastWetDiaper(childId),
     getLastDirtyDiaper: (childId) => client.getLastDirtyDiaper(childId),
-    updateDiaper: (entryId, updates) => client.updateDiaperLog(entryId, updates),
+    updateDiaper: async (entryId, updates) => client.updateDiaperLog(entryId, await withUpdateAttribution(client, updates)),
     deleteDiaper: (entry) => client.deleteDiaperLog(entry),
     getPoopFrequencyStats: (childId, days) => client.getFrequencyStats(childId, days),
     getPoopConsistencyTrend: (childId, days) => client.getConsistencyTrend(childId, days),
@@ -193,38 +292,38 @@ export function createLocalRepositories(client: LocalDbClient = defaultDbClient)
   };
 
   const feeding: AppRepositories["feeding"] = {
-    recordFeed: (input: CreateFeedingInput) => createFeedingLog(client, input),
+    recordFeed: async (input: CreateFeedingInput) => createFeedingLog(client, await withCreateAttribution(client, input)),
     listFeedingLogs: (childId, limit) => client.getFeedingLogs(childId, limit),
     listFeedingLogsInRange: (childId, startDate, endDate) => client.getFeedingLogsForRange(childId, startDate, endDate),
-    updateFeed: (entryId, updates: UpdateFeedingInput) => client.updateDietLog(entryId, updates),
+    updateFeed: async (entryId, updates: UpdateFeedingInput) => client.updateDietLog(entryId, await withUpdateAttribution(client, updates)),
     deleteFeed: (entryId) => client.deleteDietLog(entryId),
   };
 
   const sleep: AppRepositories["sleep"] = {
-    recordSleep: (input) => client.createSleepLog(input),
+    recordSleep: async (input) => client.createSleepLog(await withCreateAttribution(client, input)),
     listSleepLogs: (childId, limit) => client.getSleepLogs(childId, limit),
     listSleepLogsInRange: (childId, startDate, endDate) => client.getSleepLogsForRange(childId, startDate, endDate),
-    updateSleep: (entryId, updates) => client.updateSleepLog(entryId, updates),
+    updateSleep: async (entryId, updates) => client.updateSleepLog(entryId, await withUpdateAttribution(client, updates)),
     deleteSleep: (entryId) => client.deleteSleepLog(entryId),
   };
 
   const care: AppRepositories["care"] = {
-    recordSymptom: (input) => client.createSymptomLog(input),
-    updateSymptom: (entryId, updates) => client.updateSymptomLog(entryId, updates),
+    recordSymptom: async (input) => client.createSymptomLog(await withCreateAttribution(client, input)),
+    updateSymptom: async (entryId, updates) => client.updateSymptomLog(entryId, await withUpdateAttribution(client, updates)),
     deleteSymptom: (entryId) => client.deleteSymptomLog(entryId),
     listSymptoms: (childId, limit) => client.getSymptoms(childId, limit),
     listSymptomsInRange: (childId, startDate, endDate) => client.getSymptomsForRange(childId, startDate, endDate),
     saveSymptomWithEpisodeEvent: (input) => saveSymptomWithEpisodeEvent(client, input),
     deleteSymptomWithGeneratedEvent: (input) => deleteSymptomWithGeneratedEvent(client, input),
-    startEpisode: (input) => client.createEpisode(input),
+    startEpisode: async (input) => client.createEpisode(await withCreateAttribution(client, input)),
     startEpisodeWithLinkedSymptoms: (input) => startEpisodeWithLinkedSymptoms(client, input),
     getActiveEpisode: (childId) => client.getActiveEpisode(childId),
     listActiveEpisodes: (childId) => client.getActiveEpisodes(childId),
     listRecentEpisodes: (childId, limit) => client.getEpisodes(childId, limit),
     listEpisodesInRange: (childId, startDate, endDate) => client.getEpisodesForRange(childId, startDate, endDate),
-    updateEpisode: (entryId, updates) => client.updateEpisode(entryId, updates),
-    resolveEpisode: (entryId, input) => client.closeEpisode(entryId, input),
-    addEpisodeEvent: (input) => client.createEpisodeEvent(input),
+    updateEpisode: async (entryId, updates) => client.updateEpisode(entryId, await withUpdateAttribution(client, updates)),
+    resolveEpisode: async (entryId, input) => client.closeEpisode(entryId, await withUpdateAttribution(client, input)),
+    addEpisodeEvent: async (input) => client.createEpisodeEvent(await withCreateAttribution(client, input)),
     deleteGeneratedSymptomEvent: (input) => client.deleteGeneratedSymptomEpisodeEvent(input),
     listEpisodeEvents: (episodeId) => client.getEpisodeEvents(episodeId),
     listEpisodeEventsForChild: (childId, limit) => client.getEpisodeEventsByChild(childId, limit),
@@ -236,16 +335,16 @@ export function createLocalRepositories(client: LocalDbClient = defaultDbClient)
   };
 
   const growth: AppRepositories["growth"] = {
-    recordGrowth: (input) => client.createGrowthLog(input),
+    recordGrowth: async (input) => client.createGrowthLog(await withCreateAttribution(client, input)),
     listGrowthLogs: (childId, limit) => client.getGrowthLogs(childId, limit),
     listGrowthLogsInRange: (childId, startDate, endDate) => client.getGrowthLogsForRange(childId, startDate, endDate),
     getLatestGrowth: (childId) => client.getLatestGrowthLog(childId),
-    updateGrowth: (entryId, updates) => client.updateGrowthLog(entryId, updates),
+    updateGrowth: async (entryId, updates) => client.updateGrowthLog(entryId, await withUpdateAttribution(client, updates)),
     deleteGrowth: (entryId) => client.deleteGrowthLog(entryId),
   };
 
   const milestones: AppRepositories["milestones"] = {
-    recordMilestone: (input) => client.createMilestoneLog(input),
+    recordMilestone: async (input) => client.createMilestoneLog(await withCreateAttribution(client, input)),
     listMilestones: (childId, limit) => client.getMilestoneLogs(childId, limit),
     listMilestonesInRange: (childId, startDate, endDate) => client.getMilestonesForRange(childId, startDate, endDate),
     deleteMilestone: (entryId) => client.deleteMilestoneLog(entryId),

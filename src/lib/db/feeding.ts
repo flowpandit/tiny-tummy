@@ -15,6 +15,8 @@ export async function createFeedingLog(input: {
   reaction_notes?: string | null;
   is_constipation_support?: number;
   notes?: string | null;
+  created_by_caregiver_id?: string | null;
+  updated_by_caregiver_id?: string | null;
 }): Promise<FeedingEntry> {
   const conn = await getDb();
   const id = generateId();
@@ -24,8 +26,9 @@ export async function createFeedingLog(input: {
     conn,
     `INSERT INTO diet_logs (
       id, child_id, logged_at, food_type, food_name, amount_ml, duration_minutes,
-      breast_side, bottle_content, reaction_notes, is_constipation_support, notes, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      breast_side, bottle_content, reaction_notes, is_constipation_support, notes,
+      created_by_caregiver_id, updated_by_caregiver_id, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       id,
       input.child_id,
@@ -39,6 +42,8 @@ export async function createFeedingLog(input: {
       input.reaction_notes ?? null,
       input.is_constipation_support ?? 0,
       input.notes ?? null,
+      input.created_by_caregiver_id ?? null,
+      input.updated_by_caregiver_id ?? null,
       now,
       now,
     ],
@@ -57,6 +62,8 @@ export async function createFeedingLog(input: {
     reaction_notes: input.reaction_notes ?? null,
     is_constipation_support: input.is_constipation_support ?? 0,
     notes: input.notes ?? null,
+    created_by_caregiver_id: input.created_by_caregiver_id ?? null,
+    updated_by_caregiver_id: input.updated_by_caregiver_id ?? null,
     created_at: now,
     updated_at: now,
   };
@@ -91,6 +98,7 @@ export async function getFeedingLogsForRange(
 export async function updateDietLog(
   id: string,
   updates: {
+    child_id?: string;
     logged_at?: string;
     food_type?: string;
     food_name?: string | null;
@@ -101,6 +109,7 @@ export async function updateDietLog(
     reaction_notes?: string | null;
     is_constipation_support?: number;
     notes?: string | null;
+    updated_by_caregiver_id?: string | null;
   },
 ): Promise<void> {
   const conn = await getDb();
@@ -117,6 +126,10 @@ export async function updateDietLog(
   if (updates.reaction_notes !== undefined) { sets.push("reaction_notes = ?"); params.push(updates.reaction_notes); }
   if (updates.is_constipation_support !== undefined) { sets.push("is_constipation_support = ?"); params.push(updates.is_constipation_support); }
   if (updates.notes !== undefined) { sets.push("notes = ?"); params.push(updates.notes); }
+  if (updates.updated_by_caregiver_id !== undefined) {
+    sets.push("updated_by_caregiver_id = ?");
+    params.push(updates.updated_by_caregiver_id);
+  }
 
   if (sets.length === 1) return;
   params.push(id);

@@ -16,6 +16,7 @@ import {
   formatHistoryDayHeader,
   formatHistorySleepDuration,
   getEarliestHistoryDate,
+  getHistoryCaregiverAttributionLabel,
   getHistoryFeedingPresentation,
   getHistoryDisplayDays,
   getHistoryRange,
@@ -267,6 +268,30 @@ test("formats sleep durations using hours and minutes", () => {
   assert.equal(
     formatHistorySleepDuration(createSleepEntry("2026-04-14T06:00:00", "2026-04-14T06:45:00")),
     "45m",
+  );
+});
+
+test("formats caregiver attribution labels only for available display names", () => {
+  assert.equal(
+    getHistoryCaregiverAttributionLabel({
+      created_by_caregiver_id: "caregiver-1",
+      updated_by_caregiver_id: "caregiver-1",
+    }, { "caregiver-1": "Mum" }),
+    "Logged by Mum",
+  );
+  assert.equal(
+    getHistoryCaregiverAttributionLabel({
+      created_by_caregiver_id: "caregiver-1",
+      updated_by_caregiver_id: "caregiver-2",
+    }, { "caregiver-1": "Mum", "caregiver-2": "Dad" }),
+    "Updated by Dad",
+  );
+  assert.equal(
+    getHistoryCaregiverAttributionLabel({
+      created_by_caregiver_id: "deleted-caregiver",
+      updated_by_caregiver_id: "deleted-caregiver",
+    }, {}),
+    null,
   );
 });
 

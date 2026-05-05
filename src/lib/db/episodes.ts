@@ -12,6 +12,8 @@ type CreateEpisodeEventInput = {
   logged_at: string;
   source_kind?: string | null;
   source_id?: string | null;
+  created_by_caregiver_id?: string | null;
+  updated_by_caregiver_id?: string | null;
 };
 
 type EpisodeEventInsertPlan = {
@@ -56,7 +58,6 @@ export function buildEpisodeEventInsertPlan(
     input.title,
     input.notes ?? null,
     input.logged_at,
-    now,
   ];
 
   if (!canStoreSourceColumns) {
@@ -64,7 +65,7 @@ export function buildEpisodeEventInsertPlan(
       sql: `INSERT INTO episode_events (
         id, episode_id, child_id, event_type, title, notes, logged_at, created_at
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      params: baseParams,
+      params: [...baseParams, now],
       storedSourceKind: null,
       storedSourceId: null,
     };
@@ -75,9 +76,18 @@ export function buildEpisodeEventInsertPlan(
 
   return {
     sql: `INSERT INTO episode_events (
-      id, episode_id, child_id, event_type, title, notes, logged_at, created_at, updated_at, source_kind, source_id
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    params: [...baseParams, now, storedSourceKind, storedSourceId],
+      id, episode_id, child_id, event_type, title, notes, logged_at, source_kind, source_id,
+      created_by_caregiver_id, updated_by_caregiver_id, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    params: [
+      ...baseParams,
+      storedSourceKind,
+      storedSourceId,
+      input.created_by_caregiver_id ?? null,
+      input.updated_by_caregiver_id ?? null,
+      now,
+      now,
+    ],
     storedSourceKind,
     storedSourceId,
   };
@@ -88,6 +98,8 @@ export async function createEpisode(input: {
   episode_type: string;
   started_at: string;
   summary?: string | null;
+  created_by_caregiver_id?: string | null;
+  updated_by_caregiver_id?: string | null;
 }): Promise<Episode> {
   const conn = await getDb();
   const id = generateId();
@@ -96,9 +108,20 @@ export async function createEpisode(input: {
   await executeMutation(
     conn,
     `INSERT INTO episodes (
-      id, child_id, episode_type, status, started_at, ended_at, summary, outcome, created_at, updated_at
-    ) VALUES (?, ?, ?, 'active', ?, NULL, ?, NULL, ?, ?)`,
-    [id, input.child_id, input.episode_type, input.started_at, input.summary ?? null, now, now],
+      id, child_id, episode_type, status, started_at, ended_at, summary, outcome,
+      created_by_caregiver_id, updated_by_caregiver_id, created_at, updated_at
+    ) VALUES (?, ?, ?, 'active', ?, NULL, ?, NULL, ?, ?, ?, ?)`,
+    [
+      id,
+      input.child_id,
+      input.episode_type,
+      input.started_at,
+      input.summary ?? null,
+      input.created_by_caregiver_id ?? null,
+      input.updated_by_caregiver_id ?? null,
+      now,
+      now,
+    ],
   );
 
   return {
@@ -110,6 +133,8 @@ export async function createEpisode(input: {
     ended_at: null,
     summary: input.summary ?? null,
     outcome: null,
+    created_by_caregiver_id: input.created_by_caregiver_id ?? null,
+    updated_by_caregiver_id: input.updated_by_caregiver_id ?? null,
     created_at: now,
     updated_at: now,
   };
@@ -142,21 +167,28 @@ export async function getEpisodes(childId: string, limit = 10): Promise<Episode[
 
 export async function closeEpisode(
   id: string,
-  input: { ended_at: string; outcome?: string | null },
+  input: { child_id?: string; ended_at: string; outcome?: string | null; updated_by_caregiver_id?: string | null },
 ): Promise<void> {
   const conn = await getDb();
-  await executeMutation(
-    conn,
-    "UPDATE episodes SET status = 'resolved', ended_at = ?, outcome = ?, updated_at = ? WHERE id = ? AND deleted_at IS NULL",
-    [input.ended_at, input.outcome ?? null, nowISO(), id],
-  );
+  const sets = ["status = 'resolved'", "ended_at = ?", "outcome = ?", "updated_at = ?"];
+  const params: unknown[] = [input.ended_at, input.outcome ?? null, nowISO()];
+
+  if (input.updated_by_caregiver_id !== undefined) {
+    sets.push("updated_by_caregiver_id = ?");
+    params.push(input.updated_by_caregiver_id);
+  }
+
+  params.push(id);
+  await executeMutation(conn, `UPDATE episodes SET ${sets.join(", ")} WHERE id = ? AND deleted_at IS NULL`, params);
 }
 
 export async function updateEpisode(
   id: string,
   updates: {
+    child_id?: string;
     started_at?: string;
     summary?: string | null;
+    updated_by_caregiver_id?: string | null;
   },
 ): Promise<void> {
   const conn = await getDb();
@@ -165,6 +197,10 @@ export async function updateEpisode(
 
   if (updates.started_at !== undefined) { sets.push("started_at = ?"); params.push(updates.started_at); }
   if (updates.summary !== undefined) { sets.push("summary = ?"); params.push(updates.summary); }
+  if (updates.updated_by_caregiver_id !== undefined) {
+    sets.push("updated_by_caregiver_id = ?");
+    params.push(updates.updated_by_caregiver_id);
+  }
 
   if (sets.length === 0) return;
 
@@ -194,6 +230,8 @@ export async function createEpisodeEvent(input: CreateEpisodeEventInput): Promis
     updated_at: now,
     source_kind: insertPlan.storedSourceKind,
     source_id: insertPlan.storedSourceId,
+    created_by_caregiver_id: input.created_by_caregiver_id ?? null,
+    updated_by_caregiver_id: input.updated_by_caregiver_id ?? null,
   };
 }
 

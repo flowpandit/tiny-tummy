@@ -12,6 +12,8 @@ export async function createSymptomLog(input: {
   temperature_method?: string | null;
   logged_at: string;
   notes?: string | null;
+  created_by_caregiver_id?: string | null;
+  updated_by_caregiver_id?: string | null;
 }): Promise<SymptomEntry> {
   const conn = await getDb();
   const id = generateId();
@@ -20,8 +22,9 @@ export async function createSymptomLog(input: {
   await executeMutation(
     conn,
     `INSERT INTO symptom_logs (
-      id, child_id, episode_id, symptom_type, severity, temperature_c, temperature_method, logged_at, notes, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      id, child_id, episode_id, symptom_type, severity, temperature_c, temperature_method, logged_at, notes,
+      created_by_caregiver_id, updated_by_caregiver_id, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       id,
       input.child_id,
@@ -32,6 +35,8 @@ export async function createSymptomLog(input: {
       input.temperature_method ?? null,
       input.logged_at,
       input.notes ?? null,
+      input.created_by_caregiver_id ?? null,
+      input.updated_by_caregiver_id ?? null,
       now,
       now,
     ],
@@ -47,6 +52,8 @@ export async function createSymptomLog(input: {
     temperature_method: (input.temperature_method as SymptomEntry["temperature_method"] | undefined) ?? null,
     logged_at: input.logged_at,
     notes: input.notes ?? null,
+    created_by_caregiver_id: input.created_by_caregiver_id ?? null,
+    updated_by_caregiver_id: input.updated_by_caregiver_id ?? null,
     created_at: now,
     updated_at: now,
   };
@@ -55,6 +62,7 @@ export async function createSymptomLog(input: {
 export async function updateSymptomLog(
   id: string,
   updates: {
+    child_id?: string;
     episode_id?: string | null;
     symptom_type?: string;
     severity?: string;
@@ -62,6 +70,7 @@ export async function updateSymptomLog(
     temperature_method?: string | null;
     logged_at?: string;
     notes?: string | null;
+    updated_by_caregiver_id?: string | null;
   },
 ): Promise<void> {
   const conn = await getDb();
@@ -75,6 +84,10 @@ export async function updateSymptomLog(
   if (updates.temperature_method !== undefined) { sets.push("temperature_method = ?"); params.push(updates.temperature_method); }
   if (updates.logged_at !== undefined) { sets.push("logged_at = ?"); params.push(updates.logged_at); }
   if (updates.notes !== undefined) { sets.push("notes = ?"); params.push(updates.notes); }
+  if (updates.updated_by_caregiver_id !== undefined) {
+    sets.push("updated_by_caregiver_id = ?");
+    params.push(updates.updated_by_caregiver_id);
+  }
 
   if (sets.length === 0) return;
 
@@ -121,6 +134,8 @@ export async function createGrowthLog(input: {
   height_cm?: number | null;
   head_circumference_cm?: number | null;
   notes?: string | null;
+  created_by_caregiver_id?: string | null;
+  updated_by_caregiver_id?: string | null;
 }): Promise<GrowthEntry> {
   const conn = await getDb();
   const id = generateId();
@@ -129,8 +144,9 @@ export async function createGrowthLog(input: {
   await executeMutation(
     conn,
     `INSERT INTO growth_logs (
-      id, child_id, measured_at, weight_kg, height_cm, head_circumference_cm, notes, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      id, child_id, measured_at, weight_kg, height_cm, head_circumference_cm, notes,
+      created_by_caregiver_id, updated_by_caregiver_id, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       id,
       input.child_id,
@@ -139,6 +155,8 @@ export async function createGrowthLog(input: {
       input.height_cm ?? null,
       input.head_circumference_cm ?? null,
       input.notes ?? null,
+      input.created_by_caregiver_id ?? null,
+      input.updated_by_caregiver_id ?? null,
       now,
       now,
     ],
@@ -152,6 +170,8 @@ export async function createGrowthLog(input: {
     height_cm: input.height_cm ?? null,
     head_circumference_cm: input.head_circumference_cm ?? null,
     notes: input.notes ?? null,
+    created_by_caregiver_id: input.created_by_caregiver_id ?? null,
+    updated_by_caregiver_id: input.updated_by_caregiver_id ?? null,
     created_at: now,
     updated_at: now,
   };
@@ -192,11 +212,13 @@ export async function getLatestGrowthLog(childId: string): Promise<GrowthEntry |
 export async function updateGrowthLog(
   id: string,
   updates: {
+    child_id?: string;
     measured_at?: string;
     weight_kg?: number | null;
     height_cm?: number | null;
     head_circumference_cm?: number | null;
     notes?: string | null;
+    updated_by_caregiver_id?: string | null;
   },
 ): Promise<void> {
   const conn = await getDb();
@@ -208,6 +230,10 @@ export async function updateGrowthLog(
   if (updates.height_cm !== undefined) { sets.push("height_cm = ?"); params.push(updates.height_cm); }
   if (updates.head_circumference_cm !== undefined) { sets.push("head_circumference_cm = ?"); params.push(updates.head_circumference_cm); }
   if (updates.notes !== undefined) { sets.push("notes = ?"); params.push(updates.notes); }
+  if (updates.updated_by_caregiver_id !== undefined) {
+    sets.push("updated_by_caregiver_id = ?");
+    params.push(updates.updated_by_caregiver_id);
+  }
 
   if (sets.length === 1) return;
 
@@ -226,6 +252,8 @@ export async function createSleepLog(input: {
   started_at: string;
   ended_at: string;
   notes?: string | null;
+  created_by_caregiver_id?: string | null;
+  updated_by_caregiver_id?: string | null;
 }): Promise<SleepEntry> {
   const conn = await getDb();
   const id = generateId();
@@ -234,8 +262,9 @@ export async function createSleepLog(input: {
   await executeMutation(
     conn,
     `INSERT INTO sleep_logs (
-      id, child_id, sleep_type, started_at, ended_at, notes, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      id, child_id, sleep_type, started_at, ended_at, notes,
+      created_by_caregiver_id, updated_by_caregiver_id, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       id,
       input.child_id,
@@ -243,6 +272,8 @@ export async function createSleepLog(input: {
       input.started_at,
       input.ended_at,
       input.notes ?? null,
+      input.created_by_caregiver_id ?? null,
+      input.updated_by_caregiver_id ?? null,
       now,
       now,
     ],
@@ -255,6 +286,8 @@ export async function createSleepLog(input: {
     started_at: input.started_at,
     ended_at: input.ended_at,
     notes: input.notes ?? null,
+    created_by_caregiver_id: input.created_by_caregiver_id ?? null,
+    updated_by_caregiver_id: input.updated_by_caregiver_id ?? null,
     created_at: now,
     updated_at: now,
   };
@@ -286,10 +319,12 @@ export async function getSleepLogsForRange(
 export async function updateSleepLog(
   id: string,
   updates: {
+    child_id?: string;
     sleep_type?: string;
     started_at?: string;
     ended_at?: string;
     notes?: string | null;
+    updated_by_caregiver_id?: string | null;
   },
 ): Promise<void> {
   const conn = await getDb();
@@ -300,6 +335,10 @@ export async function updateSleepLog(
   if (updates.started_at !== undefined) { sets.push("started_at = ?"); params.push(updates.started_at); }
   if (updates.ended_at !== undefined) { sets.push("ended_at = ?"); params.push(updates.ended_at); }
   if (updates.notes !== undefined) { sets.push("notes = ?"); params.push(updates.notes); }
+  if (updates.updated_by_caregiver_id !== undefined) {
+    sets.push("updated_by_caregiver_id = ?");
+    params.push(updates.updated_by_caregiver_id);
+  }
 
   if (sets.length === 1) return;
   params.push(id);
@@ -316,6 +355,8 @@ export async function createMilestoneLog(input: {
   milestone_type: string;
   logged_at: string;
   notes?: string | null;
+  created_by_caregiver_id?: string | null;
+  updated_by_caregiver_id?: string | null;
 }): Promise<MilestoneEntry> {
   const conn = await getDb();
   const id = generateId();
@@ -323,8 +364,21 @@ export async function createMilestoneLog(input: {
 
   await executeMutation(
     conn,
-    "INSERT INTO milestone_logs (id, child_id, milestone_type, logged_at, notes, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
-    [id, input.child_id, input.milestone_type, input.logged_at, input.notes ?? null, now, now],
+    `INSERT INTO milestone_logs (
+      id, child_id, milestone_type, logged_at, notes,
+      created_by_caregiver_id, updated_by_caregiver_id, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      id,
+      input.child_id,
+      input.milestone_type,
+      input.logged_at,
+      input.notes ?? null,
+      input.created_by_caregiver_id ?? null,
+      input.updated_by_caregiver_id ?? null,
+      now,
+      now,
+    ],
   );
 
   return {
@@ -333,6 +387,8 @@ export async function createMilestoneLog(input: {
     milestone_type: input.milestone_type as MilestoneEntry["milestone_type"],
     logged_at: input.logged_at,
     notes: input.notes ?? null,
+    created_by_caregiver_id: input.created_by_caregiver_id ?? null,
+    updated_by_caregiver_id: input.updated_by_caregiver_id ?? null,
     created_at: now,
     updated_at: now,
   };

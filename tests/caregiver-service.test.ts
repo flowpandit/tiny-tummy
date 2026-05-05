@@ -239,6 +239,24 @@ test("caregiver service supports one caregiver across children and many caregive
   assert.equal(state.caregivers.find((caregiver) => caregiver.id === dad.id)?.deleted_at, null);
 });
 
+test("caregiver service resolves current caregiver only when linked to the child", async () => {
+  const state = createRepositoryState();
+  const caregiver = await state.service.createCaregiverForChild("child-1", {
+    displayName: "Mum",
+    role: "parent",
+  });
+  await state.service.setCurrentCaregiver(caregiver.id);
+
+  assert.equal((await state.service.getCurrentCaregiverForChild("child-1"))?.id, caregiver.id);
+  assert.equal(await state.service.getCurrentCaregiverForChild("child-2"), null);
+
+  const link = state.childCaregivers.find((item) => item.child_id === "child-1" && item.caregiver_id === caregiver.id);
+  assert.ok(link);
+  await state.service.unlinkCaregiverFromChild(link.id);
+
+  assert.equal(await state.service.getCurrentCaregiverForChild("child-1"), null);
+});
+
 test("default local caregiver is suggested without blocking normal app use", async () => {
   const state = createRepositoryState();
 

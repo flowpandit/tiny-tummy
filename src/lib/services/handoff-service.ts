@@ -1,5 +1,5 @@
 import { buildChildDailySummary, type ChildDailySummary } from "../child-summary";
-import { CURRENT_CAREGIVER_SETTING_KEY } from "../caregivers";
+import { CURRENT_CAREGIVER_SETTING_KEY, findLinkedCurrentCaregiverForChild } from "../caregivers";
 import { buildHandoffSummary, type HandoffSummary } from "../handoff-summary";
 import type {
   Alert,
@@ -116,9 +116,7 @@ export function createHandoffService(
       const episodeEvents = activeEpisode
         ? await repositories.care.listEpisodeEvents(activeEpisode.id)
         : [];
-      const preparedByCaregiver = currentCaregiverId
-        ? childCaregivers.find((caregiver) => caregiver.id === currentCaregiverId) ?? null
-        : null;
+      const preparedByCaregiver = findLinkedCurrentCaregiverForChild(currentCaregiverId, childCaregivers);
 
       return buildHandoffSummary({
         child,

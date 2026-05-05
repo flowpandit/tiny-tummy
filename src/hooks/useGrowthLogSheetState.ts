@@ -57,7 +57,7 @@ export function useGrowthLogSheetState({
         head_circumference_cm: parseGrowthInputToMetric("head_circumference_cm", headCircumferenceCm, unitSystem),
         notes: notes.trim() || null,
       };
-      if (entry) await growth.updateGrowth(entry.id, payload);
+      if (entry) await growth.updateGrowth(entry.id, { child_id: entry.child_id, ...payload });
       else await growth.recordGrowth({ child_id: childId, ...payload });
       notifyGrowthLogsChanged(childId);
       await onLogged();

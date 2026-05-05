@@ -34,6 +34,7 @@ export function useEditDiaperSheetState({
     setIsSaving(true);
     try {
       await elimination.updateDiaper(entry.id, {
+        child_id: entry.child_id,
         logged_at: combineLocalDateAndTimeToUtcIso(logDate, logTime),
         diaper_type: diaperType,
         urine_color: diaperIncludesWet(diaperType) ? urineColor : null,
@@ -48,7 +49,7 @@ export function useEditDiaperSheetState({
       onError("Failed to save changes. Please try again.");
     }
     setIsSaving(false);
-  }, [color, diaperType, elimination, entry.id, logDate, logTime, notes, onClose, onError, onSaved, size, stoolType, urineColor]);
+  }, [color, diaperType, elimination, entry.child_id, entry.id, logDate, logTime, notes, onClose, onError, onSaved, size, stoolType, urineColor]);
 
   const handleDelete = useCallback(async () => {
     try {

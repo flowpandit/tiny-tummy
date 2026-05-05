@@ -31,6 +31,7 @@ export function useEditPoopSheetState({
     setIsSaving(true);
     try {
       await elimination.updatePoop(entry.id, {
+        child_id: entry.child_id,
         logged_at: combineLocalDateAndTimeToUtcIso(logDate, logTime),
         stool_type: stoolType,
         color,
@@ -43,7 +44,7 @@ export function useEditPoopSheetState({
       onError("Failed to save changes. Please try again.");
     }
     setIsSaving(false);
-  }, [color, elimination, entry.id, logDate, logTime, notes, onClose, onError, onSaved, size, stoolType]);
+  }, [color, elimination, entry.child_id, entry.id, logDate, logTime, notes, onClose, onError, onSaved, size, stoolType]);
 
   const handleDelete = useCallback(async () => {
     try {

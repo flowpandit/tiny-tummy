@@ -47,6 +47,7 @@ export function useEditMealSheetState({
     setIsSaving(true);
     try {
       await feeding.updateFeed(entry.id, {
+        child_id: entry.child_id,
         logged_at: combineLocalDateAndTimeToUtcIso(logDate, logTime),
         food_type: foodType,
         food_name: showsFoodName ? foodName.trim() || null : null,
@@ -64,7 +65,7 @@ export function useEditMealSheetState({
       onError("Failed to save changes. Please try again.");
     }
     setIsSaving(false);
-  }, [amountMl, bottleContent, breastSide, durationMinutes, entry.id, feeding, foodName, foodType, isConstipationSupport, logDate, logTime, notes, onClose, onError, onSaved, reactionNotes, unitSystem]);
+  }, [amountMl, bottleContent, breastSide, durationMinutes, entry.child_id, entry.id, feeding, foodName, foodType, isConstipationSupport, logDate, logTime, notes, onClose, onError, onSaved, reactionNotes, unitSystem]);
 
   const handleDelete = useCallback(async () => {
     try {

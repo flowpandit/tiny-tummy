@@ -1,6 +1,7 @@
 import type {
   Alert,
   Attachment,
+  CaregiverAttribution,
   Caregiver,
   Child,
   ChildCaregiver,
@@ -37,6 +38,12 @@ export type CreateChildInput = {
 
 export type UpdateChildInput = Partial<Pick<Child, "name" | "date_of_birth" | "sex" | "feeding_type" | "avatar_color">>;
 
+export type CreateCaregiverAttributionInput = Pick<CaregiverAttribution, "created_by_caregiver_id" | "updated_by_caregiver_id">;
+
+export type UpdateCaregiverAttributionInput = Pick<CaregiverAttribution, "updated_by_caregiver_id"> & {
+  child_id?: string;
+};
+
 export interface ChildRepository {
   createChild(input: CreateChildInput): Promise<Child>;
   listActiveChildren(): Promise<Child[]>;
@@ -69,15 +76,16 @@ export type CreatePoopInput = {
   size?: string | null;
   notes?: string | null;
   photo_path?: string | null;
-};
+} & Partial<CreateCaregiverAttributionInput>;
 
 export type UpdatePoopInput = {
+  child_id?: string;
   logged_at?: string;
   stool_type?: number | null;
   color?: string | null;
   size?: string | null;
   notes?: string | null;
-};
+} & Partial<UpdateCaregiverAttributionInput>;
 
 export type CreateDiaperInput = {
   child_id: string;
@@ -89,9 +97,10 @@ export type CreateDiaperInput = {
   size?: string | null;
   notes?: string | null;
   photo_path?: string | null;
-};
+} & Partial<CreateCaregiverAttributionInput>;
 
 export type UpdateDiaperInput = {
+  child_id?: string;
   logged_at?: string;
   diaper_type?: DiaperEntry["diaper_type"];
   urine_color?: string | null;
@@ -99,7 +108,7 @@ export type UpdateDiaperInput = {
   color?: string | null;
   size?: string | null;
   notes?: string | null;
-};
+} & Partial<UpdateCaregiverAttributionInput>;
 
 export interface EliminationRepository {
   recordPoop(input: CreatePoopInput): Promise<PoopEntry>;
@@ -135,9 +144,10 @@ export type CreateFeedingInput = {
   reaction_notes?: string | null;
   is_constipation_support?: number;
   notes?: string | null;
-};
+} & Partial<CreateCaregiverAttributionInput>;
 
 export type UpdateFeedingInput = {
+  child_id?: string;
   logged_at?: string;
   food_type?: string;
   food_name?: string | null;
@@ -148,7 +158,7 @@ export type UpdateFeedingInput = {
   reaction_notes?: string | null;
   is_constipation_support?: number;
   notes?: string | null;
-};
+} & Partial<UpdateCaregiverAttributionInput>;
 
 export interface FeedingRepository {
   recordFeed(input: CreateFeedingInput): Promise<FeedingEntry>;
@@ -164,14 +174,15 @@ export type CreateSleepInput = {
   started_at: string;
   ended_at: string;
   notes?: string | null;
-};
+} & Partial<CreateCaregiverAttributionInput>;
 
 export type UpdateSleepInput = {
+  child_id?: string;
   sleep_type?: string;
   started_at?: string;
   ended_at?: string;
   notes?: string | null;
-};
+} & Partial<UpdateCaregiverAttributionInput>;
 
 export interface SleepRepository {
   recordSleep(input: CreateSleepInput): Promise<SleepEntry>;
@@ -190,9 +201,10 @@ export type CreateSymptomInput = {
   temperature_method?: string | null;
   logged_at: string;
   notes?: string | null;
-};
+} & Partial<CreateCaregiverAttributionInput>;
 
 export type UpdateSymptomInput = {
+  child_id?: string;
   episode_id?: string | null;
   symptom_type?: string;
   severity?: string;
@@ -200,19 +212,20 @@ export type UpdateSymptomInput = {
   temperature_method?: string | null;
   logged_at?: string;
   notes?: string | null;
-};
+} & Partial<UpdateCaregiverAttributionInput>;
 
 export type CreateEpisodeInput = {
   child_id: string;
   episode_type: string;
   started_at: string;
   summary?: string | null;
-};
+} & Partial<CreateCaregiverAttributionInput>;
 
 export type UpdateEpisodeInput = {
+  child_id?: string;
   started_at?: string;
   summary?: string | null;
-};
+} & Partial<UpdateCaregiverAttributionInput>;
 
 export type CreateEpisodeEventInput = {
   episode_id: string;
@@ -223,7 +236,7 @@ export type CreateEpisodeEventInput = {
   logged_at: string;
   source_kind?: string | null;
   source_id?: string | null;
-};
+} & Partial<CreateCaregiverAttributionInput>;
 
 export type SaveSymptomWithEpisodeEventInput = {
   childId: string;
@@ -269,7 +282,7 @@ export interface CareRepository {
   listRecentEpisodes(childId: string, limit?: number): Promise<Episode[]>;
   listEpisodesInRange(childId: string, startDate: string, endDate: string): Promise<Episode[]>;
   updateEpisode(entryId: string, updates: UpdateEpisodeInput): Promise<void>;
-  resolveEpisode(entryId: string, input: { ended_at: string; outcome?: string | null }): Promise<void>;
+  resolveEpisode(entryId: string, input: { child_id?: string; ended_at: string; outcome?: string | null; updated_by_caregiver_id?: string | null }): Promise<void>;
   addEpisodeEvent(input: CreateEpisodeEventInput): Promise<EpisodeEvent>;
   deleteGeneratedSymptomEvent(input: { symptomId: string; episodeId?: string | null; loggedAt?: string | null }): Promise<void>;
   listEpisodeEvents(episodeId: string): Promise<EpisodeEvent[]>;
@@ -288,15 +301,16 @@ export type CreateGrowthInput = {
   height_cm?: number | null;
   head_circumference_cm?: number | null;
   notes?: string | null;
-};
+} & Partial<CreateCaregiverAttributionInput>;
 
 export type UpdateGrowthInput = {
+  child_id?: string;
   measured_at?: string;
   weight_kg?: number | null;
   height_cm?: number | null;
   head_circumference_cm?: number | null;
   notes?: string | null;
-};
+} & Partial<UpdateCaregiverAttributionInput>;
 
 export interface GrowthRepository {
   recordGrowth(input: CreateGrowthInput): Promise<GrowthEntry>;
@@ -312,7 +326,7 @@ export type CreateMilestoneInput = {
   milestone_type: string;
   logged_at: string;
   notes?: string | null;
-};
+} & Partial<CreateCaregiverAttributionInput>;
 
 export interface MilestoneRepository {
   recordMilestone(input: CreateMilestoneInput): Promise<MilestoneEntry>;

@@ -65,6 +65,7 @@ export function useEditSleepSheetState({
     setIsSaving(true);
     try {
       await sleep.updateSleep(entry.id, {
+        child_id: entry.child_id,
         sleep_type: sleepType,
         started_at: startedAt,
         ended_at: endedAt,
@@ -77,7 +78,7 @@ export function useEditSleepSheetState({
       onError("Could not save the sleep entry. Please try again.");
     }
     setIsSaving(false);
-  }, [endDate, endTime, entry.id, isSaving, notes, onClose, onError, onSaved, onSuccess, sleep, sleepType, startDate, startTime]);
+  }, [endDate, endTime, entry.child_id, entry.id, isSaving, notes, onClose, onError, onSaved, onSuccess, sleep, sleepType, startDate, startTime]);
 
   const handleDelete = useCallback(async () => {
     try {
