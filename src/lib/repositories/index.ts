@@ -6,6 +6,7 @@ export type {
   CaregiverRepository,
   ChildRepository,
   EliminationRepository,
+  ExportImportRepository,
   FeedingRepository,
   GrowthRepository,
   MilestoneRepository,

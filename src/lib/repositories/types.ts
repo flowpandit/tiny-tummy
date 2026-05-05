@@ -19,6 +19,12 @@ import type {
   SymptomEntry,
 } from "../types";
 import type { ReportOptions, ReportSourceData } from "../reporting";
+import type {
+  SnapshotImportExistingRecords,
+  SnapshotLoadInput,
+  SnapshotSourceData,
+} from "../db/snapshot";
+import type { TinyTummySnapshotV1 } from "../export-import-snapshot";
 
 export type CreateChildInput = {
   name: string;
@@ -322,6 +328,12 @@ export interface AttachmentRepository {
   deleteAttachmentMetadataForOwner(ownerTable: string, ownerId: string): Promise<void>;
 }
 
+export interface ExportImportRepository {
+  loadSnapshotSourceData(input: SnapshotLoadInput): Promise<SnapshotSourceData>;
+  loadSnapshotImportExistingRecords(): Promise<SnapshotImportExistingRecords>;
+  importSnapshotIntoEmptyDatabase(snapshot: TinyTummySnapshotV1): Promise<void>;
+}
+
 export type ReportSourceRequest = {
   childId: string;
   startDate: string;
@@ -345,6 +357,7 @@ export interface AppRepositories {
   milestones: MilestoneRepository;
   settings: SettingsRepository;
   attachments: AttachmentRepository;
+  exportImport: ExportImportRepository;
   reportSource: ReportSourceRepository;
 }
 

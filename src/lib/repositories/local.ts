@@ -249,6 +249,12 @@ export function createLocalRepositories(client: LocalDbClient = defaultDbClient)
     deleteAttachmentMetadataForOwner: (ownerTable, ownerId) => client.deleteAttachmentMetadataForOwner(ownerTable, ownerId),
   };
 
+  const exportImport: AppRepositories["exportImport"] = {
+    loadSnapshotSourceData: (input) => client.loadSnapshotSourceData(input),
+    loadSnapshotImportExistingRecords: () => client.loadSnapshotImportExistingRecords(),
+    importSnapshotIntoEmptyDatabase: (snapshot) => client.importSnapshotIntoEmptyDatabase(snapshot),
+  };
+
   const repositories: AppRepositories = {
     children,
     caregivers,
@@ -260,6 +266,7 @@ export function createLocalRepositories(client: LocalDbClient = defaultDbClient)
     milestones,
     settings,
     attachments,
+    exportImport,
     reportSource: {
       getLatestActivityDate: (childId) => client.getLatestReportActivityDate(childId),
       getSourceData: (input) => getReportSourceData(repositories, input),
