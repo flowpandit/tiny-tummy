@@ -2,7 +2,11 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>NSCameraUsageDescription</key>
+	<string>Tiny Tummy uses the camera only when you choose to add a private photo to a log.</string>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>Tiny Tummy connects to the Vite dev server on your Mac when running iOS development builds with hot reload.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Tiny Tummy lets you choose a photo only when you attach one to a private log.</string>
 </dict>
 </plist>

@@ -1,4 +1,5 @@
 import type { FormEvent } from "react";
+import { platform } from "@tauri-apps/plugin-os";
 import { Sheet, type SheetVisibilityProps } from "../ui/sheet";
 import { Button } from "../ui/button";
 import { useToast } from "../ui/toast";
@@ -45,6 +46,7 @@ export function DiaperLogForm({
   const { resolved } = useTheme();
   const canAddPhoto = usePremiumFeature("photoCapture");
   const nightMode = resolved === "night";
+  const photoInputCapture = platform() === "ios" ? undefined : "environment";
   const { fileInputRef, photoFile, photoPreview, resetPhoto, setPhotoFromChange } = usePhotoField();
 
   const { handleClose, handleLoggedSuccess } = useLoggingSheetLifecycle({
@@ -112,7 +114,7 @@ export function DiaperLogForm({
                     ref={fileInputRef}
                     type="file"
                     accept="image/*"
-                    capture="environment"
+                    capture={photoInputCapture}
                     onChange={setPhotoFromChange}
                     className="hidden"
                     id="diaper-photo-input"
@@ -153,7 +155,7 @@ export function DiaperLogForm({
                         : "border-[var(--color-border)] text-[var(--color-text-secondary)] hover:border-[var(--color-muted)]",
                     )}
                   >
-                    Take Photo
+                    Add Photo
                   </button>
                 )}
               </div>
