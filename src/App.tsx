@@ -25,6 +25,7 @@ import { Breastfeed } from "./pages/Breastfeed";
 import { Guidance } from "./pages/Guidance";
 import { Settings } from "./pages/Settings";
 import { Report } from "./pages/Report";
+import { CaregiverHandoff } from "./pages/CaregiverHandoff";
 import { AddChild } from "./pages/AddChild";
 import { AllKids } from "./pages/AllKids";
 import { Privacy } from "./pages/Privacy";
@@ -166,6 +167,7 @@ function AppRoutes() {
         <Route path="/guidance" element={<Guidance />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="/report" element={<Report />} />
+        <Route path="/handoff" element={<CaregiverHandoff />} />
       </Route>
       <Route path="/unlock" element={<Paywall />} />
       <Route path="/add-child" element={<AddChild />} />

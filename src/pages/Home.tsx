@@ -28,6 +28,7 @@ import {
 import { HomeTopSection } from "../components/home/HomeTopSection";
 import { RecentActivity } from "../components/home/RecentActivity";
 import { CareToolsSection } from "../components/care/CareToolsSection";
+import { HomeCaregiverHandoffCard } from "../components/handoff/HomeCaregiverHandoffCard";
 import { HomeQuickActions } from "../components/home/HomeQuickActions";
 import { HomeHealthActions } from "../components/home/HomeHealthActions";
 import { HomeActiveEpisodes } from "../components/home/HomeActiveEpisodes";
@@ -446,6 +447,8 @@ export function Home() {
         glanceStats={assistantModel.glanceStats}
         onTimelineItemSelect={handleTimelineItemSelect}
       />
+
+      <HomeCaregiverHandoffCard />
 
       <CareToolsSection className="px-4 md:px-10" palette="soft" />
 

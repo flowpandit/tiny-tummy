@@ -316,6 +316,9 @@ test("HandoffService prepares a local summary snapshot through repositories", as
     related_log_id: diaper.id,
   };
   const service = createHandoffService({
+    children: {
+      listActiveChildren: async () => [child],
+    },
     elimination: {
       listDiaperLogs: async () => [diaper],
       listPoopLogs: async () => [poop],
@@ -345,4 +348,17 @@ test("HandoffService prepares a local summary snapshot through repositories", as
   assert.equal(snapshot.lastPoop?.id, poop.id);
   assert.equal(snapshot.lastSleep?.id, sleep.id);
   assert.deepEqual(snapshot.visibleAlerts.map((item) => item.id), [alert.id]);
+
+  const handoff = await service.getHandoffSummary(child.id, {
+    dayKey: "2026-04-12",
+    generatedAt: "2026-04-12T14:00:00.000Z",
+    parentNote: "Nana is taking over after lunch.",
+  });
+
+  assert.equal(handoff.child.name, child.name);
+  assert.equal(handoff.todaySummary.wetDiaperCount, 1);
+  assert.equal(handoff.lastEvents.lastPoop?.detail, "brown, Type 5, large");
+  assert.equal(handoff.lastEvents.activeEpisode?.title, "Constipation concern");
+  assert.equal(handoff.parentNote, "Nana is taking over after lunch.");
+  assert.equal(JSON.stringify(handoff).includes("photo_path"), false);
 });

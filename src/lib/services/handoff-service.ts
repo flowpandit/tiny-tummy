@@ -1,4 +1,5 @@
 import { buildChildDailySummary, type ChildDailySummary } from "../child-summary";
+import { buildHandoffSummary, type HandoffSummary } from "../handoff-summary";
 import type {
   Alert,
   DiaperEntry,
@@ -28,10 +29,22 @@ export interface HandoffService {
       dayKey?: string;
     },
   ): Promise<ChildSummarySnapshot>;
+  getHandoffSummary(
+    childId: string,
+    options?: {
+      poopLimit?: number;
+      feedingLimit?: number;
+      sleepLimit?: number;
+      symptomLimit?: number;
+      dayKey?: string;
+      generatedAt?: string;
+      parentNote?: string | null;
+    },
+  ): Promise<HandoffSummary>;
 }
 
 export function createHandoffService(
-  repositories: Pick<AppRepositories, "elimination" | "feeding" | "sleep" | "care">,
+  repositories: Pick<AppRepositories, "children" | "elimination" | "feeding" | "sleep" | "care">,
 ): HandoffService {
   return {
     async getChildSummarySnapshot(childId, options = {}) {
@@ -75,5 +88,48 @@ export function createHandoffService(
         symptomLogs,
       };
     },
+    async getHandoffSummary(childId, options = {}) {
+      const poopLimit = options.poopLimit ?? 100;
+      const feedingLimit = options.feedingLimit ?? 100;
+      const sleepLimit = options.sleepLimit ?? 50;
+      const symptomLimit = options.symptomLimit ?? 20;
+
+      const [children, diaperLogs, poopLogs, feedingLogs, sleepLogs, alerts, activeEpisode, symptomLogs] = await Promise.all([
+        repositories.children.listActiveChildren(),
+        repositories.elimination.listDiaperLogs(childId, poopLimit),
+        repositories.elimination.listPoopLogs(childId, poopLimit),
+        repositories.feeding.listFeedingLogs(childId, feedingLimit),
+        repositories.sleep.listSleepLogs(childId, sleepLimit),
+        repositories.care.listActiveAlerts(childId),
+        repositories.care.getActiveEpisode(childId),
+        repositories.care.listSymptoms(childId, symptomLimit),
+      ]);
+      const child = children.find((item) => item.id === childId) ?? null;
+
+      if (!child) {
+        throw new Error("Child not found for caregiver handoff.");
+      }
+
+      const episodeEvents = activeEpisode
+        ? await repositories.care.listEpisodeEvents(activeEpisode.id)
+        : [];
+
+      return buildHandoffSummary({
+        child,
+        poopLogs,
+        diaperLogs,
+        feedingLogs,
+        sleepLogs,
+        alerts,
+        activeEpisode,
+        episodeEvents,
+        symptomLogs,
+        dayKey: options.dayKey,
+        generatedAt: options.generatedAt,
+        parentNote: options.parentNote,
+      });
+    },
   };
 }
+
+export type { HandoffSummary };
