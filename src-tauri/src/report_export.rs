@@ -24,6 +24,14 @@ struct SharePdfPayload {
     base64_data: String,
 }
 
+#[cfg(target_os = "ios")]
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ShareJsonPayload {
+    file_name: String,
+    json: String,
+}
+
 pub fn init<R: Runtime>() -> TauriPlugin<R> {
     Builder::<R, ()>::new("report_export")
         .setup(|app, api| {
@@ -65,5 +73,29 @@ pub async fn share_pdf_report<R: Runtime>(
     {
         let _ = (app, file_name, base64_data);
         Err("PDF sharing is only supported on iOS and iPadOS.".to_string())
+    }
+}
+
+#[tauri::command]
+pub async fn share_json_backup<R: Runtime>(
+    app: tauri::AppHandle<R>,
+    file_name: String,
+    json: String,
+) -> Result<(), String> {
+    #[cfg(target_os = "ios")]
+    {
+        let handle = app.state::<ReportExportHandle<R>>();
+        return handle
+            .0
+            .run_mobile_plugin::<()>(
+                "shareJsonBackup",
+                ShareJsonPayload { file_name, json },
+            )
+            .map_err(|error: tauri::plugin::mobile::PluginInvokeError| error.to_string());
+    }
+    #[cfg(not(target_os = "ios"))]
+    {
+        let _ = (app, file_name, json);
+        Err("JSON backup sharing is only supported on iOS and iPadOS.".to_string())
     }
 }

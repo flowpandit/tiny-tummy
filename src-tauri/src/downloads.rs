@@ -19,9 +19,18 @@ struct SavePdfPayload {
 }
 
 #[cfg(target_os = "android")]
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct SaveTextPayload {
+    file_name: String,
+    text: String,
+    mime_type: String,
+}
+
+#[cfg(target_os = "android")]
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct SavePdfResult {
+pub struct SaveDownloadsResult {
     pub file_name: String,
     pub uri: String,
 }
@@ -33,10 +42,18 @@ struct OpenPdfPayload {
     uri: String,
 }
 
+#[cfg(target_os = "android")]
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct OpenFilePayload {
+    uri: String,
+    mime_type: String,
+}
+
 #[cfg(not(target_os = "android"))]
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct SavePdfResult {
+pub struct SaveDownloadsResult {
     pub file_name: String,
     pub uri: String,
 }
@@ -70,13 +87,13 @@ pub async fn save_pdf_to_downloads<R: Runtime>(
     app: tauri::AppHandle<R>,
     file_name: String,
     base64_data: String,
-) -> Result<SavePdfResult, String> {
+) -> Result<SaveDownloadsResult, String> {
     #[cfg(target_os = "android")]
     {
         let handle = app.state::<DownloadsHandle<R>>();
         return handle
             .0
-            .run_mobile_plugin::<SavePdfResult>(
+            .run_mobile_plugin::<SaveDownloadsResult>(
                 "savePdfToDownloads",
                 SavePdfPayload {
                     file_name,
@@ -88,6 +105,35 @@ pub async fn save_pdf_to_downloads<R: Runtime>(
     #[cfg(not(target_os = "android"))]
     {
         let _ = (app, file_name, base64_data);
+        Err("Saving directly to Downloads is only supported on Android.".to_string())
+    }
+}
+
+#[tauri::command]
+pub async fn save_text_to_downloads<R: Runtime>(
+    app: tauri::AppHandle<R>,
+    file_name: String,
+    text: String,
+    mime_type: String,
+) -> Result<SaveDownloadsResult, String> {
+    #[cfg(target_os = "android")]
+    {
+        let handle = app.state::<DownloadsHandle<R>>();
+        return handle
+            .0
+            .run_mobile_plugin::<SaveDownloadsResult>(
+                "saveTextToDownloads",
+                SaveTextPayload {
+                    file_name,
+                    text,
+                    mime_type,
+                },
+            )
+            .map_err(|e: tauri::plugin::mobile::PluginInvokeError| e.to_string());
+    }
+    #[cfg(not(target_os = "android"))]
+    {
+        let _ = (app, file_name, text, mime_type);
         Err("Saving directly to Downloads is only supported on Android.".to_string())
     }
 }
@@ -109,5 +155,29 @@ pub async fn open_pdf_from_downloads<R: Runtime>(
     {
         let _ = (app, uri);
         Err("Opening Downloads PDFs is only supported on Android.".to_string())
+    }
+}
+
+#[tauri::command]
+pub async fn open_file_from_downloads<R: Runtime>(
+    app: tauri::AppHandle<R>,
+    uri: String,
+    mime_type: String,
+) -> Result<(), String> {
+    #[cfg(target_os = "android")]
+    {
+        let handle = app.state::<DownloadsHandle<R>>();
+        return handle
+            .0
+            .run_mobile_plugin::<()>(
+                "openFileFromDownloads",
+                OpenFilePayload { uri, mime_type },
+            )
+            .map_err(|e: tauri::plugin::mobile::PluginInvokeError| e.to_string());
+    }
+    #[cfg(not(target_os = "android"))]
+    {
+        let _ = (app, uri, mime_type);
+        Err("Opening Downloads files is only supported on Android.".to_string())
     }
 }

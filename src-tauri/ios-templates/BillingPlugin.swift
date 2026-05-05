@@ -14,13 +14,20 @@ class ReportPdfShareArgs: Decodable {
   let base64Data: String
 }
 
-class ReportPdfActivityItemSource: NSObject, UIActivityItemSource {
+class ReportJsonShareArgs: Decodable {
+  let fileName: String
+  let json: String
+}
+
+class ReportFileActivityItemSource: NSObject, UIActivityItemSource {
   let fileUrl: URL
   let fileName: String
+  let dataTypeIdentifier: String
 
-  init(fileUrl: URL, fileName: String) {
+  init(fileUrl: URL, fileName: String, dataTypeIdentifier: String) {
     self.fileUrl = fileUrl
     self.fileName = fileName
+    self.dataTypeIdentifier = dataTypeIdentifier
   }
 
   func activityViewControllerPlaceholderItem(_ activityViewController: UIActivityViewController) -> Any {
@@ -36,7 +43,7 @@ class ReportPdfActivityItemSource: NSObject, UIActivityItemSource {
   }
 
   func activityViewController(_ activityViewController: UIActivityViewController, dataTypeIdentifierForActivityType activityType: UIActivity.ActivityType?) -> String {
-    "com.adobe.pdf"
+    dataTypeIdentifier
   }
 }
 
@@ -177,12 +184,39 @@ class ReportExportPlugin: Plugin {
     }
 
     let fileName = normalizedPdfFileName(args.fileName)
+    shareFile(
+      invoke,
+      data: pdfData,
+      fileName: fileName,
+      dataTypeIdentifier: "com.adobe.pdf",
+      writeErrorMessage: "The PDF could not be written for sharing."
+    )
+  }
+
+  @objc public func shareJsonBackup(_ invoke: Invoke) throws {
+    let args = try invoke.parseArgs(ReportJsonShareArgs.self)
+    guard let jsonData = args.json.data(using: .utf8) else {
+      invoke.reject("The backup data could not be prepared for sharing.")
+      return
+    }
+
+    let fileName = normalizedJsonFileName(args.fileName)
+    shareFile(
+      invoke,
+      data: jsonData,
+      fileName: fileName,
+      dataTypeIdentifier: "public.json",
+      writeErrorMessage: "The backup could not be written for sharing."
+    )
+  }
+
+  private func shareFile(_ invoke: Invoke, data: Data, fileName: String, dataTypeIdentifier: String, writeErrorMessage: String) {
     let fileUrl = FileManager.default.temporaryDirectory.appendingPathComponent(fileName, isDirectory: false)
 
     do {
-      try pdfData.write(to: fileUrl, options: .atomic)
+      try data.write(to: fileUrl, options: .atomic)
     } catch {
-      invoke.reject("The PDF could not be written for sharing.")
+      invoke.reject(writeErrorMessage)
       return
     }
 
@@ -192,7 +226,11 @@ class ReportExportPlugin: Plugin {
         return
       }
 
-      let itemSource = ReportPdfActivityItemSource(fileUrl: fileUrl, fileName: fileName)
+      let itemSource = ReportFileActivityItemSource(
+        fileUrl: fileUrl,
+        fileName: fileName,
+        dataTypeIdentifier: dataTypeIdentifier
+      )
       let activityViewController = UIActivityViewController(activityItems: [itemSource], applicationActivities: nil)
 
       if let popover = activityViewController.popoverPresentationController {
@@ -216,6 +254,12 @@ class ReportExportPlugin: Plugin {
     let trimmed = fileName.trimmingCharacters(in: .whitespacesAndNewlines)
     let candidate = trimmed.isEmpty ? "tiny-tummy-baby-health-report.pdf" : trimmed
     return candidate.lowercased().hasSuffix(".pdf") ? candidate : "\(candidate).pdf"
+  }
+
+  private func normalizedJsonFileName(_ fileName: String) -> String {
+    let trimmed = fileName.trimmingCharacters(in: .whitespacesAndNewlines)
+    let candidate = trimmed.isEmpty ? "tiny-tummy-backup.json" : trimmed
+    return candidate.lowercased().hasSuffix(".json") ? candidate : "\(candidate).json"
   }
 
   private func topViewController(from rootViewController: UIViewController?) -> UIViewController? {

@@ -67,6 +67,8 @@ export interface SavedDownloadsPdf {
   uri: string;
 }
 
+export type SavedDownloadsFile = SavedDownloadsPdf;
+
 export async function savePdfToDownloads(fileName: string, base64Data: string): Promise<SavedDownloadsPdf> {
   return await invoke("save_pdf_to_downloads", {
     fileName,
@@ -74,14 +76,33 @@ export async function savePdfToDownloads(fileName: string, base64Data: string): 
   });
 }
 
+export async function saveTextToDownloads(fileName: string, text: string, mimeType: string): Promise<SavedDownloadsFile> {
+  return await invoke("save_text_to_downloads", {
+    fileName,
+    text,
+    mimeType,
+  });
+}
+
 export async function openPdfFromDownloads(uri: string): Promise<void> {
   return await invoke("open_pdf_from_downloads", { uri });
+}
+
+export async function openFileFromDownloads(uri: string, mimeType: string): Promise<void> {
+  return await invoke("open_file_from_downloads", { uri, mimeType });
 }
 
 export async function sharePdfReport(fileName: string, base64Data: string): Promise<void> {
   return await invoke("share_pdf_report", {
     fileName,
     base64Data,
+  });
+}
+
+export async function shareJsonBackup(fileName: string, json: string): Promise<void> {
+  return await invoke("share_json_backup", {
+    fileName,
+    json,
   });
 }
 

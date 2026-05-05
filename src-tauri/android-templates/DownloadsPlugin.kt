@@ -27,8 +27,21 @@ class SavePdfArgs {
 }
 
 @InvokeArg
+class SaveTextArgs {
+    var fileName: String = ""
+    var text: String = ""
+    var mimeType: String = "text/plain"
+}
+
+@InvokeArg
 class OpenPdfArgs {
     var uri: String = ""
+}
+
+@InvokeArg
+class OpenFileArgs {
+    var uri: String = ""
+    var mimeType: String = "application/octet-stream"
 }
 
 @TauriPlugin
@@ -40,9 +53,9 @@ class DownloadsPlugin(private val activity: Activity) : Plugin(activity) {
         try {
             val pdfBytes = Base64.decode(args.base64Data, Base64.DEFAULT)
             val savedUri = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                saveWithMediaStore(args.fileName, pdfBytes)
+                saveWithMediaStore(args.fileName, pdfBytes, "application/pdf")
             } else {
-                saveLegacy(args.fileName, pdfBytes)
+                saveLegacy(args.fileName, pdfBytes, "application/pdf")
             }
             val result = JSObject().apply {
                 put("fileName", args.fileName)
@@ -55,40 +68,76 @@ class DownloadsPlugin(private val activity: Activity) : Plugin(activity) {
     }
 
     @Command
+    fun saveTextToDownloads(invoke: Invoke) {
+        val args = invoke.parseArgs(SaveTextArgs::class.java)
+
+        try {
+            val bytes = args.text.toByteArray(Charsets.UTF_8)
+            val mimeType = args.mimeType.ifBlank { "text/plain" }
+            val savedUri = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                saveWithMediaStore(args.fileName, bytes, mimeType)
+            } else {
+                saveLegacy(args.fileName, bytes, mimeType)
+            }
+            val result = JSObject().apply {
+                put("fileName", args.fileName)
+                put("uri", savedUri)
+            }
+            invoke.resolve(result)
+        } catch (error: Exception) {
+            invoke.reject("Failed to save file to Downloads: ${error.message}")
+        }
+    }
+
+    @Command
     fun openPdfFromDownloads(invoke: Invoke) {
         val args = invoke.parseArgs(OpenPdfArgs::class.java)
+        openFromDownloads(invoke, args.uri, "application/pdf", "Tiny Tummy PDF report")
+    }
 
+    @Command
+    fun openFileFromDownloads(invoke: Invoke) {
+        val args = invoke.parseArgs(OpenFileArgs::class.java)
+        openFromDownloads(
+            invoke,
+            args.uri,
+            args.mimeType.ifBlank { "application/octet-stream" },
+            "Tiny Tummy backup"
+        )
+    }
+
+    private fun openFromDownloads(invoke: Invoke, uriValue: String, mimeType: String, clipLabel: String) {
         activity.runOnUiThread {
             try {
-                if (args.uri.isBlank()) {
-                    throw IllegalArgumentException("Saved PDF location is missing.")
+                if (uriValue.isBlank()) {
+                    throw IllegalArgumentException("Saved file location is missing.")
                 }
 
-                val uri = Uri.parse(args.uri)
+                val uri = Uri.parse(uriValue)
                 val intent = Intent(Intent.ACTION_VIEW).apply {
-                    setDataAndType(uri, "application/pdf")
+                    setDataAndType(uri, mimeType)
                     addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                     clipData = ClipData.newUri(
                         activity.contentResolver,
-                        "Tiny Tummy PDF report",
+                        clipLabel,
                         uri
                     )
                 }
                 activity.startActivity(intent)
                 invoke.resolve()
             } catch (error: ActivityNotFoundException) {
-                invoke.reject("No PDF viewer is installed on this device.")
+                invoke.reject("No app is installed to open this file.")
             } catch (error: Exception) {
-                invoke.reject("Could not open PDF report: ${error.message}")
+                invoke.reject("Could not open saved file: ${error.message}")
             }
         }
     }
 
-    private fun saveWithMediaStore(fileName: String, pdfBytes: ByteArray): String {
+    private fun saveWithMediaStore(fileName: String, bytes: ByteArray, mimeType: String): String {
         val resolver = activity.contentResolver
         val values = ContentValues().apply {
             put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)
-            put(MediaStore.MediaColumns.MIME_TYPE, "application/pdf")
+            put(MediaStore.MediaColumns.MIME_TYPE, mimeType)
             put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
             put(MediaStore.Downloads.IS_PENDING, 1)
         }
@@ -98,7 +147,7 @@ class DownloadsPlugin(private val activity: Activity) : Plugin(activity) {
 
         try {
             resolver.openOutputStream(uri)?.use { stream ->
-                stream.write(pdfBytes)
+                stream.write(bytes)
             } ?: throw IllegalStateException("Unable to open the Downloads file.")
 
             val completedValues = ContentValues().apply {
@@ -112,7 +161,7 @@ class DownloadsPlugin(private val activity: Activity) : Plugin(activity) {
         }
     }
 
-    private fun saveLegacy(fileName: String, pdfBytes: ByteArray): String {
+    private fun saveLegacy(fileName: String, bytes: ByteArray, @Suppress("UNUSED_PARAMETER") mimeType: String): String {
         val downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
         if (!downloadsDir.exists() && !downloadsDir.mkdirs()) {
             throw IllegalStateException("Unable to access the Downloads folder.")
@@ -120,7 +169,7 @@ class DownloadsPlugin(private val activity: Activity) : Plugin(activity) {
 
         val targetFile = File(downloadsDir, fileName)
         FileOutputStream(targetFile).use { stream ->
-            stream.write(pdfBytes)
+            stream.write(bytes)
         }
         return FileProvider.getUriForFile(
             activity,

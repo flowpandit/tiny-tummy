@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useActiveChild, useChildActions, useChildren } from "../contexts/ChildContext";
 import { useTrialAccess, useTrialActions } from "../contexts/TrialContext";
 import { EditChildSheet } from "../components/settings/EditChildSheet";
+import { BackupRestoreSection } from "../components/settings/BackupRestoreSection";
 import {
   AccessSection,
   ChildrenSection,
@@ -12,6 +13,7 @@ import {
   ThemeSection,
 } from "../components/settings/SettingsSections";
 import { PageBody } from "../components/ui/page-layout";
+import { useBackupRestoreActions } from "../hooks/useBackupRestoreActions";
 import { useDeleteChildAction } from "../hooks/useSettingsActions";
 import { canUseFeature } from "../lib/feature-access";
 import type { Child } from "../lib/types";
@@ -83,6 +85,10 @@ export function Settings() {
   } = useTrialActions();
   const navigate = useNavigate();
   const deleteChild = useDeleteChildAction(refreshChildren);
+  const backupRestore = useBackupRestoreActions({
+    activeChild,
+    onImported: refreshChildren,
+  });
   const [editingChild, setEditingChild] = useState<Child | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
@@ -127,6 +133,31 @@ export function Settings() {
         <ThemeSection child={activeChild} />
 
         <NotificationSection children={children} />
+
+        <BackupRestoreSection
+          activeChild={activeChild}
+          canExportBackup={backupRestore.exportAccess.allowed}
+          canImportBackup={backupRestore.importAccess.allowed}
+          importPreview={backupRestore.importPreview}
+          isWorking={backupRestore.isWorking}
+          lastSaveResult={backupRestore.lastSaveResult}
+          statusMessage={backupRestore.statusMessage}
+          onConfirmImport={() => {
+            void backupRestore.confirmImportBackup();
+          }}
+          onExportChild={() => {
+            void backupRestore.exportCurrentChildBackup();
+          }}
+          onExportFull={() => {
+            void backupRestore.exportFullBackup();
+          }}
+          onImport={() => {
+            void backupRestore.selectImportBackup();
+          }}
+          onOpenSaved={() => {
+            void backupRestore.openLastSavedBackup();
+          }}
+        />
 
         <RecordsSupportSection />
 

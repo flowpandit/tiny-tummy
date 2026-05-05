@@ -122,10 +122,13 @@ pub fn run() {
             db_transaction::execute_sqlite_transaction,
             get_child_status,
             get_guidance_tips,
+            downloads::open_file_from_downloads,
             downloads::open_pdf_from_downloads,
             downloads::save_pdf_to_downloads,
+            downloads::save_text_to_downloads,
             report_pdf::generate_native_report_pdf,
             report_export::share_pdf_report,
+            report_export::share_json_backup,
             statusbar::set_status_bar_style,
         ])
         .run(tauri::generate_context!())
