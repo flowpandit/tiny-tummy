@@ -1,7 +1,12 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { buildNativeReportPdfPayload } from "../src/lib/report-native-pdf.ts";
-import { buildReportData, getDefaultReportOptionsForKind } from "../src/lib/reporting.ts";
+import { buildHandoffSummary } from "../src/lib/handoff-summary.ts";
+import {
+  buildReportData,
+  getDefaultReportOptionsForKind,
+  getDefaultReportOptionsForMode,
+} from "../src/lib/reporting.ts";
 import type { Child, DiaperEntry, PoopEntry } from "../src/lib/types.ts";
 
 const child: Child = {
@@ -106,4 +111,93 @@ test("native report payload keeps selected date range when report-page default o
 
   assert.equal(payload.dataQuality.totalDays, 4);
   assert.equal(Number.isFinite(payload.dataQuality.totalDays), true);
+});
+
+test("native caregiver handoff payload includes parent note and excludes photo/file content", () => {
+  const parentNote = "Please offer fluids and watch wet diapers.";
+  const photoPoop = {
+    ...poop,
+    photo_path: "/private/tiny-tummy/poop.jpg",
+  };
+  const photoDiaper = {
+    ...diaper,
+    photo_path: "/private/tiny-tummy/diaper.jpg",
+  };
+  const options = {
+    ...getDefaultReportOptionsForMode("caregiver_handoff", {
+      childId: child.id,
+      dateRange: { start: "2026-05-04", end: "2026-05-04" },
+      generatedAt: "2026-05-04T15:50:00.000Z",
+    }),
+    parentNote,
+    includePhotos: false,
+    includeAttachmentMetadata: false,
+    includeDeleted: false,
+  };
+  const data = buildReportData({
+    child,
+    logs: [photoPoop],
+    diaperLogs: [photoDiaper],
+    feedingLogs: [],
+    growthLogs: [],
+    episodes: [],
+    episodeEvents: [],
+    symptomLogs: [],
+    milestoneLogs: [],
+    handoffSummary: {
+      dayKey: "2026-05-04",
+      lastPoop: photoPoop,
+      lastDiaper: photoDiaper,
+      lastWetDiaper: photoDiaper,
+      lastFeed: null,
+      lastSleep: null,
+      activeEpisode: null,
+      latestEpisodeUpdate: null,
+      latestSymptom: null,
+      recentSymptoms: [],
+      todayPoops: 1,
+      todayWetDiapers: 1,
+      todayDirtyDiapers: 1,
+      todayFeeds: 0,
+      hasNoPoopDay: false,
+      watchItems: ["Logging is sparse"],
+      parentNote,
+    },
+  }, "2026-05-04", "2026-05-04", options, "metric", "fullHealth");
+  const handoffSummary = buildHandoffSummary({
+    child,
+    poopLogs: [photoPoop],
+    diaperLogs: [photoDiaper],
+    feedingLogs: [],
+    sleepLogs: [],
+    alerts: [],
+    activeEpisode: null,
+    episodeEvents: [],
+    symptomLogs: [],
+    dayKey: "2026-05-04",
+    generatedAt: "2026-05-04T15:50:00.000Z",
+    parentNote,
+  });
+
+  const payload = buildNativeReportPdfPayload({
+    child,
+    startDate: "2026-05-04",
+    endDate: "2026-05-04",
+    reportData: data,
+    unitSystem: "metric",
+    generatedAt: new Date("2026-05-04T15:50:00"),
+    handoffSummary,
+  });
+  const serializedPayload = JSON.stringify(payload);
+
+  assert.equal(payload.title, "Caregiver Handoff");
+  assert.equal(payload.reportMode, "caregiver_handoff");
+  assert.equal(payload.childId, "");
+  assert.equal(payload.includePhotos, false);
+  assert.equal(payload.includeAttachmentMetadata, false);
+  assert.equal(payload.handoff?.parentNoteRows.at(0)?.detail, parentNote);
+  assert.equal(payload.handoff?.nextDueRows.length, 3);
+  assert.equal(serializedPayload.includes("/private/tiny-tummy"), false);
+  assert.equal(serializedPayload.includes("photo_path"), false);
+  assert.doesNotMatch(serializedPayload, /diagnose|medical advice|treat/i);
 });

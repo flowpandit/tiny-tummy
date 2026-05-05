@@ -169,7 +169,11 @@ export function buildReportPreviewModel(input: {
   const generatedLabel = formatReportGeneratedAt(generatedAt);
 
   return {
-    title: data.reportKind === "poopTummy" ? "Poop & Tummy Report" : "Pediatrician Report",
+    title: data.reportMode === "caregiver_handoff"
+      ? "Caregiver Handoff"
+      : data.reportKind === "poopTummy"
+        ? "Poop & Tummy Report"
+        : "Pediatrician Report",
     childId: child.id,
     childName: child.name,
     childAvatarColor: child.avatar_color,
@@ -875,6 +879,16 @@ function buildFeedingRows(logs: FeedingEntry[], unitSystem: UnitSystem): ReportF
 
 function buildParentNoteRows(data: ReportData): ReportPreviewRow[] {
   const rows: ReportPreviewRow[] = [];
+  const handoffParentNote = data.report.sections.caregiverHandoff?.rows.find((row) => row.label === "Parent note");
+  if (handoffParentNote?.detail) {
+    rows.push({
+      label: "Parent handoff note",
+      value: "Provided",
+      detail: handoffParentNote.detail,
+      tone: "info",
+    });
+  }
+
   for (const log of data.stoolEvents) {
     if (log.notes) {
       rows.push({

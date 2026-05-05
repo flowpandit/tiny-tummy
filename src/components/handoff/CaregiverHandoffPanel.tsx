@@ -17,9 +17,11 @@ interface CaregiverHandoffPanelProps {
   canUseNativeShare: boolean;
   isCopying: boolean;
   isSharing: boolean;
+  isGeneratingPdf: boolean;
   onParentNoteChange: (value: string) => void;
   onCopy: () => void;
   onShare: () => void;
+  onGeneratePdf: () => void;
   onRefresh: () => void;
 }
 
@@ -116,9 +118,11 @@ export function CaregiverHandoffPanel({
   canUseNativeShare,
   isCopying,
   isSharing,
+  isGeneratingPdf,
   onParentNoteChange,
   onCopy,
   onShare,
+  onGeneratePdf,
   onRefresh,
 }: CaregiverHandoffPanelProps) {
   const lastEvents = summary.lastEvents;
@@ -223,12 +227,15 @@ export function CaregiverHandoffPanel({
             <p className="text-[0.8rem] leading-snug text-[var(--color-text-secondary)]">
               {summary.privacyNote}
             </p>
-            <div className="mt-3 grid gap-2 sm:grid-cols-2">
-              <Button type="button" variant="cta" onClick={onShare} disabled={isSharing || isCopying}>
+            <div className="mt-3 grid gap-2 sm:grid-cols-3">
+              <Button type="button" variant="cta" onClick={onShare} disabled={isSharing || isCopying || isGeneratingPdf}>
                 {isSharing ? "Preparing..." : canUseNativeShare ? "Share" : "Share text"}
               </Button>
-              <Button type="button" variant="secondary" onClick={onCopy} disabled={isCopying || isSharing}>
+              <Button type="button" variant="secondary" onClick={onCopy} disabled={isCopying || isSharing || isGeneratingPdf}>
                 {isCopying ? "Copying..." : "Copy text"}
+              </Button>
+              <Button type="button" variant="secondary" onClick={onGeneratePdf} disabled={isCopying || isSharing || isGeneratingPdf}>
+                {isGeneratingPdf ? "Preparing PDF..." : "Generate PDF"}
               </Button>
             </div>
           </div>

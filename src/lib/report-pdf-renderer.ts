@@ -1,5 +1,6 @@
 import { buildNativeReportPdfPayloadWithAssets } from "./report-native-pdf";
 import { generateNativeReportPdf } from "./tauri";
+import type { HandoffSummary } from "./handoff-summary";
 import type { ReportData } from "./reporting";
 import type { Child, UnitSystem } from "./types";
 
@@ -15,6 +16,7 @@ export async function renderReportPdfBase64(input: {
   endDate: string;
   reportData: ReportData;
   unitSystem: UnitSystem;
+  handoffSummary?: HandoffSummary | null;
 }): Promise<ReportPdfRenderResult> {
   const startedAt = performance.now();
   const base64Data = await generateNativeReportPdf(await buildNativeReportPdfPayloadWithAssets(input));

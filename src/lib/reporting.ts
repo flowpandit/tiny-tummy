@@ -97,6 +97,7 @@ export interface ReportOptions {
   includeMilestones: boolean;
   includeGrowth: boolean;
   includeNotes: boolean;
+  parentNote?: string | null;
 }
 
 export type ReportSectionId =
@@ -223,6 +224,7 @@ export interface ReportHandoffSourceData {
   todayFeeds: number;
   hasNoPoopDay: boolean;
   watchItems: string[];
+  parentNote?: string | null;
 }
 
 export interface ReportDashboardStat {
@@ -1820,7 +1822,7 @@ function buildCaregiverHandoffSection(
   const poopCount = handoff?.todayPoops ?? legacyData.stats.totalPoops;
   const feedCount = handoff?.todayFeeds ?? legacyData.feedingLogs.length;
 
-  return makeSection("caregiverHandoff", "Caregiver Handoff", [
+  const rows: ReportSectionRow[] = [
     {
       label: "Today",
       value: dayLabel,
@@ -1857,7 +1859,18 @@ function buildCaregiverHandoffSection(
       value: [...(handoff?.watchItems ?? []), ...recentSymptoms.map((log) => getSymptomTypeLabel(log.symptom_type))].slice(0, 3).join(", ") || "None",
       detail: "Observational handoff context for the next caregiver.",
     },
-  ]);
+  ];
+
+  if (handoff?.parentNote) {
+    rows.push({
+      label: "Parent note",
+      value: "Provided",
+      detail: handoff.parentNote,
+      tone: "info",
+    });
+  }
+
+  return makeSection("caregiverHandoff", "Caregiver Handoff", rows);
 }
 
 function buildChartsSection(legacyData: LegacyReportDataFields): TinyTummyReportSection {

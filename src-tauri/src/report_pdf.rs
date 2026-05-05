@@ -59,6 +59,8 @@ pub struct NativeReportPdfPayload {
     pub context: ContextModel,
     #[serde(default)]
     pub timeline_groups: Vec<TimelineGroup>,
+    #[serde(default)]
+    pub handoff: Option<NativeHandoffPdfModel>,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -232,6 +234,23 @@ pub struct TimelineRow {
     pub tone: String,
 }
 
+#[derive(Debug, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct NativeHandoffPdfModel {
+    #[serde(default)]
+    pub today_metrics: Vec<Metric>,
+    #[serde(default)]
+    pub last_event_rows: Vec<InfoRow>,
+    #[serde(default)]
+    pub next_due_rows: Vec<InfoRow>,
+    #[serde(default)]
+    pub watch_rows: Vec<InfoRow>,
+    #[serde(default)]
+    pub parent_note_rows: Vec<InfoRow>,
+    #[serde(default)]
+    pub timeline_rows: Vec<TimelineRow>,
+}
+
 #[tauri::command]
 pub fn generate_native_report_pdf(payload: NativeReportPdfPayload) -> Result<String, String> {
     let mut layout = PdfLayout::new(&payload);
@@ -383,6 +402,11 @@ impl PdfLayout {
     }
 
     fn draw_report(&mut self, payload: &NativeReportPdfPayload) -> Result<(), String> {
+        if payload.report_mode.as_deref() == Some("caregiver_handoff") {
+            self.draw_caregiver_handoff_report(payload)?;
+            return Ok(());
+        }
+
         self.draw_pediatrician_brief_page(payload)?;
         self.draw_pattern_review_page(payload)?;
         self.draw_tummy_context_page(payload)?;
@@ -889,6 +913,173 @@ impl PdfLayout {
         }
 
         Ok(())
+    }
+
+    fn draw_caregiver_handoff_report(
+        &mut self,
+        payload: &NativeReportPdfPayload,
+    ) -> Result<(), String> {
+        self.start_report_page(
+            "Caregiver Handoff",
+            Some("Local caregiver summary for the selected handoff window."),
+        );
+        self.draw_report_meta(
+            payload,
+            false,
+            Some("Generated locally by Tiny Tummy. Share only with people you trust."),
+        );
+
+        let Some(handoff) = payload.handoff.as_ref() else {
+            self.draw_supporting_metric_strip("Today So Far", &payload.brief.metrics, 6)?;
+            self.add_gap(SECTION_GAP_MM);
+            self.draw_brief_event_question_band(payload)?;
+            return Ok(());
+        };
+
+        self.draw_supporting_metric_strip("Today So Far", &handoff.today_metrics, 6)?;
+        self.add_gap(SECTION_GAP_MM);
+
+        let last_rows = Self::handoff_rows_or_default(
+            &handoff.last_event_rows,
+            "Last important events",
+            "No handoff events logged yet.",
+        );
+        let next_due_rows = Self::handoff_rows_or_default(
+            &handoff.next_due_rows,
+            "Next due",
+            "No clear pattern yet.",
+        );
+        self.draw_handoff_two_column_panels(
+            "Last Important Events",
+            "D",
+            &last_rows,
+            "What May Be Due Next",
+            "G",
+            &next_due_rows,
+        )?;
+
+        let watch_rows = Self::handoff_rows_or_default(
+            &handoff.watch_rows,
+            "Watch items",
+            "No watch items logged for this window.",
+        );
+        let parent_note_rows = Self::handoff_rows_or_default(
+            &handoff.parent_note_rows,
+            "Parent note",
+            "No parent note entered.",
+        );
+        self.draw_handoff_two_column_panels(
+            "Watch Items",
+            "symptom",
+            &watch_rows,
+            "Parent Note",
+            "i",
+            &parent_note_rows,
+        )?;
+
+        let timeline_rows = Self::handoff_timeline_rows(&handoff.timeline_rows);
+        let timeline_h = self
+            .measure_info_panel_for_mode(
+                "Short Recent Timeline",
+                &timeline_rows,
+                CONTENT_WIDTH_MM,
+                true,
+            )
+            .max(42.0);
+        self.ensure_space(timeline_h);
+        let y = self.y_mm;
+        self.draw_info_panel(
+            PAGE_PAD_X_MM,
+            y,
+            CONTENT_WIDTH_MM,
+            timeline_h,
+            "Short Recent Timeline",
+            "D",
+            &timeline_rows,
+            true,
+        )?;
+        self.y_mm = y + timeline_h + SECTION_GAP_MM;
+
+        Ok(())
+    }
+
+    fn draw_handoff_two_column_panels(
+        &mut self,
+        left_title: &str,
+        left_icon: &str,
+        left_rows: &[InfoRow],
+        right_title: &str,
+        right_icon: &str,
+        right_rows: &[InfoRow],
+    ) -> Result<(), String> {
+        let gap = SECTION_GAP_MM;
+        let col_w = (CONTENT_WIDTH_MM - gap) / 2.0;
+        let h = self
+            .measure_info_panel_for_mode(left_title, left_rows, col_w, true)
+            .max(self.measure_info_panel_for_mode(right_title, right_rows, col_w, true))
+            .max(48.0);
+        self.ensure_space(h);
+        let y = self.y_mm;
+        self.draw_info_panel(
+            PAGE_PAD_X_MM,
+            y,
+            col_w,
+            h,
+            left_title,
+            left_icon,
+            left_rows,
+            true,
+        )?;
+        self.draw_info_panel(
+            PAGE_PAD_X_MM + col_w + gap,
+            y,
+            col_w,
+            h,
+            right_title,
+            right_icon,
+            right_rows,
+            true,
+        )?;
+        self.y_mm = y + h + gap;
+        Ok(())
+    }
+
+    fn handoff_rows_or_default(rows: &[InfoRow], label: &str, detail: &str) -> Vec<InfoRow> {
+        if !rows.is_empty() {
+            return rows.iter().take(6).cloned().collect();
+        }
+
+        vec![InfoRow {
+            label: label.to_string(),
+            value: "None logged".to_string(),
+            detail: Some(detail.to_string()),
+            tone: Some("default".to_string()),
+        }]
+    }
+
+    fn handoff_timeline_rows(rows: &[TimelineRow]) -> Vec<InfoRow> {
+        if rows.is_empty() {
+            return vec![InfoRow {
+                label: "Timeline".to_string(),
+                value: "No events logged yet".to_string(),
+                detail: Some("No timeline events were logged for this handoff window.".to_string()),
+                tone: Some("default".to_string()),
+            }];
+        }
+
+        rows.iter()
+            .take(8)
+            .map(|row| InfoRow {
+                label: row.time.clone(),
+                value: row.event.clone(),
+                detail: Some(if row.note.trim().is_empty() {
+                    row.details.clone()
+                } else {
+                    format!("{} - {}", row.details, row.note)
+                }),
+                tone: Some(row.tone.clone()),
+            })
+            .collect()
     }
 
     fn draw_brief_hero(&mut self, summary: &str) -> Result<(), String> {
@@ -3817,12 +4008,60 @@ mod tests {
                 date_label: "May 1".to_string(),
                 rows: vec![TimelineRow { time: "9:00 AM".to_string(), event: "Stool".to_string(), details: "Type 4 - Color yellow".to_string(), note: "Soft yellow stool".to_string(), tone: "default".to_string() }],
             }],
+            handoff: None,
         }
     }
 
     #[test]
     fn generates_a_valid_native_report_pdf() {
         let encoded = generate_native_report_pdf(sample_payload()).expect("pdf should generate");
+        let bytes = STANDARD.decode(encoded).expect("should decode pdf bytes");
+        assert!(bytes.starts_with(b"%PDF-"));
+        assert!(bytes.len() > 1000);
+    }
+
+    #[test]
+    fn generates_a_valid_caregiver_handoff_pdf() {
+        let mut payload = sample_payload();
+        payload.title = "Caregiver Handoff".to_string();
+        payload.report_mode = Some("caregiver_handoff".to_string());
+        payload.disclaimer =
+            "This handoff is an observational summary of Tiny Tummy logs.".to_string();
+        payload.handoff = Some(NativeHandoffPdfModel {
+            today_metrics: vec![
+                metric("Poops", "1"),
+                metric("Wet diapers", "3"),
+                metric("Feeds", "5"),
+                metric("Sleep", "2h 10m"),
+            ],
+            last_event_rows: vec![
+                row("Last poop", "8:20 AM"),
+                row("Last wet diaper", "11:20 AM"),
+                row("Last feed", "2:43 PM"),
+            ],
+            next_due_rows: vec![InfoRow {
+                label: "Next feed".to_string(),
+                value: "No clear pattern yet".to_string(),
+                detail: Some("Based on recent logs.".to_string()),
+                tone: Some("default".to_string()),
+            }],
+            watch_rows: vec![row("Fever / illness episode", "Watch")],
+            parent_note_rows: vec![InfoRow {
+                label: "Parent note".to_string(),
+                value: "Provided".to_string(),
+                detail: Some("Please watch wet diapers.".to_string()),
+                tone: Some("info".to_string()),
+            }],
+            timeline_rows: vec![TimelineRow {
+                time: "8:20 AM".to_string(),
+                event: "Poop".to_string(),
+                details: "yellow, Type 4, medium".to_string(),
+                note: "".to_string(),
+                tone: "default".to_string(),
+            }],
+        });
+
+        let encoded = generate_native_report_pdf(payload).expect("handoff pdf should generate");
         let bytes = STANDARD.decode(encoded).expect("should decode pdf bytes");
         assert!(bytes.starts_with(b"%PDF-"));
         assert!(bytes.len() > 1000);

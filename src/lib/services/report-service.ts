@@ -31,7 +31,11 @@ export interface ReportService {
   generateReport(input: GenerateReportInput): Promise<ReportData>;
 }
 
-function mapHandoffSnapshotToReportSource(snapshot: ChildSummarySnapshot, dayKey: string): ReportHandoffSourceData {
+function mapHandoffSnapshotToReportSource(
+  snapshot: ChildSummarySnapshot,
+  dayKey: string,
+  parentNote?: string | null,
+): ReportHandoffSourceData {
   return {
     dayKey,
     lastPoop: snapshot.lastPoop,
@@ -49,6 +53,7 @@ function mapHandoffSnapshotToReportSource(snapshot: ChildSummarySnapshot, dayKey
     todayFeeds: snapshot.todayFeeds,
     hasNoPoopDay: snapshot.hasNoPoopDay,
     watchItems: snapshot.visibleAlerts.map((alert) => alert.title),
+    parentNote: parentNote?.trim() || null,
   };
 }
 
@@ -79,6 +84,12 @@ export function createReportService(
         endDate: input.endDate,
         options,
       });
+      const fallbackHandoffSummary = source.handoffSummary
+        ? {
+            ...source.handoffSummary,
+            parentNote: options.parentNote?.trim() || (source.handoffSummary.parentNote ?? null),
+          }
+        : null;
       const handoffSummary = reportMode === "caregiver_handoff" && handoffService
         ? mapHandoffSnapshotToReportSource(
             await handoffService.getChildSummarySnapshot(input.childId, {
@@ -88,8 +99,9 @@ export function createReportService(
               symptomLimit: 10,
             }),
             input.endDate,
+            options.parentNote,
           )
-        : source.handoffSummary ?? null;
+        : fallbackHandoffSummary;
 
       return buildReportData(
         { ...source, handoffSummary },

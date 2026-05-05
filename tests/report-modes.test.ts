@@ -208,6 +208,7 @@ function sourceData(): ReportSourceData {
       todayFeeds: 1,
       hasNoPoopDay: false,
       watchItems: ["Watch straining"],
+      parentNote: "Please offer a bottle before nap.",
     },
   };
 }
@@ -290,6 +291,7 @@ test("symptoms_episodes and caregiver_handoff build focused mode sections", () =
   assert.equal(handoff.mode, "caregiver_handoff");
   assert.ok(handoff.sections.caregiverHandoff);
   assert.equal(handoff.sections.caregiverHandoff?.rows.some((row) => row.label === "Last sleep" && row.value !== "None"), true);
+  assert.equal(handoff.sections.caregiverHandoff?.rows.some((row) => row.label === "Parent note" && row.detail?.includes("bottle")), true);
 });
 
 test("clinical_export builds and attachment metadata remains local-only and explicit", () => {
