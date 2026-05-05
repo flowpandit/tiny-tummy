@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useVisibilityRefresh } from "./useVisibilityRefresh";
-import { useDbClient } from "../contexts/DatabaseContext";
+import { useRepositories } from "../contexts/DatabaseContext";
 import type { SleepType } from "../lib/types";
 import {
   getLocalTimestamp,
@@ -50,7 +50,7 @@ export function useSleepLogSheetState({
   onError: (message: string) => void;
   onSuccess: (message: string) => void;
 }) {
-  const db = useDbClient();
+  const { settings, sleep } = useRepositories();
   const defaultWindow = getDefaultManualWindow();
   const [mode, setModeState] = useState<Mode>("manual");
   const [sleepType, setSleepType] = useState<SleepType>("nap");
@@ -81,7 +81,7 @@ export function useSleepLogSheetState({
 
     let cancelled = false;
 
-    db.getSetting(getSleepTimerSettingKey(childId))
+    settings.getSetting(getSleepTimerSettingKey(childId))
       .then((raw) => {
         if (cancelled) return;
         const session = parseSleepTimerSession(raw);
@@ -97,7 +97,7 @@ export function useSleepLogSheetState({
     return () => {
       cancelled = true;
     };
-  }, [childId, open, resetManualState]);
+  }, [childId, open, resetManualState, settings]);
 
   useEffect(() => {
     if (!open || !timerSession) return;
@@ -111,8 +111,8 @@ export function useSleepLogSheetState({
   }, open);
 
   const persistTimerSession = useCallback(async (session: SleepTimerSession | null) => {
-    await db.setSetting(getSleepTimerSettingKey(childId), session ? JSON.stringify(session) : "");
-  }, [childId]);
+    await settings.setSetting(getSleepTimerSettingKey(childId), session ? JSON.stringify(session) : "");
+  }, [childId, settings]);
 
   const setMode = useCallback((value: Mode) => {
     setModeState((current) => {
@@ -146,7 +146,7 @@ export function useSleepLogSheetState({
 
     setIsSubmitting(true);
     try {
-      await db.createSleepLog({
+      await sleep.recordSleep({
         child_id: childId,
         sleep_type: classifySleepType(timerSession.startedAt, endedAt),
         started_at: timerSession.startedAt,
@@ -163,7 +163,7 @@ export function useSleepLogSheetState({
       onError("Could not save the sleep entry. Please try again.");
     }
     setIsSubmitting(false);
-  }, [childId, isSubmitting, onClose, onError, onLogged, onSuccess, persistTimerSession, timerSession]);
+  }, [childId, isSubmitting, onClose, onError, onLogged, onSuccess, persistTimerSession, sleep, timerSession]);
 
   const handleCancelTimer = useCallback(async () => {
     await persistTimerSession(null);
@@ -190,7 +190,7 @@ export function useSleepLogSheetState({
 
     setIsSubmitting(true);
     try {
-      await db.createSleepLog({
+      await sleep.recordSleep({
         child_id: childId,
         sleep_type: sleepType,
         started_at: startedAt,
@@ -207,7 +207,7 @@ export function useSleepLogSheetState({
     } finally {
       setIsSubmitting(false);
     }
-  }, [childId, endDate, endTime, isSubmitting, notes, onClose, onError, onLogged, onSuccess, sleepType, startDate, startTime]);
+  }, [childId, endDate, endTime, isSubmitting, notes, onClose, onError, onLogged, onSuccess, sleep, sleepType, startDate, startTime]);
 
   const handleTimerNotesChange = useCallback(async (value: string) => {
     setNotes(value);

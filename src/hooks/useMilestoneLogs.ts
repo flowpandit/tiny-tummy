@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import type { MilestoneEntry } from "../lib/types";
-import { useDbClient } from "../contexts/DatabaseContext";
+import { useRepositories } from "../contexts/DatabaseContext";
 
 export function useMilestoneLogs(childId: string | null) {
-  const db = useDbClient();
+  const { milestones } = useRepositories();
   const [logs, setLogs] = useState<MilestoneEntry[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const requestIdRef = useRef(0);
@@ -19,7 +19,7 @@ export function useMilestoneLogs(childId: string | null) {
 
     setIsLoading(true);
     try {
-      const rows = await db.getMilestoneLogs(childId);
+      const rows = await milestones.listMilestones(childId);
       if (requestId !== requestIdRef.current) return;
       setLogs(rows);
     } catch {
@@ -30,7 +30,7 @@ export function useMilestoneLogs(childId: string | null) {
     if (requestId === requestIdRef.current) {
       setIsLoading(false);
     }
-  }, [childId]);
+  }, [childId, milestones]);
 
   useEffect(() => {
     setLogs([]);

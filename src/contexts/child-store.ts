@@ -1,7 +1,7 @@
 import type { Child } from "../lib/types";
 import { withTimeout } from "../lib/async";
 import { createExternalStore, type ExternalStore } from "../lib/store";
-import type { DbClient } from "./DatabaseContext";
+import type { ChildRepository } from "../lib/repositories";
 
 const STARTUP_LOAD_TIMEOUT_MS = 30000;
 
@@ -20,7 +20,7 @@ export interface ChildStore extends ExternalStore<ChildStoreState> {
   };
 }
 
-export function createChildStore(db: DbClient): ChildStore {
+export function createChildStore(repository: ChildRepository): ChildStore {
   const store = createExternalStore<ChildStoreState>({
     children: [],
     activeChildId: null,
@@ -43,7 +43,7 @@ export function createChildStore(db: DbClient): ChildStore {
     try {
       // Tauri desktop startup can be noticeably slower in CI while the WebView,
       // plugin-sql, and app-data SQLite file initialize for the first time.
-      const nextChildren = await withTimeout(db.getChildren(), STARTUP_LOAD_TIMEOUT_MS, "Loading children");
+      const nextChildren = await withTimeout(repository.listActiveChildren(), STARTUP_LOAD_TIMEOUT_MS, "Loading children");
 
       if (currentRequestId !== requestId) return;
 

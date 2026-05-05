@@ -2,17 +2,15 @@ import { diaperIncludesStool, getDiaperTypeLabel, getUrineColorLabel } from "./d
 import {
   FEED_PREDICTION_FALLBACK,
   formatPredictionRange,
-  getFeedBaseline,
-  getFeedPrediction,
   type FeedPrediction,
-  getUnifiedFeedTimeline,
 } from "./feed-insights";
 import { getHistoryFeedingPresentation } from "./history-timeline";
 import { BITSS_TYPES } from "./constants";
 import { formatLocalDateKey, getAgeLabelFromDob, isOnLocalDay, timeSince } from "./utils";
-import { formatSleepDuration, getClassifiedSleepLogs, getDurationMinutes, getSleepPrediction, getWakeBaseline } from "./sleep-insights";
+import { formatSleepDuration, getClassifiedSleepLogs, getDurationMinutes } from "./sleep-insights";
 import { formatSleepTimerInsightElapsed } from "./sleep-timer";
 import { type BreastTimerSide, formatBreastfeedingInsightElapsed } from "./breastfeeding";
+import { defaultPredictionService } from "./services/prediction-service";
 import type {
   Alert,
   Child,
@@ -258,8 +256,7 @@ function buildHydrationInsight(summary: ChildDailySummary): HomeInsightCard {
 }
 
 function buildSleepInsight(child: Child, sleepLogs: SleepEntry[]): HomeInsightCard {
-  const completedSleepLogs = getClassifiedSleepLogs(sleepLogs);
-  const sleepPrediction = getSleepPrediction(completedSleepLogs, getWakeBaseline(child.date_of_birth));
+  const { logs: completedSleepLogs, prediction: sleepPrediction } = defaultPredictionService.getSleepWindow(child, sleepLogs);
   const lastSleep = completedSleepLogs[0] ?? null;
 
   if (sleepPrediction) {
@@ -292,8 +289,7 @@ function buildSleepInsight(child: Child, sleepLogs: SleepEntry[]): HomeInsightCa
 }
 
 function buildFeedInsight(child: Child, feedLogs: FeedingEntry[]): HomeInsightCard {
-  const feedTimeline = getUnifiedFeedTimeline(feedLogs);
-  const feedPrediction = getFeedPrediction(feedTimeline, getFeedBaseline(child.date_of_birth, child.feeding_type));
+  const { prediction: feedPrediction } = defaultPredictionService.getFeedWindow(child, feedLogs);
 
   if (feedPrediction) {
     return {
@@ -363,9 +359,8 @@ function buildRecommendations(input: {
   sleepLogs: SleepEntry[];
   includeHydration: boolean;
 }): HomeRecommendationCard[] {
-  const feedTimeline = getUnifiedFeedTimeline(input.feedLogs);
-  const feedPrediction = getFeedPrediction(feedTimeline, getFeedBaseline(input.child.date_of_birth, input.child.feeding_type));
-  const sleepPrediction = getSleepPrediction(input.sleepLogs, getWakeBaseline(input.child.date_of_birth));
+  const { timeline: feedTimeline, prediction: feedPrediction } = defaultPredictionService.getFeedWindow(input.child, input.feedLogs);
+  const { prediction: sleepPrediction } = defaultPredictionService.getSleepWindow(input.child, input.sleepLogs);
   const pronoun = getPronoun(input.child.sex);
   const recommendations: HomeRecommendationCard[] = [];
 
@@ -579,10 +574,8 @@ export function buildHomeAssistantModel(input: {
 }): HomeAssistantModel {
   const dayKey = formatLocalDateKey(input.now ?? new Date());
   const includeHydration = input.includeHydration ?? true;
-  const feedTimeline = getUnifiedFeedTimeline(input.feedingLogs);
-  const feedPrediction = getFeedPrediction(feedTimeline, getFeedBaseline(input.child.date_of_birth, input.child.feeding_type));
-  const classifiedSleepLogs = getClassifiedSleepLogs(input.sleepLogs);
-  const sleepPrediction = getSleepPrediction(classifiedSleepLogs, getWakeBaseline(input.child.date_of_birth));
+  const { prediction: feedPrediction } = defaultPredictionService.getFeedWindow(input.child, input.feedingLogs);
+  const { logs: classifiedSleepLogs, prediction: sleepPrediction } = defaultPredictionService.getSleepWindow(input.child, input.sleepLogs);
   const recommendations = buildRecommendations({
     child: input.child,
     summary: input.summary,

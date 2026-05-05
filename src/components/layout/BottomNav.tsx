@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useActiveChild, useChildActions } from "../../contexts/ChildContext";
 import { useUpdateChildFeedingTypeAction } from "../../hooks/useSettingsActions";
-import { useDbClient } from "../../contexts/DatabaseContext";
+import { useRepositories } from "../../contexts/DatabaseContext";
 import { cn } from "../../lib/cn";
 import type { EliminationExperience } from "../../lib/diaper";
 import { Button } from "../ui/button";
@@ -97,7 +97,7 @@ interface BottomNavProps {
 }
 
 export function BottomNav({ eliminationExperience }: BottomNavProps) {
-  const db = useDbClient();
+  const { milestones } = useRepositories();
   const location = useLocation();
   const navigate = useNavigate();
   const activeChild = useActiveChild();
@@ -175,7 +175,7 @@ export function BottomNav({ eliminationExperience }: BottomNavProps) {
 
     try {
       setIsUpdatingFeedingType(true);
-      await db.createMilestoneLog({
+      await milestones.recordMilestone({
         child_id: activeChild.id,
         milestone_type: "started_solids",
         logged_at: combineLocalDateAndTimeToUtcIso(getCurrentLocalDate(), getCurrentLocalTime()),

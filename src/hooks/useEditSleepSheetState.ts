@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { useDbClient } from "../contexts/DatabaseContext";
+import { useRepositories } from "../contexts/DatabaseContext";
 import { combineLocalDateAndTimeToUtcIso, getLocalDateTimeParts } from "../lib/utils";
 import type { SleepEntry, SleepType } from "../lib/types";
 
@@ -20,7 +20,7 @@ export function useEditSleepSheetState({
   onError: (message: string) => void;
   onSuccess: (message: string) => void;
 }) {
-  const db = useDbClient();
+  const { sleep } = useRepositories();
   const startParts = getLocalDateTimeParts(entry.started_at);
   const endParts = getLocalDateTimeParts(entry.ended_at);
   const [sleepType, setSleepType] = useState<SleepType>(entry.sleep_type);
@@ -64,7 +64,7 @@ export function useEditSleepSheetState({
 
     setIsSaving(true);
     try {
-      await db.updateSleepLog(entry.id, {
+      await sleep.updateSleep(entry.id, {
         sleep_type: sleepType,
         started_at: startedAt,
         ended_at: endedAt,
@@ -77,18 +77,18 @@ export function useEditSleepSheetState({
       onError("Could not save the sleep entry. Please try again.");
     }
     setIsSaving(false);
-  }, [endDate, endTime, entry.id, isSaving, notes, onClose, onError, onSaved, onSuccess, sleepType, startDate, startTime]);
+  }, [endDate, endTime, entry.id, isSaving, notes, onClose, onError, onSaved, onSuccess, sleep, sleepType, startDate, startTime]);
 
   const handleDelete = useCallback(async () => {
     try {
-      await db.deleteSleepLog(entry.id);
+      await sleep.deleteSleep(entry.id);
       onSuccess("Sleep entry deleted.");
       onDeleted();
       onClose();
     } catch {
       onError("Could not delete the sleep entry. Please try again.");
     }
-  }, [entry.id, onClose, onDeleted, onError, onSuccess]);
+  }, [entry.id, onClose, onDeleted, onError, onSuccess, sleep]);
 
   return {
     sleepType,

@@ -6,7 +6,7 @@ import {
   hasHistoryEntries,
   type TimelineEvent,
 } from "../lib/history-timeline";
-import { useDbClient } from "../contexts/DatabaseContext";
+import { useRepositories } from "../contexts/DatabaseContext";
 import type {
   Child,
   DiaperEntry,
@@ -52,7 +52,7 @@ export function useHistoryPageState(
   quickRangeDays: 7 | 14 | 30,
   searchDate: string | null,
 ) {
-  const db = useDbClient();
+  const { care, elimination, feeding, growth, milestones, sleep } = useRepositories();
   const [data, setData] = useState<HistoryPageData>(getEmptyHistoryPageData);
   const [isLoading, setIsLoading] = useState(false);
   const requestIdRef = useRef(0);
@@ -82,15 +82,15 @@ export function useHistoryPageState(
         episodes,
         episodeEvents,
       ] = await Promise.all([
-        db.getDiaperLogsForRange(activeChild.id, rangeStart, rangeEnd),
-        db.getPoopLogsForRange(activeChild.id, rangeStart, rangeEnd),
-        db.getFeedingLogsForRange(activeChild.id, rangeStart, rangeEnd),
-        db.getSleepLogsForRange(activeChild.id, rangeStart, rangeEnd),
-        db.getSymptomsForRange(activeChild.id, rangeStart, rangeEnd),
-        db.getGrowthLogsForRange(activeChild.id, rangeStart, rangeEnd),
-        db.getMilestonesForRange(activeChild.id, rangeStart, rangeEnd),
-        db.getEpisodesForRange(activeChild.id, rangeStart, rangeEnd),
-        db.getEpisodeEventsForRange(activeChild.id, rangeStart, rangeEnd),
+        elimination.listDiaperLogsInRange(activeChild.id, rangeStart, rangeEnd),
+        elimination.listPoopLogsInRange(activeChild.id, rangeStart, rangeEnd),
+        feeding.listFeedingLogsInRange(activeChild.id, rangeStart, rangeEnd),
+        sleep.listSleepLogsInRange(activeChild.id, rangeStart, rangeEnd),
+        care.listSymptomsInRange(activeChild.id, rangeStart, rangeEnd),
+        growth.listGrowthLogsInRange(activeChild.id, rangeStart, rangeEnd),
+        milestones.listMilestonesInRange(activeChild.id, rangeStart, rangeEnd),
+        care.listEpisodesInRange(activeChild.id, rangeStart, rangeEnd),
+        care.listEpisodeEventsInRange(activeChild.id, rangeStart, rangeEnd),
       ]);
 
       if (requestId !== requestIdRef.current) return;
@@ -114,7 +114,7 @@ export function useHistoryPageState(
     if (requestId === requestIdRef.current) {
       setIsLoading(false);
     }
-  }, [activeChild, quickRangeDays, searchDate, today]);
+  }, [activeChild, care, elimination, feeding, growth, milestones, quickRangeDays, searchDate, sleep, today]);
 
   useEffect(() => {
     void refreshHistory();
@@ -147,24 +147,24 @@ export function useHistoryPageState(
 
   const deletePoop = useCallback(async (id: string) => {
     const entry = data.poopLogs.find((log) => log.id === id);
-    await db.deletePoopLog(entry ?? id);
+    await elimination.deletePoop(entry ?? id);
     await refreshHistory();
-  }, [data.poopLogs, refreshHistory]);
+  }, [data.poopLogs, elimination, refreshHistory]);
 
   const deleteMeal = useCallback(async (id: string) => {
-    await db.deleteFeedingLog(id);
+    await feeding.deleteFeed(id);
     await refreshHistory();
-  }, [refreshHistory]);
+  }, [feeding, refreshHistory]);
 
   const deleteSleep = useCallback(async (id: string) => {
-    await db.deleteSleepLog(id);
+    await sleep.deleteSleep(id);
     await refreshHistory();
-  }, [refreshHistory]);
+  }, [refreshHistory, sleep]);
 
   const deleteDiaper = useCallback(async (entry: DiaperEntry) => {
-    await db.deleteDiaperLog(entry);
+    await elimination.deleteDiaper(entry);
     await refreshHistory();
-  }, [refreshHistory]);
+  }, [elimination, refreshHistory]);
 
   return {
     ...data,

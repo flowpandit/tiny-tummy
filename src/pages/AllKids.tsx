@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useChildActions, useChildren } from "../contexts/ChildContext";
-import { useDbClient } from "../contexts/DatabaseContext";
+import { useRepositories } from "../contexts/DatabaseContext";
 import { useTrialAccess } from "../contexts/TrialContext";
 import { getChildStatus } from "../lib/tauri";
 import { getAgeLabelFromDob, timeSince } from "../lib/utils";
@@ -22,7 +22,7 @@ interface ChildSummary {
 }
 
 export function AllKids() {
-  const db = useDbClient();
+  const { care, elimination } = useRepositories();
   const children = useChildren();
   const { entitlement } = useTrialAccess();
   const { setActiveChildId } = useChildActions();
@@ -39,14 +39,14 @@ export function AllKids() {
 
       const results = await Promise.all(
         children.map(async (child) => {
-          const lastPoop = await db.getLastRealPoop(child.id);
+          const lastPoop = await elimination.getLastRealPoop(child.id);
           const lastAt = lastPoop?.logged_at ?? null;
           const [status] = await getChildStatus(
             child.date_of_birth,
             child.feeding_type,
             lastAt,
           );
-          const alerts = await db.getActiveAlerts(child.id);
+          const alerts = await care.listActiveAlerts(child.id);
           return {
             child,
             status,
@@ -67,7 +67,7 @@ export function AllKids() {
     return () => {
       cancelled = true;
     };
-  }, [children]);
+  }, [care, children, elimination]);
 
   const handleSelectChild = (childId: string) => {
     if (!canAccessChild(childId, children, entitlement)) {

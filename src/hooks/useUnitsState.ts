@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { useDbClient } from "../contexts/DatabaseContext";
+import { useRepositories } from "../contexts/DatabaseContext";
 import {
   detectDefaultUnitSystem,
   getDefaultTemperatureUnit,
@@ -9,7 +9,7 @@ import {
 import type { TemperatureUnit, UnitSystem } from "../lib/types";
 
 export function useUnitsState() {
-  const db = useDbClient();
+  const { settings } = useRepositories();
   const detectedUnitSystem = detectDefaultUnitSystem();
   const [unitSystem, setUnitSystemState] = useState<UnitSystem>(detectedUnitSystem);
   const [temperatureUnit, setTemperatureUnitState] = useState<TemperatureUnit>(() => getDefaultTemperatureUnit(detectedUnitSystem));
@@ -19,8 +19,8 @@ export function useUnitsState() {
     let cancelled = false;
 
     Promise.all([
-      db.getSetting(UNIT_SYSTEM_SETTING_KEY),
-      db.getSetting(TEMPERATURE_UNIT_SETTING_KEY),
+      settings.getSetting(UNIT_SYSTEM_SETTING_KEY),
+      settings.getSetting(TEMPERATURE_UNIT_SETTING_KEY),
     ]).then(([storedValue, storedTemperatureUnit]) => {
       if (cancelled) return;
 
@@ -28,7 +28,7 @@ export function useUnitsState() {
       if (storedValue === "metric" || storedValue === "imperial") {
         nextUnitSystem = storedValue;
       } else {
-        void db.setSetting(UNIT_SYSTEM_SETTING_KEY, nextUnitSystem);
+        void settings.setSetting(UNIT_SYSTEM_SETTING_KEY, nextUnitSystem);
       }
 
       setUnitSystemState(nextUnitSystem);
@@ -45,21 +45,21 @@ export function useUnitsState() {
     return () => {
       cancelled = true;
     };
-  }, [db]);
+  }, [settings]);
 
   const setUnitSystem = useCallback((next: UnitSystem) => {
     setUnitSystemState(next);
-    void db.setSetting(UNIT_SYSTEM_SETTING_KEY, next);
+    void settings.setSetting(UNIT_SYSTEM_SETTING_KEY, next);
     if (!hasExplicitTemperatureUnit) {
       setTemperatureUnitState(getDefaultTemperatureUnit(next));
     }
-  }, [db, hasExplicitTemperatureUnit]);
+  }, [hasExplicitTemperatureUnit, settings]);
 
   const setTemperatureUnit = useCallback((next: TemperatureUnit) => {
     setTemperatureUnitState(next);
     setHasExplicitTemperatureUnit(true);
-    void db.setSetting(TEMPERATURE_UNIT_SETTING_KEY, next);
-  }, [db]);
+    void settings.setSetting(TEMPERATURE_UNIT_SETTING_KEY, next);
+  }, [settings]);
 
   return {
     unitSystem,

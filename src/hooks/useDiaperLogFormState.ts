@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { useDbClient } from "../contexts/DatabaseContext";
+import { useRepositories } from "../contexts/DatabaseContext";
 import { diaperIncludesStool, diaperIncludesWet } from "../lib/diaper";
 import { savePhoto } from "../lib/photos";
 import { combineLocalDateAndTimeToUtcIso, getCurrentLocalDate, getCurrentLocalTime } from "../lib/utils";
@@ -31,7 +31,7 @@ export function useDiaperLogFormState({
   resetPhoto: () => void;
   photoFile: File | null;
 }) {
-  const db = useDbClient();
+  const { elimination } = useRepositories();
   const [logDate, setLogDate] = useState(getCurrentLocalDate());
   const [logTime, setLogTime] = useState(getCurrentLocalTime());
   const [diaperType, setDiaperType] = useState<DiaperType | null>(null);
@@ -72,7 +72,7 @@ export function useDiaperLogFormState({
         try { photoPath = await savePhoto(photoFile); } catch { photoPath = null; }
       }
 
-      await db.createDiaperLog({
+      await elimination.recordDiaper({
         child_id: childId,
         logged_at: combineLocalDateAndTimeToUtcIso(logDate, logTime),
         diaper_type: diaperType,
@@ -93,7 +93,7 @@ export function useDiaperLogFormState({
     setShowSuccess(true);
     onLoggedSuccess();
     return true;
-  }, [childId, color, diaperType, isSubmitting, logDate, logTime, notes, onError, onLoggedSuccess, photoFile, size, stoolType, urineColor]);
+  }, [childId, color, diaperType, elimination, isSubmitting, logDate, logTime, notes, onError, onLoggedSuccess, photoFile, size, stoolType, urineColor]);
 
   return {
     logDate,

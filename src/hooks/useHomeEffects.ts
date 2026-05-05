@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { useDbClient } from "../contexts/DatabaseContext";
+import { useRepositories } from "../contexts/DatabaseContext";
 import type { Child, Episode, EpisodeEvent, FeedingEntry, PoopEntry } from "../lib/types";
 
 interface UseHomeEffectsInput {
@@ -23,7 +23,7 @@ export function useHomeEffects({
   refreshLogs,
   syncChildReminders,
 }: UseHomeEffectsInput) {
-  const db = useDbClient();
+  const { elimination } = useRepositories();
   const latestFeedingLogId = feedingLogs[0]?.id;
   const latestFeedingLoggedAt = feedingLogs[0]?.logged_at;
   const latestEpisodeEventId = episodeEvents[0]?.id;
@@ -34,7 +34,7 @@ export function useHomeEffects({
 
     // Delay background cleanup to let the UI finish its initial render
     const timer = setTimeout(() => {
-      db.reconcileAutoNoPoopDays(activeChild.id).then((changes: number) => {
+      elimination.reconcileAutoNoPoopDays(activeChild.id).then((changes: number) => {
         if (changes > 0) {
           void refreshLogs();
         }
@@ -46,6 +46,7 @@ export function useHomeEffects({
     return () => clearTimeout(timer);
   }, [
     activeChild,
+    elimination,
     refreshLogs,
   ]);
 

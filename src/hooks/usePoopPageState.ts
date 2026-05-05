@@ -7,7 +7,7 @@ import {
   type QuickPoopPreset,
 } from "../lib/quick-presets";
 import { combineLocalDateAndTimeToUtcIso, getCurrentLocalDate, getCurrentLocalTime } from "../lib/utils";
-import { useDbClient } from "../contexts/DatabaseContext";
+import { useRepositories } from "../contexts/DatabaseContext";
 import type { Child, PoopEntry, PoopLogDraft } from "../lib/types";
 
 function getCurrentPoopTimestamp(): string {
@@ -25,7 +25,7 @@ export function usePoopPageState({
   onSuccess: (message: string) => void;
   refreshLogs: () => Promise<void>;
 }) {
-  const db = useDbClient();
+  const { elimination, settings } = useRepositories();
   const [quickPoopPresets, setQuickPoopPresets] = useState<QuickPoopPreset[]>([]);
 
   useEffect(() => {
@@ -36,7 +36,7 @@ export function usePoopPageState({
 
     let cancelled = false;
 
-    db.getQuickPresets(activeChild.id, "poop")
+    settings.listQuickPresets(activeChild.id, "poop")
       .then((rows) => {
         if (cancelled) return;
         const hydrated = hydratePoopPresets(rows);
@@ -53,13 +53,13 @@ export function usePoopPageState({
     return () => {
       cancelled = true;
     };
-  }, [activeChild]);
+  }, [activeChild, settings]);
 
   const repeatLastPoop = useCallback(async (repeatablePoop: PoopEntry | null) => {
     if (!activeChild || !repeatablePoop) return;
 
     try {
-      await db.createPoopLog({
+      await elimination.recordPoop({
         child_id: activeChild.id,
         logged_at: getCurrentPoopTimestamp(),
         stool_type: repeatablePoop.stool_type,
@@ -73,13 +73,13 @@ export function usePoopPageState({
     } catch {
       onError("Could not repeat the last poop pattern. Please try again.");
     }
-  }, [activeChild, onError, onSuccess, refreshLogs]);
+  }, [activeChild, elimination, onError, onSuccess, refreshLogs]);
 
   const logQuickPoopPreset = useCallback(async (preset: QuickPoopPreset) => {
     if (!activeChild) return;
 
     try {
-      await db.createPoopLog({
+      await elimination.recordPoop({
         child_id: activeChild.id,
         logged_at: getCurrentPoopTimestamp(),
         stool_type: preset.draft.stool_type ?? null,
@@ -93,7 +93,7 @@ export function usePoopPageState({
     } catch {
       onError("Could not log that poop. Please try again.");
     }
-  }, [activeChild, onError, onSuccess, refreshLogs]);
+  }, [activeChild, elimination, onError, onSuccess, refreshLogs]);
 
   const savePoopPresets = useCallback(async (drafts: Array<Partial<PoopLogDraft>>) => {
     if (!activeChild) return false;
@@ -109,7 +109,7 @@ export function usePoopPageState({
     });
 
     try {
-      await db.replaceQuickPresets(activeChild.id, "poop", buildPoopPresetRecordInput(drafts));
+      await settings.replaceQuickPresets(activeChild.id, "poop", buildPoopPresetRecordInput(drafts));
       setQuickPoopPresets(nextPresets);
       onSuccess("Quick poop tiles updated.");
       return true;
@@ -117,7 +117,7 @@ export function usePoopPageState({
       onError("Could not save the quick poop tiles. Please try again.");
       return false;
     }
-  }, [activeChild, onError, onSuccess]);
+  }, [activeChild, onError, onSuccess, settings]);
 
   return {
     quickPoopPresets,

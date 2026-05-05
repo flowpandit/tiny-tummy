@@ -9,7 +9,7 @@ import {
 } from "../lib/quick-presets";
 import { getBreastfeedingSessionSettingKey, parseBreastfeedingSession } from "../lib/breastfeeding";
 import { combineLocalDateAndTimeToUtcIso, getCurrentLocalDate, getCurrentLocalTime } from "../lib/utils";
-import { useDbClient } from "../contexts/DatabaseContext";
+import { useRepositories } from "../contexts/DatabaseContext";
 import type { Child, FeedingEntry, FeedingLogDraft, UnitSystem } from "../lib/types";
 import { useVisibilityRefresh } from "./useVisibilityRefresh";
 
@@ -30,7 +30,7 @@ export function useFeedPageState({
   onSuccess: (message: string) => void;
   refreshLogs: () => Promise<void>;
 }) {
-  const db = useDbClient();
+  const { feeding, settings } = useRepositories();
   const [quickFeedPresets, setQuickFeedPresets] = useState<QuickFeedPreset[]>([]);
   const [activeBreastfeedingSide, setActiveBreastfeedingSide] = useState<"left" | "right" | null>(null);
 
@@ -48,7 +48,7 @@ export function useFeedPageState({
       unitSystem,
     ));
 
-    db.getQuickPresets(activeChild.id, "feed").then((feedRows) => {
+    settings.listQuickPresets(activeChild.id, "feed").then((feedRows) => {
       if (cancelled) return;
       const hydratedFeed = hydrateFeedPresets(feedRows, unitSystem);
       setQuickFeedPresets(
@@ -71,7 +71,7 @@ export function useFeedPageState({
     return () => {
       cancelled = true;
     };
-  }, [activeChild, unitSystem]);
+  }, [activeChild, settings, unitSystem]);
 
   const refreshBreastfeedingSession = useCallback(async () => {
     if (!activeChild) {
@@ -80,13 +80,13 @@ export function useFeedPageState({
     }
 
     try {
-      const raw = await db.getSetting(getBreastfeedingSessionSettingKey(activeChild.id));
+      const raw = await settings.getSetting(getBreastfeedingSessionSettingKey(activeChild.id));
       const session = parseBreastfeedingSession(raw);
       setActiveBreastfeedingSide(session?.activeSide ?? null);
     } catch {
       setActiveBreastfeedingSide(null);
     }
-  }, [activeChild]);
+  }, [activeChild, settings]);
 
   useEffect(() => {
     void refreshBreastfeedingSession();
@@ -98,7 +98,7 @@ export function useFeedPageState({
     if (!activeChild || !lastFeed) return;
 
     try {
-      await db.createFeedingLog({
+      await feeding.recordFeed({
         child_id: activeChild.id,
         logged_at: getCurrentFeedingTimestamp(),
         food_type: lastFeed.food_type,
@@ -116,7 +116,7 @@ export function useFeedPageState({
     } catch {
       onError("Could not repeat the last feed. Please try again.");
     }
-  }, [activeChild, onError, onSuccess, refreshLogs]);
+  }, [activeChild, feeding, onError, onSuccess, refreshLogs]);
 
   const logQuickFeedPreset = useCallback(async (preset: QuickFeedPreset) => {
     if (!activeChild) return;
@@ -127,7 +127,7 @@ export function useFeedPageState({
     }
 
     try {
-      await db.createFeedingLog({
+      await feeding.recordFeed({
         child_id: activeChild.id,
         logged_at: getCurrentFeedingTimestamp(),
         food_type: preset.draft.food_type,
@@ -145,7 +145,7 @@ export function useFeedPageState({
     } catch {
       onError("Could not log that feed. Please try again.");
     }
-  }, [activeChild, onError, onSuccess, refreshLogs]);
+  }, [activeChild, feeding, onError, onSuccess, refreshLogs]);
 
   const saveFeedPresets = useCallback(async (drafts: Array<Partial<FeedingLogDraft>>) => {
     if (!activeChild) return false;
@@ -161,7 +161,7 @@ export function useFeedPageState({
     });
 
     try {
-      await db.replaceQuickPresets(activeChild.id, "feed", buildFeedPresetRecordInput(drafts, unitSystem));
+      await settings.replaceQuickPresets(activeChild.id, "feed", buildFeedPresetRecordInput(drafts, unitSystem));
       setQuickFeedPresets(ensureEssentialFeedPresets(nextPresets, activeChild.feeding_type, unitSystem));
       onSuccess("Quick feed tiles updated.");
       return true;
@@ -169,7 +169,7 @@ export function useFeedPageState({
       onError("Could not save the quick feed tiles. Please try again.");
       return false;
     }
-  }, [activeChild, onError, onSuccess, unitSystem]);
+  }, [activeChild, onError, onSuccess, settings, unitSystem]);
 
   return {
     activeBreastfeedingSide,

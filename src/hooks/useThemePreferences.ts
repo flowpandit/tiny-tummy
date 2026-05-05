@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { useDbClient } from "../contexts/DatabaseContext";
+import { useRepositories } from "../contexts/DatabaseContext";
 
 export type ThemeMode = "system" | "light" | "dark";
 
@@ -11,7 +11,7 @@ function isValidTimeValue(value: string | null): value is string {
 }
 
 export function useThemePreferences() {
-  const db = useDbClient();
+  const { settings } = useRepositories();
   const [mode, setModeState] = useState<ThemeMode>("system");
   const [nightModeEnabled, setNightModeEnabledState] = useState(false);
   const [nightModeStart, setNightModeStartState] = useState(DEFAULT_NIGHT_START);
@@ -21,10 +21,10 @@ export function useThemePreferences() {
     let cancelled = false;
 
     Promise.all([
-      db.getSetting("theme"),
-      db.getSetting("night_mode_enabled"),
-      db.getSetting("night_mode_start"),
-      db.getSetting("night_mode_end"),
+      settings.getSetting("theme"),
+      settings.getSetting("night_mode_enabled"),
+      settings.getSetting("night_mode_start"),
+      settings.getSetting("night_mode_end"),
     ]).then(([themeValue, enabledValue, startValue, endValue]) => {
       if (cancelled) return;
 
@@ -32,10 +32,10 @@ export function useThemePreferences() {
         setModeState(themeValue);
       } else if (themeValue === "night") {
         setModeState("dark");
-        void db.setSetting("theme", "dark");
+        void settings.setSetting("theme", "dark");
         if (enabledValue === null) {
           setNightModeEnabledState(true);
-          void db.setSetting("night_mode_enabled", "1");
+          void settings.setSetting("night_mode_enabled", "1");
         }
       }
 
@@ -55,24 +55,24 @@ export function useThemePreferences() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [settings]);
 
   const setMode = useCallback((nextMode: ThemeMode) => {
     setModeState(nextMode);
-    void db.setSetting("theme", nextMode);
-  }, []);
+    void settings.setSetting("theme", nextMode);
+  }, [settings]);
 
   const setNightModeEnabled = useCallback((enabled: boolean) => {
     setNightModeEnabledState(enabled);
-    void db.setSetting("night_mode_enabled", enabled ? "1" : "0");
-  }, []);
+    void settings.setSetting("night_mode_enabled", enabled ? "1" : "0");
+  }, [settings]);
 
   const setNightModeSchedule = useCallback((start: string, end: string) => {
     setNightModeStartState(start);
     setNightModeEndState(end);
-    void db.setSetting("night_mode_start", start);
-    void db.setSetting("night_mode_end", end);
-  }, []);
+    void settings.setSetting("night_mode_start", start);
+    void settings.setSetting("night_mode_end", end);
+  }, [settings]);
 
   return {
     mode,

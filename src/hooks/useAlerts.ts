@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import type { Alert } from "../lib/types";
-import { useDbClient } from "../contexts/DatabaseContext";
+import { useRepositories } from "../contexts/DatabaseContext";
 
 export function useAlerts(childId: string | null) {
-  const db = useDbClient();
+  const { care } = useRepositories();
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const requestIdRef = useRef(0);
 
@@ -16,14 +16,14 @@ export function useAlerts(childId: string | null) {
     }
 
     try {
-      const rows = await db.getActiveAlerts(childId);
+      const rows = await care.listActiveAlerts(childId);
       if (requestId !== requestIdRef.current) return;
       setAlerts(rows);
     } catch {
       if (requestId !== requestIdRef.current) return;
       setAlerts([]);
     }
-  }, [childId]);
+  }, [care, childId]);
 
   useEffect(() => {
     setAlerts([]);
@@ -32,12 +32,12 @@ export function useAlerts(childId: string | null) {
 
   const dismiss = useCallback(async (alertId: string) => {
     try {
-      await db.dismissAlert(alertId);
+      await care.dismissAlert(alertId);
       setAlerts((prev) => prev.filter((a) => a.id !== alertId));
     } catch {
       // Silent fail — alert stays visible
     }
-  }, []);
+  }, [care]);
 
   return { alerts, refresh, dismiss };
 }

@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import type { DailyFrequency, ConsistencyPoint, ColorCount } from "../lib/types";
-import { useDbClient } from "../contexts/DatabaseContext";
+import { useRepositories } from "../contexts/DatabaseContext";
 
 export function useStats(childId: string | null, days: number) {
-  const db = useDbClient();
+  const { elimination } = useRepositories();
   const [frequency, setFrequency] = useState<DailyFrequency[]>([]);
   const [consistency, setConsistency] = useState<ConsistencyPoint[]>([]);
   const [colorDist, setColorDist] = useState<ColorCount[]>([]);
@@ -24,9 +24,9 @@ export function useStats(childId: string | null, days: number) {
     setIsLoading(true);
     try {
       const [freq, cons, colors] = await Promise.all([
-        db.getFrequencyStats(childId, days),
-        db.getConsistencyTrend(childId, days),
-        db.getColorDistribution(childId, days),
+        elimination.getPoopFrequencyStats(childId, days),
+        elimination.getPoopConsistencyTrend(childId, days),
+        elimination.getPoopColorDistribution(childId, days),
       ]);
 
       if (requestId !== requestIdRef.current) return;
@@ -43,7 +43,7 @@ export function useStats(childId: string | null, days: number) {
     if (requestId === requestIdRef.current) {
       setIsLoading(false);
     }
-  }, [childId, days]);
+  }, [childId, days, elimination]);
 
   useEffect(() => {
     setFrequency([]);

@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import type { SymptomEntry } from "../lib/types";
-import { useDbClient } from "../contexts/DatabaseContext";
+import { useRepositories } from "../contexts/DatabaseContext";
 
 export function useSymptoms(childId: string | null) {
-  const db = useDbClient();
+  const { care } = useRepositories();
   const [logs, setLogs] = useState<SymptomEntry[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const requestIdRef = useRef(0);
@@ -19,7 +19,7 @@ export function useSymptoms(childId: string | null) {
 
     setIsLoading(true);
     try {
-      const rows = await db.getSymptoms(childId);
+      const rows = await care.listSymptoms(childId);
       if (requestId !== requestIdRef.current) return;
       setLogs(rows);
     } catch {
@@ -30,7 +30,7 @@ export function useSymptoms(childId: string | null) {
     if (requestId === requestIdRef.current) {
       setIsLoading(false);
     }
-  }, [childId]);
+  }, [care, childId]);
 
   useEffect(() => {
     setLogs([]);

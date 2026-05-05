@@ -6,11 +6,11 @@ import {
   type EliminationExperience,
   type EliminationViewPreference,
 } from "../lib/diaper";
-import { useDbClient } from "../contexts/DatabaseContext";
+import { useRepositories } from "../contexts/DatabaseContext";
 import type { Child } from "../lib/types";
 
 export function useEliminationPreference(child: Child | null) {
-  const db = useDbClient();
+  const { settings } = useRepositories();
   const [preference, setPreferenceState] = useState<EliminationViewPreference>("auto");
   const [isLoading, setIsLoading] = useState(() => Boolean(child));
 
@@ -24,7 +24,7 @@ export function useEliminationPreference(child: Child | null) {
     let cancelled = false;
     setIsLoading(true);
 
-    db.getSetting(getEliminationViewSettingKey(child.id))
+    settings.getSetting(getEliminationViewSettingKey(child.id))
       .then((raw) => {
         if (cancelled) return;
         setPreferenceState(
@@ -43,7 +43,7 @@ export function useEliminationPreference(child: Child | null) {
     return () => {
       cancelled = true;
     };
-  }, [child]);
+  }, [child, settings]);
 
   const experience: EliminationExperience = useMemo(() => {
     if (!child) {
@@ -56,7 +56,7 @@ export function useEliminationPreference(child: Child | null) {
     if (!child) return;
     const normalizedValue = normalizeEliminationViewPreference(child, value);
     setPreferenceState(normalizedValue);
-    await db.setSetting(getEliminationViewSettingKey(child.id), normalizedValue);
+    await settings.setSetting(getEliminationViewSettingKey(child.id), normalizedValue);
   };
 
   return { preference, setPreference, experience, isLoading };

@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
-import { useDbClient } from "../contexts/DatabaseContext";
+import { useRepositories } from "../contexts/DatabaseContext";
 import { getSleepTimerSettingKey, parseSleepTimerSession, type SleepTimerSession } from "../lib/sleep-timer";
 import type { Child } from "../lib/types";
 import { useVisibilityRefresh } from "./useVisibilityRefresh";
 
 export function useSleepTimerPreview(activeChild: Child | null, refreshKey: unknown) {
-  const db = useDbClient();
+  const { settings } = useRepositories();
   const [timerSession, setTimerSession] = useState<SleepTimerSession | null>(null);
   const [tick, setTick] = useState(Date.now());
 
@@ -17,13 +17,13 @@ export function useSleepTimerPreview(activeChild: Child | null, refreshKey: unkn
     }
 
     try {
-      const raw = await db.getSetting(getSleepTimerSettingKey(activeChild.id));
+      const raw = await settings.getSetting(getSleepTimerSettingKey(activeChild.id));
       setTimerSession(parseSleepTimerSession(raw));
     } catch {
       setTimerSession(null);
     }
     setTick(Date.now());
-  }, [activeChild, db]);
+  }, [activeChild, settings]);
 
   useEffect(() => {
     void refreshTimerSession();

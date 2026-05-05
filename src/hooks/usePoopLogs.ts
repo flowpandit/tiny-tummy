@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import type { PoopEntry } from "../lib/types";
-import { useDbClient } from "../contexts/DatabaseContext";
+import { useRepositories } from "../contexts/DatabaseContext";
 
 export function usePoopLogs(childId: string | null, limit = 100) {
-  const db = useDbClient();
+  const { elimination } = useRepositories();
   const [logs, setLogs] = useState<PoopEntry[]>([]);
   const [lastRealPoop, setLastRealPoop] = useState<PoopEntry | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -22,8 +22,8 @@ export function usePoopLogs(childId: string | null, limit = 100) {
     setIsLoading(true);
     try {
       const [allLogs, lastPoop] = await Promise.all([
-        db.getPoopLogs(childId, limit),
-        db.getLastRealPoop(childId),
+        elimination.listPoopLogs(childId, limit),
+        elimination.getLastRealPoop(childId),
       ]);
 
       if (requestId !== requestIdRef.current) return;
@@ -38,7 +38,7 @@ export function usePoopLogs(childId: string | null, limit = 100) {
     if (requestId === requestIdRef.current) {
       setIsLoading(false);
     }
-  }, [childId, limit]);
+  }, [childId, elimination, limit]);
 
   useEffect(() => {
     setLogs([]);

@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { useDbClient } from "../contexts/DatabaseContext";
+import { useRepositories } from "../contexts/DatabaseContext";
 import { diaperIncludesStool, diaperIncludesWet } from "../lib/diaper";
 import { combineLocalDateAndTimeToUtcIso, getLocalDateTimeParts } from "../lib/utils";
 import type { DiaperEntry, DiaperType, StoolColor, StoolSize, UrineColor } from "../lib/types";
@@ -17,7 +17,7 @@ export function useEditDiaperSheetState({
   onDeleted: () => void;
   onError: (message: string) => void;
 }) {
-  const db = useDbClient();
+  const { elimination } = useRepositories();
   const entryLoggedAt = getLocalDateTimeParts(entry.logged_at);
   const [logDate, setLogDate] = useState(entryLoggedAt.date);
   const [logTime, setLogTime] = useState(entryLoggedAt.time);
@@ -33,7 +33,7 @@ export function useEditDiaperSheetState({
   const handleSave = useCallback(async () => {
     setIsSaving(true);
     try {
-      await db.updateDiaperLog(entry.id, {
+      await elimination.updateDiaper(entry.id, {
         logged_at: combineLocalDateAndTimeToUtcIso(logDate, logTime),
         diaper_type: diaperType,
         urine_color: diaperIncludesWet(diaperType) ? urineColor : null,
@@ -48,17 +48,17 @@ export function useEditDiaperSheetState({
       onError("Failed to save changes. Please try again.");
     }
     setIsSaving(false);
-  }, [color, diaperType, entry.id, logDate, logTime, notes, onClose, onError, onSaved, size, stoolType, urineColor]);
+  }, [color, diaperType, elimination, entry.id, logDate, logTime, notes, onClose, onError, onSaved, size, stoolType, urineColor]);
 
   const handleDelete = useCallback(async () => {
     try {
-      await db.deleteDiaperLog(entry);
+      await elimination.deleteDiaper(entry);
       onDeleted();
       onClose();
     } catch {
       onError("Failed to delete. Please try again.");
     }
-  }, [entry, onClose, onDeleted, onError]);
+  }, [elimination, entry, onClose, onDeleted, onError]);
 
   return {
     logDate,

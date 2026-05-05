@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import type { FeedingEntry } from "../lib/types";
-import { useDbClient } from "../contexts/DatabaseContext";
+import { useRepositories } from "../contexts/DatabaseContext";
 
 export function useFeedingLogs(childId: string | null, limit = 100) {
-  const db = useDbClient();
+  const { feeding } = useRepositories();
   const [logs, setLogs] = useState<FeedingEntry[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const requestIdRef = useRef(0);
@@ -19,7 +19,7 @@ export function useFeedingLogs(childId: string | null, limit = 100) {
 
     setIsLoading(true);
     try {
-      const rows = await db.getFeedingLogs(childId, limit);
+      const rows = await feeding.listFeedingLogs(childId, limit);
       if (requestId !== requestIdRef.current) return;
       setLogs(rows);
     } catch {
@@ -30,7 +30,7 @@ export function useFeedingLogs(childId: string | null, limit = 100) {
     if (requestId === requestIdRef.current) {
       setIsLoading(false);
     }
-  }, [childId, limit]);
+  }, [childId, feeding, limit]);
 
   useEffect(() => {
     setLogs([]);

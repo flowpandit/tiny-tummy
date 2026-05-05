@@ -8,7 +8,7 @@ import {
   pending,
 } from "@tauri-apps/plugin-notification";
 import * as db from "./db";
-import { getChildSummarySnapshot } from "./child-summary";
+import { defaultServices } from "./services";
 import { checkColorAlert } from "./tauri";
 import type { Child, Episode } from "./types";
 
@@ -199,7 +199,7 @@ export async function syncSmartRemindersForChild(child: Child): Promise<void> {
     return;
   }
 
-  const summary = await getChildSummarySnapshot(child.id, {
+  const summary = await defaultServices.handoff.getChildSummarySnapshot(child.id, {
     poopLimit: 30,
     feedingLimit: 1,
     symptomLimit: 3,

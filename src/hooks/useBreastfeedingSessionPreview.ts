@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useDbClient } from "../contexts/DatabaseContext";
+import { useRepositories } from "../contexts/DatabaseContext";
 import {
   type BreastTimerSide,
   type BreastfeedingSessionState,
@@ -26,7 +26,7 @@ function getSessionElapsedMs(session: BreastfeedingSessionState | null, tick: nu
 }
 
 export function useBreastfeedingSessionPreview(activeChild: Child | null, refreshKey?: unknown) {
-  const db = useDbClient();
+  const { settings } = useRepositories();
   const [session, setSession] = useState<BreastfeedingSessionState | null>(null);
   const [tick, setTick] = useState(Date.now());
 
@@ -38,13 +38,13 @@ export function useBreastfeedingSessionPreview(activeChild: Child | null, refres
     }
 
     try {
-      const raw = await db.getSetting(getBreastfeedingSessionSettingKey(activeChild.id));
+      const raw = await settings.getSetting(getBreastfeedingSessionSettingKey(activeChild.id));
       setSession(parseBreastfeedingSession(raw));
     } catch {
       setSession(null);
     }
     setTick(Date.now());
-  }, [activeChild, db]);
+  }, [activeChild, settings]);
 
   useEffect(() => {
     void refreshSession();

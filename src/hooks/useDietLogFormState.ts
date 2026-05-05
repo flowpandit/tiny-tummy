@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { useDbClient } from "../contexts/DatabaseContext";
+import { useRepositories } from "../contexts/DatabaseContext";
 import { combineLocalDateAndTimeToUtcIso, getCurrentLocalDate, getCurrentLocalTime } from "../lib/utils";
 import { parseVolumeInputToMl } from "../lib/units";
 import type { BottleContent, BreastSide, FeedingLogDraft, FoodType, UnitSystem } from "../lib/types";
@@ -39,7 +39,7 @@ export function useDietLogFormState({
   onClose: () => void;
   onError: (message: string) => void;
 }) {
-  const db = useDbClient();
+  const { feeding } = useRepositories();
   const [logDate, setLogDate] = useState(getCurrentLocalDate());
   const [logTime, setLogTime] = useState(getCurrentLocalTime());
   const [foodType, setFoodType] = useState<FoodType | null>(null);
@@ -85,7 +85,7 @@ export function useDietLogFormState({
 
     setIsSubmitting(true);
     try {
-      await db.createDietLog({
+      await feeding.recordFeed({
         child_id: childId,
         logged_at: combineLocalDateAndTimeToUtcIso(logDate, logTime),
         food_type: foodType,
@@ -108,7 +108,7 @@ export function useDietLogFormState({
     void onLogged();
     onClose();
     return true;
-  }, [amountMl, bottleContent, breastSide, childId, durationMinutes, foodName, foodType, isConstipationSupport, isSubmitting, logDate, logTime, notes, onClose, onError, onLogged, reactionNotes, unitSystem]);
+  }, [amountMl, bottleContent, breastSide, childId, durationMinutes, feeding, foodName, foodType, isConstipationSupport, isSubmitting, logDate, logTime, notes, onClose, onError, onLogged, reactionNotes, unitSystem]);
 
   return {
     logDate, setLogDate, logTime, setLogTime,

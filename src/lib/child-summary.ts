@@ -1,4 +1,3 @@
-import * as db from "./db";
 import { diaperIncludesStool, diaperIncludesWet } from "./diaper";
 import { formatLocalDateKey, isOnLocalDay } from "./utils";
 import type { Alert, DiaperEntry, Episode, EpisodeEvent, FeedingEntry, PoopEntry, SymptomEntry } from "./types";
@@ -16,14 +15,6 @@ export interface ChildDailySummary {
   visibleAlerts: Alert[];
   recentSymptoms: SymptomEntry[];
   activeEpisode: Episode | null;
-}
-
-export interface ChildSummarySnapshot extends ChildDailySummary {
-  diaperLogs: DiaperEntry[];
-  lastPoop: PoopEntry | null;
-  alerts: Alert[];
-  episodeEvents: EpisodeEvent[];
-  symptomLogs: SymptomEntry[];
 }
 
 export function getTodayKey(now: Date = new Date()): string {
@@ -55,53 +46,5 @@ export function buildChildDailySummary(input: {
     visibleAlerts: input.alerts.slice(0, 3),
     recentSymptoms: input.symptomLogs.slice(0, 3),
     activeEpisode: input.activeEpisode,
-  };
-}
-
-export async function getChildSummarySnapshot(
-  childId: string,
-  options: {
-    poopLimit?: number;
-    feedingLimit?: number;
-    symptomLimit?: number;
-    dayKey?: string;
-  } = {},
-): Promise<ChildSummarySnapshot> {
-  const poopLimit = options.poopLimit ?? 100;
-  const feedingLimit = options.feedingLimit ?? 100;
-  const symptomLimit = options.symptomLimit ?? 10;
-
-  const [diaperLogs, poopLogs, lastPoop, feedingLogs, alerts, activeEpisode, symptomLogs] = await Promise.all([
-    db.getDiaperLogs(childId, poopLimit),
-    db.getPoopLogs(childId, poopLimit),
-    db.getLastRealPoop(childId),
-    db.getFeedingLogs(childId, feedingLimit),
-    db.getActiveAlerts(childId),
-    db.getActiveEpisode(childId),
-    db.getSymptoms(childId, symptomLimit),
-  ]);
-
-  const episodeEvents = activeEpisode
-    ? await db.getEpisodeEvents(activeEpisode.id)
-    : [];
-
-  const summary = buildChildDailySummary({
-    poopLogs,
-    diaperLogs,
-    feedingLogs,
-    alerts,
-    activeEpisode,
-    episodeEvents,
-    symptomLogs,
-    dayKey: options.dayKey,
-  });
-
-  return {
-    ...summary,
-    diaperLogs,
-    lastPoop,
-    alerts,
-    episodeEvents,
-    symptomLogs,
   };
 }

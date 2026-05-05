@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from "react";
-import { useDbClient } from "../contexts/DatabaseContext";
+import { useRepositories } from "../contexts/DatabaseContext";
 import { getSymptomSeverityLabel, getSymptomTypeLabel } from "../lib/symptom-constants";
 import { formatTemperatureValue } from "../lib/units";
 import { combineLocalDateAndTimeToUtcIso, getCurrentLocalDate, getCurrentLocalTime, getLocalDateTimeParts } from "../lib/utils";
@@ -29,7 +29,7 @@ export function useEpisodeSheetState({
   onError: (message: string) => void;
   onSuccess: (message: string) => void;
 }) {
-  const db = useDbClient();
+  const { care } = useRepositories();
   const [episodeType, setEpisodeType] = useState<EpisodeType | null>(null);
   const [episodeDate, setEpisodeDate] = useState(getCurrentLocalDate());
   const [episodeTime, setEpisodeTime] = useState(getCurrentLocalTime());
@@ -78,40 +78,24 @@ export function useEpisodeSheetState({
     if (!episodeType || isSubmitting) return false;
     setIsSubmitting(true);
     try {
-      const episode = await db.runDbTransaction(async () => {
-        const created = await db.createEpisode({
+      const episode = await care.startEpisodeWithLinkedSymptoms({
+        episode: {
           child_id: childId,
           episode_type: episodeType,
           started_at: combineLocalDateAndTimeToUtcIso(episodeDate, episodeTime),
           summary: summary.trim() || null,
-        });
-        for (const symptomId of linkedRecentSymptomIds) {
-          const symptom = recentSymptoms?.find((item) => item.id === symptomId);
-          if (!symptom) continue;
-          const title = [
-            getSymptomTypeLabel(symptom.symptom_type),
-            getSymptomSeverityLabel(symptom.severity),
-            symptom.temperature_c !== null ? formatTemperatureValue(symptom.temperature_c, temperatureUnit) : null,
-          ].filter(Boolean).join(" · ");
-
-          await db.updateSymptomLog(symptom.id, { episode_id: created.id });
-          await db.deleteGeneratedSymptomEpisodeEvent({
-            symptomId: symptom.id,
-            episodeId: symptom.episode_id,
-            loggedAt: symptom.logged_at,
-          });
-          await db.createEpisodeEvent({
-            episode_id: created.id,
-            child_id: childId,
-            event_type: "symptom",
-            title,
-            notes: symptom.notes,
-            logged_at: symptom.logged_at,
-            source_kind: "symptom",
-            source_id: symptom.id,
-          });
-        }
-        return created;
+        },
+        linkedSymptoms: linkedRecentSymptomIds
+          .map((symptomId) => recentSymptoms?.find((item) => item.id === symptomId) ?? null)
+          .filter((symptom): symptom is SymptomEntry => symptom !== null)
+          .map((symptom) => ({
+            symptom,
+            eventTitle: [
+              getSymptomTypeLabel(symptom.symptom_type),
+              getSymptomSeverityLabel(symptom.severity),
+              symptom.temperature_c !== null ? formatTemperatureValue(symptom.temperature_c, temperatureUnit) : null,
+            ].filter(Boolean).join(" · "),
+          })),
       });
       setCreatedEpisode(episode);
       await onUpdated();
@@ -123,7 +107,7 @@ export function useEpisodeSheetState({
     } finally {
       setIsSubmitting(false);
     }
-  }, [childId, db, episodeDate, episodeTime, episodeType, isSubmitting, linkedRecentSymptomIds, onError, onSuccess, onUpdated, recentSymptoms, summary, temperatureUnit]);
+  }, [care, childId, episodeDate, episodeTime, episodeType, isSubmitting, linkedRecentSymptomIds, onError, onSuccess, onUpdated, recentSymptoms, summary, temperatureUnit]);
 
   const handleAddEvent = useCallback(async () => {
     const trimmedTitle = eventTitle.trim();
@@ -132,7 +116,7 @@ export function useEpisodeSheetState({
     if (!currentEpisode || !eventType || (!trimmedTitle && !trimmedNotes) || isAddingEvent) return false;
     setIsAddingEvent(true);
     try {
-      await db.createEpisodeEvent({
+      await care.addEpisodeEvent({
         episode_id: currentEpisode.id,
         child_id: childId,
         event_type: eventType,
@@ -154,7 +138,7 @@ export function useEpisodeSheetState({
     } finally {
       setIsAddingEvent(false);
     }
-  }, [activeEpisode, childId, createdEpisode, eventDate, eventNotes, eventTime, eventTitle, eventType, isAddingEvent, onError, onSuccess, onUpdated]);
+  }, [activeEpisode, care, childId, createdEpisode, eventDate, eventNotes, eventTime, eventTitle, eventType, isAddingEvent, onError, onSuccess, onUpdated]);
 
   const handleResolveEpisode = useCallback(async () => {
     const currentEpisode = activeEpisode ?? createdEpisode;
@@ -167,7 +151,7 @@ export function useEpisodeSheetState({
 
     setIsResolving(true);
     try {
-      await db.closeEpisode(currentEpisode.id, {
+      await care.resolveEpisode(currentEpisode.id, {
         ended_at: endedAt,
         outcome: outcome.trim() || null,
       });
@@ -181,7 +165,7 @@ export function useEpisodeSheetState({
     } finally {
       setIsResolving(false);
     }
-  }, [activeEpisode, createdEpisode, isResolving, onClose, onError, onSuccess, onUpdated, outcome, resolutionDate, resolutionTime]);
+  }, [activeEpisode, care, createdEpisode, isResolving, onClose, onError, onSuccess, onUpdated, outcome, resolutionDate, resolutionTime]);
 
   return {
     episodeType, setEpisodeType, episodeDate, setEpisodeDate, episodeTime, setEpisodeTime, summary, setSummary,

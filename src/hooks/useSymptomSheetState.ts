@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { useDbClient } from "../contexts/DatabaseContext";
+import { useRepositories } from "../contexts/DatabaseContext";
 import { getEpisodeTypeLabel } from "../lib/episode-constants";
 import { getSymptomSeverityLabel, getSymptomTypeLabel } from "../lib/symptom-constants";
 import { formatTemperatureValue, parseTemperatureInputToCelsius } from "../lib/units";
@@ -67,7 +67,7 @@ export function useSymptomSheetState({
   onError: (message: string) => void;
   onSuccess: (message: string) => void;
 }) {
-  const db = useDbClient();
+  const { care } = useRepositories();
   const [symptomType, setSymptomType] = useState<SymptomType | null>(null);
   const [severity, setSeverity] = useState<SymptomSeverity>("moderate");
   const [logDate, setLogDate] = useState(getCurrentLocalDate());
@@ -153,62 +153,32 @@ export function useSymptomSheetState({
         ? new Date(loggedAt).getTime() < new Date(selectedEpisode.started_at).getTime()
         : false;
 
-      await db.runDbTransaction(async () => {
-        if (episodeId && useSymptomTimeAsEpisodeStart && loggedBeforeEpisode) {
-          await db.updateEpisode(episodeId, { started_at: loggedAt });
-        }
-
-        if (entry) {
-          await db.updateSymptomLog(entry.id, {
-            episode_id: episodeId,
-            symptom_type: symptomType,
-            severity,
-            temperature_c: temperatureCelsius,
-            temperature_method: nextTemperatureMethod,
-            logged_at: loggedAt,
-            notes: notes.trim() || null,
-          });
-          await db.deleteGeneratedSymptomEpisodeEvent({
-            symptomId: entry.id,
-            episodeId: entry.episode_id,
-            loggedAt: entry.logged_at,
-          });
-          if (episodeId) {
-            await db.createEpisodeEvent({
+      await care.saveSymptomWithEpisodeEvent({
+        childId,
+        existingSymptom: entry ?? null,
+        symptom: {
+          child_id: childId,
+          episode_id: episodeId,
+          symptom_type: symptomType,
+          severity,
+          temperature_c: temperatureCelsius,
+          temperature_method: nextTemperatureMethod,
+          logged_at: loggedAt,
+          notes: notes.trim() || null,
+        },
+        episodeEvent: episodeId
+          ? {
               episode_id: episodeId,
-              child_id: childId,
               event_type: "symptom",
               title: eventTitle,
               notes: notes.trim() || null,
               logged_at: loggedAt,
               source_kind: "symptom",
-              source_id: entry.id,
-            });
-          }
-        } else {
-          const symptom = await db.createSymptomLog({
-            child_id: childId,
-            episode_id: episodeId,
-            symptom_type: symptomType,
-            severity,
-            temperature_c: temperatureCelsius,
-            temperature_method: nextTemperatureMethod,
-            logged_at: loggedAt,
-            notes: notes.trim() || null,
-          });
-          if (episodeId) {
-            await db.createEpisodeEvent({
-              episode_id: episodeId,
-              child_id: childId,
-              event_type: "symptom",
-              title: eventTitle,
-              notes: notes.trim() || null,
-              logged_at: loggedAt,
-              source_kind: "symptom",
-              source_id: symptom.id,
-            });
-          }
-        }
+            }
+          : null,
+        updateEpisodeStartedAt: episodeId && useSymptomTimeAsEpisodeStart && loggedBeforeEpisode
+          ? { episodeId, startedAt: loggedAt }
+          : null,
       });
 
       if (episodeId) {
@@ -236,21 +206,14 @@ export function useSymptomSheetState({
     } finally {
       setIsSubmitting(false);
     }
-  }, [childId, db, entry, episodeChoices, isSubmitting, linkToEpisode, logDate, logTime, notes, onClose, onError, onLogged, onSuccess, recentSymptoms, selectedEpisodeId, severity, symptomType, temperature, temperatureMethod, temperatureUnit, useSymptomTimeAsEpisodeStart]);
+  }, [care, childId, entry, episodeChoices, isSubmitting, linkToEpisode, logDate, logTime, notes, onClose, onError, onLogged, onSuccess, recentSymptoms, selectedEpisodeId, severity, symptomType, temperature, temperatureMethod, temperatureUnit, useSymptomTimeAsEpisodeStart]);
 
   const handleDelete = useCallback(async () => {
     if (!entry || isDeleting) return false;
 
     setIsDeleting(true);
     try {
-      await db.runDbTransaction(async () => {
-        await db.deleteGeneratedSymptomEpisodeEvent({
-          symptomId: entry.id,
-          episodeId: entry.episode_id,
-          loggedAt: entry.logged_at,
-        });
-        await db.deleteSymptomLog(entry.id);
-      });
+      await care.deleteSymptomWithGeneratedEvent(entry);
       await onDeleted?.();
       await onLogged();
       onSuccess("Symptom deleted.");
@@ -262,7 +225,7 @@ export function useSymptomSheetState({
     } finally {
       setIsDeleting(false);
     }
-  }, [db, entry, isDeleting, onClose, onDeleted, onError, onLogged, onSuccess]);
+  }, [care, entry, isDeleting, onClose, onDeleted, onError, onLogged, onSuccess]);
 
   return {
     symptomType, setSymptomType, severity, setSeverity, logDate, setLogDate, logTime, setLogTime,

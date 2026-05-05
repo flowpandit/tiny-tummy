@@ -1,13 +1,13 @@
 import { useCallback } from "react";
-import { useDbClient } from "../contexts/DatabaseContext";
+import { useRepositories } from "../contexts/DatabaseContext";
 import type { Child, ChildSex, FeedingType } from "../lib/types";
 
 export function useDeleteChildAction(refreshChildren: () => Promise<void>) {
-  const db = useDbClient();
+  const { children } = useRepositories();
   return useCallback(async (id: string) => {
-    await db.deleteChild(id);
+    await children.deleteChild(id);
     await refreshChildren();
-  }, [db, refreshChildren]);
+  }, [children, refreshChildren]);
 }
 
 export function useUpdateChildAction({
@@ -19,7 +19,7 @@ export function useUpdateChildAction({
   onSaved: () => void;
   onClose: () => void;
 }) {
-  const db = useDbClient();
+  const { children } = useRepositories();
   return useCallback(async ({
     name,
     dob,
@@ -33,7 +33,7 @@ export function useUpdateChildAction({
     feedingType: FeedingType;
     avatarColor: string;
   }) => {
-    await db.updateChild(child.id, {
+    await children.updateChild(child.id, {
       name: name.trim(),
       date_of_birth: dob,
       sex,
@@ -42,15 +42,15 @@ export function useUpdateChildAction({
     });
     onSaved();
     onClose();
-  }, [child.id, db, onClose, onSaved]);
+  }, [child.id, children, onClose, onSaved]);
 }
 
 export function useUpdateChildFeedingTypeAction(refreshChildren?: () => Promise<void>) {
-  const db = useDbClient();
+  const { children } = useRepositories();
   return useCallback(async (childId: string, feedingType: FeedingType) => {
-    await db.updateChild(childId, { feeding_type: feedingType });
+    await children.updateChild(childId, { feeding_type: feedingType });
     if (refreshChildren) {
       await refreshChildren();
     }
-  }, [db, refreshChildren]);
+  }, [children, refreshChildren]);
 }

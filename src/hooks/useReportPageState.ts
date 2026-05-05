@@ -2,20 +2,19 @@ import { useCallback, useEffect, useState } from "react";
 import { getDefaultReportDateRange, getReportDateRangeFromLatestActivity } from "../lib/report-view-model";
 import {
   DEFAULT_REPORT_KIND,
-  generateReportData,
   getDefaultReportOptionsForKind,
   type ReportData,
   type ReportKind,
   type ReportOptions,
 } from "../lib/reporting";
 import type { Child, UnitSystem } from "../lib/types";
-import { useDbClient } from "../contexts/DatabaseContext";
+import { useServices } from "../contexts/DatabaseContext";
 
 export function useReportPageState(
   activeChild: Child | null,
   unitSystem: UnitSystem,
 ) {
-  const db = useDbClient();
+  const { report } = useServices();
   const { today, thirtyDaysAgo } = getDefaultReportDateRange();
   const [startDate, setStartDate] = useState(thirtyDaysAgo);
   const [endDate, setEndDate] = useState(today);
@@ -29,7 +28,7 @@ export function useReportPageState(
 
     let cancelled = false;
 
-    void db.getLatestReportActivityDate(activeChild.id).then((latestActivity) => {
+    void report.getLatestActivityDate(activeChild.id).then((latestActivity) => {
       if (cancelled) return;
       const nextRange = getReportDateRangeFromLatestActivity(latestActivity);
       if (!nextRange) return;
@@ -40,7 +39,7 @@ export function useReportPageState(
     return () => {
       cancelled = true;
     };
-  }, [activeChild]);
+  }, [activeChild, report]);
 
   const handleStartDateChange = useCallback((value: string) => {
     setStartDate(value);
@@ -71,13 +70,20 @@ export function useReportPageState(
 
     setIsGenerating(true);
     try {
-      const data = await generateReportData(activeChild.id, startDate, endDate, options, unitSystem, reportKind);
+      const data = await report.generateReport({
+        childId: activeChild.id,
+        startDate,
+        endDate,
+        options,
+        unitSystem,
+        reportKind,
+      });
       setReportData(data);
       return data;
     } finally {
       setIsGenerating(false);
     }
-  }, [activeChild, endDate, options, reportKind, startDate, unitSystem]);
+  }, [activeChild, endDate, options, report, reportKind, startDate, unitSystem]);
 
   return {
     today,

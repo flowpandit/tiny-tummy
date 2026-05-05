@@ -1,10 +1,10 @@
 import { useCallback } from "react";
-import { useDbClient } from "../contexts/DatabaseContext";
+import { useRepositories } from "../contexts/DatabaseContext";
 import { saveAvatar } from "../lib/photos";
 import type { Child, ChildSex, FeedingType } from "../lib/types";
 
 export function useCreateChildAction() {
-  const db = useDbClient();
+  const { children } = useRepositories();
   return useCallback(async ({
     name,
     dob,
@@ -20,7 +20,7 @@ export function useCreateChildAction() {
     avatarColor: string;
     avatarBlob?: Blob | null;
   }): Promise<Child> => {
-    const child = await db.createChild({
+    const child = await children.createChild({
       name: name.trim(),
       date_of_birth: dob,
       sex,
@@ -33,5 +33,5 @@ export function useCreateChildAction() {
     }
 
     return child;
-  }, []);
+  }, [children]);
 }

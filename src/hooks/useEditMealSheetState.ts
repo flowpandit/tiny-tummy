@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { useDbClient } from "../contexts/DatabaseContext";
+import { useRepositories } from "../contexts/DatabaseContext";
 import { combineLocalDateAndTimeToUtcIso, getLocalDateTimeParts } from "../lib/utils";
 import { formatVolumeValue, parseVolumeInputToMl } from "../lib/units";
 import type { BottleContent, BreastSide, DietEntry, FoodType, UnitSystem } from "../lib/types";
@@ -20,7 +20,7 @@ export function useEditMealSheetState({
   onDeleted: () => void;
   onError: (message: string) => void;
 }) {
-  const db = useDbClient();
+  const { feeding } = useRepositories();
   const entryLoggedAt = getLocalDateTimeParts(entry.logged_at);
   const [logDate, setLogDate] = useState(entryLoggedAt.date);
   const [logTime, setLogTime] = useState(entryLoggedAt.time);
@@ -46,7 +46,7 @@ export function useEditMealSheetState({
 
     setIsSaving(true);
     try {
-      await db.updateDietLog(entry.id, {
+      await feeding.updateFeed(entry.id, {
         logged_at: combineLocalDateAndTimeToUtcIso(logDate, logTime),
         food_type: foodType,
         food_name: showsFoodName ? foodName.trim() || null : null,
@@ -64,17 +64,17 @@ export function useEditMealSheetState({
       onError("Failed to save changes. Please try again.");
     }
     setIsSaving(false);
-  }, [amountMl, bottleContent, breastSide, durationMinutes, entry.id, foodName, foodType, isConstipationSupport, logDate, logTime, notes, onClose, onError, onSaved, reactionNotes, unitSystem]);
+  }, [amountMl, bottleContent, breastSide, durationMinutes, entry.id, feeding, foodName, foodType, isConstipationSupport, logDate, logTime, notes, onClose, onError, onSaved, reactionNotes, unitSystem]);
 
   const handleDelete = useCallback(async () => {
     try {
-      await db.deleteDietLog(entry.id);
+      await feeding.deleteFeed(entry.id);
       onDeleted();
       onClose();
     } catch {
       onError("Failed to delete. Please try again.");
     }
-  }, [entry.id, onClose, onDeleted, onError]);
+  }, [entry.id, feeding, onClose, onDeleted, onError]);
 
   return {
     logDate, setLogDate, logTime, setLogTime, foodType, setFoodType, foodName, setFoodName, amountMl, setAmountMl,

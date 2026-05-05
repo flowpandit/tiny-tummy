@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import type { DiaperEntry } from "../lib/types";
-import { useDbClient } from "../contexts/DatabaseContext";
+import { useRepositories } from "../contexts/DatabaseContext";
 
 export function useDiaperLogs(childId: string | null, limit = 100) {
-  const db = useDbClient();
+  const { elimination } = useRepositories();
   const [logs, setLogs] = useState<DiaperEntry[]>([]);
   const [lastDiaper, setLastDiaper] = useState<DiaperEntry | null>(null);
   const [lastWetDiaper, setLastWetDiaper] = useState<DiaperEntry | null>(null);
@@ -26,10 +26,10 @@ export function useDiaperLogs(childId: string | null, limit = 100) {
     setIsLoading(true);
     try {
       const [allLogs, lastLog, lastWet, lastDirty] = await Promise.all([
-        db.getDiaperLogs(childId, limit),
-        db.getLastDiaperLog(childId),
-        db.getLastWetDiaper(childId),
-        db.getLastDirtyDiaper(childId),
+        elimination.listDiaperLogs(childId, limit),
+        elimination.getLastDiaper(childId),
+        elimination.getLastWetDiaper(childId),
+        elimination.getLastDirtyDiaper(childId),
       ]);
 
       if (requestId !== requestIdRef.current) return;
@@ -48,7 +48,7 @@ export function useDiaperLogs(childId: string | null, limit = 100) {
     if (requestId === requestIdRef.current) {
       setIsLoading(false);
     }
-  }, [childId, limit]);
+  }, [childId, elimination, limit]);
 
   useEffect(() => {
     setLogs([]);

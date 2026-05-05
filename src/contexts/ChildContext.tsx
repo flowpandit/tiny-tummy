@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useRef, type ReactNode } from "react";
-import { useDbClient } from "./DatabaseContext";
+import { useRepositories } from "./DatabaseContext";
 import { createChildStore, type ChildStore } from "./child-store";
 import { useStoreSelector } from "../lib/store";
 import type { Child } from "../lib/types";
@@ -16,11 +16,11 @@ interface ChildContextType {
 const ChildContext = createContext<ChildStore | null>(null);
 
 export function ChildProvider({ children: childrenProp }: { children: ReactNode }) {
-  const db = useDbClient();
+  const { children: childRepository } = useRepositories();
   const storeRef = useRef<ChildStore | null>(null);
 
   if (!storeRef.current) {
-    storeRef.current = createChildStore(db);
+    storeRef.current = createChildStore(childRepository);
   }
 
   useEffect(() => {

@@ -26,7 +26,7 @@ import {
   getTrackedMl,
   getUnifiedFeedTimeline,
 } from "../lib/feed-insights";
-import { useDbClient } from "../contexts/DatabaseContext";
+import { useRepositories } from "../contexts/DatabaseContext";
 import type { BreastSide, Child, FeedingEntry } from "../lib/types";
 
 type SessionDurations = Record<"left" | "right", number>;
@@ -49,7 +49,7 @@ export function useBreastfeedingTimerState({
   onError: (message: string) => void;
   onSuccess: (message: string) => void;
 }) {
-  const db = useDbClient();
+  const { children, feeding, milestones, settings } = useRepositories();
   const [durations, setDurations] = useState<SessionDurations>({ left: 0, right: 0 });
   const [activeSide, setActiveSide] = useState<"left" | "right" | null>(null);
   const [activeStartedAt, setActiveStartedAt] = useState<number | null>(null);
@@ -90,9 +90,9 @@ export function useBreastfeedingTimerState({
     setTick(Date.now());
 
     Promise.all([
-      db.getSetting(getBreastfeedingSessionSettingKey(activeChild.id)),
-      db.getSetting(getBreastfeedingLastSideSettingKey(activeChild.id)),
-      db.getFeedingLogs(activeChild.id, FEED_CONTEXT_LOG_LIMIT),
+      settings.getSetting(getBreastfeedingSessionSettingKey(activeChild.id)),
+      settings.getSetting(getBreastfeedingLastSideSettingKey(activeChild.id)),
+      feeding.listFeedingLogs(activeChild.id, FEED_CONTEXT_LOG_LIMIT),
     ]).then(([sessionRaw, savedSide, feedingLogs]) => {
       if (cancelled) return;
 
@@ -124,18 +124,18 @@ export function useBreastfeedingTimerState({
     return () => {
       cancelled = true;
     };
-  }, [activeChild]);
+  }, [activeChild, feeding, settings]);
 
   const refreshRecentBreastHistory = useCallback(async () => {
     if (!activeChild) return;
-    const feedingLogs = await db.getFeedingLogs(activeChild.id, FEED_CONTEXT_LOG_LIMIT);
+    const feedingLogs = await feeding.listFeedingLogs(activeChild.id, FEED_CONTEXT_LOG_LIMIT);
     setRecentHistory(getBreastfeedingContextRows(feedingLogs, FEED_CONTEXT_LOG_LIMIT));
-  }, [activeChild]);
+  }, [activeChild, feeding]);
 
   const persistSession = useCallback(async (session: BreastfeedingSessionState) => {
     if (!activeChild) return;
-    await db.setSetting(getBreastfeedingSessionSettingKey(activeChild.id), JSON.stringify(session));
-  }, [activeChild]);
+    await settings.setSetting(getBreastfeedingSessionSettingKey(activeChild.id), JSON.stringify(session));
+  }, [activeChild, settings]);
 
   const flushActiveDuration = useCallback(async (options: { persist?: boolean } = { persist: true }): Promise<BreastfeedingSessionState> => {
     if (!activeSide || !activeStartedAt) {
@@ -216,7 +216,7 @@ export function useBreastfeedingTimerState({
         .join(" • ");
       const breastSide = sidesUsed.length === 2 ? "both" : sidesUsed[0];
 
-      const createdEntry = await db.createFeedingLog({
+      const createdEntry = await feeding.recordFeed({
         child_id: activeChild.id,
         logged_at: combineLocalDateAndTimeToUtcIso(getCurrentLocalDate(), getCurrentLocalTime()),
         food_type: "breast_milk",
@@ -226,7 +226,7 @@ export function useBreastfeedingTimerState({
       });
 
       if (saveSide === "left" || saveSide === "right") {
-        await db.setSetting(getBreastfeedingLastSideSettingKey(activeChild.id), saveSide).catch(() => {});
+        await settings.setSetting(getBreastfeedingLastSideSettingKey(activeChild.id), saveSide).catch(() => {});
       }
 
       const clearedSession = getEmptyBreastfeedingSession(saveSide);
@@ -261,20 +261,20 @@ export function useBreastfeedingTimerState({
       setDurations(finalSession.durations);
       await persistSession(finalSession).catch(() => {});
     }
-  }, [activeChild, db, flushActiveDuration, onError, onSuccess, persistSession, refreshRecentBreastHistory, runPostLogActions]);
+  }, [activeChild, feeding, flushActiveDuration, onError, onSuccess, persistSession, refreshRecentBreastHistory, runPostLogActions, settings]);
 
   const handleConfirmSolidTransition = useCallback(async () => {
     if (!activeChild) return false;
 
     try {
       setIsTransitioningToMixed(true);
-      await db.createMilestoneLog({
+      await milestones.recordMilestone({
         child_id: activeChild.id,
         milestone_type: "started_solids",
         logged_at: combineLocalDateAndTimeToUtcIso(getCurrentLocalDate(), getCurrentLocalTime()),
         notes: null,
       });
-      await db.updateChild(activeChild.id, { feeding_type: "mixed" });
+      await children.updateChild(activeChild.id, { feeding_type: "mixed" });
       await refreshChildren();
       onSuccess("Started solids saved to milestones.");
       return true;
@@ -284,7 +284,7 @@ export function useBreastfeedingTimerState({
     } finally {
       setIsTransitioningToMixed(false);
     }
-  }, [activeChild, db, onError, onSuccess, refreshChildren]);
+  }, [activeChild, children, milestones, onError, onSuccess, refreshChildren]);
 
   const handleFeedLogged = useCallback(async () => {
     await runPostLogActions({

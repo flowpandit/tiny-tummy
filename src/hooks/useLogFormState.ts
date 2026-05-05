@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { useDbClient } from "../contexts/DatabaseContext";
+import { useRepositories } from "../contexts/DatabaseContext";
 import { savePhoto } from "../lib/photos";
 import { combineLocalDateAndTimeToUtcIso, getCurrentLocalDate, getCurrentLocalTime } from "../lib/utils";
 import type { PoopLogDraft, StoolColor, StoolSize } from "../lib/types";
@@ -28,7 +28,7 @@ export function useLogFormState({
   resetPhoto: () => void;
   photoFile: File | null;
 }) {
-  const db = useDbClient();
+  const { elimination } = useRepositories();
   const [logDate, setLogDate] = useState(getCurrentLocalDate());
   const [logTime, setLogTime] = useState(getCurrentLocalTime());
   const [stoolType, setStoolType] = useState<number | null>(null);
@@ -65,7 +65,7 @@ export function useLogFormState({
         try { photoPath = await savePhoto(photoFile); } catch { photoPath = null; }
       }
 
-      await db.createPoopLog({
+      await elimination.recordPoop({
         child_id: childId,
         logged_at: combineLocalDateAndTimeToUtcIso(logDate, logTime),
         stool_type: stoolType,
@@ -84,7 +84,7 @@ export function useLogFormState({
     setShowSuccess(true);
     onLoggedSuccess();
     return true;
-  }, [childId, color, isSubmitting, logDate, logTime, notes, onError, onLoggedSuccess, photoFile, size, stoolType]);
+  }, [childId, color, elimination, isSubmitting, logDate, logTime, notes, onError, onLoggedSuccess, photoFile, size, stoolType]);
 
   return {
     logDate,

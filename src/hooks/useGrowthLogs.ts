@@ -1,10 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import type { GrowthEntry } from "../lib/types";
-import { useDbClient } from "../contexts/DatabaseContext";
+import { useRepositories } from "../contexts/DatabaseContext";
 import { GROWTH_LOGS_CHANGED_EVENT } from "../lib/growth-events";
 
 export function useGrowthLogs(childId: string | null) {
-  const db = useDbClient();
+  const { growth } = useRepositories();
   const [logs, setLogs] = useState<GrowthEntry[]>([]);
   const [latest, setLatest] = useState<GrowthEntry | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -23,8 +23,8 @@ export function useGrowthLogs(childId: string | null) {
     setIsLoading(true);
     try {
       const [allLogs, latestLog] = await Promise.all([
-        db.getGrowthLogs(childId),
-        db.getLatestGrowthLog(childId),
+        growth.listGrowthLogs(childId),
+        growth.getLatestGrowth(childId),
       ]);
       if (requestId !== requestIdRef.current) return;
       setLogs(allLogs);
@@ -38,7 +38,7 @@ export function useGrowthLogs(childId: string | null) {
     if (requestId === requestIdRef.current) {
       setIsLoading(false);
     }
-  }, [childId, db]);
+  }, [childId, growth]);
 
   useEffect(() => {
     setLogs([]);

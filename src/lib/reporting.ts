@@ -5,7 +5,6 @@ import { getFeedingEntryDisplayLabel } from "./feeding";
 import { getMilestoneTypeLabel } from "./milestone-constants";
 import { getSymptomSeverityLabel, getSymptomTypeLabel, getTemperatureMethodLabel } from "./symptom-constants";
 import { formatGrowthValue, formatTemperatureValue, formatVolumeValue, getDefaultTemperatureUnit, volumeMlToDisplay } from "./units";
-import * as db from "./db";
 import type {
   Episode,
   EpisodeEvent,
@@ -168,35 +167,6 @@ export function getDefaultReportOptionsForKind(reportKind: ReportKind): ReportOp
   return reportKind === "poopTummy"
     ? { ...defaultPoopTummyReportOptions }
     : { ...defaultReportOptions };
-}
-
-export async function fetchReportSourceData(
-  childId: string,
-  startDate: string,
-  endDate: string,
-  options: ReportOptions = defaultReportOptions,
-): Promise<ReportSourceData> {
-  const [logs, diaperLogs, feedingLogs, episodes, episodeEvents, symptomLogs, milestoneLogs, growthLogs] = await Promise.all([
-    db.getPoopLogsForRange(childId, startDate, endDate),
-    db.getDiaperLogsForRange(childId, startDate, endDate),
-    db.getFeedingLogsForRange(childId, startDate, endDate),
-    db.getEpisodesForRange(childId, startDate, endDate),
-    db.getEpisodeEventsForRange(childId, startDate, endDate),
-    db.getSymptomsForRange(childId, startDate, endDate),
-    db.getMilestonesForRange(childId, startDate, endDate),
-    options.includeGrowth ? db.getGrowthLogsForRange(childId, startDate, endDate) : Promise.resolve([]),
-  ]);
-
-  return {
-    logs,
-    diaperLogs,
-    feedingLogs,
-    growthLogs,
-    episodes,
-    episodeEvents,
-    symptomLogs,
-    milestoneLogs,
-  };
 }
 
 function dateKey(isoString: string): string {
@@ -1115,16 +1085,4 @@ export function buildReportData(
       unitSystem,
     }),
   };
-}
-
-export async function generateReportData(
-  childId: string,
-  startDate: string,
-  endDate: string,
-  options: ReportOptions = defaultReportOptions,
-  unitSystem: UnitSystem = "metric",
-  reportKind: ReportKind = DEFAULT_REPORT_KIND,
-): Promise<ReportData> {
-  const source = await fetchReportSourceData(childId, startDate, endDate, options);
-  return buildReportData(source, startDate, endDate, options, unitSystem, reportKind);
 }

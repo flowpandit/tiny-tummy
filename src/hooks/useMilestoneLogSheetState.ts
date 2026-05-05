@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { useDbClient } from "../contexts/DatabaseContext";
+import { useRepositories } from "../contexts/DatabaseContext";
 import { combineLocalDateAndTimeToUtcIso, getCurrentLocalDate, getCurrentLocalTime } from "../lib/utils";
 import type { MilestoneType } from "../lib/types";
 
@@ -14,7 +14,7 @@ export function useMilestoneLogSheetState({
   onError: (message: string) => void;
   onSuccess: (message: string) => void;
 }) {
-  const db = useDbClient();
+  const { milestones } = useRepositories();
   const [milestoneType, setMilestoneType] = useState<MilestoneType>("started_solids");
   const [logDate, setLogDate] = useState(getCurrentLocalDate());
   const [logTime, setLogTime] = useState(getCurrentLocalTime());
@@ -34,7 +34,7 @@ export function useMilestoneLogSheetState({
     if (isSubmitting) return false;
     setIsSubmitting(true);
     try {
-      await db.createMilestoneLog({
+      await milestones.recordMilestone({
         child_id: childId,
         milestone_type: milestoneType,
         logged_at: combineLocalDateAndTimeToUtcIso(logDate, logTime),
@@ -50,7 +50,7 @@ export function useMilestoneLogSheetState({
     } finally {
       setIsSubmitting(false);
     }
-  }, [childId, isSubmitting, logDate, logTime, milestoneType, notes, onClose, onError, onLogged, onSuccess]);
+  }, [childId, isSubmitting, logDate, logTime, milestoneType, milestones, notes, onClose, onError, onLogged, onSuccess]);
 
   return { milestoneType, setMilestoneType, logDate, setLogDate, logTime, setLogTime, notes, setNotes, isSubmitting, handleSubmit };
 }

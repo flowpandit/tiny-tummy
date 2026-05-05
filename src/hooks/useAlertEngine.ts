@@ -1,14 +1,14 @@
 import { useCallback } from "react";
 import { checkFrequencyAlert, checkColorAlert } from "../lib/tauri";
 import { diaperIncludesWet, getChildAgeDays } from "../lib/diaper";
-import { useDbClient } from "../contexts/DatabaseContext";
+import { useRepositories } from "../contexts/DatabaseContext";
 import type { Child } from "../lib/types";
 
 export function useAlertEngine() {
-  const db = useDbClient();
+  const { care, elimination } = useRepositories();
   const runChecks = useCallback(async (child: Child) => {
     try {
-      const lastPoop = await db.getLastRealPoop(child.id);
+      const lastPoop = await elimination.getLastRealPoop(child.id);
 
       const freqResult = await checkFrequencyAlert(
         child.name,
@@ -19,10 +19,10 @@ export function useAlertEngine() {
 
       if (freqResult) {
         const [alertType, severity, title, message] = freqResult;
-        const existing = await db.getActiveAlerts(child.id);
+        const existing = await care.listActiveAlerts(child.id);
         const hasSameType = existing.some((a) => a.alert_type === alertType);
         if (!hasSameType) {
-          await db.createAlert({
+          await care.recordAlert({
             child_id: child.id,
             alert_type: alertType,
             severity,
@@ -42,13 +42,13 @@ export function useAlertEngine() {
 
         if (colorResult) {
           const [alertType, severity, title, message] = colorResult;
-          const hasSameAlertForLog = await db.hasAlertForLog(child.id, alertType, lastPoop.id);
+          const hasSameAlertForLog = await care.hasAlertForLog(child.id, alertType, lastPoop.id);
 
           if (hasSameAlertForLog) {
             return;
           }
 
-          await db.createAlert({
+          await care.recordAlert({
             child_id: child.id,
             alert_type: alertType,
             severity,
@@ -60,10 +60,10 @@ export function useAlertEngine() {
       }
 
       if (getChildAgeDays(child.date_of_birth) < 365) {
-        const diaperLogs = await db.getDiaperLogs(child.id, 40);
+        const diaperLogs = await elimination.listDiaperLogs(child.id, 40);
         const wetLogs = diaperLogs.filter((log) => diaperIncludesWet(log.diaper_type));
         const lastWet = wetLogs[0] ?? null;
-        const existing = await db.getActiveAlerts(child.id);
+        const existing = await care.listActiveAlerts(child.id);
         const ageDays = getChildAgeDays(child.date_of_birth);
 
         if (lastWet) {
@@ -71,7 +71,7 @@ export function useAlertEngine() {
           const thresholdHours = ageDays < 7 ? 6 : ageDays < 56 ? 8 : 10;
 
           if (hoursSinceWet >= thresholdHours && !existing.some((alert) => alert.alert_type === "low_wet_output")) {
-            await db.createAlert({
+            await care.recordAlert({
               child_id: child.id,
               alert_type: "low_wet_output",
               severity: "warning",
@@ -83,7 +83,7 @@ export function useAlertEngine() {
 
           const wetCount24h = wetLogs.filter((log) => Date.now() - new Date(log.logged_at).getTime() <= 24 * 3600000).length;
           if (ageDays >= 3 && wetCount24h < 5 && !existing.some((alert) => alert.alert_type === "low_wet_count_24h")) {
-            await db.createAlert({
+            await care.recordAlert({
               child_id: child.id,
               alert_type: "low_wet_count_24h",
               severity: "warning",
@@ -94,9 +94,9 @@ export function useAlertEngine() {
           }
 
           if (lastWet.urine_color === "dark") {
-            const hasDarkUrineAlert = await db.hasAlertForLog(child.id, "dark_urine_diaper", lastWet.id);
+            const hasDarkUrineAlert = await care.hasAlertForLog(child.id, "dark_urine_diaper", lastWet.id);
             if (!hasDarkUrineAlert) {
-              await db.createAlert({
+              await care.recordAlert({
                 child_id: child.id,
                 alert_type: "dark_urine_diaper",
                 severity: "warning",
@@ -111,7 +111,7 @@ export function useAlertEngine() {
     } catch {
       // Alert checks are non-critical — silently fail
     }
-  }, []);
+  }, [care, elimination]);
 
   return { runChecks };
 }

@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { useDbClient } from "../contexts/DatabaseContext";
+import { useRepositories } from "../contexts/DatabaseContext";
 import {
   formatSleepTimerClock,
   getLocalTimestamp,
@@ -24,7 +24,7 @@ export function useSleepQuickTimer({
   onError: (message: string) => void;
   onSuccess: (message: string) => void;
 }) {
-  const db = useDbClient();
+  const { settings, sleep } = useRepositories();
   const { timerSession, tick, refreshTimerSession } = useSleepTimerPreview(activeChild, refreshKey);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -44,7 +44,7 @@ export function useSleepQuickTimer({
 
     setIsSubmitting(true);
     try {
-      await db.setSetting(getSleepTimerSettingKey(activeChild.id), JSON.stringify(nextSession));
+      await settings.setSetting(getSleepTimerSettingKey(activeChild.id), JSON.stringify(nextSession));
       await refreshTimerSession();
       onSuccess("Sleep timer started.");
     } catch {
@@ -52,7 +52,7 @@ export function useSleepQuickTimer({
     } finally {
       setIsSubmitting(false);
     }
-  }, [activeChild, db, isSubmitting, onError, onSuccess, refreshTimerSession, timerSession]);
+  }, [activeChild, isSubmitting, onError, onSuccess, refreshTimerSession, settings, timerSession]);
 
   const handleStopAndSaveTimer = useCallback(async () => {
     if (!activeChild || isSubmitting) return;
@@ -70,14 +70,14 @@ export function useSleepQuickTimer({
 
     setIsSubmitting(true);
     try {
-      await db.createSleepLog({
+      await sleep.recordSleep({
         child_id: activeChild.id,
         sleep_type: classifySleepType(timerSession.startedAt, endedAt),
         started_at: timerSession.startedAt,
         ended_at: endedAt,
         notes: timerSession.notes.trim() || null,
       });
-      await db.setSetting(getSleepTimerSettingKey(activeChild.id), "");
+      await settings.setSetting(getSleepTimerSettingKey(activeChild.id), "");
       await onLogged();
       await refreshTimerSession();
       onSuccess("Sleep entry saved.");
@@ -86,7 +86,7 @@ export function useSleepQuickTimer({
     } finally {
       setIsSubmitting(false);
     }
-  }, [activeChild, db, isSubmitting, onError, onLogged, onSuccess, refreshTimerSession, timerSession]);
+  }, [activeChild, isSubmitting, onError, onLogged, onSuccess, refreshTimerSession, settings, sleep, timerSession]);
 
   const timerElapsedMs = timerSession ? getSleepTimerElapsedMs(timerSession, tick) : 0;
 

@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import type { Episode, EpisodeEvent } from "../lib/types";
-import { useDbClient } from "../contexts/DatabaseContext";
+import { useRepositories } from "../contexts/DatabaseContext";
 
 export function useEpisodes(childId: string | null) {
-  const db = useDbClient();
+  const { care, children, milestones } = useRepositories();
   const [activeEpisode, setActiveEpisode] = useState<Episode | null>(null);
   const [activeEpisodes, setActiveEpisodes] = useState<Episode[]>([]);
   const [events, setEvents] = useState<EpisodeEvent[]>([]);
@@ -28,17 +28,17 @@ export function useEpisodes(childId: string | null) {
     setIsLoading(true);
     try {
       let [activeRows, recent] = await Promise.all([
-        db.getActiveEpisodes(childId),
-        db.getEpisodes(childId, 6),
+        care.listActiveEpisodes(childId),
+        care.listRecentEpisodes(childId, 6),
       ]);
       let active = activeRows[0] ?? null;
 
       for (const episode of activeRows.filter((row) => (row.episode_type as string) === "solids_transition")) {
-        const milestoneLogs = await db.getMilestoneLogs(childId, 20);
+        const milestoneLogs = await milestones.listMilestones(childId, 20);
         const hasStartedSolids = milestoneLogs.some((log) => log.milestone_type === "started_solids");
 
         if (!hasStartedSolids) {
-          await db.createMilestoneLog({
+          await milestones.recordMilestone({
             child_id: childId,
             milestone_type: "started_solids",
             logged_at: episode.started_at,
@@ -46,15 +46,15 @@ export function useEpisodes(childId: string | null) {
           });
         }
 
-        await db.updateChild(childId, { feeding_type: "mixed" });
-        await db.closeEpisode(episode.id, {
+        await children.updateChild(childId, { feeding_type: "mixed" });
+        await care.resolveEpisode(episode.id, {
           ended_at: new Date().toISOString(),
           outcome: episode.outcome ?? "Moved to milestones",
         });
 
         [activeRows, recent] = await Promise.all([
-          db.getActiveEpisodes(childId),
-          db.getEpisodes(childId, 6),
+          care.listActiveEpisodes(childId),
+          care.listRecentEpisodes(childId, 6),
         ]);
         active = activeRows[0] ?? null;
       }
@@ -66,7 +66,7 @@ export function useEpisodes(childId: string | null) {
 
       if (activeRows.length > 0) {
         const episodeEventEntries = await Promise.all(
-          activeRows.map(async (episode) => [episode.id, await db.getEpisodeEvents(episode.id)] as const),
+          activeRows.map(async (episode) => [episode.id, await care.listEpisodeEvents(episode.id)] as const),
         );
         const episodeEventsById = Object.fromEntries(episodeEventEntries);
         if (requestId !== requestIdRef.current) return;
@@ -88,7 +88,7 @@ export function useEpisodes(childId: string | null) {
     if (requestId === requestIdRef.current) {
       setIsLoading(false);
     }
-  }, [childId]);
+  }, [care, childId, children, milestones]);
 
   useEffect(() => {
     setActiveEpisode(null);
