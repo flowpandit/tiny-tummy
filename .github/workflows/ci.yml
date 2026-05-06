@@ -17,22 +17,27 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 10
-
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: pnpm
+          cache: npm
+          cache-dependency-path: package-lock.json
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: npm ci
 
-      - name: Run frontend checks
-        run: pnpm run check:all
+      - name: Run tests
+        run: npm test
+
+      - name: Run lint
+        run: npm run lint
+
+      - name: Run build
+        run: npm run build
+
+      - name: Check dead code
+        run: npm run check:dead-code
 
   tauri-e2e-changes:
     name: Detect Tauri E2E Changes
@@ -57,7 +62,7 @@ jobs:
               - 'src-tauri/**'
               - 'index.html'
               - 'package.json'
-              - 'pnpm-lock.yaml'
+              - 'package-lock.json'
               - 'tsconfig.json'
               - 'tsconfig.node.json'
               - 'vite.config.ts'
@@ -93,19 +98,15 @@ jobs:
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 10
-
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: pnpm
+          cache: npm
+          cache-dependency-path: package-lock.json
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: npm ci
 
       - name: Cache Rust artifacts
         uses: Swatinem/rust-cache@v2
@@ -120,4 +121,4 @@ jobs:
         run: cargo test --manifest-path src-tauri/Cargo.toml
 
       - name: Run Tauri E2E smoke tests
-        run: xvfb-run pnpm test:e2e:tauri
+        run: xvfb-run npm run test:e2e:tauri
