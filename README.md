@@ -179,13 +179,6 @@ Notes:
 
 ### Android
 
-Set Android environment variables before running Tauri Android commands:
-
-```bash
-export ANDROID_HOME="$HOME/Library/Android/sdk"
-export NDK_HOME="$ANDROID_HOME/ndk/$(ls -1 "$ANDROID_HOME/ndk" | tail -n 1)"
-```
-
 Install JDK 17 on macOS with Homebrew, or let the repo helper install and verify Eclipse Temurin 17:
 
 ```bash
@@ -194,13 +187,17 @@ brew install --cask temurin@17
 ./scripts/setup-macos-jdk17.sh
 ```
 
-Use JDK 17 for the current shell:
+Use JDK 17 and the Android SDK for the current shell:
 
 ```bash
-source scripts/use-jdk17.sh
+export JAVA_HOME=$(/usr/libexec/java_home -v 17)
+export PATH="$JAVA_HOME/bin:$PATH"
+export ANDROID_HOME="$HOME/Library/Android/sdk"
+export ANDROID_SDK_ROOT="$ANDROID_HOME"
+export NDK_HOME="$ANDROID_HOME/ndk/$(ls -1 "$ANDROID_HOME/ndk" | tail -n 1)"
 ```
 
-`java -version` should report 17.x. If `/usr/libexec/java_home -v 17` fails or still selects a newer JDK such as OpenJDK 25, run `./scripts/setup-macos-jdk17.sh`. Do not use OpenJDK 25 for Android verification on the current Gradle wrapper; Gradle 8.14.x does not support running on Java 25.
+`java -version` should report 17.x. If `/usr/libexec/java_home -v 17` fails or still selects a newer JDK such as OpenJDK 25, run `./scripts/setup-macos-jdk17.sh` or use `source scripts/use-jdk17.sh`. Do not use OpenJDK 25 for Android verification on the current Gradle wrapper; Gradle 8.14.x does not support running on Java 25.
 
 ```bash
 # 1. Install the Tauri CLI (one-time)
@@ -211,6 +208,10 @@ cargo tauri android init
 
 # 3. Verify the generated Android project compiles Kotlin with JDK 17.
 # This reruns ./scripts/setup-android.sh before invoking Gradle.
+export JAVA_HOME=$(/usr/libexec/java_home -v 17)
+export PATH="$JAVA_HOME/bin:$PATH"
+export ANDROID_HOME="$HOME/Library/Android/sdk"
+export ANDROID_SDK_ROOT="$ANDROID_HOME"
 ./scripts/verify-android-kotlin.sh
 
 # 4. Build a release APK for testing

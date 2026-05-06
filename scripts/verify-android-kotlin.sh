@@ -7,12 +7,27 @@ set -euo pipefail
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 REPO_ROOT=$(CDPATH= cd -- "$SCRIPT_DIR/.." && pwd)
 ANDROID_DIR="$REPO_ROOT/src-tauri/gen/android"
+DEFAULT_MACOS_ANDROID_HOME="$HOME/Library/Android/sdk"
 
 fail_jdk17() {
   echo "Android verification requires JDK 17. Run: source scripts/use-jdk17.sh"
   if [ -n "${1:-}" ]; then
     echo "Detected: $1"
   fi
+  exit 1
+}
+
+fail_android_sdk() {
+  echo "Android verification requires the Android SDK."
+  if [ -n "${1:-}" ]; then
+    echo "Detected: $1"
+  fi
+  echo ""
+  echo "Install Android Studio, install the Android SDK, then set:"
+  echo '  export ANDROID_HOME="$HOME/Library/Android/sdk"'
+  echo '  export ANDROID_SDK_ROOT="$ANDROID_HOME"'
+  echo ""
+  echo "If your SDK is somewhere else, set ANDROID_HOME to that directory before running this script."
   exit 1
 }
 
@@ -35,6 +50,27 @@ java_major_version() {
   printf "%s" "$major"
 }
 
+resolve_android_sdk() {
+  if [ -n "${ANDROID_HOME:-}" ]; then
+    if [ -d "$ANDROID_HOME" ]; then
+      export ANDROID_SDK_ROOT="${ANDROID_SDK_ROOT:-$ANDROID_HOME}"
+      echo "Android SDK detected at ANDROID_HOME=$ANDROID_HOME"
+      return
+    fi
+
+    fail_android_sdk "ANDROID_HOME is set but does not exist: $ANDROID_HOME"
+  fi
+
+  if [ -d "$DEFAULT_MACOS_ANDROID_HOME" ]; then
+    export ANDROID_HOME="$DEFAULT_MACOS_ANDROID_HOME"
+    export ANDROID_SDK_ROOT="$ANDROID_HOME"
+    echo "Android SDK detected at default macOS path: $ANDROID_HOME"
+    return
+  fi
+
+  fail_android_sdk "ANDROID_HOME is not set and $DEFAULT_MACOS_ANDROID_HOME was not found."
+}
+
 if [ -z "${JAVA_HOME:-}" ]; then
   fail_jdk17 "JAVA_HOME is not set"
 fi
@@ -54,6 +90,7 @@ export PATH="$JAVA_HOME/bin:$PATH"
 
 echo "Java 17 detected for Android verification:"
 "$JAVA_HOME/bin/java" -version
+resolve_android_sdk
 
 cd "$REPO_ROOT"
 ./scripts/setup-android.sh

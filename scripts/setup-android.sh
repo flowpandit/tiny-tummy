@@ -11,6 +11,7 @@ BUILD_GRADLE="$ANDROID_DIR/app/build.gradle.kts"
 ICON_MANIFEST="src-tauri/icons/icon-manifest.json"
 TMP_ICON_DIR="/tmp/tiny-tummy-android-icons"
 BILLING_DEPENDENCY='implementation("com.android.billingclient:billing-ktx:7.1.1")'
+DEFAULT_MACOS_ANDROID_HOME="$HOME/Library/Android/sdk"
 
 warn_if_java_is_not_17() {
   if ! command -v java >/dev/null 2>&1; then
@@ -44,6 +45,30 @@ warn_if_java_is_not_17() {
   fi
 }
 
+warn_if_android_sdk_is_missing() {
+  if [ -n "${ANDROID_HOME:-}" ]; then
+    if [ -d "$ANDROID_HOME" ]; then
+      echo "  ✓ Android SDK detected at ANDROID_HOME=$ANDROID_HOME"
+    else
+      echo "Warning: ANDROID_HOME is set but does not exist: $ANDROID_HOME"
+      echo '         Set it with: export ANDROID_HOME="$HOME/Library/Android/sdk"'
+    fi
+    return
+  fi
+
+  if [ -d "$DEFAULT_MACOS_ANDROID_HOME" ]; then
+    echo "  ✓ Android SDK found at $DEFAULT_MACOS_ANDROID_HOME"
+    echo '    Tip: export ANDROID_HOME="$HOME/Library/Android/sdk"'
+    echo '         export ANDROID_SDK_ROOT="$ANDROID_HOME"'
+    return
+  fi
+
+  echo "Warning: Android SDK was not found."
+  echo "         Install Android Studio and the Android SDK, then set:"
+  echo '           export ANDROID_HOME="$HOME/Library/Android/sdk"'
+  echo '           export ANDROID_SDK_ROOT="$ANDROID_HOME"'
+}
+
 if [ ! -d "$ANDROID_DIR" ]; then
   echo "Error: $ANDROID_DIR not found. Run 'cargo tauri android init' first."
   exit 1
@@ -60,6 +85,7 @@ if [ ! -f "$BUILD_GRADLE" ]; then
 fi
 
 warn_if_java_is_not_17
+warn_if_android_sdk_is_missing
 
 echo "Applying custom Android configuration..."
 
