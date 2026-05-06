@@ -74,12 +74,12 @@ export function AddChild() {
           Add a child
         </h2>
         <p className="mb-6 text-[var(--color-text-secondary)]">
-          One child stays free. Premium unlocks tracking for every child.
+          One child stays free. Lifetime Private unlocks tracking for every child.
         </p>
 
         <PremiumInlineLock
           featureId="multi_child"
-          title="Multi-child tracking is Premium"
+          title="Multi-child tracking is in Lifetime Private"
           description="Your existing records stay private on this device. Unlock once to add and switch between more children."
           actionLabel="Unlock multi-child"
         />

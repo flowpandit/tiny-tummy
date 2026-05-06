@@ -203,7 +203,7 @@ export function Report() {
         <div className="-mt-28 px-4 md:-mt-24 md:px-10">
           <PremiumInlineLock
             featureId={reportFeatureId}
-            title="Doctor-ready PDFs are Premium"
+            title="Doctor-ready PDFs are in Lifetime Private"
             description="Basic logging stays free. Unlock when you want a clean report with poop, diaper, feeding, symptoms, and timeline context for a visit."
             actionLabel="Unlock reports"
           />

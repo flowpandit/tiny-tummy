@@ -5,7 +5,7 @@
 This document defines the manual QA plan for exercising Tiny Tummy through the native Tauri app with [Computer Use](plugin://computer-use@openai-bundled). It is designed to cover:
 
 - user-facing app flows
-- local-dev-only access and trial states reachable from in-app Developer Tools
+- local-dev-only access, Lifetime Private, and legacy trial-key states reachable from in-app Developer Tools
 - app-to-OS boundary flows such as notifications, file save dialogs, share/copy, and photo selection
 
 This plan uses a layered-exhaustive strategy:
@@ -104,10 +104,10 @@ Before running any suite, confirm:
 
 | Access Profile | State | Entry Method | Primary Coverage Goal |
 | --- | --- | --- | --- |
-| `AP1` | Active trial | clean reset or Developer Tools reset-to-today | standard unlocked app behavior |
-| `AP2` | 13 days left in trial | Developer Tools set trial to 13 days ago | near-expiry messaging and still-unlocked behavior |
-| `AP3` | Trial expired | Developer Tools simulate expiration | paywall routing and locked-mode exceptions |
-| `AP4` | Premium unlocked | Developer Tools simulate premium unlock | unlocked behavior after expiry and restore/unlock flows |
+| `AP1` | Free plan | clean reset | Free local tracking and Lifetime Private gates |
+| `AP2` | Legacy trial key, 13 days old | Developer Tools write legacy trial start 13 days ago | legacy trial keys do not change Free access or show trial copy |
+| `AP3` | Legacy expired-trial keys | Developer Tools write legacy expired-trial keys | legacy trial keys do not change Free access or show trial copy |
+| `AP4` | Lifetime Private unlocked | Developer Tools simulate Lifetime Private unlock | unlocked behavior and restore/unlock flows |
 
 ## Global Modifiers
 
@@ -148,7 +148,7 @@ Use these bundles when a suite includes the relevant surfaces. Run the suite bas
 | `HR1` | infant elimination route remains diaper-first even after older-child preference activity | `F` | `MB0` | `S03`, `S05` |
 | `HR2` | older child switches between `auto`, `diaper`, and `poop` without route-loop or stale label | `E` | `MB1` | `S03`, `S05` |
 | `HR3` | breastfeeding-to-mixed transition changes route behavior and unlocks Feed correctly | `D` | `MB0`, `MB3` | `S08` |
-| `HR4` | expired trial still allows Settings and Privacy while other routes paywall | `E` | `MB5` | `S01`, `S03`, `S12` |
+| `HR4` | Free plan keeps Settings and Privacy available while Lifetime Private features route to unlock | `E` | `MB5` | `S01`, `S03`, `S12` |
 | `HR5` | no-data report versus rich seeded report | `B`, `E` | `MB3`, `MB4` | `S12`, `S13` |
 | `HR6` | multi-child switching preserves active child boundaries and correct elimination route | `F` | `MB1` | `S03`, `S04`, `S05` |
 | `HR7` | OS accept and cancel flows always return to a usable app state | `E` | `MB3`, `MB4`, `MB5` | `S12`, `S13` |
@@ -212,13 +212,13 @@ Use these bundles when a suite includes the relevant surfaces. Run the suite bas
 | --- | --- | --- | --- | --- | --- | --- |
 | `CU-S01-01` | `A` | clean reset | Launch app | App lands on onboarding welcome, no child routes exposed, no crash | `SS-CU-S01-01-1` |  |
 | `CU-S01-02` | environment-prepared | startup-blocked environment prepared outside app | Launch app, tap `Retry startup` | Startup blocked card appears, retry is visible, retry either recovers or preserves message cleanly | `SS-CU-S01-02-1` | mark `EN` if preparation fails |
-| `CU-S01-03` | `AP3` + seeded child | app locked via Developer Tools or prepared expired state | Launch app from cold start | Non-settings routes land on paywall | `SS-CU-S01-03-1` |  |
-| `CU-S01-04` | `AP3` | locked state active | From paywall open Settings | Settings opens while app remains otherwise locked | `SS-CU-S01-04-1` |  |
-| `CU-S01-05` | `AP3` | locked state active | From paywall open Privacy | Privacy route opens and returns safely | `SS-CU-S01-05-1` |  |
-| `CU-S01-06` | `AP3` | locked state active | Tap `Restore purchases` | Success or graceful failure toast; app remains stable | `SS-CU-S01-06-1` | classify `SB` if store boundary only |
-| `CU-S01-07` | `AP3` | locked state active, Developer Tools available in Settings | Simulate premium unlock, relaunch | Full app unlocks after relaunch | `SS-CU-S01-07-1` |  |
-| `CU-S01-08` | `AP1` to `AP3` | active trial state | Set trial to 13 days ago, then simulate expiration | Near-expiry and expired states render correct messaging without route corruption | `SS-CU-S01-08-1` |  |
-| `CU-S01-09` | `AP4` | premium unlocked | Relaunch from cold start | Premium-unlocked state persists | `SS-CU-S01-09-1` |  |
+| `CU-S01-03` | `AP1` + seeded child | Free plan active | Launch app from cold start, open a Lifetime Private feature | Feature routes to `/unlock`; Free routes remain usable | `SS-CU-S01-03-1` |  |
+| `CU-S01-04` | `AP1` | Free plan active | Open Settings | Settings opens and shows Free plan copy | `SS-CU-S01-04-1` |  |
+| `CU-S01-05` | `AP1` | Free plan active | Open Privacy | Privacy route opens and returns safely | `SS-CU-S01-05-1` |  |
+| `CU-S01-06` | `AP1` | Free plan active | Tap `Restore purchases` | Success or graceful failure toast; app remains stable | `SS-CU-S01-06-1` | classify `SB` if store boundary only |
+| `CU-S01-07` | `AP1` | Free plan active, Developer Tools available in Settings | Simulate Lifetime Private unlock, relaunch | Full local app unlocks after relaunch | `SS-CU-S01-07-1` |  |
+| `CU-S01-08` | `AP2` to `AP3` | legacy trial-key state | Write legacy trial start and expired-trial keys | App remains on Free access and does not show trial copy | `SS-CU-S01-08-1` |  |
+| `CU-S01-09` | `AP4` | Lifetime Private unlocked | Relaunch from cold start | Lifetime Private state persists | `SS-CU-S01-09-1` |  |
 
 ### S02 Onboarding and Add Child
 
@@ -248,7 +248,7 @@ Use these bundles when a suite includes the relevant surfaces. Run the suite bas
 | `CU-S03-07` | `F` | one infant and one older child seeded | Verify `Main tracking page` options on infant versus older child; change older-child option among `auto`, `diaper`, `poop` | Infant never exposes contradictory `Poop` override; older child routing follows selection and persists | `SS-CU-S03-07-1` |  |
 | `CU-S03-08` | `E` | notification boundary prepared | Toggle daily check-in and each smart reminder in both allow and deny states | Success path updates switch state; denied path shows error and keeps app stable | `SS-CU-S03-08-1` | `SB` if permission prompt blocks |
 | `CU-S03-09` | `E` | Settings open | Toggle Night mode schedule, edit start and end times | Schedule UI expands, values save, and summary text updates | `SS-CU-S03-09-1` |  |
-| `CU-S03-10` | `AP1` to `AP4` | Developer Tools visible | Run reset trial, set 13 days ago, simulate expiration, clear premium, simulate premium unlock | Each tool shows success feedback and results in the correct access state on next route check | `SS-CU-S03-10-1` |  |
+| `CU-S03-10` | `AP1` to `AP4` | Developer Tools visible | Write legacy trial keys, clear Lifetime Private, simulate Lifetime Private unlock | Legacy trial tools remain dev-only and harmless; Lifetime Private tools update access state correctly | `SS-CU-S03-10-1` |  |
 
 ### S04 Home and Quick Actions
 
@@ -420,6 +420,6 @@ This plan is complete only when all of the following are true:
 - Use the native Tauri app only; if `pnpm tauri dev` is not attachable by Computer Use, use a packaged `.app` or equivalent attachable local build.
 - Use `TAURI_E2E_RESET=1` as the default clean-start mechanism.
 - Use the macOS app-data path only as the reset fallback.
-- Dev-only `Developer Tools` in Settings are in scope and are the approved route for trial and premium state testing.
+- Dev-only `Developer Tools` in Settings are in scope and are the approved route for legacy trial-key and Lifetime Private state testing.
 - Actual store billing and long-delay notification delivery are boundary-limited unless the local build exposes a directly testable simulation.
 - No direct UI control currently guarantees a no-poop day entry on demand; verify that state when auto-generated or pre-seeded, and mark unavailable setup as environment-blocked rather than product-failed.

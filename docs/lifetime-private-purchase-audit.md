@@ -2,7 +2,7 @@
 
 Date: 2026-05-06
 
-Scope: audit the current trial, premium unlock, feature gate, restore, and mobile billing surface for launching the real Lifetime Private one-time purchase. This document does not implement purchases, Family Sync, accounts, Supabase, or backend verification.
+Scope: audit the current legacy trial keys, Lifetime Private unlock, feature gate, restore, and mobile billing surface for launching the real Lifetime Private one-time purchase. This document does not implement Family Sync, accounts, Supabase, or backend verification.
 
 ## Current State
 
@@ -18,7 +18,7 @@ Scope: audit the current trial, premium unlock, feature gate, restore, and mobil
 Real production-shaped code exists for:
 
 - Local entitlement storage in `app_settings`.
-- Feature gate resolution from `trial`, `lifetime_private`, future add-ons, and developer-only entitlements.
+- Feature gate resolution from Free, `lifetime_private`, future add-ons, and developer-only entitlements.
 - A TypeScript billing service and Apple/Google adapter boundary.
 - Tauri Rust mobile commands for purchase, restore, and ownership sync.
 - iOS StoreKit 2 code in `src-tauri/ios-templates/BillingPlugin.swift`.
@@ -27,7 +27,7 @@ Real production-shaped code exists for:
 Mocked or dev-only behavior:
 
 - Desktop development builds simulate purchase by writing `premium_unlocked=1` with platform `debug`.
-- Developer Tools in Settings can reset/expire the trial, clear premium, simulate premium unlock, and simulate future add-ons including `sync_addon`.
+- Developer Tools in Settings can write deprecated trial keys for compatibility, clear Lifetime Private, simulate Lifetime Private, and simulate future add-ons including `sync_addon`.
 - Developer feature entitlements are read only in `import.meta.env.DEV`.
 
 Not production-ready yet:
@@ -64,18 +64,18 @@ Stored in SQLite `app_settings`:
 
 Payment/trial/developer keys are intentionally excluded from backup/export and future sync payloads.
 
-## Trial Behavior
+## Legacy Trial Keys
 
 Current behavior:
 
-- Trial length is 14 days.
-- `ensureTrialStarted()` starts trial on first entitlement read.
-- `trial_last_seen_at` provides a light clock rollback guard.
-- `trial_active` grants the same private-lifetime feature category as Lifetime Private, but not Family Sync.
-- `trial_expired` becomes Free.
-- `null` entitlement is treated as trial-compatible while loading, so startup failures avoid incorrectly hard-locking the app.
+- The production-facing 14-day trial is removed.
+- Free is the preview experience for users who have not bought Lifetime Private.
+- `trial_started_at` and `trial_last_seen_at` are retained only as deprecated legacy keys.
+- Entitlement reads no longer create or refresh trial keys.
+- `trial_active`, `trial_expired`, and `null` entitlement inputs are treated as Free by feature access.
+- Deprecated developer tools can still write legacy trial keys, but those keys do not unlock Lifetime Private features.
 
-Recommendation: **Option B, remove the trial and rely on Free plan for the production Lifetime Private launch.**
+Decision: **Option B, remove the trial and rely on Free plan for the production Lifetime Private launch.**
 
 Reasoning:
 
@@ -84,7 +84,7 @@ Reasoning:
 - The local 14-day trial adds clock, copy, QA, and support complexity without store-backed entitlement truth.
 - If product wants a preview period later, keep it explicitly app-side and call it a feature preview, not a store trial.
 
-Do not remove the trial in the purchase-wiring PR unless that PR is explicitly scoped to access model simplification.
+Do not reintroduce production trial access unless product intentionally scopes a new preview model.
 
 ## Restore Behavior
 
@@ -181,7 +181,7 @@ Migrated to `FeatureGateService`/feature IDs:
 
 Broad access still exists mainly for plan status/copy:
 
-- `accessKind`, `isLocked`, `hasFullAccess`, and `daysRemaining` in `TrialContext`.
+- `accessKind`, `isLocked`, `hasFullAccess`, and legacy-compatible `daysRemaining` in `TrialContext`.
 - Settings access card and `/unlock` header copy.
 
 ## Testing Plan
@@ -191,7 +191,7 @@ Add focused tests for:
 - Free access map keeps Family Sync locked.
 - `lifetime_private` unlocks the intended local features.
 - `lifetime_private` does not grant `sync_addon` or Family Sync features.
-- Trial access if retained, or absence of trial access if removed.
+- Legacy trial keys and `trial_active` state do not unlock Lifetime Private features.
 - Store product ID maps only to `lifetime_private`.
 - Unknown/wrong product IDs do not unlock.
 - Purchase success marks premium with platform and product ID.
@@ -255,7 +255,7 @@ Native/manual store tests:
 ## Risks
 
 - Stale docs can cause wrong store setup if they drift from the `$14.99 USD` Lifetime Private product ID and price.
-- Current app-side trial may confuse Free vs Lifetime behavior and increases support/debug surface.
+- Deprecated app-side trial keys can confuse QA if treated as active product behavior; keep them documented as ignored compatibility state.
 - Local-only entitlement storage is correct for offline use but cannot detect refunds/revocations while offline. Decide whether to keep access until a later successful store check or to relock only on explicit confirmed revocation.
 - Without a backend, purchase verification relies on StoreKit/Play Billing client APIs. That is acceptable for a simple local-first app but weaker than server verification.
 - Android generated billing setup may not be reproducible after a clean `cargo tauri android init`.

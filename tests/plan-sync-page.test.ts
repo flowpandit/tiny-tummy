@@ -9,7 +9,7 @@ afterEach(() => {
   cleanup();
 });
 
-test("PlanSyncPageContent renders Free, Lifetime Private, and Family Sync pricing", () => {
+test("PlanSyncPageContent renders Free, Lifetime Private, and Family Sync plan states", () => {
   render(React.createElement(PlanSyncPageContent));
 
   assert.ok(screen.getByRole("heading", { name: "Choose how Tiny Tummy works for your family" }));
@@ -18,7 +18,7 @@ test("PlanSyncPageContent renders Free, Lifetime Private, and Family Sync pricin
   assert.ok(screen.getAllByRole("heading", { name: "Family Sync" }).length >= 1);
   assert.ok(screen.getByText("$0"));
   assert.ok(screen.getByText("$14.99 once"));
-  assert.ok(screen.getByText("$2.99/mo or $24.99/yr"));
+  assert.ok(screen.getAllByText("Coming later").length >= 1);
   assert.ok(screen.getByText("Recommended"));
 });
 
@@ -38,16 +38,18 @@ test("PlanSyncPageContent makes Lifetime the payment trigger and keeps sync unav
   assert.equal(unlockCalls, 1);
 });
 
-test("PlanSyncPageContent explains cancellation and privacy outcomes", () => {
+test("PlanSyncPageContent explains access and privacy outcomes", () => {
   render(React.createElement(PlanSyncPageContent));
 
-  assert.ok(screen.getByText("Returns to Free limits if cancelled. Local data stays on device."));
-  assert.ok(screen.getByText("Keeps Lifetime if cancelled. Only sync turns off."));
-  assert.ok(screen.getByText("Tiny Tummy works privately without Family Sync."));
-  assert.ok(screen.getByText("Family Sync is optional."));
+  assert.ok(screen.getByText("Free is the private preview experience. Lifetime Private unlocks the full local app. Family Sync is not available yet."));
+  assert.ok(screen.getByText("No purchase needed"));
+  assert.ok(screen.getByText("One-time purchase"));
+  assert.ok(screen.getByText("Will be separate from Lifetime Private."));
+  assert.ok(screen.getByText("Free and Lifetime Private work without an account."));
+  assert.ok(screen.getByText("Lifetime Private is a one-time purchase."));
+  assert.ok(screen.getByText("Family Sync is optional and coming later."));
   assert.ok(screen.getByText("Photos are not synced by default."));
-  assert.ok(screen.getByText("If you cancel Family Sync, your local data stays on your device."));
-  assert.ok(screen.getByText("If you already own Lifetime Private, cancelling Family Sync does not remove your Lifetime features."));
+  assert.ok(screen.getByText("Your local data stays on this device unless you choose to export it."));
 });
 
 test("PlanSyncPageContent disables the Lifetime CTA when already unlocked", () => {

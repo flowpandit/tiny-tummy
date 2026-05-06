@@ -163,7 +163,7 @@ export function History() {
           featureId="unlimited_history"
           tone="compact"
           title="Last 7 days stay free"
-          description="Unlock Premium when you need older poop, diaper, feed, sleep, symptom, growth, or milestone records for longer patterns."
+          description="Unlock Lifetime Private when you need older poop, diaper, feed, sleep, symptom, growth, or milestone records for longer patterns."
         />
       )}
 

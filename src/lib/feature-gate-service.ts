@@ -56,6 +56,7 @@ export type FeatureIdentifier = FeatureId | LegacyPremiumFeatureId;
 
 export const ENTITLEMENT_IDS = [
   "free",
+  /** @deprecated Legacy local trial entitlement. It no longer grants private features. */
   "trial",
   "lifetime_private",
   "report_pack",
@@ -179,7 +180,7 @@ const FEATURE_DEFINITIONS: Record<FeatureId, FeatureDefinition> = {
   unlimited_history: {
     id: "unlimited_history",
     category: "private_lifetime",
-    label: "Premium history",
+    label: "Lifetime history",
     title: "Unlock full poop and diaper history",
     description: "Search older days, use longer ranges, and keep the whole care timeline available when patterns matter.",
     requiredEntitlement: "lifetime_private",
@@ -187,7 +188,7 @@ const FEATURE_DEFINITIONS: Record<FeatureId, FeatureDefinition> = {
   pediatrician_report: {
     id: "pediatrician_report",
     category: "private_lifetime",
-    label: "Premium report",
+    label: "Lifetime report",
     title: "Unlock doctor-ready reports",
     description: "Create private PDFs with poop, diaper, feeding, symptoms, and timeline context for pediatrician visits.",
     requiredEntitlement: "lifetime_private",
@@ -195,7 +196,7 @@ const FEATURE_DEFINITIONS: Record<FeatureId, FeatureDefinition> = {
   advanced_report_modes: {
     id: "advanced_report_modes",
     category: "private_lifetime",
-    label: "Premium reports",
+    label: "Lifetime reports",
     title: "Unlock advanced report modes",
     description: "Prepare focused report modes for pediatrician visits, tummy reviews, and longer health context.",
     requiredEntitlement: "lifetime_private",
@@ -221,7 +222,7 @@ const FEATURE_DEFINITIONS: Record<FeatureId, FeatureDefinition> = {
   export_backup: {
     id: "export_backup",
     category: "private_lifetime",
-    label: "Premium backup",
+    label: "Lifetime backup",
     title: "Unlock local backup export",
     description: "Export a private device backup when you want to keep a copy outside the app.",
     requiredEntitlement: "lifetime_private",
@@ -229,7 +230,7 @@ const FEATURE_DEFINITIONS: Record<FeatureId, FeatureDefinition> = {
   import_backup: {
     id: "import_backup",
     category: "private_lifetime",
-    label: "Premium import",
+    label: "Lifetime import",
     title: "Unlock local backup import",
     description: "Import a Tiny Tummy backup into this local app without using an account.",
     requiredEntitlement: "lifetime_private",
@@ -237,7 +238,7 @@ const FEATURE_DEFINITIONS: Record<FeatureId, FeatureDefinition> = {
   csv_export: {
     id: "csv_export",
     category: "private_lifetime",
-    label: "Premium CSV",
+    label: "Lifetime CSV",
     title: "Unlock CSV export",
     description: "Export local records as CSV when you need a spreadsheet-friendly copy.",
     requiredEntitlement: "lifetime_private",
@@ -245,7 +246,7 @@ const FEATURE_DEFINITIONS: Record<FeatureId, FeatureDefinition> = {
   multi_child: {
     id: "multi_child",
     category: "private_lifetime",
-    label: "Premium family",
+    label: "Lifetime family",
     title: "Unlock multi-child tracking",
     description: "Keep private logs for every child without accounts, ads, cloud storage, or subscriptions.",
     requiredEntitlement: "lifetime_private",
@@ -271,7 +272,7 @@ const FEATURE_DEFINITIONS: Record<FeatureId, FeatureDefinition> = {
   advanced_trends: {
     id: "advanced_trends",
     category: "private_lifetime",
-    label: "Premium trends",
+    label: "Lifetime trends",
     title: "Unlock advanced patterns",
     description: "See poop, diaper, feed, and sleep trends beyond today so changes are easier to explain.",
     requiredEntitlement: "lifetime_private",
@@ -279,7 +280,7 @@ const FEATURE_DEFINITIONS: Record<FeatureId, FeatureDefinition> = {
   stool_photo_capture: {
     id: "stool_photo_capture",
     category: "private_lifetime",
-    label: "Premium photos",
+    label: "Lifetime photos",
     title: "Unlock private stool photos",
     description: "Add poop and diaper photos to your on-device log so visual changes are easier to compare.",
     requiredEntitlement: "lifetime_private",
@@ -287,7 +288,7 @@ const FEATURE_DEFINITIONS: Record<FeatureId, FeatureDefinition> = {
   smart_reminders: {
     id: "smart_reminders",
     category: "private_lifetime",
-    label: "Premium reminders",
+    label: "Lifetime reminders",
     title: "Unlock smart check-ins",
     description: "Get local no-poop, stool-color follow-up, and active episode reminders without sending data anywhere.",
     requiredEntitlement: "lifetime_private",
@@ -428,11 +429,6 @@ function baseEntitlementsFromState(entitlement: EntitlementState | null): Curren
     return base;
   }
 
-  if (entitlement?.kind === "trial_expired") {
-    return base;
-  }
-
-  base.push({ id: "trial", source: "trial", stateKind: entitlement?.kind ?? "derived" });
   return base;
 }
 
@@ -454,24 +450,15 @@ function buildCurrentEntitlements(
   return uniqueEntitlements(entitlements);
 }
 
-function hasEntitlement(entitlements: readonly CurrentEntitlement[], entitlementId: EntitlementId): boolean {
-  return entitlements.some((entitlement) => entitlement.id === entitlementId);
-}
-
 function grantsFeature(entitlementId: EntitlementId, featureId: FeatureId): boolean {
   const definition = FEATURE_DEFINITIONS[featureId];
 
   if (definition.requiredEntitlement === "free") {
     return entitlementId === "free"
-      || entitlementId === "trial"
       || entitlementId === "lifetime_private"
       || entitlementId === "family_lifetime"
       || entitlementId === "developer_override"
       || entitlementId === "store_entitlement";
-  }
-
-  if (entitlementId === "trial") {
-    return definition.category === "private_lifetime";
   }
 
   if (entitlementId === "lifetime_private" || entitlementId === "store_entitlement" || entitlementId === "developer_override") {
@@ -508,7 +495,6 @@ function findGrantingEntitlement(
   const priority: EntitlementId[] = [
     "free",
     "developer_override",
-    "trial",
     "lifetime_private",
     "store_entitlement",
     "family_lifetime",
@@ -597,7 +583,7 @@ export class FeatureGateService {
       requiredEntitlement: definition.requiredEntitlement,
       reason: "missing_entitlement",
       upgradeMessage: definition.description,
-      source: hasEntitlement(entitlements, "trial") ? "trial" : "free",
+      source: "free",
     };
   }
 

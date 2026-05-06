@@ -12,12 +12,14 @@ const LEGACY_TRIAL_STARTED_AT_KEY = "app_first_launched_at";
 const LEGACY_PREMIUM_UNLOCKED_KEY = "app_is_premium";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
-const CLOCK_ROLLBACK_TOLERANCE_MS = 5 * 60 * 1000;
 
 export type PremiumPlatform = "apple" | "google" | "debug" | "unknown";
 
 export type EntitlementState =
+  | { kind: "free"; daysRemaining: 0; trialStartedAt: string | null }
+  /** @deprecated Legacy local trial state. Production access treats this as Free. */
   | { kind: "trial_active"; daysRemaining: number; trialStartedAt: string }
+  /** @deprecated Legacy local trial state. Production access treats this as Free. */
   | { kind: "trial_expired"; daysRemaining: 0; trialStartedAt: string }
   | { kind: "premium_unlocked"; daysRemaining: number; platform: PremiumPlatform; productId: string | null; trialStartedAt: string | null };
 
@@ -48,17 +50,7 @@ function hasLifetimePrivateStoredUnlock(input: {
   return isLifetimePrivateStoreProductId(storedProductId);
 }
 
-async function updateLastSeenAt(now: Date, existingLastSeenAt: string | null): Promise<void> {
-  const nextLastSeenAt = now.toISOString();
-  const previousLastSeen = parseStoredDate(existingLastSeenAt);
-
-  if (previousLastSeen && now.getTime() + CLOCK_ROLLBACK_TOLERANCE_MS < previousLastSeen.getTime()) {
-    return;
-  }
-
-  await setSetting(TRIAL_LAST_SEEN_AT_KEY, nextLastSeenAt);
-}
-
+/** @deprecated Legacy local trial bootstrap retained for dev reset tools only. */
 export async function ensureTrialStarted(now = new Date()): Promise<string> {
   let trialStartedAt = await getSetting(TRIAL_STARTED_AT_KEY);
   const legacyTrialStartedAt = await getSetting(LEGACY_TRIAL_STARTED_AT_KEY);
@@ -72,24 +64,24 @@ export async function ensureTrialStarted(now = new Date()): Promise<string> {
   return trialStartedAt ?? now.toISOString();
 }
 
-export async function getEntitlementState(now = new Date()): Promise<EntitlementState> {
+export async function getEntitlementState(_now = new Date()): Promise<EntitlementState> {
   const [
     premiumUnlockedRaw,
     premiumPlatformRaw,
     premiumProductId,
     existingTrialStartedAt,
-    existingLastSeenAt,
+    legacyTrialStartedAt,
   ] = await Promise.all([
     getSetting(PREMIUM_UNLOCKED_KEY),
     getSetting(PREMIUM_PLATFORM_KEY),
     getSetting(PREMIUM_PRODUCT_ID_KEY),
     getSetting(TRIAL_STARTED_AT_KEY),
-    getSetting(TRIAL_LAST_SEEN_AT_KEY),
+    getSetting(LEGACY_TRIAL_STARTED_AT_KEY),
   ]);
   const legacyPremiumUnlocked = await getSetting(LEGACY_PREMIUM_UNLOCKED_KEY);
-
-  const trialStartedAt = await ensureTrialStarted(now);
-  await updateLastSeenAt(now, existingLastSeenAt);
+  const legacyStartedAt = parseStoredDate(existingTrialStartedAt)?.toISOString()
+    ?? parseStoredDate(legacyTrialStartedAt)?.toISOString()
+    ?? null;
 
   const isPremiumUnlocked = hasLifetimePrivateStoredUnlock({
     premiumUnlockedRaw,
@@ -107,24 +99,14 @@ export async function getEntitlementState(now = new Date()): Promise<Entitlement
       daysRemaining: TRIAL_LENGTH_DAYS,
       platform: (premiumPlatformRaw as PremiumPlatform | null) ?? "unknown",
       productId: premiumProductId,
-      trialStartedAt: existingTrialStartedAt ?? trialStartedAt,
-    };
-  }
-
-  const daysRemaining = getTrialDaysRemainingFromStart(trialStartedAt, now);
-
-  if (daysRemaining === 0) {
-    return {
-      kind: "trial_expired",
-      daysRemaining: 0,
-      trialStartedAt,
+      trialStartedAt: legacyStartedAt,
     };
   }
 
   return {
-    kind: "trial_active",
-    daysRemaining,
-    trialStartedAt,
+    kind: "free",
+    daysRemaining: 0,
+    trialStartedAt: legacyStartedAt,
   };
 }
 

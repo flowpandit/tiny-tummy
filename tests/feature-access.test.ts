@@ -95,21 +95,26 @@ test("free user access map keeps core local and compatibility-free features avai
   assert.equal(service.canUseFeature("family_sync"), false);
 });
 
-test("trial and lifetime private access unlock current private features without sync", () => {
-  assert.equal(getAccessKind(trialActive), "trial");
-  assert.equal(getAccessKind(premiumUnlocked), "premium");
+test("legacy trial state is treated as Free and does not unlock private features", () => {
+  assert.equal(getAccessKind(trialActive), "free");
 
   const trialService = createFeatureGateService(trialActive);
-  const lifetimeService = createFeatureGateService(premiumUnlocked);
 
-  assert.equal(trialService.canUseFeature("unlimited_history"), true);
-  assert.equal(trialService.canUseFeature("pediatrician_report"), true);
-  assert.equal(trialService.canUseFeature("advanced_report_modes"), true);
-  assert.equal(trialService.canUseFeature("multi_child"), true);
-  assert.equal(trialService.canUseFeature("advanced_trends"), true);
-  assert.equal(trialService.canUseFeature("stool_photo_capture"), true);
-  assert.equal(trialService.canUseFeature("smart_reminders"), true);
+  assert.equal(trialService.canUseFeature("poop_logging"), true);
+  assert.equal(trialService.canUseFeature("unlimited_history"), false);
+  assert.equal(trialService.canUseFeature("pediatrician_report"), false);
+  assert.equal(trialService.canUseFeature("advanced_report_modes"), false);
+  assert.equal(trialService.canUseFeature("multi_child"), false);
+  assert.equal(trialService.canUseFeature("advanced_trends"), false);
+  assert.equal(trialService.canUseFeature("stool_photo_capture"), false);
+  assert.equal(trialService.canUseFeature("smart_reminders"), false);
   assert.equal(trialService.canUseFeature("family_sync"), false);
+});
+
+test("lifetime private access unlocks current private features without sync", () => {
+  assert.equal(getAccessKind(premiumUnlocked), "premium");
+
+  const lifetimeService = createFeatureGateService(premiumUnlocked);
 
   assert.equal(lifetimeService.canUseFeature("unlimited_history"), true);
   assert.equal(lifetimeService.canUseFeature("pediatrician_report"), true);
@@ -133,7 +138,7 @@ test("expired trials become free basic and legacy premium wrappers remain compat
 
   for (const featureId of PREMIUM_FEATURE_IDS) {
     assert.equal(canUsePremiumFeature(trialExpired, featureId), false);
-    assert.equal(canUsePremiumFeature(trialActive, featureId), true);
+    assert.equal(canUsePremiumFeature(trialActive, featureId), false);
     assert.equal(canUsePremiumFeature(premiumUnlocked, featureId), true);
   }
 
@@ -210,8 +215,8 @@ test("feature access explains required entitlement and source", () => {
   assert.match(freeReportAccess.upgradeMessage, /PDFs/);
 
   const trialReportAccess = getFeatureAccess(trialActive, "pediatrician_report");
-  assert.equal(trialReportAccess.allowed, true);
-  assert.equal(trialReportAccess.source, "trial");
+  assert.equal(trialReportAccess.allowed, false);
+  assert.equal(trialReportAccess.source, "free");
 
   const debugPremium: EntitlementState = {
     ...premiumUnlocked,
@@ -239,15 +244,16 @@ test("report and handoff helpers map to clean feature ids", () => {
   assert.equal(getReportFeatureIdForMode("caregiver_handoff"), "caregiver_handoff_pdf");
 });
 
-test("offline default access stays compatible during entitlement loading", () => {
+test("offline default access stays Free during entitlement loading", () => {
   const service = createFeatureGateService(null);
   const entitlements = service.getCurrentEntitlements().map((entitlement) => entitlement.id);
 
-  assert.deepEqual(entitlements, ["free", "trial"]);
-  assert.equal(canUseFeature(null, "pediatrician_report"), true);
+  assert.deepEqual(entitlements, ["free"]);
+  assert.equal(canUseFeature(null, "pediatrician_report"), false);
   assert.equal(service.canUseFeature("family_sync"), false);
   assert.ok(service.listEnabledFeatures().includes("poop_logging"));
   assert.ok(service.listLockedFeatures().includes("family_sync"));
+  assert.ok(service.listLockedFeatures().includes("pediatrician_report"));
 });
 
 test("free plan keeps the first-created child available and locks later children", () => {
@@ -256,7 +262,8 @@ test("free plan keeps the first-created child available and locks later children
   assert.equal(getFirstFreeChild(children)?.id, "child-1");
   assert.equal(canAccessChild("child-1", children, trialExpired), true);
   assert.equal(canAccessChild("child-2", children, trialExpired), false);
-  assert.equal(canAccessChild("child-2", children, trialActive), true);
+  assert.equal(canAccessChild("child-2", children, trialActive), false);
+  assert.equal(canAccessChild("child-2", children, premiumUnlocked), true);
   assert.equal(getAllowedActiveChildId("child-2", children, trialExpired), "child-1");
 });
 

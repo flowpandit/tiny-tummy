@@ -140,8 +140,8 @@ export function DiaperLogForm({
                   <PremiumInlineLock
                     featureId="stool_photo_capture"
                     tone="compact"
-                    title="Photos are Premium"
-                    description="Wet and dirty diaper logging stays free. Unlock Premium when you want private stool photos saved with entries."
+                    title="Photos are in Lifetime Private"
+                    description="Wet and dirty diaper logging stays free. Unlock Lifetime Private when you want private stool photos saved with entries."
                     actionLabel="Unlock photos"
                   />
                 ) : (

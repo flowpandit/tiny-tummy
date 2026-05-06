@@ -33,6 +33,7 @@ import {
 import {
   DEVELOPER_FEATURE_ENTITLEMENT_PRESETS,
 } from "../../lib/developer-feature-entitlements";
+import { getSettingsAccessCopy } from "../../lib/access-plan-copy";
 import type { EntitlementId } from "../../lib/feature-access";
 import type { BillingPurchaseResult } from "../../lib/billing/types";
 import type { Child, TemperatureUnit, UnitSystem } from "../../lib/types";
@@ -350,7 +351,7 @@ export function NotificationSection({ children }: { children: Child[] }) {
             featureId="smart_reminders"
             tone="compact"
             title="Daily reminders stay free"
-            description="Unlock Premium for local no-poop, red-flag stool color, and active episode follow-up reminders."
+            description="Unlock Lifetime Private for local no-poop, red-flag stool color, and active episode follow-up reminders."
             actionLabel="Unlock smart reminders"
           />
         </div>
@@ -551,21 +552,12 @@ export function RecordsSupportSection() {
 }
 
 export function AccessSection() {
-  const { accessKind, daysRemaining, isLocked } = useTrialAccess();
+  const { accessKind } = useTrialAccess();
   const { restorePremium } = useTrialActions();
   const { showError, showInfo, showSuccess } = useToast();
   const navigate = useNavigate();
   const isPremium = accessKind === "premium";
-  const accessTitle = isPremium
-    ? "Lifetime Private is unlocked"
-    : isLocked
-      ? "Free plan is active"
-      : "14-day full trial active";
-  const accessDetail = isPremium
-    ? "Full local tracking, reports, backup/export, and multi-child support stay available without a subscription."
-    : isLocked
-      ? "Useful local tracking stays free. Lifetime Private unlocks the full local app forever."
-      : "Try the full local app before deciding. After the trial, useful local tracking remains free.";
+  const accessCopy = getSettingsAccessCopy(accessKind);
 
   const handleRestore = async () => {
     try {
@@ -613,16 +605,11 @@ export function AccessSection() {
           </span>
           <div className="relative min-w-0">
             <p className="text-[0.92rem] font-bold leading-tight tracking-[-0.02em] text-[var(--color-text)] md:text-[1rem]">
-              {accessTitle}
+              {accessCopy.title}
             </p>
             <p className="mt-0.5 text-[0.74rem] leading-snug text-[var(--color-text-secondary)] md:text-[0.84rem]">
-              {accessDetail}
+              {accessCopy.detail}
             </p>
-            {!isLocked && !isPremium && (
-              <p className="mt-0.5 text-[0.68rem] font-semibold text-[var(--color-text-soft)] md:text-[0.74rem]">
-                {daysRemaining} day{daysRemaining === 1 ? "" : "s"} left in trial
-              </p>
-            )}
           </div>
         </div>
         <div className="relative mt-3 flex gap-2 md:mt-0 md:shrink-0">
@@ -670,7 +657,7 @@ export function DeveloperToolsSection({
   onSetDeveloperEntitlements: (entitlements: readonly EntitlementId[]) => Promise<void> | void;
   onClearDeveloperEntitlements: () => Promise<void> | void;
 }) {
-  const { daysRemaining, developerEntitlements, isLocked } = useTrialAccess();
+  const { accessKind, developerEntitlements } = useTrialAccess();
   const { showError, showSuccess } = useToast();
 
   if (!import.meta.env.DEV) {
@@ -685,6 +672,10 @@ export function DeveloperToolsSection({
       showError(error instanceof Error ? error.message : "Developer tool action failed.");
     }
   };
+
+  const accessStateLabel = accessKind === "premium"
+    ? "Lifetime Private"
+    : "Free plan";
 
   const formatSimulatedEntitlements = () => {
     if (developerEntitlements.length === 0) return "None";
@@ -705,7 +696,10 @@ export function DeveloperToolsSection({
         <CardContent className="flex flex-col gap-3 py-3">
           <p className="text-xs text-[var(--color-text-secondary)]">These tools only appear during local development.</p>
           <p className="rounded-[var(--radius-sm)] bg-[var(--color-alert)]/8 px-3 py-2 text-xs text-[var(--color-text)]">
-            Current access state: {isLocked ? "Trial expired" : `${daysRemaining} day${daysRemaining === 1 ? "" : "s"} left in trial`}
+            Current access state: {accessStateLabel}
+          </p>
+          <p className="rounded-[var(--radius-sm)] bg-[var(--color-alert)]/8 px-3 py-2 text-xs text-[var(--color-text)]">
+            Legacy trial tools only write deprecated local keys. They no longer unlock Lifetime Private features.
           </p>
           <p className="rounded-[var(--radius-sm)] bg-[var(--color-alert)]/8 px-3 py-2 text-xs text-[var(--color-text)]">
             Feature simulation: {formatSimulatedEntitlements()}
@@ -714,46 +708,46 @@ export function DeveloperToolsSection({
             variant="secondary"
             className="w-full border border-[var(--color-alert)]/30 text-[var(--color-alert)] hover:bg-[var(--color-alert)]/10"
             onClick={() => {
-              void runAction(onResetTrial, "Trial reset to today.");
+              void runAction(onResetTrial, "Legacy trial start key written. Access remains Free unless Lifetime Private is unlocked.");
             }}
           >
-            Reset Trial To Today
+            Write Legacy Trial Start
           </Button>
           <Button
             variant="secondary"
             className="w-full border border-[var(--color-alert)]/30 text-[var(--color-alert)] hover:bg-[var(--color-alert)]/10"
             onClick={() => {
-              void runAction(() => onSetTrialDaysAgo(13), "Trial set to 13 days ago.");
+              void runAction(() => onSetTrialDaysAgo(13), "Legacy trial start key moved back 13 days. Access remains Free unless Lifetime Private is unlocked.");
             }}
           >
-            Set Trial To 13 Days Ago
+            Write Legacy Trial Start 13 Days Ago
           </Button>
           <Button
             variant="secondary"
             className="w-full border border-[var(--color-alert)]/30 text-[var(--color-alert)] hover:bg-[var(--color-alert)]/10"
             onClick={() => {
-              void runAction(onSimulateExpiration, "Trial expired. Settings stays available by design.");
+              void runAction(onSimulateExpiration, "Legacy expired-trial keys written. Access remains Free unless Lifetime Private is unlocked.");
             }}
           >
-            Simulate Trial Expiration
+            Write Legacy Expired Trial
           </Button>
           <Button
             variant="secondary"
             className="w-full border border-[var(--color-alert)]/30 text-[var(--color-alert)] hover:bg-[var(--color-alert)]/10"
             onClick={() => {
-              void runAction(onClearPremium, "Premium unlock cleared.");
+              void runAction(onClearPremium, "Lifetime Private unlock cleared.");
             }}
           >
-            Clear Premium Unlock
+            Clear Lifetime Private Unlock
           </Button>
           <Button
             variant="secondary"
             className="w-full border border-[var(--color-alert)]/30 text-[var(--color-alert)] hover:bg-[var(--color-alert)]/10"
             onClick={() => {
-              void runAction(onSimulatePremiumUnlock, "Premium unlock simulated.");
+              void runAction(onSimulatePremiumUnlock, "Lifetime Private unlock simulated.");
             }}
           >
-            Simulate Premium Unlock
+            Simulate Lifetime Private Unlock
           </Button>
           <Button
             variant="secondary"

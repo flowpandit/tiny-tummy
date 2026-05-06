@@ -5,8 +5,8 @@ import { LIFETIME_PRIVATE_PRODUCT_ID } from "../src/lib/billing/products.ts";
 import type { BillingAdapter, BillingPlatform, BillingPurchaseResult, BillingResultCode } from "../src/lib/billing/types.ts";
 import type { EntitlementState, PremiumPlatform } from "../src/lib/entitlements.ts";
 
-const expiredTrial: EntitlementState = {
-  kind: "trial_expired",
+const freeAccess: EntitlementState = {
+  kind: "free",
   daysRemaining: 0,
   trialStartedAt: "2026-04-01T00:00:00.000Z",
 };
@@ -54,7 +54,7 @@ function createTestService(input: {
   const writes: Array<{ platform: PremiumPlatform; productId?: string | null }> = [];
   const dependencies: BillingServiceDependencies = {
     getBillingAdapter: () => input.adapter,
-    getEntitlementState: async () => input.entitlement ?? expiredTrial,
+    getEntitlementState: async () => input.entitlement ?? freeAccess,
     isDesktopDevBillingSimulation: () => input.desktopDev ?? false,
     markPremiumUnlocked: async (write) => {
       writes.push(write);

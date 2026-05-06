@@ -40,7 +40,7 @@ Examples:
 - summaries and insight calculations
 - grouping and sorting timeline items
 - chart/view-model shaping
-- trial and entitlement calculations
+- entitlement and deprecated trial-key calculations
 
 Components should render prepared values, not invent them inline.
 

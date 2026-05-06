@@ -29,7 +29,6 @@ interface ComparisonRow {
 }
 
 export interface PlanSyncPageContentProps {
-  daysRemaining?: number;
   isLifetimeUnlocked?: boolean;
   isProcessing?: boolean;
   featureLabel?: string | null;
@@ -43,7 +42,7 @@ const planCards: readonly PlanCardDefinition[] = [
   {
     key: "free",
     title: "Free",
-    subtitle: "Try Tiny Tummy privately",
+    subtitle: "Private local tracking, no account",
     price: "$0",
     bullets: [
       "Poop, diaper, feed & sleep logs",
@@ -75,8 +74,8 @@ const planCards: readonly PlanCardDefinition[] = [
   {
     key: "sync",
     title: "Family Sync",
-    subtitle: "Optional subscription for shared care",
-    price: "$2.99/mo or $24.99/yr",
+    subtitle: "Future optional shared care",
+    price: "Coming later",
     badge: "Coming later",
     bullets: [
       "Everything in Lifetime while subscribed",
@@ -93,36 +92,30 @@ const planCards: readonly PlanCardDefinition[] = [
 const comparisonRows: readonly ComparisonRow[] = [
   {
     choice: "Free",
-    localAccess: "Free local features",
-    syncAccess: "No Family Sync",
-    cancellation: "Not applicable",
+    localAccess: "Useful local tracking",
+    syncAccess: "Coming later",
+    cancellation: "No purchase needed",
   },
   {
     choice: "Lifetime Private",
     localAccess: "Full local app forever",
     syncAccess: "No Family Sync",
-    cancellation: "Not applicable",
+    cancellation: "One-time purchase",
   },
   {
-    choice: "Family Sync from Free",
-    localAccess: "Full app while subscribed",
-    syncAccess: "Sync enabled",
-    cancellation: "Returns to Free limits if cancelled. Local data stays on device.",
-  },
-  {
-    choice: "Lifetime Private + Family Sync",
-    localAccess: "Full local app forever",
-    syncAccess: "Sync enabled",
-    cancellation: "Keeps Lifetime if cancelled. Only sync turns off.",
+    choice: "Family Sync",
+    localAccess: "Future add-on",
+    syncAccess: "Not available yet",
+    cancellation: "Will be separate from Lifetime Private.",
   },
 ];
 
 const trustNotes = [
-  "Tiny Tummy works privately without Family Sync.",
-  "Family Sync is optional.",
+  "Free and Lifetime Private work without an account.",
+  "Lifetime Private is a one-time purchase.",
+  "Family Sync is optional and coming later.",
   "Photos are not synced by default.",
-  "If you cancel Family Sync, your local data stays on your device.",
-  "If you already own Lifetime Private, cancelling Family Sync does not remove your Lifetime features.",
+  "Your local data stays on this device unless you choose to export it.",
 ] as const;
 
 function CheckIcon({ className }: { className?: string }) {
@@ -255,7 +248,6 @@ function ComparisonCard({ row }: { row: ComparisonRow }) {
 }
 
 export function PlanSyncPageContent({
-  daysRemaining = 14,
   isLifetimeUnlocked = false,
   isProcessing = false,
   featureLabel,
@@ -285,7 +277,7 @@ export function PlanSyncPageContent({
             <div className="min-w-0">
               <p className="truncate text-xl font-semibold tracking-[-0.03em]">Tiny Tummy</p>
               <p className="text-sm text-[var(--color-text-secondary)]">
-                {daysRemaining > 0 ? `${daysRemaining} day${daysRemaining === 1 ? "" : "s"} left in trial` : "Free plan active"}
+                {isLifetimeUnlocked ? "Lifetime Private unlocked" : "Free plan active"}
               </p>
             </div>
           </div>
@@ -307,7 +299,7 @@ export function PlanSyncPageContent({
         >
           <div className="max-w-3xl">
             <span className="inline-flex items-center rounded-full border border-[var(--color-border)] bg-[var(--color-surface-strong)] px-3 py-1.5 text-[0.78rem] font-bold text-[var(--color-text-secondary)]">
-              {featureLabel ?? "Continue tracking with one purchase"}
+              {featureLabel ?? "Free now. Lifetime Private when you need more."}
             </span>
             <h1 id="plan-sync-title" className="mt-4 max-w-[13ch] text-[2.3rem] font-extrabold leading-[0.98] tracking-[-0.06em] text-[var(--color-text)] md:text-[3.4rem]">
               Choose how Tiny Tummy works for your family
@@ -333,10 +325,10 @@ export function PlanSyncPageContent({
             <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
               <div>
                 <h2 id="plan-comparison-title" className="text-[1.2rem] font-extrabold tracking-[-0.03em] text-[var(--color-text)]">
-                  What happens later
+                  Plan access
                 </h2>
                 <p className="mt-1 max-w-[42rem] text-[0.84rem] leading-6 text-[var(--color-text-secondary)]">
-                  Family Sync is separate because cloud sync has ongoing server and security costs.
+                  Free is the private preview experience. Lifetime Private unlocks the full local app. Family Sync is not available yet.
                 </p>
               </div>
               {onRestore && (
@@ -349,7 +341,7 @@ export function PlanSyncPageContent({
                 </button>
               )}
             </div>
-            <div className="mt-3 grid gap-2 md:grid-cols-4">
+            <div className="mt-3 grid gap-2 md:grid-cols-3">
               {comparisonRows.map((row) => (
                 <ComparisonCard key={row.choice} row={row} />
               ))}
@@ -373,7 +365,7 @@ export function PlanSyncPageContent({
 export function PlanSync() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { daysRemaining, accessKind } = useTrialAccess();
+  const { accessKind } = useTrialAccess();
   const { restorePremium, unlockPremium } = useTrialActions();
   const { showError, showInfo, showSuccess } = useToast();
   const [isProcessing, setIsProcessing] = useState(false);
@@ -424,7 +416,6 @@ export function PlanSync() {
 
   return (
     <PlanSyncPageContent
-      daysRemaining={daysRemaining}
       isLifetimeUnlocked={isLifetimeUnlocked}
       isProcessing={isProcessing}
       featureLabel={featureCopy?.label}

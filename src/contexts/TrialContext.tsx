@@ -66,7 +66,7 @@ export function useTrialAccess() {
   const hasFullPlanAccess = hasFullAccess(entitlement);
   const isFreeBasic = accessKind === "free";
   const isLocked = isFreeBasic;
-  const daysRemaining = entitlement?.daysRemaining ?? 14;
+  const daysRemaining = entitlement?.daysRemaining ?? 0;
 
   return useMemo(() => ({
     entitlement,

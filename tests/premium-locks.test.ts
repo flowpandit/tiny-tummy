@@ -8,6 +8,7 @@ import { PremiumInlineLock } from "../src/components/billing/PremiumLocks.tsx";
 import { getUnlockNavigationState } from "../src/lib/unlock-navigation.ts";
 import { SmartReminderRows } from "../src/components/settings/SmartReminderRows.tsx";
 import { HistoryRangeSelector } from "../src/components/history/HistoryRangeSelector.tsx";
+import { PlanSyncPageContent } from "../src/pages/PlanSync.tsx";
 
 afterEach(() => {
   cleanup();
@@ -79,12 +80,12 @@ test("HistoryRangeSelector disables premium ranges for free basic users", () => 
   }));
 
   fireEvent.click(screen.getByRole("button", { name: "7d" }));
-  fireEvent.click(screen.getByRole("button", { name: "14d requires Premium" }));
-  fireEvent.click(screen.getByRole("button", { name: "30d requires Premium" }));
+  fireEvent.click(screen.getByRole("button", { name: "14d requires Lifetime Private" }));
+  fireEvent.click(screen.getByRole("button", { name: "30d requires Lifetime Private" }));
 
   assert.deepEqual(selected, [7]);
-  assert.equal(screen.getByRole("button", { name: "14d requires Premium" }).hasAttribute("disabled"), true);
-  assert.equal(screen.getByRole("button", { name: "30d requires Premium" }).hasAttribute("disabled"), true);
+  assert.equal(screen.getByRole("button", { name: "14d requires Lifetime Private" }).hasAttribute("disabled"), true);
+  assert.equal(screen.getByRole("button", { name: "30d requires Lifetime Private" }).hasAttribute("disabled"), true);
 });
 
 test("SmartReminderRows locks smart reminder switches for free basic users", () => {
@@ -106,5 +107,29 @@ test("SmartReminderRows locks smart reminder switches for free basic users", () 
 
   assert.equal(noPoopSwitch.hasAttribute("disabled"), true);
   assert.deepEqual(toggled, []);
-  assert.ok(screen.getAllByText("Premium reminders").length >= 1);
+  assert.ok(screen.getAllByText("Lifetime reminders").length >= 1);
+});
+
+test("PlanSyncPageContent presents Free, Lifetime Private, and Family Sync without trial copy", () => {
+  const { container } = render(React.createElement(PlanSyncPageContent, {
+    isLifetimeUnlocked: false,
+    onClose: () => {},
+  }));
+
+  assert.ok(screen.getAllByText("Free").length >= 1);
+  assert.ok(screen.getAllByText("Lifetime Private").length >= 1);
+  assert.ok(screen.getAllByText("Family Sync").length >= 1);
+  assert.ok(screen.getAllByText("Coming later").length >= 1);
+  assert.ok(screen.getByText("Free plan active"));
+  assert.doesNotMatch(container.textContent ?? "", /trial/i);
+});
+
+test("PlanSyncPageContent shows unlocked Lifetime Private state without trial days", () => {
+  const { container } = render(React.createElement(PlanSyncPageContent, {
+    isLifetimeUnlocked: true,
+    onClose: () => {},
+  }));
+
+  assert.ok(screen.getByText("Lifetime Private unlocked"));
+  assert.doesNotMatch(container.textContent ?? "", /trial|days remaining|days left/i);
 });

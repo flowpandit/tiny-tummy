@@ -24,7 +24,7 @@ export function PremiumBadge({
   featureId?: FeatureIdentifier;
   className?: string;
 }) {
-  const label = featureId ? getPremiumFeatureCopy(featureId).label : "Premium";
+  const label = featureId ? getPremiumFeatureCopy(featureId).label : "Lifetime Private";
 
   return (
     <span className={cn(

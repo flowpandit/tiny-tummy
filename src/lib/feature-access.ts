@@ -35,7 +35,7 @@ export {
 export const PREMIUM_FEATURE_IDS = LEGACY_PREMIUM_FEATURE_IDS;
 
 export type PremiumFeatureId = LegacyPremiumFeatureId;
-export type AccessKind = "trial" | "premium" | "free";
+export type AccessKind = "premium" | "free";
 
 export function isPremiumFeatureId(value: unknown): value is FeatureIdentifier {
   return isFeatureIdentifier(value);
@@ -43,12 +43,11 @@ export function isPremiumFeatureId(value: unknown): value is FeatureIdentifier {
 
 export function getAccessKind(entitlement: EntitlementState | null): AccessKind {
   if (entitlement?.kind === "premium_unlocked") return "premium";
-  if (entitlement?.kind === "trial_expired") return "free";
-  return "trial";
+  return "free";
 }
 
 export function hasFullAccess(entitlement: EntitlementState | null): boolean {
-  return getAccessKind(entitlement) !== "free";
+  return getAccessKind(entitlement) === "premium";
 }
 
 export function getFeatureAccess(

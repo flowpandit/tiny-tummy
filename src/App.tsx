@@ -100,7 +100,7 @@ function AppRoutes() {
 
     const loadingParts = [
       isLoading ? "children" : null,
-      isTrialLoading ? "trial" : null,
+      isTrialLoading ? "access" : null,
     ].filter(Boolean).join(" + ");
 
     return <StartupSetupScreen loadingParts={loadingParts} loadingForMs={loadingForMs} />;

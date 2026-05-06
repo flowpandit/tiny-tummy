@@ -53,7 +53,7 @@ export function Dashboard() {
 
         <PremiumInlineLock
           featureId="advanced_trends"
-          title="Advanced trends are Premium"
+          title="Advanced trends are in Lifetime Private"
           description="Today views and basic logging stay free. Unlock charts and pattern reads when you want to compare poop, diaper, feed, and sleep changes over time."
           actionLabel="Unlock trends"
         />

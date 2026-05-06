@@ -102,7 +102,7 @@ test("unknown stored product ID does not unlock", async () => {
   }, async () => {
     const entitlement = await getEntitlementState(NOW);
 
-    assert.equal(entitlement.kind, "trial_expired");
+    assert.equal(entitlement.kind, "free");
   });
 });
 
@@ -115,7 +115,7 @@ test("future Family Sync product ID does not unlock Lifetime Private", async () 
   }, async () => {
     const entitlement = await getEntitlementState(NOW);
 
-    assert.equal(entitlement.kind, "trial_expired");
+    assert.equal(entitlement.kind, "free");
   });
 });
 
@@ -137,15 +137,26 @@ test("markPremiumUnlocked writes Lifetime Private store metadata and rejects wro
   });
 });
 
-test("trial bookkeeping remains separate from Lifetime Private mapping", async () => {
+test("legacy trial bookkeeping remains separate from Lifetime Private mapping", async () => {
   await withSettingsDb({
     [TRIAL_STARTED_AT_KEY]: EXPIRED_TRIAL_START,
   }, async (db) => {
     const entitlement = await getEntitlementState(NOW);
 
-    assert.equal(entitlement.kind, "trial_expired");
+    assert.equal(entitlement.kind, "free");
     assert.equal(db.settings.has(PREMIUM_UNLOCKED_KEY), false);
     assert.equal(db.settings.has(PREMIUM_PRODUCT_ID_KEY), false);
-    assert.equal(db.settings.has(TRIAL_LAST_SEEN_AT_KEY), true);
+    assert.equal(db.settings.has(TRIAL_LAST_SEEN_AT_KEY), false);
+  });
+});
+
+test("free entitlement does not create new trial keys", async () => {
+  await withSettingsDb({}, async (db) => {
+    const entitlement = await getEntitlementState(NOW);
+
+    assert.equal(entitlement.kind, "free");
+    assert.equal(entitlement.trialStartedAt, null);
+    assert.equal(db.settings.has(TRIAL_STARTED_AT_KEY), false);
+    assert.equal(db.settings.has(TRIAL_LAST_SEEN_AT_KEY), false);
   });
 });

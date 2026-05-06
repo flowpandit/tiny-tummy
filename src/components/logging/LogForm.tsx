@@ -128,8 +128,8 @@ export function LogForm({ open, onClose, childId, onLogged, initialDraft = null 
                 <PremiumInlineLock
                   featureId="stool_photo_capture"
                   tone="compact"
-                  title="Photos are Premium"
-                  description="Keep logging poop for free. Unlock Premium when you want private stool photos saved with entries."
+                  title="Photos are in Lifetime Private"
+                  description="Keep logging poop for free. Unlock Lifetime Private when you want private stool photos saved with entries."
                   actionLabel="Unlock photos"
                 />
               ) : (
