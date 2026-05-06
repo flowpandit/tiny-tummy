@@ -87,21 +87,15 @@ fn get_warning_threshold(age_weeks: i64, feeding_type: &str) -> f64 {
 
 fn get_normal_description(age_weeks: i64, feeding_type: &str) -> String {
     match (age_weeks, feeding_type) {
-        (0..=5, "breast") => {
-            "Breastfed newborns typically poop 3-12 times per day".to_string()
-        }
-        (0..=5, _) => {
-            "Formula-fed newborns typically poop 1-4 times per day".to_string()
-        }
+        (0..=5, "breast") => "Breastfed newborns typically poop 3-12 times per day".to_string(),
+        (0..=5, _) => "Formula-fed newborns typically poop 1-4 times per day".to_string(),
         (6..=25, "breast") => {
             "Breastfed babies at this age can normally go up to 7 days between poops".to_string()
         }
         (6..=25, _) => {
             "Formula-fed babies at this age typically poop 1-3 times per day".to_string()
         }
-        (26..=51, _) => {
-            "Babies 6-12 months typically poop 1-3 times per day".to_string()
-        }
+        (26..=51, _) => "Babies 6-12 months typically poop 1-3 times per day".to_string(),
         (52..=155, _) => "Toddlers typically poop 1-2 times per day".to_string(),
         _ => "Normal frequency varies by age".to_string(),
     }
@@ -114,7 +108,12 @@ pub fn get_status_for_child(
 ) -> (String, String) {
     let dob = match NaiveDate::parse_from_str(dob, "%Y-%m-%d") {
         Ok(d) => d,
-        Err(_) => return ("unknown".to_string(), "Unable to determine status".to_string()),
+        Err(_) => {
+            return (
+                "unknown".to_string(),
+                "Unable to determine status".to_string(),
+            )
+        }
     };
 
     let age_weeks = (Utc::now().date_naive() - dob).num_days() / 7;

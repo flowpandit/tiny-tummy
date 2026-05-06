@@ -38,7 +38,7 @@ warn_if_java_is_not_17() {
     echo "         Then rerun:"
     echo "           ./scripts/setup-android.sh"
     echo "           cd src-tauri/gen/android"
-    echo "           ./gradlew :app:compileDebugKotlin"
+    echo "           ./gradlew :app:compileUniversalDebugKotlin"
   else
     echo "  ✓ Java 17 detected ($JAVA_VERSION)"
   fi

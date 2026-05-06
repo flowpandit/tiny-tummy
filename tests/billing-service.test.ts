@@ -1,8 +1,19 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { createBillingService, type BillingServiceDependencies } from "../src/lib/billing-service.ts";
-import { LIFETIME_PRIVATE_PRODUCT_ID } from "../src/lib/billing/products.ts";
-import type { BillingAdapter, BillingPlatform, BillingPurchaseResult, BillingResultCode } from "../src/lib/billing/types.ts";
+import {
+  FAMILY_SYNC_MONTHLY_PRODUCT_ID,
+  LIFETIME_PRIVATE_FALLBACK_LOCALIZED_PRICE,
+  LIFETIME_PRIVATE_PRODUCT_ID,
+  createLifetimePrivateProductMetadata,
+} from "../src/lib/billing/products.ts";
+import type {
+  BillingAdapter,
+  BillingPlatform,
+  BillingProductMetadata,
+  BillingPurchaseResult,
+  BillingResultCode,
+} from "../src/lib/billing/types.ts";
 import type { EntitlementState, PremiumPlatform } from "../src/lib/entitlements.ts";
 
 const freeAccess: EntitlementState = {
@@ -30,8 +41,23 @@ function billingResult(input: {
   };
 }
 
-function createAdapter(resultByMethod: Partial<Record<keyof BillingAdapter, BillingPurchaseResult>>): BillingAdapter {
+function productMetadata(input?: Parameters<typeof createLifetimePrivateProductMetadata>[0]): BillingProductMetadata {
+  return createLifetimePrivateProductMetadata(input);
+}
+
+function createAdapter(resultByMethod: {
+  purchasePremium?: BillingPurchaseResult;
+  restorePremium?: BillingPurchaseResult;
+  checkOwnedPremium?: BillingPurchaseResult;
+  getProductMetadata?: BillingProductMetadata;
+}): BillingAdapter {
   const fallback = billingResult({ code: "failed", ok: false, message: "Unexpected adapter call." });
+  const fallbackMetadata = productMetadata({
+    source: "fallback",
+    available: false,
+    errorCode: "failed",
+    message: "Unexpected metadata call.",
+  });
 
   return {
     async purchasePremium() {
@@ -42,6 +68,9 @@ function createAdapter(resultByMethod: Partial<Record<keyof BillingAdapter, Bill
     },
     async checkOwnedPremium() {
       return resultByMethod.checkOwnedPremium ?? fallback;
+    },
+    async getProductMetadata() {
+      return resultByMethod.getProductMetadata ?? fallbackMetadata;
     },
   };
 }
@@ -83,6 +112,9 @@ test("purchase success queries canonical Lifetime Private and writes store entit
     },
     async checkOwnedPremium() {
       throw new Error("sync should not be called");
+    },
+    async getProductMetadata() {
+      throw new Error("metadata should not be called");
     },
   };
   const { service, writes } = createTestService({ adapter });
@@ -257,4 +289,117 @@ test("startup ownership sync ignores pending or wrong products", async () => {
   });
   await wrongProduct.service.syncOwnedPurchase();
   assert.deepEqual(wrongProduct.writes, []);
+});
+
+test("product metadata success queries only canonical Lifetime Private and does not unlock", async () => {
+  let requestedProductId: string | null = null;
+  const adapter: BillingAdapter = {
+    async purchasePremium() {
+      throw new Error("purchase should not be called");
+    },
+    async restorePremium() {
+      throw new Error("restore should not be called");
+    },
+    async checkOwnedPremium() {
+      throw new Error("sync should not be called");
+    },
+    async getProductMetadata(productId) {
+      requestedProductId = productId;
+      return productMetadata({
+        source: "store",
+        localizedPrice: "A$22.99",
+        currencyCode: "AUD",
+        rawPriceMicros: "22990000",
+        rawPrice: 22.99,
+        available: true,
+      });
+    },
+  };
+  const { service, writes } = createTestService({ adapter });
+
+  const metadata = await service.getLifetimePrivateProduct();
+
+  assert.equal(requestedProductId, LIFETIME_PRIVATE_PRODUCT_ID);
+  assert.equal(metadata.source, "store");
+  assert.equal(metadata.localizedPrice, "A$22.99");
+  assert.equal(metadata.currencyCode, "AUD");
+  assert.equal(metadata.rawPriceMicros, "22990000");
+  assert.deepEqual(writes, []);
+});
+
+test("unavailable product metadata falls back without granting entitlement", async () => {
+  const { service, writes } = createTestService({
+    adapter: createAdapter({
+      getProductMetadata: productMetadata({
+        source: "fallback",
+        available: false,
+        errorCode: "product_unavailable",
+        message: "Store product missing.",
+      }),
+    }),
+  });
+
+  const metadata = await service.getLifetimePrivateProduct();
+
+  assert.equal(metadata.localizedPrice, LIFETIME_PRIVATE_FALLBACK_LOCALIZED_PRICE);
+  assert.equal(metadata.available, false);
+  assert.equal(metadata.source, "fallback");
+  assert.equal(metadata.errorCode, "product_unavailable");
+  assert.deepEqual(writes, []);
+});
+
+test("desktop development product metadata uses fallback without a store query", async () => {
+  let metadataCalls = 0;
+  const adapter: BillingAdapter = {
+    async purchasePremium() {
+      throw new Error("purchase should not be called");
+    },
+    async restorePremium() {
+      throw new Error("restore should not be called");
+    },
+    async checkOwnedPremium() {
+      throw new Error("sync should not be called");
+    },
+    async getProductMetadata() {
+      metadataCalls += 1;
+      throw new Error("metadata should not be called");
+    },
+  };
+  const { service, writes } = createTestService({ adapter, desktopDev: true });
+
+  const metadata = await service.getLifetimePrivateProduct();
+
+  assert.equal(metadata.localizedPrice, LIFETIME_PRIVATE_FALLBACK_LOCALIZED_PRICE);
+  assert.equal(metadata.source, "desktop_dev");
+  assert.equal(metadata.available, true);
+  assert.equal(metadataCalls, 0);
+  assert.deepEqual(writes, []);
+});
+
+test("wrong product metadata requests are rejected and Family Sync is not queried", async () => {
+  let metadataCalls = 0;
+  const adapter: BillingAdapter = {
+    async purchasePremium() {
+      throw new Error("purchase should not be called");
+    },
+    async restorePremium() {
+      throw new Error("restore should not be called");
+    },
+    async checkOwnedPremium() {
+      throw new Error("sync should not be called");
+    },
+    async getProductMetadata() {
+      metadataCalls += 1;
+      throw new Error("Family Sync product metadata should not be queried");
+    },
+  };
+  const { service, writes } = createTestService({ adapter });
+
+  const metadata = await service.getProductMetadata(FAMILY_SYNC_MONTHLY_PRODUCT_ID);
+
+  assert.equal(metadata.productId, FAMILY_SYNC_MONTHLY_PRODUCT_ID);
+  assert.equal(metadata.available, false);
+  assert.equal(metadata.errorCode, "product_unavailable");
+  assert.equal(metadataCalls, 0);
+  assert.deepEqual(writes, []);
 });

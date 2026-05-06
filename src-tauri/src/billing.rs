@@ -16,6 +16,8 @@ pub struct BillingHandle<R: Runtime>(pub PluginHandle<R>);
 #[cfg(target_os = "ios")]
 tauri::ios_plugin_binding!(init_plugin_billing);
 
+const LIFETIME_PRIVATE_PRODUCT_ID: &str = "com.tinytummy.lifetime_private";
+
 #[cfg(any(target_os = "android", target_os = "ios"))]
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -34,12 +36,78 @@ pub struct BillingPluginResponse {
     pub message: Option<String>,
 }
 
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BillingProductMetadataResponse {
+    pub ok: bool,
+    #[serde(default)]
+    pub code: Option<String>,
+    pub product_id: Option<String>,
+    pub title: Option<String>,
+    pub description: Option<String>,
+    pub localized_price: Option<String>,
+    pub currency_code: Option<String>,
+    pub raw_price_micros: Option<String>,
+    pub raw_price: Option<f64>,
+    pub available: bool,
+    pub message: Option<String>,
+}
+
 fn unsupported_response(message: &str) -> BillingPluginResponse {
     BillingPluginResponse {
         ok: false,
         code: Some("unavailable".to_string()),
         restored: false,
         product_id: None,
+        message: Some(message.to_string()),
+    }
+}
+
+fn is_supported_product_id(product_id: &str) -> bool {
+    product_id == LIFETIME_PRIVATE_PRODUCT_ID
+}
+
+fn unsupported_product_response(message: &str) -> BillingPluginResponse {
+    BillingPluginResponse {
+        ok: false,
+        code: Some("product_unavailable".to_string()),
+        restored: false,
+        product_id: None,
+        message: Some(message.to_string()),
+    }
+}
+
+fn unsupported_metadata_response(
+    product_id: String,
+    message: &str,
+) -> BillingProductMetadataResponse {
+    BillingProductMetadataResponse {
+        ok: false,
+        code: Some("product_unavailable".to_string()),
+        product_id: Some(product_id),
+        title: None,
+        description: None,
+        localized_price: None,
+        currency_code: None,
+        raw_price_micros: None,
+        raw_price: None,
+        available: false,
+        message: Some(message.to_string()),
+    }
+}
+
+fn unavailable_metadata_response(message: &str) -> BillingProductMetadataResponse {
+    BillingProductMetadataResponse {
+        ok: false,
+        code: Some("unavailable".to_string()),
+        product_id: Some(LIFETIME_PRIVATE_PRODUCT_ID.to_string()),
+        title: None,
+        description: None,
+        localized_price: None,
+        currency_code: None,
+        raw_price_micros: None,
+        raw_price: None,
+        available: false,
         message: Some(message.to_string()),
     }
 }
@@ -72,6 +140,12 @@ pub async fn billing_purchase_premium<R: Runtime>(
     app: tauri::AppHandle<R>,
     product_id: String,
 ) -> Result<BillingPluginResponse, String> {
+    if !is_supported_product_id(&product_id) {
+        return Ok(unsupported_product_response(
+            "Tiny Tummy only supports the Lifetime Private billing product.",
+        ));
+    }
+
     #[cfg(any(target_os = "android", target_os = "ios"))]
     {
         let handle = app.state::<BillingHandle<R>>();
@@ -86,7 +160,9 @@ pub async fn billing_purchase_premium<R: Runtime>(
     #[cfg(not(any(target_os = "android", target_os = "ios")))]
     {
         let _ = (app, product_id);
-        Ok(unsupported_response("Mobile billing is only available on iOS and Android store builds."))
+        Ok(unsupported_response(
+            "Mobile billing is only available on iOS and Android store builds.",
+        ))
     }
 }
 
@@ -95,6 +171,12 @@ pub async fn billing_restore_premium<R: Runtime>(
     app: tauri::AppHandle<R>,
     product_id: String,
 ) -> Result<BillingPluginResponse, String> {
+    if !is_supported_product_id(&product_id) {
+        return Ok(unsupported_product_response(
+            "Tiny Tummy only supports the Lifetime Private billing product.",
+        ));
+    }
+
     #[cfg(any(target_os = "android", target_os = "ios"))]
     {
         let handle = app.state::<BillingHandle<R>>();
@@ -109,7 +191,9 @@ pub async fn billing_restore_premium<R: Runtime>(
     #[cfg(not(any(target_os = "android", target_os = "ios")))]
     {
         let _ = (app, product_id);
-        Ok(unsupported_response("Mobile restore is only available on iOS and Android store builds."))
+        Ok(unsupported_response(
+            "Mobile restore is only available on iOS and Android store builds.",
+        ))
     }
 }
 
@@ -118,6 +202,12 @@ pub async fn billing_check_owned_premium<R: Runtime>(
     app: tauri::AppHandle<R>,
     product_id: String,
 ) -> Result<BillingPluginResponse, String> {
+    if !is_supported_product_id(&product_id) {
+        return Ok(unsupported_product_response(
+            "Tiny Tummy only supports the Lifetime Private billing product.",
+        ));
+    }
+
     #[cfg(any(target_os = "android", target_os = "ios"))]
     {
         let handle = app.state::<BillingHandle<R>>();
@@ -132,6 +222,40 @@ pub async fn billing_check_owned_premium<R: Runtime>(
     #[cfg(not(any(target_os = "android", target_os = "ios")))]
     {
         let _ = (app, product_id);
-        Ok(unsupported_response("Mobile ownership sync is only available on iOS and Android store builds."))
+        Ok(unsupported_response(
+            "Mobile ownership sync is only available on iOS and Android store builds.",
+        ))
+    }
+}
+
+#[tauri::command]
+pub async fn billing_get_product_metadata<R: Runtime>(
+    app: tauri::AppHandle<R>,
+    product_id: String,
+) -> Result<BillingProductMetadataResponse, String> {
+    if !is_supported_product_id(&product_id) {
+        return Ok(unsupported_metadata_response(
+            product_id,
+            "Tiny Tummy only supports Lifetime Private store metadata.",
+        ));
+    }
+
+    #[cfg(any(target_os = "android", target_os = "ios"))]
+    {
+        let handle = app.state::<BillingHandle<R>>();
+        return handle
+            .0
+            .run_mobile_plugin::<BillingProductMetadataResponse>(
+                "getProductMetadata",
+                BillingProductPayload { product_id },
+            )
+            .map_err(|e: tauri::plugin::mobile::PluginInvokeError| e.to_string());
+    }
+    #[cfg(not(any(target_os = "android", target_os = "ios")))]
+    {
+        let _ = (app, product_id);
+        Ok(unavailable_metadata_response(
+            "Mobile store product metadata is only available on iOS and Android store builds.",
+        ))
     }
 }

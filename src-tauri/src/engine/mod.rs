@@ -1,5 +1,5 @@
-pub mod normal_range;
 pub mod guidance;
+pub mod normal_range;
 
 pub struct ChildInfo {
     pub name: String,

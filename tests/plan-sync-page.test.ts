@@ -17,9 +17,27 @@ test("PlanSyncPageContent renders Free, Lifetime Private, and Family Sync plan s
   assert.ok(screen.getAllByRole("heading", { name: "Lifetime Private" }).length >= 1);
   assert.ok(screen.getAllByRole("heading", { name: "Family Sync" }).length >= 1);
   assert.ok(screen.getByText("$0"));
-  assert.ok(screen.getByText("$14.99 once"));
+  assert.ok(screen.getByText("$14.99 USD once"));
   assert.ok(screen.getAllByText("Coming later").length >= 1);
   assert.ok(screen.getByText("Recommended"));
+});
+
+test("PlanSyncPageContent displays localized Lifetime Private store price", () => {
+  render(React.createElement(PlanSyncPageContent, {
+    lifetimePriceLabel: "A$22.99 once",
+  }));
+
+  assert.ok(screen.getByText("A$22.99 once"));
+});
+
+test("PlanSyncPageContent uses stable one-time copy while price is loading", () => {
+  render(React.createElement(PlanSyncPageContent, {
+    lifetimePriceLabel: "One-time purchase",
+    isLifetimePriceLoading: true,
+  }));
+
+  const priceCopy = screen.getAllByText("One-time purchase")[0];
+  assert.equal(priceCopy.getAttribute("aria-busy"), "true");
 });
 
 test("PlanSyncPageContent makes Lifetime the payment trigger and keeps sync unavailable", () => {

@@ -36,6 +36,7 @@ class BillingPlugin(private val activity: Activity) : Plugin(activity), Purchase
         const val CODE_PRODUCT_UNAVAILABLE = "product_unavailable"
         const val CODE_NO_PURCHASE_FOUND = "no_purchase_found"
         const val CODE_FAILED = "failed"
+        const val LIFETIME_PRIVATE_PRODUCT_ID = "com.tinytummy.lifetime_private"
     }
 
     private val billingClient: BillingClient = BillingClient.newBuilder(activity)
@@ -49,6 +50,11 @@ class BillingPlugin(private val activity: Activity) : Plugin(activity), Purchase
     @Command
     fun purchasePremium(invoke: Invoke) {
         val args = invoke.parseArgs(BillingProductArgs::class.java)
+        if (!isSupportedProductId(args.productId)) {
+            invoke.resolve(errorResult(CODE_PRODUCT_UNAVAILABLE, "Tiny Tummy only supports the Lifetime Private billing product."))
+            return
+        }
+
         withReadyClient(invoke) {
             val params = QueryProductDetailsParams.newBuilder()
                 .setProductList(
@@ -100,6 +106,11 @@ class BillingPlugin(private val activity: Activity) : Plugin(activity), Purchase
     @Command
     fun restorePremium(invoke: Invoke) {
         val args = invoke.parseArgs(BillingProductArgs::class.java)
+        if (!isSupportedProductId(args.productId)) {
+            invoke.resolve(errorResult(CODE_PRODUCT_UNAVAILABLE, "Tiny Tummy only supports the Lifetime Private billing product."))
+            return
+        }
+
         queryOwnedPurchase(args.productId) { ownedResult ->
             val purchase = ownedResult.purchase
             if (purchase == null) {
@@ -122,6 +133,11 @@ class BillingPlugin(private val activity: Activity) : Plugin(activity), Purchase
     @Command
     fun checkOwnedPremium(invoke: Invoke) {
         val args = invoke.parseArgs(BillingProductArgs::class.java)
+        if (!isSupportedProductId(args.productId)) {
+            invoke.resolve(errorResult(CODE_PRODUCT_UNAVAILABLE, "Tiny Tummy only supports the Lifetime Private billing product."))
+            return
+        }
+
         queryOwnedPurchase(args.productId) { ownedResult ->
             val purchase = ownedResult.purchase
             if (purchase == null) {
@@ -138,6 +154,48 @@ class BillingPlugin(private val activity: Activity) : Plugin(activity), Purchase
                     invoke.resolve(errorResult(CODE_FAILED, message))
                 },
             )
+        }
+    }
+
+    @Command
+    fun getProductMetadata(invoke: Invoke) {
+        val args = invoke.parseArgs(BillingProductArgs::class.java)
+        if (!isSupportedProductId(args.productId)) {
+            invoke.resolve(metadataErrorResult(args.productId, CODE_PRODUCT_UNAVAILABLE, "Tiny Tummy only supports Lifetime Private store metadata."))
+            return
+        }
+
+        withReadyClient(
+            invoke = null,
+            onUnavailable = { code, message ->
+                invoke.resolve(metadataErrorResult(args.productId, code, message))
+            },
+        ) {
+            val params = QueryProductDetailsParams.newBuilder()
+                .setProductList(
+                    listOf(
+                        QueryProductDetailsParams.Product.newBuilder()
+                            .setProductId(args.productId)
+                            .setProductType(BillingClient.ProductType.INAPP)
+                            .build()
+                    )
+                )
+                .build()
+
+            billingClient.queryProductDetailsAsync(params) { billingResult, productDetailsList ->
+                if (!billingResult.isOk()) {
+                    invoke.resolve(metadataErrorResult(args.productId, codeForBillingResult(billingResult), "Unable to load Google Play product details."))
+                    return@queryProductDetailsAsync
+                }
+
+                val productDetails = productDetailsList.firstOrNull { product -> product.productId == args.productId }
+                if (productDetails == null) {
+                    invoke.resolve(metadataErrorResult(args.productId, CODE_PRODUCT_UNAVAILABLE, "Lifetime Private is not available in Google Play yet."))
+                    return@queryProductDetailsAsync
+                }
+
+                invoke.resolve(productMetadataResult(productDetails))
+            }
         }
     }
 
@@ -312,6 +370,43 @@ class BillingPlugin(private val activity: Activity) : Plugin(activity), Purchase
         return result
     }
 
+    private fun productMetadataResult(productDetails: ProductDetails): JSObject {
+        val offerDetails = productDetails.oneTimePurchaseOfferDetails
+        if (offerDetails == null) {
+            return metadataErrorResult(productDetails.productId, CODE_PRODUCT_UNAVAILABLE, "Lifetime Private does not have a Google Play purchase offer yet.")
+        }
+
+        val result = JSObject()
+        result.put("ok", true)
+        result.put("code", CODE_SUCCESS)
+        result.put("productId", productDetails.productId)
+        result.put("title", productDetails.title)
+        result.put("description", productDetails.description)
+        result.put("localizedPrice", offerDetails.formattedPrice)
+        result.put("currencyCode", offerDetails.priceCurrencyCode)
+        result.put("rawPriceMicros", offerDetails.priceAmountMicros.toString())
+        result.put("rawPrice", offerDetails.priceAmountMicros.toDouble() / 1_000_000.0)
+        result.put("available", true)
+        result.put("message", "Google Play Lifetime Private metadata loaded.")
+        return result
+    }
+
+    private fun metadataErrorResult(productId: String, code: String, message: String): JSObject {
+        val result = JSObject()
+        result.put("ok", false)
+        result.put("code", code)
+        result.put("productId", productId)
+        result.put("title", JSONObject.NULL)
+        result.put("description", JSONObject.NULL)
+        result.put("localizedPrice", JSONObject.NULL)
+        result.put("currencyCode", JSONObject.NULL)
+        result.put("rawPriceMicros", JSONObject.NULL)
+        result.put("rawPrice", JSONObject.NULL)
+        result.put("available", false)
+        result.put("message", message)
+        return result
+    }
+
     private fun errorResult(code: String, message: String): JSObject {
         val result = JSObject()
         result.put("ok", false)
@@ -320,6 +415,10 @@ class BillingPlugin(private val activity: Activity) : Plugin(activity), Purchase
         result.put("productId", JSONObject.NULL)
         result.put("message", message)
         return result
+    }
+
+    private fun isSupportedProductId(productId: String): Boolean {
+        return productId == LIFETIME_PRIVATE_PRODUCT_ID
     }
 
     private fun BillingResult.isOk(): Boolean {

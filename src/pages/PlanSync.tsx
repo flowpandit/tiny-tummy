@@ -5,7 +5,13 @@ import { Button } from "../components/ui/button";
 import { Logo } from "../components/ui/Logo";
 import { useToast } from "../components/ui/toast";
 import { useTrialAccess, useTrialActions } from "../contexts/TrialContext";
+import { useLifetimePrivateProductMetadata } from "../hooks/useLifetimePrivateProductMetadata";
 import { cn } from "../lib/cn";
+import {
+  LIFETIME_PRIVATE_LOADING_PRICE_LABEL,
+  createLifetimePrivateProductMetadata,
+  formatLifetimePrivatePrice,
+} from "../lib/billing";
 import { getPremiumFeatureCopy } from "../lib/premium-feature-copy";
 import { getUnlockNavigationState } from "../lib/unlock-navigation";
 import type { BillingPurchaseResult } from "../lib/billing/types";
@@ -33,10 +39,14 @@ export interface PlanSyncPageContentProps {
   isProcessing?: boolean;
   featureLabel?: string | null;
   featureDescription?: string | null;
+  lifetimePriceLabel?: string;
+  isLifetimePriceLoading?: boolean;
   onUnlockLifetime?: () => void;
   onRestore?: () => void;
   onClose?: () => void;
 }
+
+const FALLBACK_LIFETIME_PRICE_LABEL = formatLifetimePrivatePrice(createLifetimePrivateProductMetadata());
 
 const planCards: readonly PlanCardDefinition[] = [
   {
@@ -58,7 +68,7 @@ const planCards: readonly PlanCardDefinition[] = [
     key: "lifetime",
     title: "Lifetime Private",
     subtitle: "Full local app, one-time purchase",
-    price: "$14.99 once",
+    price: LIFETIME_PRIVATE_LOADING_PRICE_LABEL,
     badge: "Recommended",
     bullets: [
       "Everything in Free",
@@ -129,11 +139,15 @@ function CheckIcon({ className }: { className?: string }) {
 function PlanCard({
   card,
   isLifetimeUnlocked,
+  lifetimePriceLabel,
+  isLifetimePriceLoading,
   isProcessing,
   onUnlockLifetime,
 }: {
   card: PlanCardDefinition;
   isLifetimeUnlocked: boolean;
+  lifetimePriceLabel: string;
+  isLifetimePriceLoading: boolean;
   isProcessing: boolean;
   onUnlockLifetime?: () => void;
 }) {
@@ -174,8 +188,15 @@ function PlanCard({
         <p className="text-[0.82rem] leading-snug text-[var(--color-text-secondary)]">
           {card.subtitle}
         </p>
-        <p className="pt-2 text-[1.5rem] font-extrabold leading-none tracking-[-0.04em] text-[var(--color-text)]">
-          {card.price}
+        <p
+          className={cn(
+            "min-h-[1.5rem] pt-2 text-[1.5rem] font-extrabold leading-none tracking-[-0.04em] text-[var(--color-text)]",
+            isLifetimePriceLoading && isLifetime && "text-[var(--color-text-secondary)]",
+          )}
+          aria-live={isLifetime ? "polite" : undefined}
+          aria-busy={isLifetime ? isLifetimePriceLoading : undefined}
+        >
+          {isLifetime ? lifetimePriceLabel : card.price}
         </p>
       </div>
 
@@ -252,6 +273,8 @@ export function PlanSyncPageContent({
   isProcessing = false,
   featureLabel,
   featureDescription,
+  lifetimePriceLabel = FALLBACK_LIFETIME_PRICE_LABEL,
+  isLifetimePriceLoading = false,
   onUnlockLifetime,
   onRestore,
   onClose,
@@ -315,6 +338,8 @@ export function PlanSyncPageContent({
                 key={card.key}
                 card={card}
                 isLifetimeUnlocked={isLifetimeUnlocked}
+                lifetimePriceLabel={lifetimePriceLabel}
+                isLifetimePriceLoading={isLifetimePriceLoading}
                 isProcessing={isProcessing}
                 onUnlockLifetime={onUnlockLifetime}
               />
@@ -369,6 +394,7 @@ export function PlanSync() {
   const { restorePremium, unlockPremium } = useTrialActions();
   const { showError, showInfo, showSuccess } = useToast();
   const [isProcessing, setIsProcessing] = useState(false);
+  const lifetimeProduct = useLifetimePrivateProductMetadata();
   const unlockState = getUnlockNavigationState(location.state);
   const featureCopy = unlockState.featureId ? getPremiumFeatureCopy(unlockState.featureId) : null;
   const isLifetimeUnlocked = accessKind === "premium";
@@ -420,6 +446,8 @@ export function PlanSync() {
       isProcessing={isProcessing}
       featureLabel={featureCopy?.label}
       featureDescription={featureCopy?.description}
+      lifetimePriceLabel={lifetimeProduct.priceLabel}
+      isLifetimePriceLoading={lifetimeProduct.isLoading}
       onUnlockLifetime={() => {
         void handleUnlock();
       }}

@@ -1,11 +1,13 @@
 import { getEntitlementState, markPremiumUnlocked } from "./entitlements";
 import {
   LIFETIME_PRIVATE_PRODUCT_ID,
+  createLifetimePrivateProductMetadata,
+  createRejectedProductMetadata,
   getBillingAdapter,
   isCanonicalLifetimePrivateProductId,
   isDesktopDevBillingSimulation,
 } from "./billing";
-import type { BillingAdapter, BillingPlatform, BillingPurchaseResult } from "./billing/types";
+import type { BillingAdapter, BillingPlatform, BillingProductMetadata, BillingPurchaseResult } from "./billing/types";
 import type { EntitlementState, PremiumPlatform } from "./entitlements";
 
 export interface BillingServiceDependencies {
@@ -160,7 +162,47 @@ export function createBillingService(dependencies: BillingServiceDependencies) {
     });
   };
 
+  const getProductMetadata = async (productId: string): Promise<BillingProductMetadata> => {
+    if (!isCanonicalLifetimePrivateProductId(productId)) {
+      return createRejectedProductMetadata(productId, "Tiny Tummy only supports Lifetime Private store metadata.");
+    }
+
+    if (dependencies.isDesktopDevBillingSimulation()) {
+      return createLifetimePrivateProductMetadata({
+        source: "desktop_dev",
+        available: true,
+        message: "Desktop development uses fallback Lifetime Private metadata.",
+      });
+    }
+
+    const adapter = dependencies.getBillingAdapter();
+    if (!adapter) {
+      return createLifetimePrivateProductMetadata({
+        source: "fallback",
+        available: false,
+        errorCode: "unavailable",
+        message: "Store product metadata is only available on supported mobile store builds.",
+      });
+    }
+
+    try {
+      return await adapter.getProductMetadata(productId);
+    } catch (error) {
+      return createLifetimePrivateProductMetadata({
+        source: "fallback",
+        available: false,
+        errorCode: "failed",
+        message: error instanceof Error ? error.message : "Store product metadata could not be loaded.",
+      });
+    }
+  };
+
+  const getLifetimePrivateProduct = async (): Promise<BillingProductMetadata> =>
+    getProductMetadata(LIFETIME_PRIVATE_PRODUCT_ID);
+
   return {
+    getLifetimePrivateProduct,
+    getProductMetadata,
     purchasePremium,
     restorePurchases,
     syncOwnedPurchase,
@@ -176,6 +218,14 @@ const billingService = createBillingService({
 
 export async function purchasePremium(): Promise<BillingPurchaseResult> {
   return billingService.purchasePremium();
+}
+
+export async function getLifetimePrivateProduct(): Promise<BillingProductMetadata> {
+  return billingService.getLifetimePrivateProduct();
+}
+
+export async function getProductMetadata(productId: string): Promise<BillingProductMetadata> {
+  return billingService.getProductMetadata(productId);
 }
 
 export async function restorePurchases(): Promise<BillingPurchaseResult> {

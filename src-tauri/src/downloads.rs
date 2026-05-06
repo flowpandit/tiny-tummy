@@ -169,10 +169,7 @@ pub async fn open_file_from_downloads<R: Runtime>(
         let handle = app.state::<DownloadsHandle<R>>();
         return handle
             .0
-            .run_mobile_plugin::<()>(
-                "openFileFromDownloads",
-                OpenFilePayload { uri, mime_type },
-            )
+            .run_mobile_plugin::<()>("openFileFromDownloads", OpenFilePayload { uri, mime_type })
             .map_err(|e: tauri::plugin::mobile::PluginInvokeError| e.to_string());
     }
     #[cfg(not(target_os = "android"))]

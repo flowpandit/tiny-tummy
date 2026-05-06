@@ -44,7 +44,10 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
 
 /// Command callable from TypeScript via invoke("set_status_bar_style", { isLight: true })
 #[tauri::command]
-pub async fn set_status_bar_style<R: Runtime>(app: tauri::AppHandle<R>, is_light: bool) -> Result<(), String> {
+pub async fn set_status_bar_style<R: Runtime>(
+    app: tauri::AppHandle<R>,
+    is_light: bool,
+) -> Result<(), String> {
     #[cfg(target_os = "android")]
     {
         let handle = app.state::<StatusBarHandle<R>>();

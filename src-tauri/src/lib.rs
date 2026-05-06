@@ -117,6 +117,7 @@ pub fn run() {
             billing::billing_purchase_premium,
             billing::billing_restore_premium,
             billing::billing_check_owned_premium,
+            billing::billing_get_product_metadata,
             check_frequency_alert,
             check_color_alert,
             db_transaction::execute_sqlite_transaction,

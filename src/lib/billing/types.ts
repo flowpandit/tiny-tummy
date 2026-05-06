@@ -30,10 +30,41 @@ export interface NativeBillingResponse {
   message?: string | null;
 }
 
+export type BillingProductMetadataSource = "store" | "fallback" | "desktop_dev";
+
+export interface BillingProductMetadata {
+  productId: string;
+  title: string;
+  description: string;
+  localizedPrice: string;
+  currencyCode?: string;
+  rawPriceMicros?: string;
+  rawPrice?: number;
+  available: boolean;
+  source: BillingProductMetadataSource;
+  errorCode?: BillingResultCode;
+  message?: string;
+}
+
+export interface NativeBillingProductMetadataResponse {
+  ok: boolean;
+  code?: BillingResultCode | string | null;
+  productId: string | null;
+  title?: string | null;
+  description?: string | null;
+  localizedPrice?: string | null;
+  currencyCode?: string | null;
+  rawPriceMicros?: string | number | null;
+  rawPrice?: number | null;
+  available?: boolean | null;
+  message?: string | null;
+}
+
 export interface BillingAdapter {
   purchasePremium(productId: string): Promise<BillingPurchaseResult>;
   restorePremium(productId: string): Promise<BillingPurchaseResult>;
   checkOwnedPremium(productId: string): Promise<BillingPurchaseResult>;
+  getProductMetadata(productId: string): Promise<BillingProductMetadata>;
 }
 
 export function isBillingResultCode(value: unknown): value is BillingResultCode {

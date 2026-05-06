@@ -87,10 +87,7 @@ pub async fn share_json_backup<R: Runtime>(
         let handle = app.state::<ReportExportHandle<R>>();
         return handle
             .0
-            .run_mobile_plugin::<()>(
-                "shareJsonBackup",
-                ShareJsonPayload { file_name, json },
-            )
+            .run_mobile_plugin::<()>("shareJsonBackup", ShareJsonPayload { file_name, json })
             .map_err(|error: tauri::plugin::mobile::PluginInvokeError| error.to_string());
     }
     #[cfg(not(target_os = "ios"))]

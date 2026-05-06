@@ -48,11 +48,14 @@ class ReportFileActivityItemSource: NSObject, UIActivityItemSource {
 }
 
 class BillingPlugin: Plugin {
+  private let lifetimePrivateProductId = "com.tinytummy.lifetime_private"
+
   private enum BillingResultCode: String {
     case success
     case cancelled
     case pending
     case unavailable
+    case offline
     case productUnavailable = "product_unavailable"
     case noPurchaseFound = "no_purchase_found"
     case failed
@@ -60,6 +63,11 @@ class BillingPlugin: Plugin {
 
   @objc public func purchasePremium(_ invoke: Invoke) throws {
     let args = try invoke.parseArgs(BillingProductArgs.self)
+    guard isSupportedProductId(args.productId) else {
+      invoke.resolve(errorResult(code: .productUnavailable, message: "Tiny Tummy only supports the Lifetime Private billing product."))
+      return
+    }
+
     guard #available(iOS 15.0, *) else {
       invoke.resolve(errorResult(code: .unavailable, message: "In-app purchases require iOS 15 or newer on this build."))
       return
@@ -98,6 +106,11 @@ class BillingPlugin: Plugin {
 
   @objc public func restorePremium(_ invoke: Invoke) throws {
     let args = try invoke.parseArgs(BillingProductArgs.self)
+    guard isSupportedProductId(args.productId) else {
+      invoke.resolve(errorResult(code: .productUnavailable, message: "Tiny Tummy only supports the Lifetime Private billing product."))
+      return
+    }
+
     guard #available(iOS 15.0, *) else {
       invoke.resolve(errorResult(code: .unavailable, message: "In-app purchases require iOS 15 or newer on this build."))
       return
@@ -120,6 +133,11 @@ class BillingPlugin: Plugin {
 
   @objc public func checkOwnedPremium(_ invoke: Invoke) throws {
     let args = try invoke.parseArgs(BillingProductArgs.self)
+    guard isSupportedProductId(args.productId) else {
+      invoke.resolve(errorResult(code: .productUnavailable, message: "Tiny Tummy only supports the Lifetime Private billing product."))
+      return
+    }
+
     guard #available(iOS 15.0, *) else {
       invoke.resolve(errorResult(code: .unavailable, message: "In-app purchases require iOS 15 or newer on this build."))
       return
@@ -134,6 +152,49 @@ class BillingPlugin: Plugin {
         }
       } catch {
         invoke.resolve(self.errorResult(code: .failed, message: "Ownership sync could not be completed."))
+      }
+    }
+  }
+
+  @objc public func getProductMetadata(_ invoke: Invoke) throws {
+    let args = try invoke.parseArgs(BillingProductArgs.self)
+    guard isSupportedProductId(args.productId) else {
+      invoke.resolve(metadataErrorResult(
+        productId: args.productId,
+        code: .productUnavailable,
+        message: "Tiny Tummy only supports Lifetime Private store metadata."
+      ))
+      return
+    }
+
+    guard #available(iOS 15.0, *) else {
+      invoke.resolve(metadataErrorResult(
+        productId: args.productId,
+        code: .unavailable,
+        message: "App Store product metadata requires iOS 15 or newer on this build."
+      ))
+      return
+    }
+
+    Task {
+      do {
+        let products = try await Product.products(for: [args.productId])
+        guard let product = products.first(where: { $0.id == args.productId }) else {
+          invoke.resolve(self.metadataErrorResult(
+            productId: args.productId,
+            code: .productUnavailable,
+            message: "Lifetime Private is not available in the App Store yet."
+          ))
+          return
+        }
+
+        invoke.resolve(self.metadataSuccessResult(product: product))
+      } catch {
+        invoke.resolve(self.metadataErrorResult(
+          productId: args.productId,
+          code: .failed,
+          message: "App Store product metadata could not be loaded."
+        ))
       }
     }
   }
@@ -166,6 +227,10 @@ class BillingPlugin: Plugin {
     return true
   }
 
+  private func isSupportedProductId(_ productId: String) -> Bool {
+    productId == lifetimePrivateProductId
+  }
+
   @available(iOS 15.0, *)
   private func verified<T>(_ result: VerificationResult<T>) throws -> T {
     switch result {
@@ -182,6 +247,44 @@ class BillingPlugin: Plugin {
       "code": BillingResultCode.success.rawValue,
       "restored": restored,
       "productId": productId,
+      "message": message
+    ]
+  }
+
+  @available(iOS 15.0, *)
+  private func metadataSuccessResult(product: Product) -> [String: Any] {
+    let currencyCode: Any
+    if #available(iOS 16.0, *) {
+      currencyCode = Locale.current.currency?.identifier ?? NSNull()
+    } else {
+      currencyCode = NSNull()
+    }
+
+    return [
+      "ok": true,
+      "code": BillingResultCode.success.rawValue,
+      "productId": product.id,
+      "title": product.displayName,
+      "description": product.description,
+      "localizedPrice": product.displayPrice,
+      "currencyCode": currencyCode,
+      "rawPrice": NSDecimalNumber(decimal: product.price).doubleValue,
+      "available": true,
+      "message": "App Store Lifetime Private metadata loaded."
+    ]
+  }
+
+  private func metadataErrorResult(productId: String, code: BillingResultCode, message: String) -> [String: Any] {
+    [
+      "ok": false,
+      "code": code.rawValue,
+      "productId": productId,
+      "title": NSNull(),
+      "description": NSNull(),
+      "localizedPrice": NSNull(),
+      "currencyCode": NSNull(),
+      "rawPrice": NSNull(),
+      "available": false,
       "message": message
     ]
   }
