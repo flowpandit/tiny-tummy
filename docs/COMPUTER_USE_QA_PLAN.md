@@ -53,7 +53,7 @@ Primary target:
 
 Fallback target:
 
-- a release binary or packaged `.app` launched directly if `pnpm tauri dev` is not attachable by Computer Use
+- a release binary or packaged `.app` launched directly if `npm run tauri dev` is not attachable by Computer Use
 
 ### Reset Workflow
 
@@ -417,7 +417,7 @@ This plan is complete only when all of the following are true:
 ## Assumptions and Defaults
 
 - Default save location for this plan is `docs/COMPUTER_USE_QA_PLAN.md`.
-- Use the native Tauri app only; if `pnpm tauri dev` is not attachable by Computer Use, use a packaged `.app` or equivalent attachable local build.
+- Use the native Tauri app only; if `npm run tauri dev` is not attachable by Computer Use, use a packaged `.app` or equivalent attachable local build.
 - Use `TAURI_E2E_RESET=1` as the default clean-start mechanism.
 - Use the macOS app-data path only as the reset fallback.
 - Dev-only `Developer Tools` in Settings are in scope and are the approved route for legacy trial-key and Lifetime Private state testing.

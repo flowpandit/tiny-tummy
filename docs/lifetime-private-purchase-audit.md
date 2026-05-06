@@ -32,11 +32,11 @@ Mocked or dev-only behavior:
 
 Not production-ready yet:
 
-- The store product ID constant needed to move to `com.tinytummy.lifetime_private`; the old ID should remain only as legacy/dev compatibility input.
+- The store product ID constant has moved to `com.tinytummy.lifetime_private`; keep the old ID only as legacy/dev compatibility input.
 - Store product metadata is not fetched into the UI; the displayed price is hard-coded.
 - The native billing path needs real sandbox/TestFlight/internal-track verification.
-- Android billing reproducibility needs tightening: generated `src-tauri/gen/android` currently contains `BillingPlugin.kt` and `billing-ktx`, but that directory is ignored, and `scripts/setup-android.sh` does not copy the billing plugin or add the billing dependency.
-- Purchase/restore result types are too coarse for production UX: cancelled, pending, unavailable, offline, and no-owned-purchase all collapse into `ok: false` plus a message.
+- Android billing reproducibility now depends on rerunning `./scripts/setup-android.sh` after `cargo tauri android init`; the script copies `BillingPlugin.kt` from templates and injects `billing-ktx`.
+- Purchase/restore result codes now distinguish cancelled, pending, unavailable, offline, product unavailable, and no-owned-purchase states; real store testing still needs to verify those paths.
 - There are no focused unit tests for `entitlements.ts` or `billing-service.ts`.
 
 ## Lifetime Private Representation

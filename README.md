@@ -103,21 +103,21 @@ tiny-tummy/
 
 ## Prerequisites
 
-- **Node.js** >= 18
-- **Rust** >= 1.70 (install via [rustup](https://rustup.rs))
-- **npm** >= 8
+- **Node.js** 24 LTS recommended, or any version that satisfies Vite 7 (`>=20.19.0` or `>=22.12.0`)
+- **npm** 11.x; `package-lock.json` is the source-of-truth lockfile
+- **Rust** stable via [rustup](https://rustup.rs)
 
 ### For iOS builds
 
-- macOS with Xcode 15+
+- macOS with a current App Store-supported Xcode
 - Apple Developer account ($99/year)
 - iOS 16+ target
 
 ### For Android builds
 
-- Android Studio with SDK 33+ and NDK
-- Android SDK 24+ target (Android 7.0)
-- JDK 17+
+- Android Studio with SDK Platform 36 or 36.1, Android SDK Build-Tools, Android SDK Platform-Tools, Android SDK Command-line Tools, and NDK installed
+- Android min SDK 24 (Android 7.0), target SDK 36
+- JDK 17 is the safest local build JDK for the current generated AGP 8.11.x / Gradle 8.14.x project. JDK 21 can be tested, but avoid JDK 25 with this Android toolchain.
 
 ## Local Development Setup
 
@@ -134,6 +134,10 @@ npm run tauri dev
 ```
 
 This starts both the Vite dev server (frontend) and the Tauri Rust backend. A desktop window opens at 390x844 (phone-sized) for development.
+
+### Package manager
+
+Use npm for this repository. The checked-in lockfile is `package-lock.json`; do not add `pnpm-lock.yaml` or `yarn.lock` unless the project intentionally migrates package managers in a dedicated tooling change.
 
 ### Useful commands
 
@@ -175,6 +179,19 @@ Notes:
 
 ### Android
 
+Set Android environment variables before running Tauri Android commands:
+
+```bash
+export ANDROID_HOME="$HOME/Library/Android/sdk"
+export NDK_HOME="$ANDROID_HOME/ndk/$(ls -1 "$ANDROID_HOME/ndk" | tail -n 1)"
+
+# Prefer a JDK 17 install for AGP 8.11.x / Gradle 8.14.x.
+export JAVA_HOME=$(/usr/libexec/java_home -v 17)
+java -version
+```
+
+If `/usr/libexec/java_home -v 17` fails, install JDK 17 first, for example with Temurin or through your normal Java version manager. Do not use OpenJDK 25 for Android verification on the current Gradle wrapper; Gradle 8.14.x does not support running on Java 25.
+
 ```bash
 # 1. Install the Tauri CLI (one-time)
 cargo install tauri-cli
@@ -182,7 +199,9 @@ cargo install tauri-cli
 # 2. Initialize Android project (one-time per machine)
 cargo tauri android init
 
-# 3. Apply custom Android config (icons, status bar fix)
+# 3. Apply custom Android config.
+# This copies BillingPlugin.kt, StatusBarPlugin.kt, DownloadsPlugin.kt, MainActivity.kt,
+# injects billing-ktx, and regenerates Android icons.
 ./scripts/setup-android.sh
 
 # 4. Build a release APK for testing
@@ -289,11 +308,11 @@ To ensure the latest frontend changes and database optimizations are correctly i
 
 1. **Build Frontend**: Update the assets that Xcode will bundle:
    ```bash
-   pnpm build
+   npm run build
    ```
 2. **Patch Xcode Project**: Ensure signing and sandbox settings are correct:
    ```bash
-   pnpm fix:ios-xcodeproj
+   npm run fix:ios-xcodeproj
    ```
 3. **Open Xcode**:
    ```bash
@@ -322,7 +341,7 @@ If the iPad shows the default Tauri icon:
 
 1. **Regenerate Icons**:
    ```bash
-   pnpm tauri icon src-tauri/icons/icon.png
+   npx tauri icon src-tauri/icons/icon.png
    ```
 2. **Xcode Verification**:
    - Open Xcode and go to the **Assets** catalog.
@@ -405,9 +424,15 @@ The `.ipa` is generated in `src-tauri/gen/apple/build/`. Upload to [App Store Co
 
 - **Unsigned APK won't install**: Android refuses unsigned APKs with `INSTALL_PARSE_FAILED_NO_CERTIFICATES`. Either sign with `apksigner` or build debug (`--debug` flag).
 
+- **Gradle fails under OpenJDK 25**: Use JDK 17 for Android builds on the current Gradle wrapper, then rerun `./scripts/setup-android.sh` and `cargo tauri android build --apk`. Check with `java -version` and `src-tauri/gen/android/gradlew --version`.
+
+- **Billing plugin missing after regenerating Android**: `src-tauri/gen/android/` is ignored and can be recreated. Run `cargo tauri android init`, then `./scripts/setup-android.sh`; the script copies `src-tauri/android-templates/BillingPlugin.kt` and inserts `implementation("com.android.billingclient:billing-ktx:7.1.1")`.
+
 ### iOS-specific
 
 - **Safe areas**: iOS Safari WebView supports `env(safe-area-inset-top)` natively via `@supports` in CSS. No manual offsets needed.
+
+- **Billing plugin stale after regenerating iOS**: `src-tauri/gen/apple/` is ignored and can be recreated. Run `cargo tauri ios init`, then `npm run fix:ios-xcodeproj` or `./scripts/build-rust-ios.sh` so `src-tauri/ios-templates/BillingPlugin.swift` is copied into the generated Xcode sources.
 
 ### General
 
