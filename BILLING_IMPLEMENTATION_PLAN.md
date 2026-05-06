@@ -4,15 +4,16 @@
 
 Implement a production-ready access model with:
 
-- a local 14-day trial
-- a one-time premium unlock for `$9.99 USD`
+- useful Free local tracking
+- a one-time Lifetime Private unlock for `$14.99 USD`
 - no backend or recurring server dependency
 - offline-friendly restore and entitlement behavior
 - real-device testing coverage for Apple App Store and Google Play
 
 This plan assumes:
 
-- no subscription model
+- no subscription model in this implementation
+- future Family Sync remains a separate, optional subscription concept and is not queried or granted here
 - no server verification
 - acceptable low-risk exposure to device-clock abuse
 - preference for simple and reliable UX over aggressive anti-tamper
@@ -22,15 +23,14 @@ This plan assumes:
 The repo already has a temporary local trial gate:
 
 - [src/contexts/TrialContext.tsx](/Users/nikhilmehral/dev/tiny-tummy/src/contexts/TrialContext.tsx)
-- [src/components/billing/Paywall.tsx](/Users/nikhilmehral/dev/tiny-tummy/src/components/billing/Paywall.tsx)
+- [src/pages/PlanSync.tsx](/Users/nikhilmehral/dev/tiny-tummy/src/pages/PlanSync.tsx)
 
 Current limitations:
 
-- premium unlock is simulated through local settings only
-- there is no real store purchase flow
-- there is no restore flow
-- trial keys are app-specific but not organized behind a dedicated entitlement service
-- the current `TrialContext` mixes state, storage, and debug behavior
+- Lifetime Private billing is wired through a shared billing service and native mobile plugin templates
+- production purchases still need App Store / Google Play sandbox and TestFlight/internal-track validation
+- Family Sync products are documented for later only and must not unlock features in this implementation
+- the local 14-day trial remains as a follow-up simplification candidate; production should consider relying on Free instead
 
 ## Target Model
 
@@ -56,9 +56,9 @@ Suggested keys:
 
 1. On first launch, store `trial_started_at` if it does not exist.
 2. Trial length is exactly 14 days from `trial_started_at`.
-3. If `premium_unlocked === "1"`, the app is fully unlocked regardless of trial age.
+3. If `premium_unlocked === "1"` and the stored product ID is Lifetime Private or accepted legacy data, the local private app is unlocked regardless of trial age.
 4. If the trial expires and premium is not unlocked, show paywall and gate premium features.
-5. Restore purchases should re-set `premium_unlocked = "1"` locally.
+5. Restore purchases should re-set `premium_unlocked = "1"` locally only for `com.tinytummy.lifetime_private`.
 6. Once unlocked, the app must continue working offline.
 
 ### Optional Soft Clock Guard
@@ -161,7 +161,16 @@ interface BillingAdapter {
 
 Use the same product ID on both platforms if possible:
 
-- `premium_unlock`
+- `com.tinytummy.lifetime_private`
+
+Legacy compatibility input:
+
+- `premium_unlock` may be accepted only for old local/dev entitlement data.
+
+Future-only product IDs, not queried or granted yet:
+
+- `com.tinytummy.family_sync.monthly`
+- `com.tinytummy.family_sync.yearly`
 
 ### Important Rule
 
@@ -251,7 +260,7 @@ Rust side responsibilities:
 Kotlin side responsibilities:
 
 - initialize Play Billing client
-- query one-time product details for `premium_unlock`
+- query one-time product details for `com.tinytummy.lifetime_private`
 - launch billing flow
 - acknowledge completed purchases
 - query owned purchases for restore and startup sync
@@ -282,7 +291,7 @@ Rust side responsibilities:
 
 Swift side responsibilities:
 
-- fetch the `premium_unlock` product
+- fetch the `com.tinytummy.lifetime_private` product
 - purchase it via StoreKit 2
 - inspect verified transactions
 - use current entitlements or latest transactions for restore and ownership checks
@@ -337,15 +346,15 @@ Replace the Apple and Google adapter stubs with native purchase bridges while pr
 - Android adapter performs real Play Billing purchase, restore, and ownership sync
 - desktop dev still uses simulated billing when running locally
 
-## Phase D: Replace Paywall Simulation
+## Phase D: Replace Unlock Screen Simulation
 
 ### Goal
 
-Wire the existing paywall to real billing instead of the simulated unlock button.
+Wire the active unlock screen to real billing instead of a simulated unlock button.
 
 ### Files To Update
 
-- [src/components/billing/Paywall.tsx](/Users/nikhilmehral/dev/tiny-tummy/src/components/billing/Paywall.tsx)
+- [src/pages/PlanSync.tsx](/Users/nikhilmehral/dev/tiny-tummy/src/pages/PlanSync.tsx)
 - wherever the paywall is gated in app shell or routes
 
 ### Required UX
@@ -458,8 +467,8 @@ Make local QA and real-device testing fast without waiting 14 actual days.
 ### Product Setup
 
 - create a `Non-Consumable` IAP
-- product ID: `premium_unlock`
-- price: `$9.99 USD`
+- product ID: `com.tinytummy.lifetime_private`
+- price: `$14.99 USD`
 
 ### Test Environments
 
@@ -488,8 +497,8 @@ Make local QA and real-device testing fast without waiting 14 actual days.
 ### Product Setup
 
 - create a one-time product
-- product ID: `premium_unlock`
-- price: `$9.99 USD`
+- product ID: `com.tinytummy.lifetime_private`
+- price: `$14.99 USD`
 
 ### Test Environments
 
@@ -526,6 +535,7 @@ Make local QA and real-device testing fast without waiting 14 actual days.
 8. Wire Google billing.
 9. Run full real-device test matrix.
 10. Remove old simulated trial-only code paths.
+11. Decide whether to remove or reframe the local 14-day trial before production launch.
 
 ## Definition Of Done
 
@@ -534,7 +544,7 @@ Make local QA and real-device testing fast without waiting 14 actual days.
 - restore works after reinstall on both platforms
 - unlocked users retain access offline
 - no backend dependency exists
-- paywall uses real billing flow
+- PlanSync unlock screen uses real billing flow
 - settings includes restore purchases
 - dev/internal builds include entitlement debug tools
 - full device test checklist has been executed
@@ -548,6 +558,7 @@ These should be decided before implementation starts:
 3. Should export/report generation be premium-only?
 4. Should history editing be premium-only?
 5. Should there be a small grace UX after expiry, or immediate paywall?
+6. Should the local 14-day trial be removed or reframed now that Free local tracking is useful?
 
 ## Notes
 

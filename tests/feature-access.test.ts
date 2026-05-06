@@ -22,6 +22,7 @@ import {
   formatDeveloperFeatureEntitlements,
   parseDeveloperFeatureEntitlements,
 } from "../src/lib/developer-feature-entitlements.ts";
+import { LIFETIME_PRIVATE_PRODUCT_ID } from "../src/lib/billing/products.ts";
 import type { EntitlementState } from "../src/lib/entitlements.ts";
 import type { Child } from "../src/lib/types.ts";
 
@@ -41,7 +42,7 @@ const premiumUnlocked: EntitlementState = {
   kind: "premium_unlocked",
   daysRemaining: 14,
   platform: "apple",
-  productId: "premium_unlock",
+  productId: LIFETIME_PRIVATE_PRODUCT_ID,
   trialStartedAt: "2026-04-01T00:00:00.000Z",
 };
 
@@ -116,6 +117,15 @@ test("trial and lifetime private access unlock current private features without 
   assert.equal(lifetimeService.canUseFeature("import_backup"), true);
   assert.equal(lifetimeService.canUseFeature("csv_export"), true);
   assert.equal(lifetimeService.canUseFeature("family_sync"), false);
+  assert.equal(lifetimeService.canUseFeature("caregiver_invites"), false);
+  assert.equal(lifetimeService.canUseFeature("multi_device_sync"), false);
+  assert.equal(lifetimeService.canUseFeature("cloud_backup"), false);
+  assert.equal(lifetimeService.canUseFeature("shared_live_today"), false);
+  assert.equal(lifetimeService.canUseFeature("sync_subscription"), false);
+  assert.equal(
+    lifetimeService.getCurrentEntitlements().some((entitlement) => entitlement.id === "sync_addon"),
+    false,
+  );
 });
 
 test("expired trials become free basic and legacy premium wrappers remain compatible", () => {

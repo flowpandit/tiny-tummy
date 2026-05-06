@@ -447,10 +447,13 @@ See the in-app privacy policy at `/privacy` for the full text.
 
 | | iOS | Android |
 |--|-----|---------|
-| Price | 14-day free trial, then $9.99 one-time | 14-day free trial, then $9.99 one-time |
+| Price | Free local tracking, optional Lifetime Private at $14.99 USD once | Free local tracking, optional Lifetime Private at $14.99 USD once |
+| Lifetime Private product ID | `com.tinytummy.lifetime_private` | `com.tinytummy.lifetime_private` |
 | Store fee | 15% (Small Business) or 30% | 15% on first $1M |
 | Min target | iOS 16 | Android 7.0 (SDK 24) |
 | App size | ~5-10 MB | ~15-28 MB |
+
+Family Sync is a future optional subscription concept only. It is not implemented, queried, or required for Lifetime Private.
 
 App store metadata (description, keywords, screenshots) is in `APP_STORE.md`.
 

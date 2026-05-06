@@ -441,7 +441,7 @@ Make component APIs consistent, reusable, and predictable across the repo.
   [src/components/tracking/TimeSinceIndicator.tsx](/Users/nikhilmehral/dev/tiny-tummy/src/components/tracking/TimeSinceIndicator.tsx)
 - [x] Revalidated imports, lint, build, tests, and dead-code scan after the layering cleanup.
 - [x] Moved route-specific components out of overly generic layers:
-  [src/components/billing/Paywall.tsx](/Users/nikhilmehral/dev/tiny-tummy/src/components/billing/Paywall.tsx),
+  [src/pages/PlanSync.tsx](/Users/nikhilmehral/dev/tiny-tummy/src/pages/PlanSync.tsx),
   [src/components/home/NoLogsYet.tsx](/Users/nikhilmehral/dev/tiny-tummy/src/components/home/NoLogsYet.tsx)
 
 ### Exit Criteria

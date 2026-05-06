@@ -3,7 +3,18 @@ import { appleBillingAdapter } from "./apple";
 import { googleBillingAdapter } from "./google";
 import type { BillingAdapter } from "./types";
 
-export const PREMIUM_UNLOCK_PRODUCT_ID = "premium_unlock";
+export {
+  FAMILY_SYNC_MONTHLY_PRODUCT_ID,
+  FAMILY_SYNC_YEARLY_PRODUCT_ID,
+  LEGACY_PREMIUM_UNLOCK_PRODUCT_ID,
+  LIFETIME_PRIVATE_PRODUCT_ID,
+  getEntitlementForStoreProduct,
+  isCanonicalLifetimePrivateProductId,
+  isFamilySyncStoreProductId,
+  isLegacyLifetimePrivateProductId,
+  isLifetimePrivateStoreProductId,
+} from "./products";
+export type { StoreProductEntitlementId } from "./products";
 
 export function getBillingPlatform(): string {
   try {
@@ -15,7 +26,7 @@ export function getBillingPlatform(): string {
 
 export function isDesktopDevBillingSimulation(): boolean {
   const currentPlatform = getBillingPlatform();
-  return import.meta.env.DEV && ["macos", "windows", "linux"].includes(currentPlatform);
+  return Boolean(import.meta.env?.DEV) && ["macos", "windows", "linux"].includes(currentPlatform);
 }
 
 export function getBillingAdapter(): BillingAdapter | null {

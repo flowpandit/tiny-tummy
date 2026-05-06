@@ -8,6 +8,7 @@ import { useTrialAccess, useTrialActions } from "../contexts/TrialContext";
 import { cn } from "../lib/cn";
 import { getPremiumFeatureCopy } from "../lib/premium-feature-copy";
 import { getUnlockNavigationState } from "../lib/unlock-navigation";
+import type { BillingPurchaseResult } from "../lib/billing/types";
 
 type PlanKey = "free" | "lifetime" | "sync";
 
@@ -374,17 +375,30 @@ export function PlanSync() {
   const location = useLocation();
   const { daysRemaining, accessKind } = useTrialAccess();
   const { restorePremium, unlockPremium } = useTrialActions();
-  const { showError, showSuccess } = useToast();
+  const { showError, showInfo, showSuccess } = useToast();
   const [isProcessing, setIsProcessing] = useState(false);
   const unlockState = getUnlockNavigationState(location.state);
   const featureCopy = unlockState.featureId ? getPremiumFeatureCopy(unlockState.featureId) : null;
   const isLifetimeUnlocked = accessKind === "premium";
 
+  const showNonSuccessResult = (result: BillingPurchaseResult, fallback: string) => {
+    if (result.code === "cancelled") return;
+    if (result.code === "pending" || result.code === "no_purchase_found" || result.code === "unavailable" || result.code === "offline") {
+      showInfo(result.message ?? fallback);
+      return;
+    }
+    showError(result.message ?? fallback);
+  };
+
   const handleUnlock = async () => {
     if (isLifetimeUnlocked || isProcessing) return;
     setIsProcessing(true);
     try {
-      await unlockPremium();
+      const result = await unlockPremium();
+      if (!result.ok) {
+        showNonSuccessResult(result, "Purchase could not be completed.");
+        return;
+      }
       showSuccess("Lifetime Private unlocked.");
       navigate(unlockState.returnTo, { replace: true });
     } catch (error) {
@@ -396,7 +410,11 @@ export function PlanSync() {
 
   const handleRestore = async () => {
     try {
-      await restorePremium();
+      const result = await restorePremium();
+      if (!result.ok) {
+        showNonSuccessResult(result, "Restore could not be completed.");
+        return;
+      }
       showSuccess("Purchase restored.");
       navigate(unlockState.returnTo, { replace: true });
     } catch (error) {

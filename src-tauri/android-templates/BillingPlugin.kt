@@ -27,6 +27,17 @@ class BillingProductArgs {
 
 @TauriPlugin
 class BillingPlugin(private val activity: Activity) : Plugin(activity), PurchasesUpdatedListener {
+    private companion object {
+        const val CODE_SUCCESS = "success"
+        const val CODE_CANCELLED = "cancelled"
+        const val CODE_PENDING = "pending"
+        const val CODE_UNAVAILABLE = "unavailable"
+        const val CODE_OFFLINE = "offline"
+        const val CODE_PRODUCT_UNAVAILABLE = "product_unavailable"
+        const val CODE_NO_PURCHASE_FOUND = "no_purchase_found"
+        const val CODE_FAILED = "failed"
+    }
+
     private val billingClient: BillingClient = BillingClient.newBuilder(activity)
         .setListener(this)
         .enablePendingPurchases()
@@ -52,13 +63,13 @@ class BillingPlugin(private val activity: Activity) : Plugin(activity), Purchase
 
             billingClient.queryProductDetailsAsync(params) { billingResult, productDetailsList ->
                 if (!billingResult.isOk()) {
-                    invoke.resolve(errorResult("Unable to load Google Play product details."))
+                    invoke.resolve(errorResult(codeForBillingResult(billingResult), "Unable to load Google Play product details."))
                     return@queryProductDetailsAsync
                 }
 
-                val productDetails = productDetailsList.firstOrNull()
+                val productDetails = productDetailsList.firstOrNull { product -> product.productId == args.productId }
                 if (productDetails == null) {
-                    invoke.resolve(errorResult("Premium unlock is not available in Google Play yet."))
+                    invoke.resolve(errorResult(CODE_PRODUCT_UNAVAILABLE, "Lifetime Private is not available in Google Play yet."))
                     return@queryProductDetailsAsync
                 }
 
@@ -79,7 +90,7 @@ class BillingPlugin(private val activity: Activity) : Plugin(activity), Purchase
                     val launchResult = billingClient.launchBillingFlow(activity, flowParams)
                     if (!launchResult.isOk()) {
                         clearPendingPurchase()
-                        invoke.resolve(errorResult("Unable to launch Google Play purchase flow."))
+                        invoke.resolve(errorResult(codeForBillingResult(launchResult), "Unable to launch Google Play purchase flow."))
                     }
                 }
             }
@@ -89,19 +100,20 @@ class BillingPlugin(private val activity: Activity) : Plugin(activity), Purchase
     @Command
     fun restorePremium(invoke: Invoke) {
         val args = invoke.parseArgs(BillingProductArgs::class.java)
-        queryOwnedPurchase(args.productId) { purchase ->
+        queryOwnedPurchase(args.productId) { ownedResult ->
+            val purchase = ownedResult.purchase
             if (purchase == null) {
-                invoke.resolve(errorResult("No Google Play premium purchase was found to restore."))
+                invoke.resolve(errorResult(ownedResult.code, ownedResult.message))
                 return@queryOwnedPurchase
             }
 
             acknowledgeIfNeeded(
                 purchase = purchase,
                 onSuccess = {
-                    invoke.resolve(successResult(args.productId, restored = true, message = "Premium unlock restored from Google Play."))
+                    invoke.resolve(successResult(args.productId, restored = true, message = "Lifetime Private restored from Google Play."))
                 },
                 onError = { message ->
-                    invoke.resolve(errorResult(message))
+                    invoke.resolve(errorResult(CODE_FAILED, message))
                 },
             )
         }
@@ -110,19 +122,20 @@ class BillingPlugin(private val activity: Activity) : Plugin(activity), Purchase
     @Command
     fun checkOwnedPremium(invoke: Invoke) {
         val args = invoke.parseArgs(BillingProductArgs::class.java)
-        queryOwnedPurchase(args.productId) { purchase ->
+        queryOwnedPurchase(args.productId) { ownedResult ->
+            val purchase = ownedResult.purchase
             if (purchase == null) {
-                invoke.resolve(errorResult("No owned Google Play premium purchase is currently available."))
+                invoke.resolve(errorResult(ownedResult.code, ownedResult.message))
                 return@queryOwnedPurchase
             }
 
             acknowledgeIfNeeded(
                 purchase = purchase,
                 onSuccess = {
-                    invoke.resolve(successResult(args.productId, restored = true, message = "Google Play premium ownership confirmed."))
+                    invoke.resolve(successResult(args.productId, restored = true, message = "Google Play Lifetime Private ownership confirmed."))
                 },
                 onError = { message ->
-                    invoke.resolve(errorResult(message))
+                    invoke.resolve(errorResult(CODE_FAILED, message))
                 },
             )
         }
@@ -136,22 +149,38 @@ class BillingPlugin(private val activity: Activity) : Plugin(activity), Purchase
             clearPendingPurchase()
             when (billingResult.responseCode) {
                 BillingClient.BillingResponseCode.USER_CANCELED ->
-                    invoke.resolve(errorResult("Purchase was canceled."))
+                    invoke.resolve(errorResult(CODE_CANCELLED, "Purchase cancelled."))
                 else ->
-                    invoke.resolve(errorResult("Google Play purchase failed."))
+                    invoke.resolve(errorResult(codeForBillingResult(billingResult), "Google Play purchase failed. Please try again."))
             }
+            return
+        }
+
+        if (productId == null) {
+            clearPendingPurchase()
+            invoke.resolve(errorResult(CODE_FAILED, "Google Play did not return the expected purchase."))
+            return
+        }
+
+        val pendingPurchase = purchases?.firstOrNull { candidate ->
+            candidate.purchaseState == Purchase.PurchaseState.PENDING &&
+                candidate.products.contains(productId)
+        }
+        if (pendingPurchase != null) {
+            clearPendingPurchase()
+            invoke.resolve(errorResult(CODE_PENDING, "Purchase is pending approval. Lifetime Private will unlock after Google Play completes it."))
             return
         }
 
         val purchase = purchases
             ?.firstOrNull { candidate ->
                 candidate.purchaseState == Purchase.PurchaseState.PURCHASED &&
-                    (productId == null || candidate.products.contains(productId))
+                    candidate.products.contains(productId)
             }
 
-        if (purchase == null || productId == null) {
+        if (purchase == null) {
             clearPendingPurchase()
-            invoke.resolve(errorResult("Google Play did not return the premium unlock purchase."))
+            invoke.resolve(errorResult(CODE_FAILED, "Google Play did not return the expected purchase."))
             return
         }
 
@@ -159,24 +188,44 @@ class BillingPlugin(private val activity: Activity) : Plugin(activity), Purchase
             purchase = purchase,
             onSuccess = {
                 clearPendingPurchase()
-                invoke.resolve(successResult(productId, restored = false, message = "Premium unlock purchased successfully."))
+                invoke.resolve(successResult(productId, restored = false, message = "Lifetime Private purchased successfully."))
             },
             onError = { message ->
                 clearPendingPurchase()
-                invoke.resolve(errorResult(message))
+                invoke.resolve(errorResult(CODE_FAILED, message))
             },
         )
     }
 
-    private fun queryOwnedPurchase(productId: String, onResult: (Purchase?) -> Unit) {
-        withReadyClient(null) {
+    private data class OwnedPurchaseResult(
+        val purchase: Purchase?,
+        val code: String,
+        val message: String,
+    )
+
+    private fun queryOwnedPurchase(productId: String, onResult: (OwnedPurchaseResult) -> Unit) {
+        withReadyClient(
+            invoke = null,
+            onUnavailable = { code, message ->
+                onResult(OwnedPurchaseResult(null, code, message))
+            },
+        ) {
             val params = QueryPurchasesParams.newBuilder()
                 .setProductType(BillingClient.ProductType.INAPP)
                 .build()
 
             billingClient.queryPurchasesAsync(params, PurchasesResponseListener { billingResult, purchases ->
                 if (!billingResult.isOk()) {
-                    onResult(null)
+                    onResult(OwnedPurchaseResult(null, codeForBillingResult(billingResult), "Google Play restore is unavailable right now."))
+                    return@PurchasesResponseListener
+                }
+
+                val pendingPurchase = purchases.firstOrNull { candidate ->
+                    candidate.purchaseState == Purchase.PurchaseState.PENDING &&
+                        candidate.products.contains(productId)
+                }
+                if (pendingPurchase != null) {
+                    onResult(OwnedPurchaseResult(null, CODE_PENDING, "Purchase is still pending in Google Play. Lifetime Private is not unlocked yet."))
                     return@PurchasesResponseListener
                 }
 
@@ -184,7 +233,12 @@ class BillingPlugin(private val activity: Activity) : Plugin(activity), Purchase
                     candidate.purchaseState == Purchase.PurchaseState.PURCHASED &&
                         candidate.products.contains(productId)
                 }
-                onResult(purchase)
+                if (purchase == null) {
+                    onResult(OwnedPurchaseResult(null, CODE_NO_PURCHASE_FOUND, "No Lifetime Private purchase was found for this Google Play account."))
+                    return@PurchasesResponseListener
+                }
+
+                onResult(OwnedPurchaseResult(purchase, CODE_SUCCESS, "Google Play Lifetime Private ownership confirmed."))
             })
         }
     }
@@ -212,7 +266,11 @@ class BillingPlugin(private val activity: Activity) : Plugin(activity), Purchase
         }
     }
 
-    private fun withReadyClient(invoke: Invoke?, onReady: () -> Unit) {
+    private fun withReadyClient(
+        invoke: Invoke?,
+        onUnavailable: ((String, String) -> Unit)? = null,
+        onReady: () -> Unit,
+    ) {
         if (billingClient.isReady) {
             onReady()
             return
@@ -223,12 +281,23 @@ class BillingPlugin(private val activity: Activity) : Plugin(activity), Purchase
                 if (billingResult.isOk()) {
                     onReady()
                 } else {
-                    invoke?.resolve(errorResult("Google Play billing is unavailable on this device."))
+                    val code = codeForBillingResult(billingResult)
+                    val message = "Google Play billing is unavailable on this device."
+                    if (invoke != null) {
+                        invoke.resolve(errorResult(code, message))
+                    } else {
+                        onUnavailable?.invoke(code, message)
+                    }
                 }
             }
 
             override fun onBillingServiceDisconnected() {
-                invoke?.resolve(errorResult("Google Play billing disconnected."))
+                val message = "Google Play billing disconnected."
+                if (invoke != null) {
+                    invoke.resolve(errorResult(CODE_OFFLINE, message))
+                } else {
+                    onUnavailable?.invoke(CODE_OFFLINE, message)
+                }
             }
         })
     }
@@ -236,15 +305,17 @@ class BillingPlugin(private val activity: Activity) : Plugin(activity), Purchase
     private fun successResult(productId: String, restored: Boolean, message: String): JSObject {
         val result = JSObject()
         result.put("ok", true)
+        result.put("code", CODE_SUCCESS)
         result.put("restored", restored)
         result.put("productId", productId)
         result.put("message", message)
         return result
     }
 
-    private fun errorResult(message: String): JSObject {
+    private fun errorResult(code: String, message: String): JSObject {
         val result = JSObject()
         result.put("ok", false)
+        result.put("code", code)
         result.put("restored", false)
         result.put("productId", JSONObject.NULL)
         result.put("message", message)
@@ -255,9 +326,21 @@ class BillingPlugin(private val activity: Activity) : Plugin(activity), Purchase
         return responseCode == BillingClient.BillingResponseCode.OK
     }
 
+    private fun codeForBillingResult(billingResult: BillingResult): String {
+        return when (billingResult.responseCode) {
+            BillingClient.BillingResponseCode.OK -> CODE_SUCCESS
+            BillingClient.BillingResponseCode.USER_CANCELED -> CODE_CANCELLED
+            BillingClient.BillingResponseCode.BILLING_UNAVAILABLE -> CODE_UNAVAILABLE
+            BillingClient.BillingResponseCode.ITEM_UNAVAILABLE -> CODE_PRODUCT_UNAVAILABLE
+            BillingClient.BillingResponseCode.SERVICE_DISCONNECTED,
+            BillingClient.BillingResponseCode.SERVICE_UNAVAILABLE,
+            BillingClient.BillingResponseCode.NETWORK_ERROR -> CODE_OFFLINE
+            else -> CODE_FAILED
+        }
+    }
+
     private fun clearPendingPurchase() {
         pendingPurchaseInvoke = null
         pendingProductId = null
     }
 }
-

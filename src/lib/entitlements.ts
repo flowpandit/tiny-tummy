@@ -1,4 +1,5 @@
 import { deleteSetting, getSetting, setSetting } from "./db";
+import { isLifetimePrivateStoreProductId } from "./billing/products";
 import { nowISO } from "./utils";
 
 export const TRIAL_LENGTH_DAYS = 14;
@@ -32,6 +33,19 @@ export function getTrialDaysRemainingFromStart(trialStartedAt: string, now = new
   const diffTime = Math.max(0, now.getTime() - startedAt.getTime());
   const diffDays = Math.floor(diffTime / DAY_MS);
   return Math.max(0, TRIAL_LENGTH_DAYS - diffDays);
+}
+
+function hasLifetimePrivateStoredUnlock(input: {
+  premiumUnlockedRaw: string | null;
+  legacyPremiumUnlocked: string | null;
+  premiumProductId: string | null;
+}): boolean {
+  if (input.premiumUnlockedRaw !== "1" && input.legacyPremiumUnlocked !== "1") return false;
+
+  const storedProductId = input.premiumProductId?.trim() ?? "";
+  if (!storedProductId) return true;
+
+  return isLifetimePrivateStoreProductId(storedProductId);
 }
 
 async function updateLastSeenAt(now: Date, existingLastSeenAt: string | null): Promise<void> {
@@ -77,7 +91,11 @@ export async function getEntitlementState(now = new Date()): Promise<Entitlement
   const trialStartedAt = await ensureTrialStarted(now);
   await updateLastSeenAt(now, existingLastSeenAt);
 
-  const isPremiumUnlocked = premiumUnlockedRaw === "1" || legacyPremiumUnlocked === "1";
+  const isPremiumUnlocked = hasLifetimePrivateStoredUnlock({
+    premiumUnlockedRaw,
+    legacyPremiumUnlocked,
+    premiumProductId,
+  });
 
   if (isPremiumUnlocked) {
     if (premiumUnlockedRaw !== "1") {
@@ -114,6 +132,10 @@ export async function markPremiumUnlocked(input: {
   platform: PremiumPlatform;
   productId?: string | null;
 }): Promise<void> {
+  if (input.productId && !isLifetimePrivateStoreProductId(input.productId)) {
+    throw new Error("Unsupported premium product ID.");
+  }
+
   await Promise.all([
     setSetting(PREMIUM_UNLOCKED_KEY, "1"),
     setSetting(PREMIUM_PLATFORM_KEY, input.platform),

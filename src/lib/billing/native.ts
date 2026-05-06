@@ -1,15 +1,10 @@
 import { invoke } from "@tauri-apps/api/core";
-
-interface NativeBillingResponse {
-  ok: boolean;
-  restored: boolean;
-  productId: string | null;
-  message?: string | null;
-}
+import type { NativeBillingResponse } from "./types";
 
 function normalizeError(error: unknown, fallback: string): NativeBillingResponse {
   return {
     ok: false,
+    code: "failed",
     restored: false,
     productId: null,
     message: error instanceof Error ? error.message : fallback,

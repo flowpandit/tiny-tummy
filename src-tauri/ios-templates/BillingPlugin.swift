@@ -48,18 +48,28 @@ class ReportFileActivityItemSource: NSObject, UIActivityItemSource {
 }
 
 class BillingPlugin: Plugin {
+  private enum BillingResultCode: String {
+    case success
+    case cancelled
+    case pending
+    case unavailable
+    case productUnavailable = "product_unavailable"
+    case noPurchaseFound = "no_purchase_found"
+    case failed
+  }
+
   @objc public func purchasePremium(_ invoke: Invoke) throws {
     let args = try invoke.parseArgs(BillingProductArgs.self)
     guard #available(iOS 15.0, *) else {
-      invoke.resolve(errorResult(message: "In-app purchases require iOS 15 or newer on this build."))
+      invoke.resolve(errorResult(code: .unavailable, message: "In-app purchases require iOS 15 or newer on this build."))
       return
     }
 
     Task {
       do {
         let products = try await Product.products(for: [args.productId])
-        guard let product = products.first else {
-          invoke.resolve(errorResult(message: "Premium unlock is not available in the App Store yet."))
+        guard let product = products.first(where: { $0.id == args.productId }) else {
+          invoke.resolve(errorResult(code: .productUnavailable, message: "Lifetime Private is not available in the App Store yet."))
           return
         }
 
@@ -67,17 +77,21 @@ class BillingPlugin: Plugin {
         switch result {
         case .success(let verification):
           let transaction = try self.verified(verification)
+          guard self.isOwnedTransaction(transaction, productId: args.productId) else {
+            invoke.resolve(self.errorResult(code: .failed, message: "Tiny Tummy could not verify that purchase. Please try again."))
+            return
+          }
           await transaction.finish()
-          invoke.resolve(self.successResult(productId: transaction.productID, restored: false, message: "Premium unlock purchased successfully."))
+          invoke.resolve(self.successResult(productId: transaction.productID, restored: false, message: "Lifetime Private purchased successfully."))
         case .userCancelled:
-          invoke.resolve(self.errorResult(message: "Purchase was canceled."))
+          invoke.resolve(self.errorResult(code: .cancelled, message: "Purchase cancelled."))
         case .pending:
-          invoke.resolve(self.errorResult(message: "Purchase is pending approval."))
+          invoke.resolve(self.errorResult(code: .pending, message: "Purchase is pending approval. Lifetime Private will unlock after the App Store completes it."))
         @unknown default:
-          invoke.resolve(self.errorResult(message: "The App Store returned an unknown purchase result."))
+          invoke.resolve(self.errorResult(code: .failed, message: "Purchase could not be completed. Please try again."))
         }
       } catch {
-        invoke.resolve(self.errorResult(message: error.localizedDescription))
+        invoke.resolve(self.errorResult(code: .failed, message: "Purchase could not be completed. Please try again."))
       }
     }
   }
@@ -85,7 +99,7 @@ class BillingPlugin: Plugin {
   @objc public func restorePremium(_ invoke: Invoke) throws {
     let args = try invoke.parseArgs(BillingProductArgs.self)
     guard #available(iOS 15.0, *) else {
-      invoke.resolve(errorResult(message: "In-app purchases require iOS 15 or newer on this build."))
+      invoke.resolve(errorResult(code: .unavailable, message: "In-app purchases require iOS 15 or newer on this build."))
       return
     }
 
@@ -94,12 +108,12 @@ class BillingPlugin: Plugin {
         try await AppStore.sync()
         if let transaction = try await self.findOwnedTransaction(productId: args.productId) {
           await transaction.finish()
-          invoke.resolve(self.successResult(productId: transaction.productID, restored: true, message: "Premium unlock restored from the App Store."))
+          invoke.resolve(self.successResult(productId: transaction.productID, restored: true, message: "Lifetime Private restored from the App Store."))
         } else {
-          invoke.resolve(self.errorResult(message: "No App Store premium purchase was found to restore."))
+          invoke.resolve(self.errorResult(code: .noPurchaseFound, message: "No Lifetime Private purchase was found for this App Store account."))
         }
       } catch {
-        invoke.resolve(self.errorResult(message: error.localizedDescription))
+        invoke.resolve(self.errorResult(code: .failed, message: "Restore could not be completed. Please try again."))
       }
     }
   }
@@ -107,19 +121,19 @@ class BillingPlugin: Plugin {
   @objc public func checkOwnedPremium(_ invoke: Invoke) throws {
     let args = try invoke.parseArgs(BillingProductArgs.self)
     guard #available(iOS 15.0, *) else {
-      invoke.resolve(errorResult(message: "In-app purchases require iOS 15 or newer on this build."))
+      invoke.resolve(errorResult(code: .unavailable, message: "In-app purchases require iOS 15 or newer on this build."))
       return
     }
 
     Task {
       do {
         if let transaction = try await self.findOwnedTransaction(productId: args.productId) {
-          invoke.resolve(self.successResult(productId: transaction.productID, restored: true, message: "App Store premium ownership confirmed."))
+          invoke.resolve(self.successResult(productId: transaction.productID, restored: true, message: "App Store Lifetime Private ownership confirmed."))
         } else {
-          invoke.resolve(self.errorResult(message: "No owned App Store premium purchase is currently available."))
+          invoke.resolve(self.errorResult(code: .noPurchaseFound, message: "No owned App Store Lifetime Private purchase is currently available."))
         }
       } catch {
-        invoke.resolve(self.errorResult(message: error.localizedDescription))
+        invoke.resolve(self.errorResult(code: .failed, message: "Ownership sync could not be completed."))
       }
     }
   }
@@ -128,11 +142,28 @@ class BillingPlugin: Plugin {
   private func findOwnedTransaction(productId: String) async throws -> Transaction? {
     for await entitlement in Transaction.currentEntitlements {
       let transaction = try verified(entitlement)
-      if transaction.productID == productId {
+      if isOwnedTransaction(transaction, productId: productId) {
         return transaction
       }
     }
     return nil
+  }
+
+  @available(iOS 15.0, *)
+  private func isOwnedTransaction(_ transaction: Transaction, productId: String) -> Bool {
+    if transaction.productID != productId {
+      return false
+    }
+
+    if transaction.revocationDate != nil {
+      return false
+    }
+
+    if let expirationDate = transaction.expirationDate, expirationDate <= Date() {
+      return false
+    }
+
+    return true
   }
 
   @available(iOS 15.0, *)
@@ -148,15 +179,17 @@ class BillingPlugin: Plugin {
   private func successResult(productId: String, restored: Bool, message: String) -> [String: Any] {
     [
       "ok": true,
+      "code": BillingResultCode.success.rawValue,
       "restored": restored,
       "productId": productId,
       "message": message
     ]
   }
 
-  private func errorResult(message: String) -> [String: Any] {
+  private func errorResult(code: BillingResultCode, message: String) -> [String: Any] {
     [
       "ok": false,
+      "code": code.rawValue,
       "restored": false,
       "productId": NSNull(),
       "message": message

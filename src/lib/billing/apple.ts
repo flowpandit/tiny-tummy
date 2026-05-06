@@ -4,10 +4,12 @@ import {
   restorePremiumNative,
 } from "./native";
 import type { BillingAdapter, BillingPurchaseResult } from "./types";
+import { normalizeBillingResultCode } from "./types";
 
 function toAppleResult(result: Awaited<ReturnType<typeof purchasePremiumNative>>): BillingPurchaseResult {
   return {
     ok: result.ok,
+    code: normalizeBillingResultCode(result.code, result.ok),
     restored: result.restored,
     platform: "apple",
     productId: result.productId,

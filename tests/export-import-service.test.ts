@@ -29,6 +29,7 @@ import type {
   SleepEntry,
   SymptomEntry,
 } from "../src/lib/types.ts"
+import { LIFETIME_PRIVATE_PRODUCT_ID } from "../src/lib/billing/products.ts"
 
 const NOW = "2026-05-05T10:00:00.000Z"
 const LATER = "2026-05-05T12:00:00.000Z"
@@ -333,8 +334,9 @@ const settings: AppSettingSnapshot[] = [
   { key: `elimination_view:${child.id}`, value: "diaper" },
   { key: "premium_unlocked", value: "1" },
   { key: "premium_platform", value: "apple" },
-  { key: "premium_product_id", value: "premium_unlock" },
+  { key: "premium_product_id", value: LIFETIME_PRIVATE_PRODUCT_ID },
   { key: "trial_started_at", value: "2026-04-01T00:00:00.000Z" },
+  { key: "trial_last_seen_at", value: "2026-04-25T00:00:00.000Z" },
   { key: "developer_feature_entitlements", value: "[\"sync_addon\"]" },
   { key: `sleep_timer:session:${child.id}`, value: "{}" },
 ]
@@ -505,6 +507,8 @@ test("keeps photo file contents out of the snapshot JSON", async () => {
   assert.doesNotMatch(jsonExport.json, /premium_unlocked/)
   assert.doesNotMatch(jsonExport.json, /premium_platform/)
   assert.doesNotMatch(jsonExport.json, /premium_product_id/)
+  assert.doesNotMatch(jsonExport.json, /trial_started_at/)
+  assert.doesNotMatch(jsonExport.json, /trial_last_seen_at/)
   assert.doesNotMatch(jsonExport.json, /developer_feature_entitlements/)
   assert.equal(jsonExport.summary.attachmentCount, 1)
 })

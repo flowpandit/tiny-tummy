@@ -13,6 +13,7 @@ import {
   setDeveloperFeatureEntitlements,
 } from "../lib/developer-feature-entitlements";
 import { purchasePremium, restorePurchases, syncOwnedPurchase } from "../lib/billing-service";
+import type { BillingPurchaseResult } from "../lib/billing/types";
 import type { EntitlementId } from "../lib/feature-access";
 import { createExternalStore, type ExternalStore } from "../lib/store";
 
@@ -29,8 +30,8 @@ export interface TrialStore extends ExternalStore<TrialStoreState> {
   initialize: () => void;
   actions: {
     refreshTrial: () => Promise<void>;
-    unlockPremium: () => Promise<void>;
-    restorePremium: () => Promise<void>;
+    unlockPremium: () => Promise<BillingPurchaseResult>;
+    restorePremium: () => Promise<BillingPurchaseResult>;
     resetTrial: () => Promise<void>;
     setTrialDaysAgo: (daysAgo: number) => Promise<void>;
     clearPremium: () => Promise<void>;
@@ -89,18 +90,18 @@ export function createTrialStore(): TrialStore {
 
   const unlockPremium = async () => {
     const result = await purchasePremium();
-    if (!result.ok) {
-      throw new Error(result.message ?? "Purchase could not be completed.");
+    if (result.ok) {
+      await refreshTrial();
     }
-    await refreshTrial();
+    return result;
   };
 
   const restorePremium = async () => {
     const result = await restorePurchases();
-    if (!result.ok) {
-      throw new Error(result.message ?? "Restore could not be completed.");
+    if (result.ok) {
+      await refreshTrial();
     }
-    await refreshTrial();
+    return result;
   };
 
   const resetTrial = async () => {

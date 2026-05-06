@@ -27,6 +27,8 @@ struct BillingProductPayload {
 #[serde(rename_all = "camelCase")]
 pub struct BillingPluginResponse {
     pub ok: bool,
+    #[serde(default)]
+    pub code: Option<String>,
     pub restored: bool,
     pub product_id: Option<String>,
     pub message: Option<String>,
@@ -35,6 +37,7 @@ pub struct BillingPluginResponse {
 fn unsupported_response(message: &str) -> BillingPluginResponse {
     BillingPluginResponse {
         ok: false,
+        code: Some("unavailable".to_string()),
         restored: false,
         product_id: None,
         message: Some(message.to_string()),

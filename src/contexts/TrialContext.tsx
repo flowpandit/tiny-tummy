@@ -11,6 +11,7 @@ import {
   type FeatureIdentifier,
 } from "../lib/feature-access";
 import type { EntitlementState } from "../lib/entitlements";
+import type { BillingPurchaseResult } from "../lib/billing/types";
 
 interface TrialContextState {
   entitlement: EntitlementState | null;
@@ -22,8 +23,8 @@ interface TrialContextState {
   daysRemaining: number;
   isLoading: boolean;
   loadError: string | null;
-  unlockPremium: () => Promise<void>;
-  restorePremium: () => Promise<void>;
+  unlockPremium: () => Promise<BillingPurchaseResult>;
+  restorePremium: () => Promise<BillingPurchaseResult>;
   resetTrial: () => Promise<void>;
   setTrialDaysAgo: (daysAgo: number) => Promise<void>;
   clearPremium: () => Promise<void>;

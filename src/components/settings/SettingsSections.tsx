@@ -34,6 +34,7 @@ import {
   DEVELOPER_FEATURE_ENTITLEMENT_PRESETS,
 } from "../../lib/developer-feature-entitlements";
 import type { EntitlementId } from "../../lib/feature-access";
+import type { BillingPurchaseResult } from "../../lib/billing/types";
 import type { Child, TemperatureUnit, UnitSystem } from "../../lib/types";
 
 const THEME_OPTIONS: { value: "system" | "light" | "dark"; label: string }[] = [
@@ -552,7 +553,7 @@ export function RecordsSupportSection() {
 export function AccessSection() {
   const { accessKind, daysRemaining, isLocked } = useTrialAccess();
   const { restorePremium } = useTrialActions();
-  const { showError, showSuccess } = useToast();
+  const { showError, showInfo, showSuccess } = useToast();
   const navigate = useNavigate();
   const isPremium = accessKind === "premium";
   const accessTitle = isPremium
@@ -568,11 +569,24 @@ export function AccessSection() {
 
   const handleRestore = async () => {
     try {
-      await restorePremium();
+      const result = await restorePremium();
+      if (!result.ok) {
+        showBillingRestoreResult(result);
+        return;
+      }
       showSuccess("Purchase restored.");
     } catch (error) {
       showError(error instanceof Error ? error.message : "Restore failed. Please try again.");
     }
+  };
+
+  const showBillingRestoreResult = (result: BillingPurchaseResult) => {
+    if (result.code === "cancelled") return;
+    if (result.code === "no_purchase_found" || result.code === "unavailable" || result.code === "offline" || result.code === "pending") {
+      showInfo(result.message ?? "No Lifetime Private purchase was found for this store account.");
+      return;
+    }
+    showError(result.message ?? "Restore failed. Please try again.");
   };
 
   return (

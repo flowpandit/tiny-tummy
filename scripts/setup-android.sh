@@ -7,8 +7,10 @@ set -e
 ANDROID_DIR="src-tauri/gen/android"
 RES_DIR="$ANDROID_DIR/app/src/main/res"
 JAVA_DIR="$ANDROID_DIR/app/src/main/java/com/nikhilmehral/tinytummy"
+BUILD_GRADLE="$ANDROID_DIR/app/build.gradle.kts"
 ICON_MANIFEST="src-tauri/icons/icon-manifest.json"
 TMP_ICON_DIR="/tmp/tiny-tummy-android-icons"
+BILLING_DEPENDENCY='implementation("com.android.billingclient:billing-ktx:7.1.1")'
 
 if [ ! -d "$ANDROID_DIR" ]; then
   echo "Error: $ANDROID_DIR not found. Run 'cargo tauri android init' first."
@@ -17,6 +19,11 @@ fi
 
 if [ ! -f "$ICON_MANIFEST" ]; then
   echo "Error: $ICON_MANIFEST not found."
+  exit 1
+fi
+
+if [ ! -f "$BUILD_GRADLE" ]; then
+  echo "Error: $BUILD_GRADLE not found."
   exit 1
 fi
 
@@ -34,6 +41,7 @@ if [ ! -d "$TMP_ICON_DIR/android" ]; then
 fi
 
 # 1. Copy custom MainActivity.kt (manual edge-to-edge + status bar control)
+mkdir -p "$JAVA_DIR"
 cp src-tauri/android-templates/MainActivity.kt "$JAVA_DIR/MainActivity.kt"
 echo "  ✓ MainActivity.kt (status bar icon control)"
 
@@ -45,7 +53,17 @@ echo "  ✓ StatusBarPlugin.kt (theme bridge)"
 cp src-tauri/android-templates/DownloadsPlugin.kt "$JAVA_DIR/DownloadsPlugin.kt"
 echo "  ✓ DownloadsPlugin.kt (Downloads save bridge)"
 
-# 4. Copy custom app icons
+# 4. Copy BillingPlugin.kt (Tauri plugin for Google Play Billing bridge)
+cp src-tauri/android-templates/BillingPlugin.kt "$JAVA_DIR/BillingPlugin.kt"
+echo "  ✓ BillingPlugin.kt (Google Play Billing bridge)"
+
+# 5. Ensure Google Play Billing dependency is reproducible in generated Gradle
+if ! grep -q 'com.android.billingclient:billing-ktx' "$BUILD_GRADLE"; then
+  perl -0pi -e "s/dependencies \{\n/dependencies {\n    $BILLING_DEPENDENCY\n/" "$BUILD_GRADLE"
+fi
+echo "  ✓ billing-ktx dependency"
+
+# 6. Copy custom app icons
 cp -r "$TMP_ICON_DIR/android/"* "$RES_DIR/"
 echo "  ✓ App icons"
 

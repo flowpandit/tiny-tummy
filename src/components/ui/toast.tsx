@@ -4,11 +4,12 @@ import { motion, AnimatePresence } from "framer-motion";
 interface Toast {
   id: number;
   message: string;
-  type: "error" | "success";
+  type: "error" | "success" | "info";
 }
 
 interface ToastContextType {
   showError: (message: string) => void;
+  showInfo: (message: string) => void;
   showSuccess: (message: string) => void;
 }
 
@@ -19,7 +20,7 @@ let nextId = 0;
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
 
-  const addToast = useCallback((message: string, type: "error" | "success") => {
+  const addToast = useCallback((message: string, type: Toast["type"]) => {
     const id = nextId++;
     setToasts((prev) => [...prev, { id, message, type }]);
     setTimeout(() => {
@@ -28,10 +29,11 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const showError = useCallback((msg: string) => addToast(msg, "error"), [addToast]);
+  const showInfo = useCallback((msg: string) => addToast(msg, "info"), [addToast]);
   const showSuccess = useCallback((msg: string) => addToast(msg, "success"), [addToast]);
 
   return (
-    <ToastContext.Provider value={{ showError, showSuccess }}>
+    <ToastContext.Provider value={{ showError, showInfo, showSuccess }}>
       {children}
       {/* Toast container */}
       <div
@@ -48,7 +50,9 @@ export function ToastProvider({ children }: { children: ReactNode }) {
               className={`pointer-events-auto px-4 py-3 rounded-[var(--radius-md)] shadow-[var(--shadow-medium)] text-sm font-medium leading-5 ${
                 toast.type === "error"
                   ? "bg-[var(--color-alert)] text-white"
-                  : "bg-[var(--color-healthy)] text-white"
+                  : toast.type === "success"
+                    ? "bg-[var(--color-healthy)] text-white"
+                    : "bg-[var(--color-primary)] text-white"
               }`}
             >
               {toast.message}
