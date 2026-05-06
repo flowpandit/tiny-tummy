@@ -12,6 +12,38 @@ ICON_MANIFEST="src-tauri/icons/icon-manifest.json"
 TMP_ICON_DIR="/tmp/tiny-tummy-android-icons"
 BILLING_DEPENDENCY='implementation("com.android.billingclient:billing-ktx:7.1.1")'
 
+warn_if_java_is_not_17() {
+  if ! command -v java >/dev/null 2>&1; then
+    echo "Warning: java was not found in PATH. Install JDK 17 before running Gradle Android builds."
+    echo "         On macOS, set it with: export JAVA_HOME=\$(/usr/libexec/java_home -v 17)"
+    return
+  fi
+
+  JAVA_VERSION_LINE=$(java -version 2>&1 | head -n 1 || true)
+  JAVA_VERSION=$(printf "%s" "$JAVA_VERSION_LINE" | sed -n 's/.*version "\([^"]*\)".*/\1/p')
+  if [ -z "$JAVA_VERSION" ]; then
+    JAVA_VERSION=$(printf "%s" "$JAVA_VERSION_LINE" | awk '{print $2}' | tr -d '"')
+  fi
+
+  JAVA_MAJOR=${JAVA_VERSION%%.*}
+  if [ "$JAVA_MAJOR" = "1" ]; then
+    JAVA_REST=${JAVA_VERSION#1.}
+    JAVA_MAJOR=${JAVA_REST%%.*}
+  fi
+
+  if [ "$JAVA_MAJOR" != "17" ]; then
+    echo "Warning: Android Gradle builds for this project should use JDK 17."
+    echo "         Detected: ${JAVA_VERSION_LINE:-unknown java version}"
+    echo "         On macOS, set it with: export JAVA_HOME=\$(/usr/libexec/java_home -v 17)"
+    echo "         Then rerun:"
+    echo "           ./scripts/setup-android.sh"
+    echo "           cd src-tauri/gen/android"
+    echo "           ./gradlew :app:compileDebugKotlin"
+  else
+    echo "  ✓ Java 17 detected ($JAVA_VERSION)"
+  fi
+}
+
 if [ ! -d "$ANDROID_DIR" ]; then
   echo "Error: $ANDROID_DIR not found. Run 'cargo tauri android init' first."
   exit 1
@@ -26,6 +58,8 @@ if [ ! -f "$BUILD_GRADLE" ]; then
   echo "Error: $BUILD_GRADLE not found."
   exit 1
 fi
+
+warn_if_java_is_not_17
 
 echo "Applying custom Android configuration..."
 

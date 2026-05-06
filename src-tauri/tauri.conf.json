@@ -33,6 +33,7 @@
     ],
     "iOS": {
       "developmentTeam": "GY2TR322AP",
+      "minimumSystemVersion": "16.0",
       "infoPlist": "Info.ios.plist"
     }
   }

@@ -36,6 +36,8 @@ Not production-ready yet:
 - Store product metadata is not fetched into the UI; the displayed price is hard-coded.
 - The native billing path needs real sandbox/TestFlight/internal-track verification.
 - Android billing reproducibility now depends on rerunning `./scripts/setup-android.sh` after `cargo tauri android init`; the script copies `BillingPlugin.kt` from templates and injects `billing-ktx`.
+- Android local build verification should use JDK 17 for the generated AGP 8.11.x / Gradle 8.14.x project, then run `./scripts/setup-android.sh` and `cd src-tauri/gen/android && ./gradlew :app:compileDebugKotlin`.
+- iOS store testing should use the documented iOS 16+ deployment target. `src-tauri/tauri.conf.json` sets `bundle.iOS.minimumSystemVersion` to `16.0`; run `npm run fix:ios-xcodeproj` if an older generated project still has `IPHONEOS_DEPLOYMENT_TARGET = 14.0`.
 - Purchase/restore result codes now distinguish cancelled, pending, unavailable, offline, product unavailable, and no-owned-purchase states; real store testing still needs to verify those paths.
 - There are no focused unit tests for `entitlements.ts` or `billing-service.ts`.
 
@@ -247,6 +249,8 @@ Native/manual store tests:
 7. Production checklist.
    - App Store Connect non-consumable configured and submitted with the app.
    - Google Play one-time non-consumable product configured with a buy purchase option.
+   - Android Kotlin compile verified with JDK 17: `cd src-tauri/gen/android && ./gradlew :app:compileDebugKotlin`.
+   - iOS generated Xcode project verified at `IPHONEOS_DEPLOYMENT_TARGET = 16.0`.
    - Price set to `$14.99 USD` with expected localized store prices.
    - Privacy copy confirms no account/cloud for Lifetime Private.
    - Restore reviewed on both stores.

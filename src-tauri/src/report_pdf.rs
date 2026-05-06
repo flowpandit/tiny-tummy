@@ -332,6 +332,126 @@ enum ImageFit {
     Cover,
 }
 
+#[derive(Clone, Copy)]
+struct PdfRect {
+    x: f32,
+    y: f32,
+    w: f32,
+    h: f32,
+}
+
+impl PdfRect {
+    const fn new(x: f32, y: f32, w: f32, h: f32) -> Self {
+        Self { x, y, w, h }
+    }
+}
+
+#[derive(Clone)]
+struct ShapeStyle {
+    fill: Color,
+    stroke: Option<Color>,
+    stroke_width: f32,
+}
+
+fn shape_style(fill: Color, stroke: Option<Color>, stroke_width: f32) -> ShapeStyle {
+    ShapeStyle {
+        fill,
+        stroke,
+        stroke_width,
+    }
+}
+
+#[derive(Clone)]
+struct PdfTextStyle {
+    font_size_pt: f32,
+    font: BuiltinFont,
+    color: Color,
+}
+
+fn text_style(font_size_pt: f32, font: BuiltinFont, color: Color) -> PdfTextStyle {
+    PdfTextStyle {
+        font_size_pt,
+        font,
+        color,
+    }
+}
+
+struct InfoPanelSpec<'a> {
+    rect: PdfRect,
+    title: &'a str,
+    icon: &'a str,
+    rows: &'a [InfoRow],
+    compact: bool,
+}
+
+struct DonutSegment {
+    cx: f32,
+    cy: f32,
+    outer_r: f32,
+    inner_r: f32,
+    start_deg: f32,
+    sweep_deg: f32,
+    color: Color,
+}
+
+macro_rules! draw_info_panel {
+    ($layout:expr, $x:expr, $y:expr, $w:expr, $h:expr, $title:expr, $icon:expr, $rows:expr, $compact:expr $(,)?) => {
+        $layout.draw_info_panel(InfoPanelSpec {
+            rect: PdfRect::new($x, $y, $w, $h),
+            title: $title,
+            icon: $icon,
+            rows: $rows,
+            compact: $compact,
+        })
+    };
+}
+
+macro_rules! draw_donut_segment {
+    ($layout:expr, $cx:expr, $cy:expr, $outer_r:expr, $inner_r:expr, $start_deg:expr, $sweep_deg:expr, $color:expr $(,)?) => {
+        $layout.draw_donut_segment(DonutSegment {
+            cx: $cx,
+            cy: $cy,
+            outer_r: $outer_r,
+            inner_r: $inner_r,
+            start_deg: $start_deg,
+            sweep_deg: $sweep_deg,
+            color: $color,
+        })
+    };
+}
+
+macro_rules! draw_round_rect {
+    ($layout:expr, $x:expr, $y:expr, $w:expr, $h:expr, $radius:expr, $fill:expr, $stroke:expr, $stroke_width:expr $(,)?) => {
+        $layout.draw_round_rect(
+            PdfRect::new($x, $y, $w, $h),
+            $radius,
+            shape_style($fill, $stroke, $stroke_width),
+        )
+    };
+}
+
+macro_rules! draw_rect {
+    ($layout:expr, $x:expr, $y:expr, $w:expr, $h:expr, $fill:expr, $stroke:expr, $stroke_width:expr $(,)?) => {
+        $layout.draw_rect(
+            PdfRect::new($x, $y, $w, $h),
+            shape_style($fill, $stroke, $stroke_width),
+        )
+    };
+}
+
+macro_rules! draw_wrapped_text_at {
+    ($layout:expr, $text:expr, $x:expr, $top_y:expr, $max_width:expr, $font_size_pt:expr, $font:expr, $color:expr, $max_lines:expr $(,)?) => {
+        $layout.draw_wrapped_text_at(
+            $text,
+            $x,
+            $top_y,
+            $max_width,
+            text_style($font_size_pt, $font, $color),
+            $max_lines,
+        )
+    };
+}
+
 impl PdfAssets {
     fn register(doc: &mut PdfDocument) -> Self {
         Self {
@@ -510,7 +630,8 @@ impl PdfLayout {
 
         let title_top = top + 15.0;
         let title_font = 22.0;
-        let title_h = self.draw_wrapped_text_at(
+        let title_h = draw_wrapped_text_at!(
+            self,
             title,
             PAGE_PAD_X_MM,
             title_top,
@@ -535,7 +656,8 @@ impl PdfLayout {
         }
         if let Some(subtitle) = subtitle {
             let subtitle_top = header_cursor + 1.8;
-            let subtitle_h = self.draw_wrapped_text_at(
+            let subtitle_h = draw_wrapped_text_at!(
+                self,
                 subtitle,
                 PAGE_PAD_X_MM,
                 subtitle_top,
@@ -646,7 +768,8 @@ impl PdfLayout {
             BuiltinFont::HelveticaBold,
             body(),
         );
-        self.draw_wrapped_text_at(
+        draw_wrapped_text_at!(
+            self,
             &payload.generated_label,
             x1 + 10.0,
             y + 6.8,
@@ -660,7 +783,8 @@ impl PdfLayout {
         let x2 = x1 + col_w[1] + 6.0;
         self.draw_line(x2 - 3.5, y, x2 - 3.5, y + height - 1.0, rule(), 0.3);
         self.draw_badge(x2, y + 2.2, 5.8, "i", "default");
-        self.draw_wrapped_text_at(
+        draw_wrapped_text_at!(
+            self,
             note.unwrap_or(&payload.disclaimer),
             x2 + 8.5,
             y + 1.6,
@@ -760,7 +884,8 @@ impl PdfLayout {
             .max(42.0);
         self.ensure_space(h);
         let y = self.y_mm;
-        self.draw_info_panel(
+        draw_info_panel!(
+            self,
             PAGE_PAD_X_MM,
             y,
             left_w,
@@ -805,7 +930,8 @@ impl PdfLayout {
             .max(46.0);
         self.ensure_space(summary_h);
         let y = self.y_mm;
-        self.draw_info_panel(
+        draw_info_panel!(
+            self,
             PAGE_PAD_X_MM,
             y,
             col_w,
@@ -815,7 +941,8 @@ impl PdfLayout {
             &poop_rows,
             true,
         )?;
-        self.draw_info_panel(
+        draw_info_panel!(
+            self,
             PAGE_PAD_X_MM + col_w + gap,
             y,
             col_w,
@@ -991,7 +1118,8 @@ impl PdfLayout {
             .max(42.0);
         self.ensure_space(timeline_h);
         let y = self.y_mm;
-        self.draw_info_panel(
+        draw_info_panel!(
+            self,
             PAGE_PAD_X_MM,
             y,
             CONTENT_WIDTH_MM,
@@ -1023,7 +1151,8 @@ impl PdfLayout {
             .max(48.0);
         self.ensure_space(h);
         let y = self.y_mm;
-        self.draw_info_panel(
+        draw_info_panel!(
+            self,
             PAGE_PAD_X_MM,
             y,
             col_w,
@@ -1033,7 +1162,8 @@ impl PdfLayout {
             left_rows,
             true,
         )?;
-        self.draw_info_panel(
+        draw_info_panel!(
+            self,
             PAGE_PAD_X_MM + col_w + gap,
             y,
             col_w,
@@ -1101,7 +1231,8 @@ impl PdfLayout {
         let h = (text_h + 18.0).max(35.0);
         self.ensure_space(h);
         let y = self.y_mm;
-        self.draw_round_rect(
+        draw_round_rect!(
+            self,
             PAGE_PAD_X_MM,
             y,
             CONTENT_WIDTH_MM,
@@ -1111,7 +1242,7 @@ impl PdfLayout {
             Some(rgb(0.82, 0.86, 0.78)),
             0.45,
         );
-        self.draw_rect(PAGE_PAD_X_MM, y, 2.0, h, leaf(), None, 0.0);
+        draw_rect!(self, PAGE_PAD_X_MM, y, 2.0, h, leaf(), None, 0.0);
         self.draw_badge(PAGE_PAD_X_MM + 9.0, y + 8.0, 21.0, "B", "default");
         self.draw_text_line(
             "Pediatrician Brief",
@@ -1121,7 +1252,8 @@ impl PdfLayout {
             BuiltinFont::HelveticaBold,
             leaf(),
         );
-        self.draw_wrapped_text_at(
+        draw_wrapped_text_at!(
+            self,
             summary,
             PAGE_PAD_X_MM + 36.0,
             y + 17.0,
@@ -1146,7 +1278,8 @@ impl PdfLayout {
         let y = self.y_mm;
         for (index, concern) in concerns.iter().take(4).enumerate() {
             let x = PAGE_PAD_X_MM + index as f32 * (card_w + gap);
-            self.draw_round_rect(
+            draw_round_rect!(
+                self,
                 x,
                 y,
                 card_w,
@@ -1163,7 +1296,8 @@ impl PdfLayout {
                 label_icon(&concern.label),
                 &concern.tone,
             );
-            self.draw_wrapped_text_at(
+            draw_wrapped_text_at!(
+                self,
                 &concern.label,
                 x + 14.0,
                 y + 3.0,
@@ -1173,7 +1307,8 @@ impl PdfLayout {
                 tone_main(&concern.tone),
                 Some(2),
             );
-            self.draw_wrapped_text_at(
+            draw_wrapped_text_at!(
+                self,
                 &concern.value,
                 x + 3.0,
                 y + 15.0,
@@ -1183,7 +1318,8 @@ impl PdfLayout {
                 ink(),
                 Some(2),
             );
-            self.draw_wrapped_text_at(
+            draw_wrapped_text_at!(
+                self,
                 &concern.detail,
                 x + 3.0,
                 y + 23.0,
@@ -1226,7 +1362,8 @@ impl PdfLayout {
         let h = 32.0;
         self.ensure_space(h);
         let y = self.y_mm;
-        self.draw_round_rect(
+        draw_round_rect!(
+            self,
             PAGE_PAD_X_MM,
             y,
             CONTENT_WIDTH_MM,
@@ -1269,7 +1406,8 @@ impl PdfLayout {
                 );
             }
             let value_font = metric_value_font_size(&metric.value, item_w).min(12.0);
-            self.draw_wrapped_text_at(
+            draw_wrapped_text_at!(
+                self,
                 &metric.value,
                 x,
                 y + 12.0,
@@ -1279,7 +1417,8 @@ impl PdfLayout {
                 tone_main(&metric.tone),
                 Some(if value_font < 10.5 { 2 } else { 1 }),
             );
-            self.draw_wrapped_text_at(
+            draw_wrapped_text_at!(
+                self,
                 &metric.label,
                 x,
                 y + 21.4,
@@ -1291,7 +1430,8 @@ impl PdfLayout {
             );
             if count <= 6 {
                 if let Some(detail) = metric.detail.as_deref() {
-                    self.draw_wrapped_text_at(
+                    draw_wrapped_text_at!(
+                        self,
                         detail,
                         x,
                         y + 27.2,
@@ -1367,7 +1507,8 @@ impl PdfLayout {
         let h = 33.0;
         self.ensure_space(h);
         let y = self.y_mm;
-        self.draw_round_rect(
+        draw_round_rect!(
+            self,
             PAGE_PAD_X_MM,
             y,
             CONTENT_WIDTH_MM,
@@ -1388,7 +1529,8 @@ impl PdfLayout {
         let col_gap = 4.0;
         let col_w = (CONTENT_WIDTH_MM - 14.0 - col_gap * 2.0) / 3.0;
         let x0 = PAGE_PAD_X_MM + 5.0;
-        self.draw_wrapped_text_at(
+        draw_wrapped_text_at!(
+            self,
             &payload.disclaimer,
             x0,
             y + 15.0,
@@ -1398,7 +1540,8 @@ impl PdfLayout {
             body(),
             Some(3),
         );
-        self.draw_wrapped_text_at(
+        draw_wrapped_text_at!(
+            self,
             &data_quality,
             x0 + col_w + col_gap,
             y + 15.0,
@@ -1408,7 +1551,8 @@ impl PdfLayout {
             body(),
             Some(3),
         );
-        self.draw_wrapped_text_at(
+        draw_wrapped_text_at!(
+            self,
             &format!(
                 "{}; {}. {} {} {}",
                 photo_note, metadata_note, parent_note, attachment_summary, mode_note
@@ -1441,7 +1585,17 @@ impl PdfLayout {
         h: f32,
         events: &[ReportEvent],
     ) -> Result<(), String> {
-        self.draw_round_rect(x, y, w, h, CARD_RADIUS_MM, paper(), Some(rule_soft()), 0.45);
+        draw_round_rect!(
+            self,
+            x,
+            y,
+            w,
+            h,
+            CARD_RADIUS_MM,
+            paper(),
+            Some(rule_soft()),
+            0.45
+        );
         self.draw_panel_title(
             x + 3.5,
             y + 3.5,
@@ -1462,7 +1616,8 @@ impl PdfLayout {
                 label_icon(&event.label),
                 &event.tone,
             );
-            self.draw_wrapped_text_at(
+            draw_wrapped_text_at!(
+                self,
                 &event.label,
                 x + 13.0,
                 row_y + 2.0,
@@ -1472,7 +1627,8 @@ impl PdfLayout {
                 ink(),
                 Some(2),
             );
-            self.draw_wrapped_text_at(
+            draw_wrapped_text_at!(
+                self,
                 &event.value,
                 detail_x,
                 row_y + 1.9,
@@ -1483,7 +1639,8 @@ impl PdfLayout {
                 Some(3),
             );
             let value_h = measure_wrapped_text(&event.value, detail_w, 7.2, Some(3));
-            self.draw_wrapped_text_at(
+            draw_wrapped_text_at!(
+                self,
                 &event.detail,
                 detail_x,
                 row_y + 2.6 + value_h,
@@ -1521,7 +1678,17 @@ impl PdfLayout {
         h: f32,
         questions: &[String],
     ) -> Result<(), String> {
-        self.draw_round_rect(x, y, w, h, CARD_RADIUS_MM, paper(), Some(rule_soft()), 0.45);
+        draw_round_rect!(
+            self,
+            x,
+            y,
+            w,
+            h,
+            CARD_RADIUS_MM,
+            paper(),
+            Some(rule_soft()),
+            0.45
+        );
         self.draw_panel_title(
             x + 3.5,
             y + 3.5,
@@ -1533,7 +1700,8 @@ impl PdfLayout {
         let mut cursor_y = y + 16.5;
         for question in questions {
             self.draw_circle(x + 6.0, cursor_y + 2.3, 0.9, leaf(), None, 0.0);
-            let used = self.draw_wrapped_text_at(
+            let used = draw_wrapped_text_at!(
+                self,
                 question,
                 x + 10.0,
                 cursor_y,
@@ -1570,7 +1738,17 @@ impl PdfLayout {
         points: &[DailyPoint],
         no_poop_dates: &[String],
     ) -> Result<(), String> {
-        self.draw_round_rect(x, y, w, h, CARD_RADIUS_MM, paper(), Some(rule_soft()), 0.45);
+        draw_round_rect!(
+            self,
+            x,
+            y,
+            w,
+            h,
+            CARD_RADIUS_MM,
+            paper(),
+            Some(rule_soft()),
+            0.45
+        );
         self.draw_chart_title(x + 4.0, y + 3.6, w - 8.0, "Daily Stool Output", "poop");
         self.draw_text_line(
             "Stool count by recent day",
@@ -1591,7 +1769,8 @@ impl PdfLayout {
         } else {
             format!("No-poop days: {}", no_poop_dates.join(", "))
         };
-        self.draw_round_rect(
+        draw_round_rect!(
+            self,
             x + 4.0,
             y + h - note_h - 2.0,
             w - 8.0,
@@ -1601,7 +1780,8 @@ impl PdfLayout {
             Some(rule_soft()),
             0.3,
         );
-        self.draw_wrapped_text_at(
+        draw_wrapped_text_at!(
+            self,
             &note,
             x + 7.0,
             y + h - note_h - 0.8,
@@ -1622,7 +1802,17 @@ impl PdfLayout {
         h: f32,
         points: &[DailyPoint],
     ) -> Result<(), String> {
-        self.draw_round_rect(x, y, w, h, CARD_RADIUS_MM, paper(), Some(rule_soft()), 0.45);
+        draw_round_rect!(
+            self,
+            x,
+            y,
+            w,
+            h,
+            CARD_RADIUS_MM,
+            paper(),
+            Some(rule_soft()),
+            0.45
+        );
         self.draw_chart_title(x + 4.0, y + 3.6, w - 8.0, "Daily Diaper Output", "diaper");
         self.draw_text_line(
             "Wet, dirty, and mixed diapers by recent day",
@@ -1658,7 +1848,17 @@ impl PdfLayout {
         h: f32,
         points: &[TypeTrendPoint],
     ) -> Result<(), String> {
-        self.draw_round_rect(x, y, w, h, CARD_RADIUS_MM, paper(), Some(rule_soft()), 0.45);
+        draw_round_rect!(
+            self,
+            x,
+            y,
+            w,
+            h,
+            CARD_RADIUS_MM,
+            paper(),
+            Some(rule_soft()),
+            0.45
+        );
         self.draw_chart_title(x + 4.0, y + 3.6, w - 8.0, "Stool Type Trend", "poop");
         self.draw_text_line(
             "Bristol-style stool types over time",
@@ -1701,7 +1901,8 @@ impl PdfLayout {
                 tone_main(&point.tone),
             );
             if should_show_chart_date_label(points.len(), index) {
-                self.draw_wrapped_text_at(
+                draw_wrapped_text_at!(
+                    self,
                     &point.date_label,
                     cx - slot / 2.0 + 1.0,
                     y + 33.8,
@@ -1714,7 +1915,8 @@ impl PdfLayout {
             }
         }
 
-        self.draw_round_rect(
+        draw_round_rect!(
+            self,
             x + 6.0,
             y + 43.0,
             w - 12.0,
@@ -1745,7 +1947,8 @@ impl PdfLayout {
                 BuiltinFont::HelveticaBold,
                 ink(),
             );
-            self.draw_wrapped_text_at(
+            draw_wrapped_text_at!(
+                self,
                 label,
                 item_x + 16.0,
                 item_y,
@@ -1767,7 +1970,17 @@ impl PdfLayout {
         h: f32,
         items: &[ColourBreakdownItem],
     ) -> Result<(), String> {
-        self.draw_round_rect(x, y, w, h, CARD_RADIUS_MM, paper(), Some(rule_soft()), 0.45);
+        draw_round_rect!(
+            self,
+            x,
+            y,
+            w,
+            h,
+            CARD_RADIUS_MM,
+            paper(),
+            Some(rule_soft()),
+            0.45
+        );
         self.draw_chart_title(x + 4.0, y + 3.6, w - 8.0, "Stool Colour Breakdown", "poop");
         self.draw_text_line(
             "Colours observed in this period",
@@ -1828,7 +2041,8 @@ impl PdfLayout {
                 Some(rgb(0.28, 0.22, 0.18)),
                 0.2,
             );
-            self.draw_wrapped_text_at(
+            draw_wrapped_text_at!(
+                self,
                 &item.label,
                 label_x,
                 row_y - 0.8,
@@ -1838,7 +2052,8 @@ impl PdfLayout {
                 if item.is_red_flag { rust() } else { ink() },
                 Some(2),
             );
-            self.draw_wrapped_text_at(
+            draw_wrapped_text_at!(
+                self,
                 note,
                 label_x,
                 row_y - 0.4 + label_h,
@@ -1880,18 +2095,25 @@ impl PdfLayout {
             + 2.0
     }
 
-    fn draw_info_panel(
-        &mut self,
-        x: f32,
-        y: f32,
-        w: f32,
-        h: f32,
-        title: &str,
-        icon: &str,
-        rows: &[InfoRow],
-        compact: bool,
-    ) -> Result<(), String> {
-        self.draw_round_rect(x, y, w, h, CARD_RADIUS_MM, paper(), Some(rule_soft()), 0.45);
+    fn draw_info_panel(&mut self, panel: InfoPanelSpec<'_>) -> Result<(), String> {
+        let InfoPanelSpec {
+            rect: PdfRect { x, y, w, h },
+            title,
+            icon,
+            rows,
+            compact,
+        } = panel;
+        draw_round_rect!(
+            self,
+            x,
+            y,
+            w,
+            h,
+            CARD_RADIUS_MM,
+            paper(),
+            Some(rule_soft()),
+            0.45
+        );
         self.draw_panel_title(
             x + 3.5,
             y + 3.2,
@@ -1919,7 +2141,8 @@ impl PdfLayout {
                 label_icon(&row.label),
                 tone,
             );
-            self.draw_wrapped_text_at(
+            draw_wrapped_text_at!(
+                self,
                 &row.label,
                 x + 12.0,
                 row_y + 1.5,
@@ -1929,7 +2152,8 @@ impl PdfLayout {
                 ink(),
                 Some(3),
             );
-            let value_h = self.draw_wrapped_text_at(
+            let value_h = draw_wrapped_text_at!(
+                self,
                 &row.value,
                 value_x,
                 row_y + 1.2,
@@ -1940,7 +2164,8 @@ impl PdfLayout {
                 Some(3),
             );
             if let Some(detail) = &row.detail {
-                self.draw_wrapped_text_at(
+                draw_wrapped_text_at!(
+                    self,
                     detail,
                     value_x,
                     row_y + 2.0 + value_h,
@@ -1980,7 +2205,17 @@ impl PdfLayout {
         h: f32,
         rows: &[ClinicalNote],
     ) -> Result<(), String> {
-        self.draw_round_rect(x, y, w, h, CARD_RADIUS_MM, paper(), Some(rule_soft()), 0.45);
+        draw_round_rect!(
+            self,
+            x,
+            y,
+            w,
+            h,
+            CARD_RADIUS_MM,
+            paper(),
+            Some(rule_soft()),
+            0.45
+        );
         self.draw_panel_title(
             x + 3.5,
             y + 3.2,
@@ -1993,7 +2228,7 @@ impl PdfLayout {
         for (index, row) in rows.iter().enumerate() {
             let row_h = measure_clinical_row_height(row, w);
             let fill = if index % 2 == 0 { paper() } else { wash() };
-            self.draw_rect(x + 3.2, row_y, w - 6.4, row_h, fill, None, 0.0);
+            draw_rect!(self, x + 3.2, row_y, w - 6.4, row_h, fill, None, 0.0);
             self.draw_badge(
                 x + 5.0,
                 row_y + (row_h - 5.8) / 2.0,
@@ -2001,7 +2236,8 @@ impl PdfLayout {
                 label_icon(&row.topic),
                 &row.tone,
             );
-            self.draw_wrapped_text_at(
+            draw_wrapped_text_at!(
+                self,
                 &row.topic,
                 x + 13.0,
                 row_y + 2.0,
@@ -2011,7 +2247,8 @@ impl PdfLayout {
                 ink(),
                 Some(2),
             );
-            self.draw_wrapped_text_at(
+            draw_wrapped_text_at!(
+                self,
                 &row.note,
                 x + 43.0,
                 row_y + 2.0,
@@ -2038,11 +2275,12 @@ impl PdfLayout {
         let cols = 2;
         let gap = 2.5;
         let row_h = 12.0;
-        let rows_count = ((rows.len().max(1) + cols - 1) / cols) as f32;
+        let rows_count = rows.len().max(1).div_ceil(cols) as f32;
         let h = 8.0 + rows_count * row_h + 4.0;
         self.ensure_space(h);
         let y = self.y_mm;
-        self.draw_round_rect(
+        draw_round_rect!(
+            self,
             PAGE_PAD_X_MM,
             y,
             CONTENT_WIDTH_MM,
@@ -2052,14 +2290,15 @@ impl PdfLayout {
             Some(rule_soft()),
             0.45,
         );
-        self.draw_rect(PAGE_PAD_X_MM, y, 2.0, h, rust(), None, 0.0);
+        draw_rect!(self, PAGE_PAD_X_MM, y, 2.0, h, rust(), None, 0.0);
         let item_w = (CONTENT_WIDTH_MM - 11.0 - gap) / cols as f32;
         for (index, row) in rows.iter().enumerate() {
             let col = index % cols;
             let row_index = index / cols;
             let x = PAGE_PAD_X_MM + 6.0 + col as f32 * (item_w + gap);
             let item_y = y + 4.0 + row_index as f32 * row_h;
-            self.draw_round_rect(
+            draw_round_rect!(
+                self,
                 x,
                 item_y,
                 item_w,
@@ -2071,7 +2310,8 @@ impl PdfLayout {
             );
             let tone = row.tone.as_deref().unwrap_or("default");
             self.draw_badge(x + 1.8, item_y + 2.0, 6.6, label_icon(&row.label), tone);
-            self.draw_wrapped_text_at(
+            draw_wrapped_text_at!(
+                self,
                 &row.value,
                 x + 10.0,
                 item_y + 1.5,
@@ -2082,7 +2322,8 @@ impl PdfLayout {
                 Some(2),
             );
             if let Some(detail) = &row.detail {
-                self.draw_wrapped_text_at(
+                draw_wrapped_text_at!(
+                    self,
                     detail,
                     x + 10.0,
                     item_y + 6.2,
@@ -2119,7 +2360,8 @@ impl PdfLayout {
         let h = 35.0_f32.max(grid_h + 12.0);
         self.ensure_space(h);
         let y = self.y_mm;
-        self.draw_round_rect(
+        draw_round_rect!(
+            self,
             PAGE_PAD_X_MM,
             y,
             CONTENT_WIDTH_MM,
@@ -2131,7 +2373,8 @@ impl PdfLayout {
         );
         let cols = 2;
         self.draw_badge(PAGE_PAD_X_MM + 5.5, y + 7.5, 14.0, "episode", "alert");
-        self.draw_wrapped_text_at(
+        draw_wrapped_text_at!(
+            self,
             "Episode Context",
             PAGE_PAD_X_MM + 4.8,
             y + 23.0,
@@ -2155,7 +2398,8 @@ impl PdfLayout {
             let item_y = y + row_offsets[row_index];
             let item_h = row_heights[row_index];
             let tone = row.tone.as_deref().unwrap_or("default");
-            self.draw_round_rect(
+            draw_round_rect!(
+                self,
                 x,
                 item_y,
                 item_w,
@@ -2180,7 +2424,8 @@ impl PdfLayout {
                 BuiltinFont::Helvetica,
                 body(),
             );
-            let value_h = self.draw_wrapped_text_at(
+            let value_h = draw_wrapped_text_at!(
+                self,
                 &row.value,
                 x + 8.8,
                 item_y + 5.0,
@@ -2191,7 +2436,8 @@ impl PdfLayout {
                 Some(2),
             );
             if let Some(detail) = &row.detail {
-                self.draw_wrapped_text_at(
+                draw_wrapped_text_at!(
+                    self,
                     detail,
                     x + 8.8,
                     item_y + 5.8 + value_h,
@@ -2226,7 +2472,17 @@ impl PdfLayout {
         h: f32,
         rows: &[SymptomSummaryRow],
     ) -> Result<(), String> {
-        self.draw_round_rect(x, y, w, h, CARD_RADIUS_MM, paper(), Some(rule_soft()), 0.45);
+        draw_round_rect!(
+            self,
+            x,
+            y,
+            w,
+            h,
+            CARD_RADIUS_MM,
+            paper(),
+            Some(rule_soft()),
+            0.45
+        );
         self.draw_panel_title(x + 3.5, y + 3.2, w - 7.0, "Symptoms", "symptom", "alert");
         if rows.is_empty() {
             self.draw_empty_box(
@@ -2250,7 +2506,8 @@ impl PdfLayout {
         row_y += 7.0;
         for row in rows {
             let row_h = measure_symptom_row_height(row, w);
-            self.draw_rect(
+            draw_rect!(
+                self,
                 x + 3.0,
                 row_y,
                 w - 6.0,
@@ -2267,7 +2524,8 @@ impl PdfLayout {
                 label_icon(&row.symptom),
                 &row.tone,
             );
-            self.draw_wrapped_text_at(
+            draw_wrapped_text_at!(
+                self,
                 &row.symptom,
                 inner_x + 8.0,
                 row_y + 2.0,
@@ -2282,7 +2540,8 @@ impl PdfLayout {
                 row_y + row_h / 2.0,
                 row.severity_score,
             );
-            self.draw_wrapped_text_at(
+            draw_wrapped_text_at!(
+                self,
                 &row.latest,
                 inner_x + widths[0] + widths[1] + 2.0,
                 row_y + 2.0,
@@ -2292,7 +2551,8 @@ impl PdfLayout {
                 body(),
                 None,
             );
-            self.draw_wrapped_text_at(
+            draw_wrapped_text_at!(
+                self,
                 &row.note,
                 inner_x + widths[0] + widths[1] + widths[2] + 2.0,
                 row_y + 2.0,
@@ -2326,7 +2586,17 @@ impl PdfLayout {
         h: f32,
         rows: &[FeedingSummaryRow],
     ) -> Result<(), String> {
-        self.draw_round_rect(x, y, w, h, CARD_RADIUS_MM, paper(), Some(rule_soft()), 0.45);
+        draw_round_rect!(
+            self,
+            x,
+            y,
+            w,
+            h,
+            CARD_RADIUS_MM,
+            paper(),
+            Some(rule_soft()),
+            0.45
+        );
         self.draw_panel_title(
             x + 3.5,
             y + 3.2,
@@ -2357,7 +2627,8 @@ impl PdfLayout {
         row_y += 7.0;
         for row in rows {
             let row_h = measure_feeding_row_height(row, w);
-            self.draw_rect(
+            draw_rect!(
+                self,
                 x + 3.0,
                 row_y,
                 w - 6.0,
@@ -2374,7 +2645,8 @@ impl PdfLayout {
                 label_icon(&row.r#type),
                 "default",
             );
-            self.draw_wrapped_text_at(
+            draw_wrapped_text_at!(
+                self,
                 &row.r#type,
                 inner_x + 8.0,
                 row_y + 2.0,
@@ -2384,7 +2656,8 @@ impl PdfLayout {
                 ink(),
                 None,
             );
-            self.draw_wrapped_text_at(
+            draw_wrapped_text_at!(
+                self,
                 &row.entries,
                 inner_x + widths[0] + 2.0,
                 row_y + 2.0,
@@ -2394,7 +2667,8 @@ impl PdfLayout {
                 body(),
                 None,
             );
-            self.draw_wrapped_text_at(
+            draw_wrapped_text_at!(
+                self,
                 &row.notes,
                 inner_x + widths[0] + widths[1] + 2.0,
                 row_y + 2.0,
@@ -2412,7 +2686,8 @@ impl PdfLayout {
     fn draw_timeline_table_header(&mut self, y: f32) {
         let widths = timeline_widths();
         let labels = ["Date / Time", "Event", "Key Details", "Parent Note"];
-        self.draw_round_rect(
+        draw_round_rect!(
+            self,
             PAGE_PAD_X_MM,
             y,
             CONTENT_WIDTH_MM,
@@ -2454,7 +2729,8 @@ impl PdfLayout {
             self.y_mm += 10.0;
         }
         let y = self.y_mm;
-        self.draw_rect(
+        draw_rect!(
+            self,
             PAGE_PAD_X_MM,
             y,
             CONTENT_WIDTH_MM,
@@ -2491,7 +2767,8 @@ impl PdfLayout {
         }
 
         let y = self.y_mm;
-        self.draw_rect(
+        draw_rect!(
+            self,
             PAGE_PAD_X_MM,
             y,
             CONTENT_WIDTH_MM,
@@ -2501,7 +2778,8 @@ impl PdfLayout {
             0.2,
         );
         let mut x = PAGE_PAD_X_MM;
-        self.draw_wrapped_text_at(
+        draw_wrapped_text_at!(
+            self,
             &row.time,
             x + 3.0,
             y + 2.0,
@@ -2520,7 +2798,8 @@ impl PdfLayout {
             label_icon(&row.event),
             &row.tone,
         );
-        self.draw_wrapped_text_at(
+        draw_wrapped_text_at!(
+            self,
             &row.event,
             x + 9.0,
             y + 2.0,
@@ -2532,7 +2811,8 @@ impl PdfLayout {
         );
         x += widths[1];
         self.draw_line(x, y, x, y + row_h, rule_soft(), 0.22);
-        self.draw_wrapped_text_at(
+        draw_wrapped_text_at!(
+            self,
             &row.details,
             x + 3.0,
             y + 2.0,
@@ -2544,7 +2824,8 @@ impl PdfLayout {
         );
         x += widths[2];
         self.draw_line(x, y, x, y + row_h, rule_soft(), 0.22);
-        self.draw_wrapped_text_at(
+        draw_wrapped_text_at!(
+            self,
             &row.note,
             x + 3.0,
             y + 2.0,
@@ -2598,7 +2879,8 @@ impl PdfLayout {
                 0.0
             };
             if bar_h > 0.0 {
-                self.draw_round_rect(
+                draw_round_rect!(
+                    self,
                     cx + slot * 0.32,
                     bar_base_y - bar_h,
                     slot * 0.36,
@@ -2620,7 +2902,8 @@ impl PdfLayout {
                     muted(),
                 );
             }
-            self.draw_wrapped_text_at(
+            draw_wrapped_text_at!(
+                self,
                 &point.weekday,
                 cx,
                 bar_base_y + 2.0,
@@ -2631,7 +2914,8 @@ impl PdfLayout {
                 Some(1),
             );
             if should_show_chart_date_label(points.len(), index) {
-                self.draw_wrapped_text_at(
+                draw_wrapped_text_at!(
+                    self,
                     &point.date_label,
                     cx,
                     bar_base_y + 5.8,
@@ -2700,7 +2984,8 @@ impl PdfLayout {
                         continue;
                     }
                     let seg_h = (value as f32 / total as f32) * bar_h;
-                    self.draw_rect(
+                    draw_rect!(
+                        self,
                         bar_x,
                         bar_base_y - used - seg_h,
                         bar_w,
@@ -2712,7 +2997,8 @@ impl PdfLayout {
                     used += seg_h;
                 }
             }
-            self.draw_wrapped_text_at(
+            draw_wrapped_text_at!(
+                self,
                 &point.weekday,
                 cx,
                 bar_base_y + 2.0,
@@ -2723,7 +3009,8 @@ impl PdfLayout {
                 Some(1),
             );
             if should_show_chart_date_label(points.len(), index) {
-                self.draw_wrapped_text_at(
+                draw_wrapped_text_at!(
+                    self,
                     &point.date_label,
                     cx,
                     bar_base_y + 5.8,
@@ -2768,7 +3055,8 @@ impl PdfLayout {
     fn draw_legend(&mut self, x: f32, y: f32, items: &[(&str, Color)]) {
         let mut cursor = x;
         for (label, color) in items {
-            self.draw_rect(
+            draw_rect!(
+                self,
                 cursor,
                 y,
                 2.8,
@@ -2811,7 +3099,8 @@ impl PdfLayout {
             } else {
                 item.count as f32 / total as f32
             };
-            self.draw_donut_segment(
+            draw_donut_segment!(
+                self,
                 cx,
                 cy,
                 outer_r,
@@ -2825,16 +3114,16 @@ impl PdfLayout {
         self.draw_circle(cx, cy, inner_r, paper(), Some(rule_soft()), 0.2);
     }
 
-    fn draw_donut_segment(
-        &mut self,
-        cx: f32,
-        cy: f32,
-        outer_r: f32,
-        inner_r: f32,
-        start_deg: f32,
-        sweep_deg: f32,
-        color: Color,
-    ) {
+    fn draw_donut_segment(&mut self, segment: DonutSegment) {
+        let DonutSegment {
+            cx,
+            cy,
+            outer_r,
+            inner_r,
+            start_deg,
+            sweep_deg,
+            color,
+        } = segment;
         let steps = ((sweep_deg.abs() / 8.0).ceil() as usize).max(3);
         let mut points = Vec::new();
         for index in 0..=steps {
@@ -2850,7 +3139,8 @@ impl PdfLayout {
 
     fn draw_panel_title(&mut self, x: f32, y: f32, w: f32, title: &str, icon: &str, tone: &str) {
         self.draw_badge(x, y, 7.4, icon, tone);
-        self.draw_wrapped_text_at(
+        draw_wrapped_text_at!(
+            self,
             title,
             x + 10.0,
             y + 0.2,
@@ -2864,7 +3154,7 @@ impl PdfLayout {
     }
 
     fn draw_table_header(&mut self, x: f32, y: f32, w: f32, labels: &[&str], widths: &[f32]) {
-        self.draw_rect(x, y, w, 7.0, wash(), Some(rule_soft()), 0.2);
+        draw_rect!(self, x, y, w, 7.0, wash(), Some(rule_soft()), 0.2);
         let mut cursor = x;
         for (index, label) in labels.iter().enumerate() {
             let width = widths[index];
@@ -2894,7 +3184,8 @@ impl PdfLayout {
     }
 
     fn draw_empty_box(&mut self, text: &str, x: f32, y: f32, w: f32, h: f32) {
-        self.draw_round_rect(
+        draw_round_rect!(
+            self,
             x,
             y,
             w,
@@ -2905,7 +3196,8 @@ impl PdfLayout {
             0.35,
         );
         let text_h = measure_wrapped_text(text, w - 12.0, 7.5, None);
-        self.draw_wrapped_text_at(
+        draw_wrapped_text_at!(
+            self,
             text,
             x + 6.0,
             y + (h - text_h) / 2.0,
@@ -2959,7 +3251,8 @@ impl PdfLayout {
         fallback_label: &str,
         tone: &str,
     ) {
-        self.draw_round_rect(
+        draw_round_rect!(
+            self,
             x,
             y,
             size,
@@ -3090,17 +3383,13 @@ impl PdfLayout {
         );
     }
 
-    fn draw_round_rect(
-        &mut self,
-        x: f32,
-        y: f32,
-        w: f32,
-        h: f32,
-        radius: f32,
-        fill: Color,
-        stroke: Option<Color>,
-        stroke_width: f32,
-    ) {
+    fn draw_round_rect(&mut self, rect: PdfRect, radius: f32, style: ShapeStyle) {
+        let PdfRect { x, y, w, h } = rect;
+        let ShapeStyle {
+            fill,
+            stroke,
+            stroke_width,
+        } = style;
         let points = rounded_rect_points(x, y, w, h, radius);
         self.draw_polygon_from_top_with_mode(
             &points,
@@ -3111,16 +3400,13 @@ impl PdfLayout {
         );
     }
 
-    fn draw_rect(
-        &mut self,
-        x: f32,
-        y: f32,
-        w: f32,
-        h: f32,
-        fill: Color,
-        stroke: Option<Color>,
-        stroke_width: f32,
-    ) {
+    fn draw_rect(&mut self, rect: PdfRect, style: ShapeStyle) {
+        let PdfRect { x, y, w, h } = rect;
+        let ShapeStyle {
+            fill,
+            stroke,
+            stroke_width,
+        } = style;
         let points = vec![(x, y), (x + w, y), (x + w, y + h), (x, y + h)];
         let mode = if stroke.is_some() {
             PaintMode::FillStroke
@@ -3242,11 +3528,14 @@ impl PdfLayout {
         x: f32,
         top_y: f32,
         max_width: f32,
-        font_size_pt: f32,
-        font: BuiltinFont,
-        color: Color,
+        style: PdfTextStyle,
         max_lines: Option<usize>,
     ) -> f32 {
+        let PdfTextStyle {
+            font_size_pt,
+            font,
+            color,
+        } = style;
         let line_height = pt_to_mm(font_size_pt * 1.22);
         let mut lines = wrap_text(text, max_width, font_size_pt);
         if let Some(max_lines) = max_lines {
@@ -3699,7 +3988,7 @@ fn chart_scale_max(values: Vec<u32>) -> u32 {
     } else if max <= 6 {
         max
     } else {
-        ((max + 1) / 2) * 2
+        max.div_ceil(2) * 2
     }
 }
 
@@ -3708,7 +3997,7 @@ fn format_chart_count_label(value: u32) -> String {
 }
 
 fn should_show_chart_date_label(total_points: usize, index: usize) -> bool {
-    total_points <= 7 || index == 0 || index + 1 == total_points || index % 2 == 0
+    total_points <= 7 || index == 0 || index + 1 == total_points || index.is_multiple_of(2)
 }
 
 fn timeline_widths() -> [f32; 4] {
@@ -3789,9 +4078,10 @@ fn label_icon(label: &str) -> &str {
         || value.contains("poop")
         || value.contains("consistency")
         || value.contains("no-poop")
+        || value.contains("type")
+        || value.contains("pattern")
+        || value.contains("trend")
     {
-        "poop"
-    } else if value.contains("type") || value.contains("pattern") || value.contains("trend") {
         "poop"
     } else if value.contains("date")
         || value.contains("latest")

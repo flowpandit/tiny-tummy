@@ -8,6 +8,7 @@ INFO_PLIST_PATH="$REPO_DIR/src-tauri/gen/apple/tiny-tummy_iOS/Info.plist"
 IOS_PLUGIN_TEMPLATE="$REPO_DIR/src-tauri/ios-templates/BillingPlugin.swift"
 IOS_PLUGIN_TARGET="$REPO_DIR/src-tauri/gen/apple/Sources/tiny-tummy/BillingPlugin.swift"
 LOCAL_NETWORK_REASON="Tiny Tummy connects to the Vite dev server on your Mac when running iOS development builds with hot reload."
+IOS_DEPLOYMENT_TARGET="16.0"
 
 if [ ! -f "$PBXPROJ_PATH" ]; then
   echo "patch-ios-xcodeproj.sh: missing $PBXPROJ_PATH" >&2
@@ -15,6 +16,7 @@ if [ ! -f "$PBXPROJ_PATH" ]; then
 fi
 
 perl -0pi -e 's/CODE_SIGN_STYLE = Automatic;\n(\s+)ENABLE_BITCODE = NO;/CODE_SIGN_STYLE = Automatic;\n$1ENABLE_USER_SCRIPT_SANDBOXING = NO;\n$1ENABLE_BITCODE = NO;/g' "$PBXPROJ_PATH"
+perl -0pi -e "s/IPHONEOS_DEPLOYMENT_TARGET = [0-9.]+;/IPHONEOS_DEPLOYMENT_TARGET = $IOS_DEPLOYMENT_TARGET;/g" "$PBXPROJ_PATH"
 
 if [ -f "$IOS_PLUGIN_TEMPLATE" ]; then
   mkdir -p "$(dirname "$IOS_PLUGIN_TARGET")"

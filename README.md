@@ -117,7 +117,7 @@ tiny-tummy/
 
 - Android Studio with SDK Platform 36 or 36.1, Android SDK Build-Tools, Android SDK Platform-Tools, Android SDK Command-line Tools, and NDK installed
 - Android min SDK 24 (Android 7.0), target SDK 36
-- JDK 17 is the safest local build JDK for the current generated AGP 8.11.x / Gradle 8.14.x project. JDK 21 can be tested, but avoid JDK 25 with this Android toolchain.
+- JDK 17 for the current generated AGP 8.11.x / Gradle 8.14.x project. Do not use OpenJDK 25 for Android verification on this toolchain.
 
 ## Local Development Setup
 
@@ -185,12 +185,12 @@ Set Android environment variables before running Tauri Android commands:
 export ANDROID_HOME="$HOME/Library/Android/sdk"
 export NDK_HOME="$ANDROID_HOME/ndk/$(ls -1 "$ANDROID_HOME/ndk" | tail -n 1)"
 
-# Prefer a JDK 17 install for AGP 8.11.x / Gradle 8.14.x.
+# Use JDK 17 for AGP 8.11.x / Gradle 8.14.x.
 export JAVA_HOME=$(/usr/libexec/java_home -v 17)
 java -version
 ```
 
-If `/usr/libexec/java_home -v 17` fails, install JDK 17 first, for example with Temurin or through your normal Java version manager. Do not use OpenJDK 25 for Android verification on the current Gradle wrapper; Gradle 8.14.x does not support running on Java 25.
+`java -version` should report 17.x. If `/usr/libexec/java_home -v 17` fails or still selects a newer JDK such as OpenJDK 25, install JDK 17 first, for example with Temurin or through your normal Java version manager. Do not use OpenJDK 25 for Android verification on the current Gradle wrapper; Gradle 8.14.x does not support running on Java 25.
 
 ```bash
 # 1. Install the Tauri CLI (one-time)
@@ -204,7 +204,12 @@ cargo tauri android init
 # injects billing-ktx, and regenerates Android icons.
 ./scripts/setup-android.sh
 
-# 4. Build a release APK for testing
+# 4. Verify the generated Android project compiles Kotlin with JDK 17
+cd src-tauri/gen/android
+./gradlew :app:compileDebugKotlin
+cd ../../..
+
+# 5. Build a release APK for testing
 cargo tauri android build --apk
 ```
 
@@ -424,13 +429,15 @@ The `.ipa` is generated in `src-tauri/gen/apple/build/`. Upload to [App Store Co
 
 - **Unsigned APK won't install**: Android refuses unsigned APKs with `INSTALL_PARSE_FAILED_NO_CERTIFICATES`. Either sign with `apksigner` or build debug (`--debug` flag).
 
-- **Gradle fails under OpenJDK 25**: Use JDK 17 for Android builds on the current Gradle wrapper, then rerun `./scripts/setup-android.sh` and `cargo tauri android build --apk`. Check with `java -version` and `src-tauri/gen/android/gradlew --version`.
+- **Gradle fails under OpenJDK 25**: Use JDK 17 for Android builds on the current Gradle wrapper, then rerun `./scripts/setup-android.sh` and `cd src-tauri/gen/android && ./gradlew :app:compileDebugKotlin`. Check with `java -version` and `src-tauri/gen/android/gradlew --version`.
 
 - **Billing plugin missing after regenerating Android**: `src-tauri/gen/android/` is ignored and can be recreated. Run `cargo tauri android init`, then `./scripts/setup-android.sh`; the script copies `src-tauri/android-templates/BillingPlugin.kt` and inserts `implementation("com.android.billingclient:billing-ktx:7.1.1")`.
 
 ### iOS-specific
 
 - **Safe areas**: iOS Safari WebView supports `env(safe-area-inset-top)` natively via `@supports` in CSS. No manual offsets needed.
+
+- **iOS deployment target stale after regenerating iOS**: `src-tauri/tauri.conf.json` sets `bundle.iOS.minimumSystemVersion` to `16.0`, which maps to `IPHONEOS_DEPLOYMENT_TARGET`. If an older generated Xcode project still shows iOS 14.0, run `npm run fix:ios-xcodeproj` and verify `IPHONEOS_DEPLOYMENT_TARGET = 16.0` in `src-tauri/gen/apple/tiny-tummy.xcodeproj/project.pbxproj`.
 
 - **Billing plugin stale after regenerating iOS**: `src-tauri/gen/apple/` is ignored and can be recreated. Run `cargo tauri ios init`, then `npm run fix:ios-xcodeproj` or `./scripts/build-rust-ios.sh` so `src-tauri/ios-templates/BillingPlugin.swift` is copied into the generated Xcode sources.
 
