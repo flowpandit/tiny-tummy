@@ -3,12 +3,12 @@ import {
   type FeatureId,
 } from "./feature-access";
 
-export interface PaywallNavigationState {
+export interface UnlockNavigationState {
   featureId: FeatureId | null;
   returnTo: string;
 }
 
-export function getPaywallNavigationState(state: unknown): PaywallNavigationState {
+export function getUnlockNavigationState(state: unknown): UnlockNavigationState {
   if (!state || typeof state !== "object") {
     return { featureId: null, returnTo: "/" };
   }

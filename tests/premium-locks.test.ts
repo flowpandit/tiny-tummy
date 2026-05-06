@@ -5,7 +5,7 @@ import "./test-dom.ts";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { PremiumInlineLock } from "../src/components/billing/PremiumLocks.tsx";
-import { getPaywallNavigationState } from "../src/lib/paywall-navigation.ts";
+import { getUnlockNavigationState } from "../src/lib/unlock-navigation.ts";
 import { SmartReminderRows } from "../src/components/settings/SmartReminderRows.tsx";
 import { HistoryRangeSelector } from "../src/components/history/HistoryRangeSelector.tsx";
 
@@ -50,20 +50,20 @@ test("PremiumInlineLock routes to unlock with feature context and return path", 
   assert.equal(screen.getByTestId("return-to").textContent, "/history");
 });
 
-test("Paywall navigation state accepts only app return paths and known canonical features", () => {
-  assert.deepEqual(getPaywallNavigationState({ featureId: "pediatrician_report", returnTo: "/report" }), {
+test("Unlock navigation state accepts only app return paths and known canonical features", () => {
+  assert.deepEqual(getUnlockNavigationState({ featureId: "pediatrician_report", returnTo: "/report" }), {
     featureId: "pediatrician_report",
     returnTo: "/report",
   });
-  assert.deepEqual(getPaywallNavigationState({ featureId: "doctorReports", returnTo: "/report" }), {
+  assert.deepEqual(getUnlockNavigationState({ featureId: "doctorReports", returnTo: "/report" }), {
     featureId: "pediatrician_report",
     returnTo: "/report",
   });
-  assert.deepEqual(getPaywallNavigationState({ featureId: "unknown", returnTo: "https://example.com" }), {
+  assert.deepEqual(getUnlockNavigationState({ featureId: "unknown", returnTo: "https://example.com" }), {
     featureId: null,
     returnTo: "/",
   });
-  assert.deepEqual(getPaywallNavigationState({ featureId: "multi_child", returnTo: "/unlock" }), {
+  assert.deepEqual(getUnlockNavigationState({ featureId: "multi_child", returnTo: "/unlock" }), {
     featureId: "multi_child",
     returnTo: "/",
   });

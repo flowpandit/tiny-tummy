@@ -8,7 +8,6 @@ import { ErrorBoundary } from "./components/ui/error-boundary";
 import { ToastProvider } from "./components/ui/toast";
 import { TrialProvider, useTrialAccess, useTrialActions } from "./contexts/TrialContext";
 import { AppShell } from "./components/layout/AppShell";
-import { Paywall } from "./components/billing/Paywall";
 import { Logo } from "./components/ui/Logo";
 import { Home } from "./pages/Home";
 import { Onboarding } from "./pages/Onboarding";
@@ -24,6 +23,7 @@ import { Milestones } from "./pages/Milestones";
 import { Breastfeed } from "./pages/Breastfeed";
 import { Guidance } from "./pages/Guidance";
 import { Settings } from "./pages/Settings";
+import { PlanSync } from "./pages/PlanSync";
 import { Report } from "./pages/Report";
 import { CaregiverHandoff } from "./pages/CaregiverHandoff";
 import { AddChild } from "./pages/AddChild";
@@ -139,7 +139,7 @@ function AppRoutes() {
     return (
       <Routes>
         <Route path="/onboarding" element={<Onboarding />} />
-        <Route path="/unlock" element={<Paywall />} />
+        <Route path="/unlock" element={<PlanSync />} />
         <Route path="/privacy" element={<Privacy />} />
         <Route path="*" element={<Navigate to="/onboarding" replace />} />
       </Routes>
@@ -169,7 +169,7 @@ function AppRoutes() {
         <Route path="/report" element={<Report />} />
         <Route path="/handoff" element={<CaregiverHandoff />} />
       </Route>
-      <Route path="/unlock" element={<Paywall />} />
+      <Route path="/unlock" element={<PlanSync />} />
       <Route path="/add-child" element={<AddChild />} />
       <Route path="/all-kids" element={<AllKids />} />
       <Route path="/privacy" element={<Privacy />} />

@@ -556,15 +556,15 @@ export function AccessSection() {
   const navigate = useNavigate();
   const isPremium = accessKind === "premium";
   const accessTitle = isPremium
-    ? "Tiny Tummy Premium is unlocked"
+    ? "Lifetime Private is unlocked"
     : isLocked
-      ? "Free basic plan is active"
+      ? "Free plan is active"
       : "14-day full trial active";
   const accessDetail = isPremium
-    ? "Doctor reports, full history, trends, photos, multi-child support, and smart reminders are available."
+    ? "Full local tracking, reports, backup/export, and multi-child support stay available without a subscription."
     : isLocked
-      ? "Basic logging stays free. Premium unlocks reports, full history, trends, photos, extra children, and smart reminders."
-      : "Try every Premium feature before deciding. After the trial, basic logging remains free.";
+      ? "Useful local tracking stays free. Lifetime Private unlocks the full local app forever."
+      : "Try the full local app before deciding. After the trial, useful local tracking remains free.";
 
   const handleRestore = async () => {
     try {
