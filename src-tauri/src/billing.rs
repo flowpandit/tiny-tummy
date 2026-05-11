@@ -53,6 +53,7 @@ pub struct BillingProductMetadataResponse {
     pub message: Option<String>,
 }
 
+#[cfg(not(any(target_os = "android", target_os = "ios")))]
 fn unsupported_response(message: &str) -> BillingPluginResponse {
     BillingPluginResponse {
         ok: false,
@@ -96,6 +97,7 @@ fn unsupported_metadata_response(
     }
 }
 
+#[cfg(not(any(target_os = "android", target_os = "ios")))]
 fn unavailable_metadata_response(message: &str) -> BillingProductMetadataResponse {
     BillingProductMetadataResponse {
         ok: false,

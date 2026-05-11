@@ -11,10 +11,9 @@ export interface EliminationExperience {
 
 const INFANT_DIAPER_CUTOFF_DAYS = 365;
 
-export function getChildAgeDays(dateOfBirth: string): number {
+export function getChildAgeDays(dateOfBirth: string, referenceDate = new Date()): number {
   const birth = parseLocalDate(dateOfBirth);
-  const now = new Date();
-  return Math.max(0, Math.floor((now.getTime() - birth.getTime()) / 86400000));
+  return Math.max(0, Math.floor((referenceDate.getTime() - birth.getTime()) / 86400000));
 }
 
 export function getEliminationViewSettingKey(childId: string): string {

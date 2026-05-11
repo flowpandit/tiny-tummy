@@ -141,7 +141,7 @@ export function getDiaperNextLikelyEstimate(
   type: "wet" | "dirty",
   referenceDate = new Date(),
 ): DiaperNextLikelyEstimate {
-  const ageDays = getChildAgeDays(dateOfBirth);
+  const ageDays = getChildAgeDays(dateOfBirth, referenceDate);
   const baseline = getDiaperBaselineHours(ageDays, type);
   const label = type === "wet" ? "Next wet" : "Next poop";
   const fallback: DiaperNextLikelyEstimate = {

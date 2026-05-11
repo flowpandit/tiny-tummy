@@ -375,26 +375,57 @@ That skips re-running the shared frontend dev command, which is useful when iOS 
 Google Play requires `.aab` (Android App Bundle) format — not `.apk`. Google generates device-optimized APKs from the bundle, so users get smaller downloads.
 
 ```bash
-# 1. Build the AAB (release mode)
+# 1. Use JDK 17 and verify Android Kotlin setup
+source scripts/use-jdk17.sh
+./scripts/verify-android-kotlin.sh
+
+# 2. Build the AAB (release mode)
 cargo tauri android build
 
 # Output is at:
 # src-tauri/gen/android/app/build/outputs/bundle/universalRelease/app-universal-release.aab
 ```
 
-**Before submitting, you must sign the AAB:**
+**Before submitting, sign the AAB with your upload key.**
+
+Create an upload keystore once if you do not already have one:
 
 ```bash
-# Sign with your upload keystore (same one used for APK testing, or a dedicated one)
-jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 \
-  -keystore ~/tiny-tummy.keystore \
-  src-tauri/gen/android/app/build/outputs/bundle/universalRelease/app-universal-release.aab \
-  tiny-tummy
+mkdir -p ~/android-keystores
+
+keytool -genkeypair \
+  -v \
+  -keystore ~/android-keystores/tiny-tummy-upload.jks \
+  -alias tiny-tummy-upload \
+  -keyalg RSA \
+  -keysize 2048 \
+  -validity 10000
 ```
 
-Then upload the signed `.aab` to [Google Play Console](https://play.google.com/console/).
+Save the `.jks` file and passwords in a secure password manager or backup location. Do not commit the keystore to git.
 
-> **Note:** Use the same keystore for every release. If you lose it, you cannot push updates to your app. Back it up securely.
+Sign the AAB:
+
+```bash
+jarsigner \
+  -verbose \
+  -sigalg SHA256withRSA \
+  -digestalg SHA-256 \
+  -keystore ~/android-keystores/tiny-tummy-upload.jks \
+  src-tauri/gen/android/app/build/outputs/bundle/universalRelease/app-universal-release.aab \
+  tiny-tummy-upload
+```
+
+Verify the signature:
+
+```bash
+jarsigner -verify -verbose -certs \
+  src-tauri/gen/android/app/build/outputs/bundle/universalRelease/app-universal-release.aab
+```
+
+Then upload the signed `.aab` to [Google Play Console](https://play.google.com/console/) under **Testing > Internal testing > Create new release**.
+
+> **Note:** Use the same upload keystore for every release. If you lose it, you must go through Google Play's upload-key reset process before you can publish updates. Back it up securely.
 
 ### iOS (App Store)
 
