@@ -1,127 +1,100 @@
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
-import { Button } from "../ui/button";
-import { Card, CardContent } from "../ui/card";
-import { Badge } from "../ui/badge";
-import { getChildStatus } from "../../lib/tauri";
-import { getAgeLabelFromDob } from "../../lib/utils";
-import { FEEDING_TYPES } from "../../lib/constants";
-import type { Child } from "../../lib/types";
+import { motion } from "framer-motion"
+import { FEEDING_TYPES } from "../../lib/constants"
+import type { BabyDetailsDraft } from "./AddChildStep"
 
 interface NormalRangeIntroProps {
-  child: Child;
-  onFinish: () => Promise<void>;
-  getChildStatusAction?: typeof getChildStatus;
-  navigateAction?: (to: string, options?: { replace?: boolean }) => void;
+  baby: BabyDetailsDraft
+  goals: string[]
+  onFinish: () => Promise<void>
+  isSubmitting?: boolean
+  error?: string | null
+}
+
+function formatDate(date: string) {
+  return new Date(`${date}T00:00:00`).toLocaleDateString(undefined, {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  })
+}
+
+function BabyPortrait({ baby }: { baby: BabyDetailsDraft }) {
+  const initial = baby.name.trim().charAt(0).toUpperCase() || "T"
+
+  return (
+    <div className="relative h-28 w-28 rounded-full bg-[#F4D5C7] p-2 shadow-[0_18px_45px_rgba(85,48,33,0.18)]">
+      <div
+        className="flex h-full w-full items-center justify-center rounded-full text-[42px] font-extrabold text-white"
+        style={{ backgroundColor: baby.avatarColor }}
+      >
+        {initial}
+      </div>
+      <div className="absolute right-0 top-2 h-9 w-9 rounded-full bg-[#FCE7D9]" />
+    </div>
+  )
 }
 
 export function NormalRangeIntro({
-  child,
+  baby,
+  goals,
   onFinish,
-  getChildStatusAction = getChildStatus,
-  navigateAction,
+  isSubmitting = false,
+  error = null,
 }: NormalRangeIntroProps) {
-  const navigate = useNavigate();
-  const [normalDesc, setNormalDesc] = useState("");
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    getChildStatusAction(child.date_of_birth, child.feeding_type, null).then(
-      ([_, desc]) => {
-        setNormalDesc(desc);
-        setIsLoading(false);
-      },
-    );
-  }, [child, getChildStatusAction]);
-
-  const handleFinish = async () => {
-    await onFinish();
-    (navigateAction ?? navigate)("/", { replace: true });
-  };
-
   const feedingLabel =
-    FEEDING_TYPES.find((f) => f.value === child.feeding_type)?.label ?? child.feeding_type;
-  const ageLabel = getAgeLabelFromDob(child.date_of_birth);
+    FEEDING_TYPES.find((feeding) => feeding.value === baby.feedingType)?.label ?? baby.feedingType
+  const goalsLabel = goals.length > 0 ? goals.join(", ") : "Not selected"
 
   return (
-    <div className="flex flex-col min-h-screen px-6 pt-12">
+    <section className="relative flex min-h-0 flex-1 flex-col overflow-hidden text-center">
+      <div className="pointer-events-none absolute left-[-10px] top-[118px] h-16 w-20 rounded-t-full border-[18px] border-b-0 border-[#FFD9C6]/75" />
+      <div className="pointer-events-none absolute right-[-18px] top-[124px] h-16 w-20 rounded-b-full border-[18px] border-t-0 border-[#F0E5FF]/80" />
+
       <motion.div
-        initial={{ scale: 0.8, opacity: 0 }}
+        initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
-        transition={{ delay: 0.2, type: "spring", stiffness: 200, damping: 20 }}
-        className="flex justify-center mb-6"
+        transition={{ type: "spring", stiffness: 210, damping: 22 }}
+        className="mt-11 flex justify-center"
       >
-        <div
-          className="w-16 h-16 rounded-full flex items-center justify-center text-white text-2xl font-bold"
-          style={{ backgroundColor: child.avatar_color }}
-        >
-          {child.name.charAt(0).toUpperCase()}
-        </div>
+        <BabyPortrait baby={baby} />
       </motion.div>
 
-      <h2 className="text-2xl font-bold text-[var(--color-text)] mb-2 text-center">
-        Great! Here's what's normal for {child.name}
+      <h2 className="mt-8 text-[25px] font-extrabold leading-tight tracking-normal text-[#3C241F]">
+        You&apos;re all set!
       </h2>
+      <p className="mx-auto mt-3 max-w-[250px] text-[14px] leading-6 text-[#7A6258]">
+        We&apos;re ready to help you track with confidence.
+      </p>
 
-      <div className="flex justify-center gap-2 mb-6">
-        <Badge variant="info">{ageLabel}</Badge>
-        <Badge variant="default">{feedingLabel}</Badge>
+      <div className="mt-8 rounded-[18px] border border-[#F4D5C3] bg-white/48 px-5 py-5 text-left shadow-[0_18px_45px_rgba(108,72,52,0.08)]">
+        <dl className="grid grid-cols-[78px_1fr] gap-x-5 gap-y-4 text-[13px]">
+          <dt className="font-semibold text-[#7A6258]">Baby</dt>
+          <dd className="font-medium text-[#3C241F]">{baby.name.trim()}</dd>
+          <dt className="font-semibold text-[#7A6258]">DOB</dt>
+          <dd className="font-medium text-[#3C241F]">{formatDate(baby.dob)}</dd>
+          <dt className="font-semibold text-[#7A6258]">Feeding</dt>
+          <dd className="font-medium text-[#3C241F]">{feedingLabel}</dd>
+          <dt className="font-semibold text-[#7A6258]">Goals</dt>
+          <dd className="font-medium leading-5 text-[#3C241F]">{goalsLabel}</dd>
+        </dl>
       </div>
 
-      {!isLoading && (
-        <motion.div
-          initial={{ y: 20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.4 }}
-        >
-          <Card className="mb-6">
-            <CardContent className="py-5">
-              <div className="flex items-start gap-3">
-                <div className="w-10 h-10 rounded-full bg-[var(--color-healthy-bg)] flex items-center justify-center flex-shrink-0">
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="var(--color-healthy)" className="w-5 h-5">
-                    <path fillRule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12Zm13.36-1.814a.75.75 0 1 0-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 0 0-1.06 1.06l2.25 2.25a.75.75 0 0 0 1.14-.094l3.75-5.25Z" clipRule="evenodd" />
-                  </svg>
-                </div>
-                <div>
-                  <p className="font-medium text-[var(--color-text)] mb-1">
-                    Normal range
-                  </p>
-                  <p className="text-sm text-[var(--color-text-secondary)] leading-relaxed">
-                    {normalDesc}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="mb-6">
-            <CardContent className="py-5">
-              <div className="flex items-start gap-3">
-                <div className="w-10 h-10 rounded-full bg-[var(--color-info-bg)] flex items-center justify-center flex-shrink-0">
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="var(--color-info)" className="w-5 h-5">
-                    <path fillRule="evenodd" d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25ZM12.75 9a.75.75 0 0 0-1.5 0v2.25H9a.75.75 0 0 0 0 1.5h2.25V15a.75.75 0 0 0 1.5 0v-2.25H15a.75.75 0 0 0 0-1.5h-2.25V9Z" clipRule="evenodd" />
-                  </svg>
-                </div>
-                <div>
-                  <p className="font-medium text-[var(--color-text)] mb-1">
-                    We'll keep watch
-                  </p>
-                  <p className="text-sm text-[var(--color-text-secondary)] leading-relaxed">
-                    We'll alert you if {child.name}'s patterns fall outside the normal range, and flag any colors that need attention.
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
+      {error && (
+        <p className="mt-4 rounded-[16px] border border-[#F2B8AA] bg-[#FFF0ED] px-4 py-3 text-left text-[13px] leading-5 text-[#A84334]">
+          {error}
+        </p>
       )}
 
-      <div className="mt-auto pb-8">
-        <Button variant="cta" size="lg" className="w-full" onClick={handleFinish}>
-          Start Tracking
-        </Button>
+      <div className="mt-auto pt-7">
+        <button
+          type="button"
+          onClick={onFinish}
+          disabled={isSubmitting}
+          className="h-14 w-full rounded-[28px] bg-[linear-gradient(180deg,#FF9D77_0%,#F47B58_100%)] text-[16px] font-extrabold text-white shadow-[0_16px_34px_rgba(239,112,75,0.26)] transition active:scale-[0.99] disabled:cursor-wait disabled:opacity-60"
+        >
+          {isSubmitting ? "Starting..." : "Start Tracking"}
+        </button>
       </div>
-    </div>
-  );
+    </section>
+  )
 }

@@ -163,32 +163,36 @@ test("AppShell page gestures are locked while a sheet is open", () => {
   }
 });
 
-test("NormalRangeIntro loads the normal-range copy and finishes onboarding", async () => {
+test("NormalRangeIntro renders completion summary and finishes onboarding", async () => {
   const calls: string[] = [];
 
   render(
     React.createElement(MemoryRouter, {},
       React.createElement(NormalRangeIntro, {
-        child: activeChild,
+        baby: {
+          name: activeChild.name,
+          dob: activeChild.date_of_birth,
+          sex: activeChild.sex,
+          feedingType: activeChild.feeding_type,
+          avatarColor: activeChild.avatar_color,
+        },
+        goals: ["Understand patterns", "Sleep better"],
         onFinish: async () => {
           calls.push("finish");
-        },
-        getChildStatusAction: async () => ["ok", "Around this age, bowel rhythm can vary a lot."],
-        navigateAction: (to: string) => {
-          calls.push(`navigate:${to}`);
         },
       }),
     ),
   );
 
-  await waitFor(() => {
-    assert.ok(screen.getByText("Around this age, bowel rhythm can vary a lot."));
-  });
+  assert.ok(screen.getByText("You're all set!"));
+  assert.ok(screen.getByText("Mila"));
+  assert.ok(screen.getByText("Mixed"));
+  assert.ok(screen.getByText("Understand patterns, Sleep better"));
 
   fireEvent.click(screen.getByRole("button", { name: "Start Tracking" }));
 
   await waitFor(() => {
-    assert.deepEqual(calls, ["finish", "navigate:/"]);
+    assert.deepEqual(calls, ["finish"]);
   });
 });
 

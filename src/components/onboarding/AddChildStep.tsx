@@ -1,180 +1,168 @@
-import { useState, type FormEvent } from "react";
-import { Button } from "../ui/button";
-import { Card, CardContent } from "../ui/card";
-import { DatePicker } from "../ui/date-picker";
-import { FEEDING_TYPES, AVATAR_COLORS, CHILD_SEX_OPTIONS } from "../../lib/constants";
-import { cn } from "../../lib/cn";
-import { useCreateChildAction } from "../../hooks/useCreateChildAction";
-import { getCurrentLocalDate } from "../../lib/utils";
-import type { Child, ChildSex, FeedingType } from "../../lib/types";
+import type { ReactNode } from "react"
+import { DatePicker } from "../ui/date-picker"
+import { AVATAR_COLORS, CHILD_SEX_OPTIONS, FEEDING_TYPES } from "../../lib/constants"
+import { cn } from "../../lib/cn"
+import { getCurrentLocalDate } from "../../lib/utils"
+import type { ChildSex, FeedingType } from "../../lib/types"
 
-interface AddChildStepProps {
-  onChildCreated: (child: Child) => void;
-  createChildAction?: ReturnType<typeof useCreateChildAction>;
+export interface BabyDetailsDraft {
+  name: string
+  dob: string
+  sex: ChildSex | null
+  feedingType: FeedingType
+  avatarColor: string
 }
 
-export function AddChildStep({ onChildCreated, createChildAction }: AddChildStepProps) {
-  const defaultCreateChild = useCreateChildAction();
-  const createChild = createChildAction ?? defaultCreateChild;
-  const [name, setName] = useState("");
-  const [dob, setDob] = useState(getCurrentLocalDate());
-  const [sex, setSex] = useState<ChildSex | null>(null);
-  const [feedingType, setFeedingType] = useState<FeedingType>("breast");
-  const [avatarColor, setAvatarColor] = useState(AVATAR_COLORS[0]);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+interface AddChildStepProps {
+  value: BabyDetailsDraft
+  onChange: (value: BabyDetailsDraft) => void
+  onNext: () => void
+}
 
-  const isValid = name.trim().length > 0 && dob.length > 0 && sex !== null;
+const pillBase =
+  "h-11 rounded-[18px] border text-[14px] font-semibold transition-all duration-200"
+const inputBase =
+  "h-11 w-full rounded-[18px] border border-[#E8DACF] bg-white/55 px-4 text-[15px] text-[#3C241F] outline-none transition focus:border-[#F28B67] focus:ring-2 focus:ring-[#F28B67]/20 placeholder:text-[#B49A8E]"
+const selectedPill =
+  "border-[#F6A27E] bg-[#FFF0E6] text-[#B95E43] shadow-[0_8px_22px_rgba(238,126,86,0.12)]"
+const idlePill =
+  "border-[#E8DACF] bg-white/45 text-[#4A342D] hover:border-[#F4B191]"
 
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-    if (!isValid || isSubmitting) return;
+function isBabyDetailsComplete(value: BabyDetailsDraft) {
+  return value.name.trim().length > 0 && value.dob.length > 0 && value.sex !== null
+}
 
-    setIsSubmitting(true);
-    const child = await createChild({ name, dob, sex, feedingType, avatarColor });
-    onChildCreated(child);
-  };
+function Field({
+  label,
+  children,
+}: {
+  label: string
+  children: ReactNode
+}) {
+  return (
+    <div className="space-y-2">
+      <label className="block text-[13px] font-semibold text-[#3C241F]">{label}</label>
+      {children}
+    </div>
+  )
+}
+
+export function AddChildStep({ value, onChange, onNext }: AddChildStepProps) {
+  const isValid = isBabyDetailsComplete(value)
+
+  const update = (patch: Partial<BabyDetailsDraft>) => {
+    onChange({ ...value, ...patch })
+  }
 
   return (
-    <div className="flex flex-col min-h-screen px-6 pt-12">
-      <h2 className="text-2xl font-bold text-[var(--color-text)] mb-2">
-        Tell us about your baby
-      </h2>
-      <p className="text-[var(--color-text-secondary)] mb-8">
-        We'll personalize tracking based on their age and feeding type.
-      </p>
+    <form
+      onSubmit={(event) => {
+        event.preventDefault()
+        if (isValid) onNext()
+      }}
+      className="flex min-h-0 flex-1 flex-col"
+    >
+      <header className="text-center">
+        <h2 className="text-[25px] font-extrabold leading-tight tracking-normal text-[#3C241F]">
+          Tell us about your baby
+        </h2>
+        <p className="mx-auto mt-3 max-w-[280px] text-[14px] leading-6 text-[#7A6258]">
+          We&apos;ll personalize tracking based on their age and feeding type.
+        </p>
+      </header>
 
-      <form onSubmit={handleSubmit} className="flex flex-col gap-5 flex-1">
-        {/* Name */}
-        <div>
-          <label htmlFor="child-name" className="block text-sm font-medium text-[var(--color-text)] mb-1.5">
-            Baby's name
-          </label>
+      <div className="mt-7 space-y-5">
+        <Field label="Baby's name">
           <input
             id="child-name"
             type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
+            value={value.name}
+            onChange={(event) => update({ name: event.target.value })}
             placeholder="e.g. Luna"
-            className="w-full h-11 px-3 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)] text-base outline-none focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20 transition-colors"
+            className={inputBase}
             autoComplete="off"
           />
-        </div>
+        </Field>
 
-        {/* Date of birth */}
-        <div>
-          <label className="block text-sm font-medium text-[var(--color-text)] mb-1.5">
-            Date of birth
-          </label>
-          <DatePicker value={dob} onChange={setDob} max={getCurrentLocalDate()} label="Date of birth" />
-        </div>
+        <Field label="Date of birth">
+          <DatePicker
+            value={value.dob}
+            onChange={(dob) => update({ dob })}
+            max={getCurrentLocalDate()}
+            label="Date of birth"
+          />
+        </Field>
 
-        <div>
-          <label className="block text-sm font-medium text-[var(--color-text)] mb-1.5">
-            Sex
-          </label>
-          <div className="grid grid-cols-2 gap-2">
+        <Field label="Sex">
+          <div className="grid grid-cols-2 gap-2.5">
             {CHILD_SEX_OPTIONS.map((option) => (
               <button
                 key={option.value}
                 type="button"
-                onClick={() => setSex(option.value)}
-                className={cn(
-                  "h-11 rounded-[var(--radius-md)] border text-sm font-medium transition-colors duration-200 cursor-pointer",
-                  sex === option.value
-                    ? "border-[var(--color-primary)] bg-[var(--color-primary)]/10 text-[var(--color-primary)]"
-                    : "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-secondary)] hover:border-[var(--color-muted)]",
-                )}
+                onClick={() => update({ sex: option.value })}
+                aria-pressed={value.sex === option.value}
+                className={cn(pillBase, value.sex === option.value ? selectedPill : idlePill)}
               >
                 {option.label}
               </button>
             ))}
           </div>
-          <p className="mt-2 text-xs text-[var(--color-text-secondary)]">
-            Needed for official growth percentile charts.
-          </p>
-        </div>
+        </Field>
 
-        {/* Feeding type */}
-        <div>
-          <label className="block text-sm font-medium text-[var(--color-text)] mb-1.5">
-            Feeding type
-          </label>
-          <div className="grid grid-cols-2 gap-2">
-            {FEEDING_TYPES.map((ft) => (
+        <Field label="Feeding type">
+          <div className="grid grid-cols-2 gap-2.5">
+            {FEEDING_TYPES.map((feeding) => (
               <button
-                key={ft.value}
+                key={feeding.value}
                 type="button"
-                onClick={() => setFeedingType(ft.value)}
+                onClick={() => update({ feedingType: feeding.value })}
+                aria-pressed={value.feedingType === feeding.value}
                 className={cn(
-                  "h-11 rounded-[var(--radius-md)] border text-sm font-medium transition-colors duration-200 cursor-pointer",
-                  feedingType === ft.value
-                    ? "border-[var(--color-primary)] bg-[var(--color-primary)]/10 text-[var(--color-primary)]"
-                    : "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-secondary)] hover:border-[var(--color-muted)]",
+                  pillBase,
+                  "flex items-center justify-center gap-2",
+                  value.feedingType === feeding.value ? selectedPill : idlePill,
                 )}
               >
-                {ft.label}
+                <span
+                  className={cn(
+                    "h-5 w-5 rounded-full",
+                    value.feedingType === feeding.value ? "bg-[#FFB08E]" : "bg-[#EADFD7]",
+                  )}
+                />
+                {feeding.label}
               </button>
             ))}
           </div>
-        </div>
+        </Field>
 
-        {/* Avatar color */}
-        <div>
-          <label className="block text-sm font-medium text-[var(--color-text)] mb-1.5">
-            Avatar color
-          </label>
+        <Field label="Avatar color">
           <div className="flex gap-3">
             {AVATAR_COLORS.map((color) => (
               <button
                 key={color}
                 type="button"
-                onClick={() => setAvatarColor(color)}
+                onClick={() => update({ avatarColor: color })}
                 className={cn(
-                  "w-10 h-10 rounded-full cursor-pointer transition-transform duration-200",
-                  avatarColor === color && "ring-2 ring-offset-2 ring-[var(--color-primary)] scale-110",
+                  "h-10 w-10 rounded-full border-4 border-white shadow-[0_7px_18px_rgba(84,54,42,0.13)] transition",
+                  value.avatarColor === color && "ring-2 ring-[#F28B67] ring-offset-2 ring-offset-[#FFF8ED]",
                 )}
                 style={{ backgroundColor: color }}
-                aria-label={`Select color ${color}`}
+                aria-label={`Select avatar color ${color}`}
               />
             ))}
           </div>
-        </div>
+        </Field>
+      </div>
 
-        {/* Preview */}
-        {name.trim() && (
-          <Card className="mt-2">
-            <CardContent className="flex items-center gap-3 py-3">
-              <div
-                className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold"
-                style={{ backgroundColor: avatarColor }}
-              >
-                {name.trim().charAt(0).toUpperCase()}
-              </div>
-              <div>
-                <p className="font-medium text-[var(--color-text)]">{name.trim()}</p>
-                <p className="text-xs text-[var(--color-text-secondary)]">
-                  {[sex ? CHILD_SEX_OPTIONS.find((option) => option.value === sex)?.label : null, FEEDING_TYPES.find((f) => f.value === feedingType)?.label]
-                    .filter(Boolean)
-                    .join(" · ")}
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Submit */}
-        <div className="mt-auto pb-8">
-          <Button
-            type="submit"
-            variant="cta"
-            size="lg"
-            className="w-full"
-            disabled={!isValid || isSubmitting}
-          >
-            {isSubmitting ? "Creating..." : "Continue"}
-          </Button>
-        </div>
-      </form>
-    </div>
-  );
+      <div className="mt-auto pt-7">
+        <button
+          type="submit"
+          disabled={!isValid}
+          className="h-14 w-full rounded-[28px] bg-[linear-gradient(180deg,#FF9D77_0%,#F47B58_100%)] text-[16px] font-extrabold text-white shadow-[0_16px_34px_rgba(239,112,75,0.26)] transition active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-45"
+        >
+          Continue
+        </button>
+      </div>
+    </form>
+  )
 }
