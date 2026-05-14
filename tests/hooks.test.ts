@@ -12,8 +12,10 @@ import { useSleepLogSheetState } from "../src/hooks/useSleepLogSheetState.ts";
 import { useSleepQuickTimer } from "../src/hooks/useSleepQuickTimer.ts";
 import { useDietLogFormState } from "../src/hooks/useDietLogFormState.ts";
 import { useHomePageState } from "../src/hooks/useHomePageState.ts";
+import { useCreateChildAction } from "../src/hooks/useCreateChildAction.ts";
+import { CURRENT_CAREGIVER_SETTING_KEY } from "../src/lib/caregivers.ts";
 import { getSleepTimerSettingKey } from "../src/lib/sleep-timer.ts";
-import type { Child } from "../src/lib/types.ts";
+import type { Caregiver, Child } from "../src/lib/types.ts";
 
 afterEach(() => {
   cleanup();
@@ -100,6 +102,76 @@ test("useHomePageState keeps sheet callbacks stable while opening health sheets"
 
   assert.equal(result.current.symptomSheetOpen, true);
   assert.equal(result.current.closeEpisodeSheet, closeEpisodeSheet);
+});
+
+test("useCreateChildAction links the current caregiver to a new child", async () => {
+  const caregiver: Caregiver = {
+    id: "caregiver-1",
+    display_name: "Mum",
+    role: "parent",
+    relationship: "parent",
+    email: null,
+    phone: null,
+    avatar_color: "#DB2777",
+    is_primary: 1,
+    created_at: "2026-05-05T10:00:00.000Z",
+    updated_at: "2026-05-05T10:00:00.000Z",
+    deleted_at: null,
+    device_id: null,
+    sync_status: "local",
+    sync_version: 1,
+    local_only: 0,
+  };
+  const linkedCaregivers: Array<{ childId: string; caregiverId: string; relationshipToChild?: string | null }> = [];
+  const dbClient = {
+    createChild: async (input: Omit<Child, "id" | "is_active" | "created_at" | "updated_at">) => ({
+      id: "child-2",
+      ...input,
+      is_active: 1,
+      created_at: "2026-05-05T10:00:00.000Z",
+      updated_at: "2026-05-05T10:00:00.000Z",
+    }),
+    getSetting: async (key: string) => key === CURRENT_CAREGIVER_SETTING_KEY ? caregiver.id : null,
+    getCaregiver: async (caregiverId: string) => caregiverId === caregiver.id ? caregiver : null,
+    linkCaregiverToChild: async (input: { childId: string; caregiverId: string; relationshipToChild?: string | null }) => {
+      linkedCaregivers.push(input);
+      return {
+        id: "child-caregiver-1",
+        child_id: input.childId,
+        caregiver_id: input.caregiverId,
+        relationship_to_child: input.relationshipToChild ?? null,
+        permissions: null,
+        created_at: "2026-05-05T10:00:00.000Z",
+        updated_at: "2026-05-05T10:00:00.000Z",
+        deleted_at: null,
+        device_id: null,
+        sync_status: "local",
+        sync_version: 1,
+        local_only: 0,
+      };
+    },
+  } as unknown as DbClient;
+  const wrapper = ({ children }: { children: React.ReactNode }) => (
+    React.createElement(DatabaseProvider, { client: dbClient }, children)
+  );
+
+  const { result } = renderHook(() => useCreateChildAction(), { wrapper });
+
+  await act(async () => {
+    await result.current({
+      name: "New baby",
+      dob: "2026-05-05",
+      sex: "female",
+      feedingType: "mixed",
+      avatarColor: "#f6b26b",
+    });
+  });
+
+  assert.deepEqual(linkedCaregivers, [{
+    childId: "child-2",
+    caregiverId: caregiver.id,
+    relationshipToChild: "parent",
+  }]);
 });
 
 test("useLoggingSheetLifecycle runs logged success flow and clears pending timers on unmount", async () => {

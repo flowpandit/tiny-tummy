@@ -1,4 +1,6 @@
 import type { ReactNode } from "react";
+import { sceneMoon, sceneSun, watercolorMountains, watercolorMountainsDark } from "../../assets/illustrations";
+import { useTheme } from "../../contexts/ThemeContext";
 import { HomeActionBottleIcon, HomeActionSleepIcon, PoopIcon } from "../ui/icons";
 import { type HomeInsightCard, type HomeStatusMessage } from "../../lib/home-insights";
 
@@ -30,19 +32,41 @@ function InsightIcon({ accent }: { accent: HomeInsightCard["accent"] }) {
   return <HomeActionSleepIcon className="h-4 w-4 text-[var(--color-home-sleep-icon)] md:h-5 md:w-5" />;
 }
 
-function HeroBackdropArt() {
+function HeroMountainBackdrop({ isDarkArtwork }: { isDarkArtwork: boolean }) {
+  const mountainArt = isDarkArtwork ? watercolorMountainsDark : watercolorMountains;
+  const orbArt = isDarkArtwork ? sceneMoon : sceneSun;
+
   return (
-    <div className="pointer-events-none absolute bottom-0 right-[-16px] h-[112px] w-[128px] overflow-hidden rounded-br-[20px] md:right-0 md:h-[184px] md:w-[232px] md:rounded-br-[28px]" aria-hidden="true">
-      <div className="absolute bottom-0 right-0 h-[42px] w-[128px] rounded-tl-[70px] bg-[#ffd8cc]/72 md:h-[70px] md:w-[232px] md:rounded-tl-[120px]" />
-      <div
-        className="absolute bottom-1 right-8 h-9 w-20 rounded-full md:bottom-3 md:right-[58px] md:h-14 md:w-32"
+    <>
+      <img
+        src={orbArt}
+        alt=""
+        aria-hidden="true"
+        className="pointer-events-none absolute right-5 top-4 h-16 w-16 md:right-16 md:top-5 md:h-24 md:w-24"
         style={{
-          background: "var(--color-home-hero-cloud-surface)",
-          boxShadow: "var(--shadow-home-hero-cloud)",
+          opacity: isDarkArtwork ? 0.72 : 0.92,
+          filter: isDarkArtwork ? "brightness(0.96) saturate(0.9)" : "brightness(1.03) saturate(0.96)",
         }}
       />
-      <div className="absolute bottom-11 right-[74px] h-11 w-11 rounded-full bg-[#ffe1a6]/78 md:bottom-[76px] md:right-[132px] md:h-16 md:w-16" />
-    </div>
+      <img
+        src={mountainArt}
+        alt=""
+        aria-hidden="true"
+        className="pointer-events-none absolute bottom-0 right-[-54px] h-full w-full object-fill"
+        style={{
+          opacity: isDarkArtwork ? 0.94 : 0.98,
+          filter: isDarkArtwork ? "brightness(0.92) saturate(1.04)" : "saturate(0.96) brightness(1.02)",
+        }}
+      />
+      <div
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background: isDarkArtwork
+            ? "linear-gradient(90deg, rgba(21, 30, 45, 0.74) 0%, rgba(21, 30, 45, 0.44) 48%, rgba(21, 30, 45, 0.14) 100%)"
+            : "linear-gradient(90deg, rgba(255, 251, 246, 0.78) 0%, rgba(255, 251, 246, 0.46) 48%, rgba(255, 251, 246, 0.12) 100%)",
+        }}
+      />
+    </>
   );
 }
 
@@ -114,6 +138,8 @@ export function HomeTopSection({
   onInsightSelect,
   onInsightAction,
 }: HomeTopSectionProps) {
+  const { resolved } = useTheme();
+  const isDarkArtwork = resolved !== "light";
   const usesWrappedGrid = insights.length >= 4;
   const insightsGridClassName = usesWrappedGrid ? "md:grid-cols-2 xl:grid-cols-4" : insights.length >= 3 ? "md:grid-cols-3" : "md:grid-cols-2";
   const insightItemClassName = usesWrappedGrid
@@ -123,19 +149,7 @@ export function HomeTopSection({
   return (
     <section className="relative px-4 pt-1 md:px-10 md:pt-0">
       <div className="relative min-h-[124px] overflow-hidden rounded-[20px] px-4 pb-3 pt-3.5 shadow-[0_12px_28px_rgba(180,138,101,0.08)] [background:var(--gradient-home-hero-card)] md:min-h-[178px] md:rounded-[28px] md:px-8 md:pb-6 md:pt-6 md:shadow-[0_16px_34px_rgba(180,138,101,0.08)]">
-        <div
-          className="pointer-events-none absolute -bottom-7 left-[50%] h-16 w-28 rounded-[52%_48%_0_0] md:left-[54%] md:h-24 md:w-36"
-          style={{ background: "var(--gradient-home-hero-hill)" }}
-        />
-        <div
-          className="pointer-events-none absolute bottom-[-16px] right-[10%] h-9 w-[86px] rounded-full md:right-[20%] md:h-[54px] md:w-[112px]"
-          style={{
-            background: "var(--color-home-hero-cloud-surface)",
-            boxShadow: "var(--shadow-home-hero-cloud)",
-          }}
-          aria-hidden="true"
-        />
-        <HeroBackdropArt />
+        <HeroMountainBackdrop isDarkArtwork={isDarkArtwork} />
 
         <div className="relative flex items-start justify-between gap-4 sm:gap-7">
           <div className="min-w-0 flex-1 pt-0.5 md:max-w-[calc(100%_-_260px)] md:pt-1">

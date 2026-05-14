@@ -198,13 +198,13 @@ function getTimeZoneOptions() {
 const timeZoneOptions = getTimeZoneOptions()
 
 const inputBase =
-  "h-11 w-full rounded-[18px] border border-[#E8DACF] bg-white/55 px-4 text-[15px] text-[#3C241F] outline-none transition focus:border-[#F28B67] focus:ring-2 focus:ring-[#F28B67]/20 placeholder:text-[#B49A8E]"
+  "h-11 w-full rounded-[18px] border border-[var(--color-onboarding-border)] bg-[var(--color-onboarding-field-bg)] px-4 text-[15px] text-[var(--color-onboarding-text)] outline-none transition focus:border-[var(--color-onboarding-accent)] focus:ring-2 focus:ring-[color-mix(in_srgb,var(--color-onboarding-accent)_22%,transparent)] placeholder:text-[var(--color-onboarding-placeholder)]"
 const textAreaBase =
-  "min-h-[78px] w-full resize-none rounded-[18px] border border-[#E8DACF] bg-white/55 px-4 py-3 text-[15px] text-[#3C241F] outline-none transition focus:border-[#F28B67] focus:ring-2 focus:ring-[#F28B67]/20 placeholder:text-[#B49A8E]"
+  "min-h-[78px] w-full resize-none rounded-[18px] border border-[var(--color-onboarding-border)] bg-[var(--color-onboarding-field-bg)] px-4 py-3 text-[15px] text-[var(--color-onboarding-text)] outline-none transition focus:border-[var(--color-onboarding-accent)] focus:ring-2 focus:ring-[color-mix(in_srgb,var(--color-onboarding-accent)_22%,transparent)] placeholder:text-[var(--color-onboarding-placeholder)]"
 const primaryButtonClass =
   "h-14 w-full rounded-[28px] bg-[linear-gradient(180deg,#FF9D77_0%,#F47B58_100%)] text-[16px] font-extrabold text-white shadow-[0_16px_34px_rgba(239,112,75,0.26)] transition active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-45"
 const skipButtonClass =
-  "mt-4 w-full py-2 text-[14px] font-extrabold text-[#D75E3E] transition hover:text-[#B94930]"
+  "mt-4 w-full py-2 text-[14px] font-extrabold text-[var(--color-onboarding-selected-text)] transition hover:text-[var(--color-onboarding-accent)]"
 
 function createDefaultBabyDetails(): BabyDetailsDraft {
   return {
@@ -324,10 +324,10 @@ function IconBadge({
   tone?: "peach" | "blue" | "mint" | "rose"
 }) {
   const toneClass = {
-    peach: "bg-[#FFE4D5] text-[#F07A55]",
-    blue: "bg-[#E3F1FF] text-[#6DA9D9]",
-    mint: "bg-[#DDF4E6] text-[#45A67B]",
-    rose: "bg-[#FFE4E4] text-[#F16B6F]",
+    peach: "bg-[var(--color-onboarding-icon-peach-bg)] text-[var(--color-onboarding-icon-peach-text)]",
+    blue: "bg-[var(--color-onboarding-icon-blue-bg)] text-[var(--color-onboarding-icon-blue-text)]",
+    mint: "bg-[var(--color-onboarding-icon-mint-bg)] text-[var(--color-onboarding-icon-mint-text)]",
+    rose: "bg-[var(--color-onboarding-icon-rose-bg)] text-[var(--color-onboarding-icon-rose-text)]",
   }[tone]
 
   return (
@@ -369,7 +369,7 @@ function ProgressHeader({
       <button
         type="button"
         onClick={onBack}
-        className="flex h-10 w-10 items-center justify-center rounded-full text-[#2E211C] transition hover:bg-[#FFEADB]"
+        className="flex h-10 w-10 items-center justify-center rounded-full text-[var(--color-onboarding-text-strong)] transition hover:bg-[var(--color-onboarding-accent-soft)]"
         aria-label="Go back"
       >
         <svg aria-hidden="true" viewBox="0 0 20 20" className="h-5 w-5" fill="none">
@@ -383,9 +383,9 @@ function ProgressHeader({
         </svg>
       </button>
       <div className="relative mx-auto h-5 w-full max-w-[245px]" aria-label={`Step ${stepIndex + 1} of ${TOTAL_FLOW_STEPS}`}>
-        <div className="absolute left-0 right-0 top-1/2 h-[3px] -translate-y-1/2 rounded-full bg-[#E8DACF]" />
+        <div className="absolute left-0 right-0 top-1/2 h-[3px] -translate-y-1/2 rounded-full bg-[var(--color-onboarding-border)]" />
         <div
-          className="absolute left-0 top-1/2 h-[3px] -translate-y-1/2 rounded-full bg-[#FF8B61] transition-all duration-300"
+          className="absolute left-0 top-1/2 h-[3px] -translate-y-1/2 rounded-full bg-[var(--color-onboarding-accent)] transition-all duration-300"
           style={{ width: `${progress}%` }}
         />
         <div className="absolute inset-0 flex items-center justify-between">
@@ -397,8 +397,8 @@ function ProgressHeader({
               <span
                 key={index}
                 className={cn(
-                  "flex h-3.5 w-3.5 items-center justify-center rounded-full border-2 bg-[#FFF8ED] transition-colors",
-                  isComplete ? "border-[#FF8B61]" : "border-[#E8DACF]",
+                  "flex h-3.5 w-3.5 items-center justify-center rounded-full border-2 bg-[var(--color-onboarding-bg)] transition-colors",
+                  isComplete ? "border-[var(--color-onboarding-accent)]" : "border-[var(--color-onboarding-border)]",
                   isFinalComplete && "h-5 w-5 border-[#48B6A8] bg-[#48B6A8] text-white",
                 )}
               >
@@ -423,7 +423,7 @@ function StepShell({
   children: ReactNode
 }) {
   return (
-    <section className="flex min-h-[100dvh] flex-col bg-[#FFF8ED] px-6 pb-7 pt-[calc(env(safe-area-inset-top)+22px)]">
+    <section className="flex min-h-[100dvh] flex-col bg-[var(--color-onboarding-bg)] px-6 pb-7 pt-[calc(env(safe-area-inset-top)+22px)] text-[var(--color-onboarding-text)]">
       <ProgressHeader stepIndex={stepIndex} onBack={onBack} />
       <div className="mt-8 flex min-h-0 flex-1 flex-col">{children}</div>
     </section>
@@ -439,10 +439,10 @@ function StepHeading({
 }) {
   return (
     <header className="text-center">
-      <h2 className="text-[25px] font-extrabold leading-tight tracking-normal text-[#3C241F]">
+      <h2 className="text-[25px] font-extrabold leading-tight tracking-normal text-[var(--color-onboarding-text)]">
         {title}
       </h2>
-      <p className="mx-auto mt-3 max-w-[280px] text-[14px] leading-6 text-[#7A6258]">
+      <p className="mx-auto mt-3 max-w-[280px] text-[14px] leading-6 text-[var(--color-onboarding-text-secondary)]">
         {subtitle}
       </p>
     </header>
@@ -478,16 +478,16 @@ function FeedingSetupStep({
               className={cn(
                 "flex w-full items-center gap-4 rounded-[18px] border px-4 py-4 text-left transition",
                 isSelected
-                  ? "border-[#F6A27E] bg-[#FFF1E7] shadow-[0_12px_28px_rgba(238,126,86,0.12)]"
-                  : "border-[#E8DACF] bg-white/45 hover:border-[#F4B191]",
+                  ? "border-[var(--color-onboarding-selected-border)] bg-[var(--color-onboarding-selected-bg)] shadow-[0_12px_28px_rgba(238,126,86,0.12)]"
+                  : "border-[var(--color-onboarding-border)] bg-[var(--color-onboarding-card)] hover:border-[var(--color-onboarding-border-hover)]",
               )}
             >
               <IconBadge icon={option.icon} tone={option.tone} />
               <span>
-                <span className="block text-[14px] font-extrabold text-[#3C241F]">
+                <span className="block text-[14px] font-extrabold text-[var(--color-onboarding-text)]">
                   {option.title}
                 </span>
-                <span className="mt-1 block text-[13px] leading-5 text-[#7A6258]">
+                <span className="mt-1 block text-[13px] leading-5 text-[var(--color-onboarding-text-secondary)]">
                   {option.helper}
                 </span>
               </span>
@@ -568,7 +568,7 @@ function SupportDetailsStep({
               placeholder="e.g. Born a little early"
               className={textAreaBase}
             />
-            <span className="absolute bottom-3 right-4 text-[11px] font-medium text-[#B49A8E]">
+            <span className="absolute bottom-3 right-4 text-[11px] font-medium text-[var(--color-onboarding-placeholder)]">
               {value.notes.length}/100
             </span>
           </div>
@@ -593,7 +593,7 @@ function Field({
 }) {
   return (
     <div className="space-y-2">
-      <label className="block text-[13px] font-semibold text-[#3C241F]">{label}</label>
+      <label className="block text-[13px] font-semibold text-[var(--color-onboarding-text)]">{label}</label>
       {children}
     </div>
   )
@@ -611,9 +611,9 @@ function PreferenceRow({
   return (
     <div className="flex min-h-[62px] items-center gap-4 px-4 py-3">
       <div className="min-w-0 flex-1">
-        <p className="text-[14px] font-extrabold leading-tight text-[#4A342D]">{label}</p>
+        <p className="text-[14px] font-extrabold leading-tight text-[var(--color-onboarding-text)]">{label}</p>
         {description && (
-          <p className="mt-1 text-[12px] leading-4 text-[#8C756B]">{description}</p>
+          <p className="mt-1 text-[12px] leading-4 text-[var(--color-onboarding-text-muted)]">{description}</p>
         )}
       </div>
       <div className="w-[184px] max-w-[56%] shrink-0">{children}</div>
@@ -667,11 +667,11 @@ function PreferencesStep({
       />
 
       <div className="mt-7">
-        <p className="px-1 text-[12px] font-extrabold uppercase tracking-[0.24em] text-[#8C675C]">
+        <p className="px-1 text-[12px] font-extrabold uppercase tracking-[0.24em] text-[var(--color-onboarding-eyebrow)]">
           App preferences
         </p>
 
-        <div className="mt-2 overflow-hidden rounded-[20px] border border-[#E8DACF] bg-white/50 shadow-[0_18px_45px_rgba(108,72,52,0.08)]">
+        <div className="mt-2 overflow-hidden rounded-[20px] border border-[var(--color-onboarding-border)] bg-[var(--color-onboarding-card-strong)] shadow-[var(--color-onboarding-card-shadow)]">
           <PreferenceRow label="Theme">
             <SegmentedControl
               value={themeMode}
@@ -683,7 +683,7 @@ function PreferencesStep({
             />
           </PreferenceRow>
 
-          <div className="border-t border-[#E8DACF]">
+          <div className="border-t border-[var(--color-onboarding-border)]">
             <PreferenceRow label="Unit system">
               <SegmentedControl
                 value={unitSystem}
@@ -696,7 +696,7 @@ function PreferencesStep({
             </PreferenceRow>
           </div>
 
-          <div className="border-t border-[#E8DACF]">
+          <div className="border-t border-[var(--color-onboarding-border)]">
             <PreferenceRow label="Temperature">
               <SegmentedControl
                 value={temperatureUnit}
@@ -709,7 +709,7 @@ function PreferencesStep({
             </PreferenceRow>
           </div>
 
-          <div className="border-t border-[#E8DACF]">
+          <div className="border-t border-[var(--color-onboarding-border)]">
             <PreferenceRow label="Main tracking page">
               <SegmentedControl
                 value={visibleEliminationPreference}
@@ -722,13 +722,13 @@ function PreferencesStep({
             </PreferenceRow>
           </div>
 
-          <div className="border-t border-[#E8DACF]">
+          <div className="border-t border-[var(--color-onboarding-border)]">
             <div className="flex min-h-[70px] items-start justify-between gap-4 px-4 py-4">
               <div className="min-w-0">
-                <p className="text-[14px] font-extrabold leading-tight text-[#4A342D]">
+                <p className="text-[14px] font-extrabold leading-tight text-[var(--color-onboarding-text)]">
                   Night mode schedule
                 </p>
-                <p className="mt-1 text-[12px] leading-4 text-[#8C756B]">
+                <p className="mt-1 text-[12px] leading-4 text-[var(--color-onboarding-text-muted)]">
                   Switch to the softer low-glare palette overnight.
                 </p>
               </div>
@@ -792,7 +792,7 @@ function ParentDetailsStep({
             className={inputBase}
             autoComplete="email"
           />
-          <p className="text-[12px] leading-5 text-[#8C756B]">
+          <p className="text-[12px] leading-5 text-[var(--color-onboarding-text-muted)]">
             Stored locally unless you choose to sync later.
           </p>
         </Field>
@@ -808,8 +808,8 @@ function ParentDetailsStep({
                 className={cn(
                   "h-11 rounded-[18px] border text-[14px] font-semibold transition",
                   value.relationship === option.value
-                    ? "border-[#F6A27E] bg-[#FFF0E6] text-[#B95E43]"
-                    : "border-[#E8DACF] bg-white/45 text-[#4A342D] hover:border-[#F4B191]",
+                    ? "border-[var(--color-onboarding-selected-border)] bg-[var(--color-onboarding-accent-wash)] text-[var(--color-onboarding-selected-text)]"
+                    : "border-[var(--color-onboarding-border)] bg-[var(--color-onboarding-card)] text-[var(--color-onboarding-text)] hover:border-[var(--color-onboarding-border-hover)]",
                   option.value === "caregiver" && "col-span-1",
                 )}
               >
@@ -860,22 +860,22 @@ function GoalsStep({
               className={cn(
                 "flex h-[48px] w-full items-center gap-3 rounded-[16px] border px-4 text-left transition",
                 isSelected
-                  ? "border-[#F6A27E] bg-[#FFF1E7] shadow-[0_10px_22px_rgba(238,126,86,0.1)]"
-                  : "border-[#E8DACF] bg-white/45 hover:border-[#F4B191]",
+                  ? "border-[var(--color-onboarding-selected-border)] bg-[var(--color-onboarding-selected-bg)] shadow-[0_10px_22px_rgba(238,126,86,0.1)]"
+                  : "border-[var(--color-onboarding-border)] bg-[var(--color-onboarding-card)] hover:border-[var(--color-onboarding-border-hover)]",
               )}
             >
-              <span className={cn("text-[#F28B67]", !isSelected && "text-[#A8CEE8]")}>
+              <span className={cn("text-[var(--color-onboarding-accent)]", !isSelected && "text-[var(--color-onboarding-icon-blue-text)]")}>
                 <IconGlyph name={goal.icon} />
               </span>
-              <span className="min-w-0 flex-1 text-[14px] font-semibold text-[#3C241F]">
+              <span className="min-w-0 flex-1 text-[14px] font-semibold text-[var(--color-onboarding-text)]">
                 {goal.label}
               </span>
               <span
                 className={cn(
                   "flex h-6 w-6 shrink-0 items-center justify-center rounded-full border",
                   isSelected
-                    ? "border-[#FF9D77] bg-[#FF9D77] text-white"
-                    : "border-[#E0D2C7] text-[#C8B7AE]",
+                    ? "border-[var(--color-onboarding-accent)] bg-[var(--color-onboarding-accent)] text-white"
+                    : "border-[var(--color-onboarding-border)] text-[var(--color-onboarding-placeholder)]",
                 )}
               >
                 <IconGlyph name="check" />
@@ -921,8 +921,8 @@ function PrivacyStep({ onNext }: { onNext: () => void }) {
         />
       </div>
 
-      <p className="mx-auto mt-7 flex max-w-[270px] items-start gap-3 text-left text-[13px] leading-5 text-[#7A6258]">
-        <span className="mt-0.5 text-[#8B7168]">
+      <p className="mx-auto mt-7 flex max-w-[270px] items-start gap-3 text-left text-[13px] leading-5 text-[var(--color-onboarding-text-secondary)]">
+        <span className="mt-0.5 text-[var(--color-onboarding-text-muted)]">
           <IconGlyph name="control" />
         </span>
         We don&apos;t collect, sell, or share your personal data.
@@ -949,11 +949,11 @@ function PrivacyCard({
   tone: "mint" | "rose"
 }) {
   return (
-    <div className="flex items-center gap-4 rounded-[18px] border border-[#E8DACF] bg-white/45 px-4 py-4 text-left shadow-[0_10px_26px_rgba(108,72,52,0.06)]">
+    <div className="flex items-center gap-4 rounded-[18px] border border-[var(--color-onboarding-border)] bg-[var(--color-onboarding-card)] px-4 py-4 text-left shadow-[var(--color-onboarding-soft-shadow)]">
       <IconBadge icon={icon} tone={tone} />
       <div>
-        <p className="text-[14px] font-extrabold text-[#3C241F]">{title}</p>
-        <p className="mt-1 text-[13px] leading-5 text-[#7A6258]">{helper}</p>
+        <p className="text-[14px] font-extrabold text-[var(--color-onboarding-text)]">{title}</p>
+        <p className="mt-1 text-[13px] leading-5 text-[var(--color-onboarding-text-secondary)]">{helper}</p>
       </div>
     </div>
   )
@@ -1175,8 +1175,8 @@ export function Onboarding() {
   })()
 
   return (
-    <div className="min-h-screen bg-[#F3EEE7] text-[#3C241F]">
-      <div className="mx-auto min-h-[100dvh] max-w-[430px] overflow-hidden bg-[#FFF8ED] shadow-[0_18px_70px_rgba(70,45,30,0.12)]">
+    <div className="min-h-screen bg-[var(--color-onboarding-app-bg)] text-[var(--color-onboarding-text)]">
+      <div className="mx-auto min-h-[100dvh] max-w-[430px] overflow-hidden bg-[var(--color-onboarding-bg)] shadow-[var(--color-onboarding-shadow)]">
         <AnimatePresence mode="wait">
           <motion.div
             key={step}

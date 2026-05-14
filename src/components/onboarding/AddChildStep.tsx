@@ -22,11 +22,11 @@ interface AddChildStepProps {
 const pillBase =
   "h-11 rounded-[18px] border text-[14px] font-semibold transition-all duration-200"
 const inputBase =
-  "h-11 w-full rounded-[18px] border border-[#E8DACF] bg-white/55 px-4 text-[15px] text-[#3C241F] outline-none transition focus:border-[#F28B67] focus:ring-2 focus:ring-[#F28B67]/20 placeholder:text-[#B49A8E]"
+  "h-11 w-full rounded-[18px] border border-[var(--color-onboarding-border)] bg-[var(--color-onboarding-field-bg)] px-4 text-[15px] text-[var(--color-onboarding-text)] outline-none transition focus:border-[var(--color-onboarding-accent)] focus:ring-2 focus:ring-[color-mix(in_srgb,var(--color-onboarding-accent)_22%,transparent)] placeholder:text-[var(--color-onboarding-placeholder)]"
 const selectedPill =
-  "border-[#F6A27E] bg-[#FFF0E6] text-[#B95E43] shadow-[0_8px_22px_rgba(238,126,86,0.12)]"
+  "border-[var(--color-onboarding-selected-border)] bg-[var(--color-onboarding-accent-wash)] text-[var(--color-onboarding-selected-text)] shadow-[0_8px_22px_rgba(238,126,86,0.12)]"
 const idlePill =
-  "border-[#E8DACF] bg-white/45 text-[#4A342D] hover:border-[#F4B191]"
+  "border-[var(--color-onboarding-border)] bg-[var(--color-onboarding-card)] text-[var(--color-onboarding-text)] hover:border-[var(--color-onboarding-border-hover)]"
 
 function isBabyDetailsComplete(value: BabyDetailsDraft) {
   return value.name.trim().length > 0 && value.dob.length > 0 && value.sex !== null
@@ -41,7 +41,7 @@ function Field({
 }) {
   return (
     <div className="space-y-2">
-      <label className="block text-[13px] font-semibold text-[#3C241F]">{label}</label>
+      <label className="block text-[13px] font-semibold text-[var(--color-onboarding-text)]">{label}</label>
       {children}
     </div>
   )
@@ -63,10 +63,10 @@ export function AddChildStep({ value, onChange, onNext }: AddChildStepProps) {
       className="flex min-h-0 flex-1 flex-col"
     >
       <header className="text-center">
-        <h2 className="text-[25px] font-extrabold leading-tight tracking-normal text-[#3C241F]">
+        <h2 className="text-[25px] font-extrabold leading-tight tracking-normal text-[var(--color-onboarding-text)]">
           Tell us about your baby
         </h2>
-        <p className="mx-auto mt-3 max-w-[280px] text-[14px] leading-6 text-[#7A6258]">
+        <p className="mx-auto mt-3 max-w-[280px] text-[14px] leading-6 text-[var(--color-onboarding-text-secondary)]">
           We&apos;ll personalize tracking based on their age and feeding type.
         </p>
       </header>
@@ -126,7 +126,7 @@ export function AddChildStep({ value, onChange, onNext }: AddChildStepProps) {
                 <span
                   className={cn(
                     "h-5 w-5 rounded-full",
-                    value.feedingType === feeding.value ? "bg-[#FFB08E]" : "bg-[#EADFD7]",
+                    value.feedingType === feeding.value ? "bg-[var(--color-onboarding-accent)]" : "bg-[var(--color-onboarding-border)]",
                   )}
                 />
                 {feeding.label}
@@ -143,8 +143,8 @@ export function AddChildStep({ value, onChange, onNext }: AddChildStepProps) {
                 type="button"
                 onClick={() => update({ avatarColor: color })}
                 className={cn(
-                  "h-10 w-10 rounded-full border-4 border-white shadow-[0_7px_18px_rgba(84,54,42,0.13)] transition",
-                  value.avatarColor === color && "ring-2 ring-[#F28B67] ring-offset-2 ring-offset-[#FFF8ED]",
+                  "h-10 w-10 rounded-full border-4 border-[var(--color-onboarding-avatar-ring)] shadow-[0_7px_18px_rgba(84,54,42,0.13)] transition",
+                  value.avatarColor === color && "ring-2 ring-[var(--color-onboarding-accent)] ring-offset-2 ring-offset-[var(--color-onboarding-bg)]",
                 )}
                 style={{ backgroundColor: color }}
                 aria-label={`Select avatar color ${color}`}
