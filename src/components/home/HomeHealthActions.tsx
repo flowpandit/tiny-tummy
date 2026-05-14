@@ -12,7 +12,7 @@ const HEALTH_ACTIONS = [
     label: "Log symptoms",
     detail: "Signs, severity, notes",
     background: "var(--gradient-home-action-symptom)",
-    icon: <HomeActionSymptomIcon className="h-6 w-6 md:h-8 md:w-8" />,
+    icon: <HomeActionSymptomIcon className="h-6 w-6 text-white md:h-8 md:w-8" />,
     iconSurface: "rgba(255, 255, 255, 0.26)",
     textClassName: "text-white",
   },
@@ -21,7 +21,7 @@ const HEALTH_ACTIONS = [
     label: "Episode",
     detail: "Start a new episode",
     background: "var(--gradient-home-action-episode)",
-    icon: <HomeActionEpisodeIcon className="h-6 w-6 md:h-8 md:w-8" />,
+    icon: <HomeActionEpisodeIcon className="h-6 w-6 text-white md:h-8 md:w-8" />,
     iconSurface: "rgba(255, 255, 255, 0.24)",
     textClassName: "text-white",
   },
@@ -65,7 +65,7 @@ export function HomeHealthActions({
               className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full md:h-14 md:w-14"
               style={{ background: action.iconSurface }}
             >
-              <span className={action.textClassName}>{action.icon}</span>
+              {action.icon}
             </span>
             <span className="min-w-0">
               <span className={`block text-[0.9rem] font-semibold leading-tight tracking-[-0.02em] md:text-[1.2rem] ${action.textClassName}`}>

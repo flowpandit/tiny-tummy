@@ -4,12 +4,17 @@ import {
   breastfeedIcon,
   diaperIcon,
   diaperIcon2,
-  episodeIcon,
   moonIcon,
+  poopIcon,
   rainbowIcon,
   sunIcon,
   symptomIcon,
 } from "../../assets/icons";
+import episodeIconSvg from "../../assets/icons/episode-icon.svg?raw";
+import growthIconSvg from "../../assets/icons/growth.svg?raw";
+import milestoneIconSvg from "../../assets/icons/milestone.svg?raw";
+import reportIconSvg from "../../assets/icons/report.svg?raw";
+import trendsIconSvg from "../../assets/icons/trends.svg?raw";
 
 interface IconProps {
   className?: string;
@@ -22,6 +27,22 @@ interface StrokeIconProps {
 
 function SvgAssetIcon({ src, className }: { src: string; className: string }) {
   return <img src={src} alt="" aria-hidden="true" className={className} />;
+}
+
+function colorizeSvg(svg: string) {
+  return svg
+    .replace(/stroke="black"/g, 'stroke="currentColor"')
+    .replace(/fill="#[0-9A-Fa-f]{3,8}"/g, 'fill="currentColor"');
+}
+
+function InlineAssetIcon({ svg, className }: { svg: string; className: string }) {
+  return (
+    <span
+      aria-hidden="true"
+      className={`inline-flex items-center justify-center [&>svg]:h-full [&>svg]:w-full ${className}`}
+      dangerouslySetInnerHTML={{ __html: colorizeSvg(svg) }}
+    />
+  );
 }
 
 function MaskAssetIcon({ src, className }: { src: string; className: string }) {
@@ -44,15 +65,8 @@ function MaskAssetIcon({ src, className }: { src: string; className: string }) {
   );
 }
 
-export function PoopIcon({ className = "w-5 h-5", color = "currentColor" }: IconProps) {
-  return (
-    <svg viewBox="0 0 24 24" fill={color} className={className} aria-hidden="true">
-      <path d="M12.5 3C10.5 3 9 4.2 8.5 6c-.7-.2-2.5.3-2.5 2.5 0 1 .5 1.7 1 2C6 11 5 12 5 13.5 5 15.5 6.5 17 8.5 17h7c2 0 3.5-1.5 3.5-3.5 0-1.5-1-2.5-2-3 .5-.3 1-1 1-2 0-1.8-1.5-2.7-2.5-2.5C15 4.2 14.5 3 12.5 3Z" />
-      <circle cx="10" cy="12" r="1.2" fill="white" />
-      <circle cx="14" cy="12" r="1.2" fill="white" />
-      <path d="M10.5 14.5c0 0 .7 1 1.5 1s1.5-1 1.5-1" stroke="white" strokeWidth="0.8" strokeLinecap="round" fill="none" />
-    </svg>
-  );
+export function PoopIcon({ className = "w-5 h-5" }: IconProps) {
+  return <SvgAssetIcon src={poopIcon} className={className} />;
 }
 
 export function MealIcon({ className = "w-5 h-5", color = "currentColor" }: IconProps) {
@@ -65,10 +79,13 @@ export function MealIcon({ className = "w-5 h-5", color = "currentColor" }: Icon
 
 export function NoPoopIcon({ className = "w-5 h-5", color = "var(--color-muted)" }: IconProps) {
   return (
-    <svg viewBox="0 0 24 24" className={className} aria-hidden="true">
-      <path d="M12.5 3C10.5 3 9 4.2 8.5 6c-.7-.2-2.5.3-2.5 2.5 0 1 .5 1.7 1 2C6 11 5 12 5 13.5 5 15.5 6.5 17 8.5 17h7c2 0 3.5-1.5 3.5-3.5 0-1.5-1-2.5-2-3 .5-.3 1-1 1-2 0-1.8-1.5-2.7-2.5-2.5C15 4.2 14.5 3 12.5 3Z" fill={color} opacity="0.3" />
-      <line x1="4" y1="4" x2="20" y2="20" stroke={color} strokeWidth="2" strokeLinecap="round" />
-    </svg>
+    <span className={`relative inline-block ${className}`} aria-hidden="true">
+      <img src={poopIcon} alt="" className="h-full w-full object-contain opacity-30" />
+      <span
+        className="absolute left-1/2 top-1/2 h-[120%] w-0.5 -translate-x-1/2 -translate-y-1/2 rotate-[-45deg] rounded-full"
+        style={{ backgroundColor: color }}
+      />
+    </span>
   );
 }
 
@@ -118,7 +135,7 @@ export function HomeActionSleepIcon({ className = "h-5 w-5" }: StrokeIconProps) 
 }
 
 export function HomeActionEpisodeIcon({ className = "h-5 w-5" }: StrokeIconProps) {
-  return <MaskAssetIcon src={episodeIcon} className={className} />;
+  return <InlineAssetIcon svg={episodeIconSvg} className={className} />;
 }
 
 export function HomeActionSymptomIcon({ className = "h-5 w-5" }: StrokeIconProps) {
@@ -136,43 +153,17 @@ export function HomeToolHistoryIcon({ className = "h-5 w-5" }: StrokeIconProps) 
 }
 
 export function HomeToolGrowthIcon({ className = "h-5 w-5" }: StrokeIconProps) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
-      <path d="M5.5 18.5V12.5" />
-      <path d="M10 18.5V9" />
-      <path d="M14.5 18.5V6.5" />
-      <path d="M19 18.5V4.5" />
-      <path d="M4 18.5h16" />
-    </svg>
-  );
+  return <InlineAssetIcon svg={growthIconSvg} className={className} />;
 }
 
 export function HomeToolMilestonesIcon({ className = "h-5 w-5" }: StrokeIconProps) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
-      <path d="M12 5.5 14.01 9.57l4.49.65-3.25 3.16.77 4.47L12 15.74 7.98 17.85l.77-4.47-3.25-3.16 4.49-.65L12 5.5Z" />
-    </svg>
-  );
+  return <InlineAssetIcon svg={milestoneIconSvg} className={className} />;
 }
 
 export function HomeToolTrendsIcon({ className = "h-5 w-5" }: StrokeIconProps) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
-      <path d="M5 18.5h14" />
-      <path d="M7 15.5v-4" />
-      <path d="M12 15.5V7" />
-      <path d="M17 15.5v-6" />
-      <path d="m7 9.5 4-3 3.25 2.25L18 5.75" />
-    </svg>
-  );
+  return <InlineAssetIcon svg={trendsIconSvg} className={className} />;
 }
 
 export function HomeToolReportIcon({ className = "h-5 w-5" }: StrokeIconProps) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
-      <path d="M7.5 12.25c0-1.8 1.45-3.25 3.25-3.25h2.5c1.8 0 3.25 1.45 3.25 3.25" />
-      <path d="M4.75 13.5h5.5a2.25 2.25 0 0 1 2.25 2.25v.75H8.75a4 4 0 0 1-4-4v-1.5" />
-      <path d="M19.25 13.5h-5.5a2.25 2.25 0 0 0-2.25 2.25v.75h3.75a4 4 0 0 0 4-4v-1.5" />
-    </svg>
-  );
+  return <InlineAssetIcon svg={reportIconSvg} className={className} />;
 }

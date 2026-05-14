@@ -14,28 +14,28 @@ interface CareToolsSectionProps {
 const CARE_TOOL_ITEMS = [
   {
     label: "Trends",
-    icon: <HomeToolTrendsIcon className="h-5 w-5" />,
+    icon: <HomeToolTrendsIcon className="h-7 w-7 md:h-9 md:w-9" />,
     background: "var(--color-home-tool-report)",
     color: "#36bf73",
     to: "/dashboard",
   },
   {
     label: "Report",
-    icon: <HomeToolReportIcon className="h-5 w-5" />,
+    icon: <HomeToolReportIcon className="h-7 w-7 md:h-9 md:w-9" />,
     background: "var(--color-home-tool-history)",
     color: "#3b8fdb",
     to: "/report",
   },
   {
     label: "Growth",
-    icon: <HomeToolGrowthIcon className="h-5 w-5" />,
+    icon: <HomeToolGrowthIcon className="h-7 w-7 md:h-9 md:w-9" />,
     background: "var(--color-home-tool-growth)",
     color: "#3b8fdb",
     to: "/growth",
   },
   {
     label: "Milestones",
-    icon: <HomeToolMilestonesIcon className="h-5 w-5" />,
+    icon: <HomeToolMilestonesIcon className="h-7 w-7 md:h-9 md:w-9" />,
     background: "var(--color-home-tool-milestone)",
     color: "#36bf73",
     to: "/milestones",
@@ -45,7 +45,7 @@ const CARE_TOOL_ITEMS = [
 const SOFT_CARE_TOOL_ITEMS = [
   {
     label: "Trends",
-    icon: <HomeToolTrendsIcon className="h-5 w-5" />,
+    icon: <HomeToolTrendsIcon className="h-7 w-7 md:h-9 md:w-9" />,
     background: "var(--gradient-care-tool-soft-green)",
     borderColor: "var(--color-care-tool-soft-green-border)",
     color: "var(--color-care-tool-soft-green)",
@@ -54,7 +54,7 @@ const SOFT_CARE_TOOL_ITEMS = [
   },
   {
     label: "Report",
-    icon: <HomeToolReportIcon className="h-5 w-5" />,
+    icon: <HomeToolReportIcon className="h-7 w-7 md:h-9 md:w-9" />,
     background: "var(--gradient-care-tool-soft-blue)",
     borderColor: "var(--color-care-tool-soft-blue-border)",
     color: "var(--color-care-tool-soft-blue)",
@@ -63,7 +63,7 @@ const SOFT_CARE_TOOL_ITEMS = [
   },
   {
     label: "Growth",
-    icon: <HomeToolGrowthIcon className="h-5 w-5" />,
+    icon: <HomeToolGrowthIcon className="h-7 w-7 md:h-9 md:w-9" />,
     background: "var(--gradient-care-tool-soft-blue)",
     borderColor: "var(--color-care-tool-soft-blue-border)",
     color: "var(--color-care-tool-soft-blue)",
@@ -72,7 +72,7 @@ const SOFT_CARE_TOOL_ITEMS = [
   },
   {
     label: "Milestones",
-    icon: <HomeToolMilestonesIcon className="h-5 w-5" />,
+    icon: <HomeToolMilestonesIcon className="h-7 w-7 md:h-9 md:w-9" />,
     background: "var(--gradient-care-tool-soft-green)",
     borderColor: "var(--color-care-tool-soft-green-border)",
     color: "var(--color-care-tool-soft-green)",
