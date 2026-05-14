@@ -12,6 +12,7 @@ import { useAlerts } from "../hooks/useAlerts";
 import { useEpisodes } from "../hooks/useEpisodes";
 import { useSymptoms } from "../hooks/useSymptoms";
 import { useChildWorkflowActions } from "../hooks/useChildWorkflowActions";
+import { useCurrentCaregiver } from "../hooks/useCurrentCaregiver";
 import { useEliminationPreference } from "../hooks/useEliminationPreference";
 import { useHomePageState } from "../hooks/useHomePageState";
 import { useHomeEffects } from "../hooks/useHomeEffects";
@@ -72,6 +73,7 @@ export function Home() {
   } = useEpisodes(activeChild?.id ?? null);
   const { logs: symptomLogs, refresh: refreshSymptoms } = useSymptoms(activeChild?.id ?? null);
   const { alerts, refresh: refreshAlerts, dismiss } = useAlerts(activeChild?.id ?? null);
+  const currentCaregiver = useCurrentCaregiver(activeChild?.id ?? null);
   const { refreshChildAlerts, syncChildReminders, runPostLogActions } = useChildWorkflowActions(activeChild, refreshAlerts);
   const { experience: eliminationExperience } = useEliminationPreference(activeChild);
   const homeState = useHomePageState();
@@ -219,8 +221,9 @@ export function Home() {
       sleepLogs,
       alerts,
       includeHydration: eliminationExperience.mode === "diaper",
+      caregiverDisplayName: currentCaregiver?.display_name ?? null,
     });
-  }, [activeChild, alerts, diaperLogs, eliminationExperience.mode, feedingLogs, logs, sleepLogs, summary]);
+  }, [activeChild, alerts, currentCaregiver?.display_name, diaperLogs, eliminationExperience.mode, feedingLogs, logs, sleepLogs, summary]);
   const displayedInsights = useMemo(() => {
     if (!activeChild || !assistantModel) {
       return assistantModel?.insights ?? [];

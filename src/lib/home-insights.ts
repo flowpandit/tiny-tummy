@@ -86,12 +86,17 @@ function formatClock(value: string): string {
   return new Date(value).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
 }
 
-function getGreeting(date = new Date()): string {
-  const hour = date.getHours();
+function getGreetingName(caregiverDisplayName?: string | null): string {
+  return caregiverDisplayName?.trim().split(/\s+/)[0] || "Mom";
+}
 
-  if (hour < 12) return "Good morning, Mom 👋";
-  if (hour < 18) return "Good afternoon, Mom 👋";
-  return "Good evening, Mom 👋";
+function getGreeting(date = new Date(), caregiverDisplayName?: string | null): string {
+  const hour = date.getHours();
+  const name = getGreetingName(caregiverDisplayName);
+
+  if (hour < 12) return `Good morning, ${name} 👋`;
+  if (hour < 18) return `Good afternoon, ${name} 👋`;
+  return `Good evening, ${name} 👋`;
 }
 
 function getPronoun(sex: ChildSex | null): "He" | "She" | "They" {
@@ -161,8 +166,10 @@ function buildStatusMessage(input: {
   summary: ChildDailySummary;
   feedPredictionTitle: string | null;
   sleepPredictionTitle: string | null;
+  caregiverDisplayName?: string | null;
+  now?: Date;
 }): HomeStatusMessage {
-  const greeting = getGreeting();
+  const greeting = getGreeting(input.now, input.caregiverDisplayName);
   const childName = input.child.name;
   const hasWatchAlert = input.alerts.some((alert) => alert.severity === "warning" || alert.severity === "urgent");
 
@@ -570,6 +577,7 @@ export function buildHomeAssistantModel(input: {
   sleepLogs: SleepEntry[];
   alerts: Alert[];
   includeHydration?: boolean;
+  caregiverDisplayName?: string | null;
   now?: Date;
 }): HomeAssistantModel {
   const dayKey = formatLocalDateKey(input.now ?? new Date());
@@ -593,6 +601,8 @@ export function buildHomeAssistantModel(input: {
     sleepPredictionTitle: sleepPrediction && (sleepPrediction.state === "due" || sleepPrediction.state === "overdue")
       ? `${input.child.name}'s sleep window is opening`
       : null,
+    caregiverDisplayName: input.caregiverDisplayName,
+    now: input.now,
   });
 
   return {

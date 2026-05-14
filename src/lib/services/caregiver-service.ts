@@ -55,6 +55,20 @@ function byCaregiverId(profiles: ChildCaregiverProfile[]): Set<string> {
   return new Set(profiles.map((profile) => profile.id));
 }
 
+async function ensureCurrentCaregiverForChild(
+  repositories: Pick<AppRepositories, "caregivers" | "settings">,
+  childId: string,
+  caregiverId: string,
+) {
+  const currentCaregiverId = await repositories.settings.getSetting(CURRENT_CAREGIVER_SETTING_KEY);
+  if (currentCaregiverId) {
+    const childCaregivers = await repositories.caregivers.listCaregiversForChild(childId);
+    if (findLinkedCurrentCaregiverForChild(currentCaregiverId, childCaregivers)) return;
+  }
+
+  await repositories.settings.setSetting(CURRENT_CAREGIVER_SETTING_KEY, caregiverId);
+}
+
 export function createCaregiverService(
   repositories: Pick<AppRepositories, "caregivers" | "settings">,
 ): CaregiverService {
@@ -83,6 +97,7 @@ export function createCaregiverService(
         caregiverId: caregiver.id,
         relationshipToChild: relationshipForLink(draft),
       });
+      await ensureCurrentCaregiverForChild(repositories, childId, caregiver.id);
 
       if (draft.is_primary === 1) {
         await repositories.caregivers.setPrimaryCaregiver(caregiver.id);
@@ -115,6 +130,7 @@ export function createCaregiverService(
         relationshipToChild: "parent",
       });
       await repositories.caregivers.setPrimaryCaregiver(caregiver.id);
+      await ensureCurrentCaregiverForChild(repositories, childId, caregiver.id);
       return {
         ...caregiver,
         is_primary: 1,

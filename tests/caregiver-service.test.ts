@@ -186,7 +186,6 @@ test("caregiver service creates, edits, selects, and soft deletes local caregive
     email: "mum@example.test",
     isPrimary: true,
   });
-  await state.service.setCurrentCaregiver(caregiver.id);
 
   assert.equal(caregiver.display_name, "Mum");
   assert.equal(state.caregivers[0].is_primary, 1);
@@ -213,6 +212,34 @@ test("caregiver service creates, edits, selects, and soft deletes local caregive
   assert.ok(state.caregivers[0].deleted_at);
   assert.ok(state.childCaregivers[0].deleted_at);
   assert.equal(state.settings.has(CURRENT_CAREGIVER_SETTING_KEY), false);
+});
+
+test("caregiver service selects a newly created caregiver when the child has no current caregiver", async () => {
+  const state = createRepositoryState();
+
+  const caregiver = await state.service.createCaregiverForChild("child-1", {
+    displayName: "Mum",
+    role: "parent",
+  });
+
+  assert.equal(state.settings.get(CURRENT_CAREGIVER_SETTING_KEY), caregiver.id);
+  assert.equal((await state.service.getCurrentCaregiverForChild("child-1"))?.id, caregiver.id);
+});
+
+test("caregiver service keeps the linked current caregiver when adding another caregiver", async () => {
+  const state = createRepositoryState();
+  const dad = await state.service.createCaregiverForChild("child-1", {
+    displayName: "Dad",
+    role: "parent",
+  });
+  const nanny = await state.service.createCaregiverForChild("child-1", {
+    displayName: "Nanny",
+    role: "nanny",
+  });
+
+  assert.equal(state.settings.get(CURRENT_CAREGIVER_SETTING_KEY), dad.id);
+  assert.equal((await state.service.getCurrentCaregiverForChild("child-1"))?.id, dad.id);
+  assert.notEqual(state.settings.get(CURRENT_CAREGIVER_SETTING_KEY), nanny.id);
 });
 
 test("caregiver service supports one caregiver across children and many caregivers for one child", async () => {
@@ -267,5 +294,6 @@ test("default local caregiver is suggested without blocking normal app use", asy
   assert.equal(caregiver.display_name, "Primary caregiver");
   assert.equal(caregiver.role, "parent");
   assert.equal(caregiver.is_primary, 1);
+  assert.equal(state.settings.get(CURRENT_CAREGIVER_SETTING_KEY), caregiver.id);
   assert.deepEqual((await state.service.listChildCaregivers("child-1")).map((profile) => profile.display_name), ["Primary caregiver"]);
 });

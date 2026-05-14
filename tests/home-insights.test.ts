@@ -38,6 +38,40 @@ const summary: ChildDailySummary = {
   activeEpisode: null,
 };
 
+test("home greeting uses the current caregiver first name", () => {
+  const model = buildHomeAssistantModel({
+    child,
+    summary,
+    poopLogs: [],
+    diaperLogs: [],
+    feedingLogs: [],
+    sleepLogs: [],
+    alerts: [],
+    includeHydration: false,
+    caregiverDisplayName: "Nikhil Mehral",
+    now: new Date(2026, 4, 3, 10, 0, 0),
+  });
+
+  assert.equal(model.status.greeting, "Good morning, Nikhil 👋");
+});
+
+test("home greeting falls back to Mom without a current caregiver", () => {
+  const model = buildHomeAssistantModel({
+    child,
+    summary,
+    poopLogs: [],
+    diaperLogs: [],
+    feedingLogs: [],
+    sleepLogs: [],
+    alerts: [],
+    includeHydration: false,
+    caregiverDisplayName: "   ",
+    now: new Date(2026, 4, 3, 10, 0, 0),
+  });
+
+  assert.equal(model.status.greeting, "Good morning, Mom 👋");
+});
+
 test("home insights can omit hydration for children using poop tracking", () => {
   const model = buildHomeAssistantModel({
     child,

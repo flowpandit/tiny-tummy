@@ -1028,7 +1028,7 @@ export function Onboarding() {
 
       if (parentDetails.name.trim().length > 0) {
         const role = caregiverRoleFor(parentDetails.relationship)
-        const caregiver = await services.caregivers.createCaregiverForChild(createdChild.id, {
+        await services.caregivers.createCaregiverForChild(createdChild.id, {
           displayName: parentDetails.name,
           role,
           relationship: role,
@@ -1036,7 +1036,6 @@ export function Onboarding() {
           avatarColor: "#DB2777",
           isPrimary: true,
         })
-        await services.caregivers.setCurrentCaregiver(caregiver.id)
       }
 
       await refreshChildren()
