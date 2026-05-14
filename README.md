@@ -493,7 +493,7 @@ SQLite database stored at the platform's app data directory:
 
 - **iOS**: `~/Library/Containers/<bundle-id>/Data/`
 - **Android**: `/data/data/<package>/`
-- **macOS** (dev): `~/Library/Application Support/com.nikhilmehral.tinytummy/`
+- **macOS** (dev): `~/Library/Application Support/au.tinytummy.app/`
 
 ### Schema
 

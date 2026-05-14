@@ -70,7 +70,7 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
             #[cfg(target_os = "android")]
             {
                 let handle =
-                    api.register_android_plugin("com.nikhilmehral.tinytummy", "DownloadsPlugin")?;
+                    api.register_android_plugin("au.tinytummy.app", "DownloadsPlugin")?;
                 app.manage(DownloadsHandle(handle));
             }
             #[cfg(not(target_os = "android"))]

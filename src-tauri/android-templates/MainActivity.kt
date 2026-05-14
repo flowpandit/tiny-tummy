@@ -1,4 +1,4 @@
-package com.nikhilmehral.tinytummy
+package au.tinytummy.app
 
 import android.graphics.Color
 import android.os.Bundle

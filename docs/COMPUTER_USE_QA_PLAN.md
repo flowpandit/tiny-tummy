@@ -65,7 +65,7 @@ Preferred clean-start workflow:
 
 Fallback manual data reset on macOS dev:
 
-- App data location: `~/Library/Application Support/com.nikhilmehral.tinytummy/`
+- App data location: `~/Library/Application Support/au.tinytummy.app/`
 - Database file: `tinytummy.db`
 
 Use the fallback only if the environment-variable reset path is unavailable.

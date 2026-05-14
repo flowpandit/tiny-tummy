@@ -120,7 +120,7 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
             #[cfg(target_os = "android")]
             {
                 let handle =
-                    api.register_android_plugin("com.nikhilmehral.tinytummy", "BillingPlugin")?;
+                    api.register_android_plugin("au.tinytummy.app", "BillingPlugin")?;
                 app.manage(BillingHandle(handle));
             }
             #[cfg(target_os = "ios")]

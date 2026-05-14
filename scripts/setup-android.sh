@@ -6,7 +6,7 @@ set -e
 
 ANDROID_DIR="src-tauri/gen/android"
 RES_DIR="$ANDROID_DIR/app/src/main/res"
-JAVA_DIR="$ANDROID_DIR/app/src/main/java/com/nikhilmehral/tinytummy"
+JAVA_DIR="$ANDROID_DIR/app/src/main/java/au/tinytummy/app"
 BUILD_GRADLE="$ANDROID_DIR/app/build.gradle.kts"
 ICON_MANIFEST="src-tauri/icons/icon-manifest.json"
 TMP_ICON_DIR="/tmp/tiny-tummy-android-icons"

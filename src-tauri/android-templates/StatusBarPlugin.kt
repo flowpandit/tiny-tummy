@@ -1,4 +1,4 @@
-package com.nikhilmehral.tinytummy
+package au.tinytummy.app
 
 import android.app.Activity
 import app.tauri.annotation.Command
