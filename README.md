@@ -317,17 +317,23 @@ Use Xcode's Play button when you want a self-contained device install without ho
 To ensure the latest frontend changes and database optimizations are correctly installed on your physical device:
 
 1. **Build Frontend**: Update the assets that Xcode will bundle:
+
    ```bash
    npm run build
    ```
+
 2. **Patch Xcode Project**: Ensure signing and sandbox settings are correct:
+
    ```bash
    npm run fix:ios-xcodeproj
    ```
+
 3. **Open Xcode**:
+
    ```bash
    npm run tauri ios open
    ```
+
 4. **Clean Build Folder**: In Xcode, go to **Product > Clean Build Folder** (or `Cmd + Shift + K`). This is critical for clearing cached assets and ensuring the new SQLite WAL mode is active.
 5. **Run**: Select your iPad/iPhone as the target and hit **Play**.
 
@@ -350,9 +356,11 @@ To prevent layout thrashing and "rotation freezes" on tablets:
 If the iPad shows the default Tauri icon:
 
 1. **Regenerate Icons**:
+
    ```bash
    npx tauri icon src-tauri/icons/icon.png
    ```
+
 2. **Xcode Verification**:
    - Open Xcode and go to the **Assets** catalog.
    - Click **AppIcon** and ensure your custom icon is present in the slots.
@@ -395,7 +403,7 @@ mkdir -p ~/android-keystores
 
 keytool -genkeypair \
   -v \
-  -keystore ~/android-keystores/tiny-tummy-upload.jks \
+  -keystore /Users/nikhilmehral/tinytummy-upload-key.jks \
   -alias tiny-tummy-upload \
   -keyalg RSA \
   -keysize 2048 \
@@ -411,7 +419,7 @@ jarsigner \
   -verbose \
   -sigalg SHA256withRSA \
   -digestalg SHA-256 \
-  -keystore ~/android-keystores/tiny-tummy-upload.jks \
+  -keystore /Users/nikhilmehral/tinytummy-upload-key.jks \
   src-tauri/gen/android/app/build/outputs/bundle/universalRelease/app-universal-release.aab \
   tiny-tummy-upload
 ```
