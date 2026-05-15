@@ -284,16 +284,20 @@ test("caregiver service resolves current caregiver only when linked to the child
   assert.equal(await state.service.getCurrentCaregiverForChild("child-1"), null);
 });
 
-test("default local caregiver is suggested without blocking normal app use", async () => {
+test("new primary caregiver uses the user-entered name", async () => {
   const state = createRepositoryState();
 
   assert.deepEqual(await state.service.listChildCaregivers("child-1"), []);
 
-  const caregiver = await state.service.createDefaultCaregiverForChild("child-1");
+  const caregiver = await state.service.createCaregiverForChild("child-1", {
+    displayName: "Nikhil",
+    role: "parent",
+    isPrimary: true,
+  });
 
-  assert.equal(caregiver.display_name, "Primary caregiver");
+  assert.equal(caregiver.display_name, "Nikhil");
   assert.equal(caregiver.role, "parent");
   assert.equal(caregiver.is_primary, 1);
   assert.equal(state.settings.get(CURRENT_CAREGIVER_SETTING_KEY), caregiver.id);
-  assert.deepEqual((await state.service.listChildCaregivers("child-1")).map((profile) => profile.display_name), ["Primary caregiver"]);
+  assert.deepEqual((await state.service.listChildCaregivers("child-1")).map((profile) => profile.display_name), ["Nikhil"]);
 });

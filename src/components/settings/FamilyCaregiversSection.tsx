@@ -131,12 +131,14 @@ function LinkExistingRow({
 
 function CaregiverFormSheet({
   editingCaregiver,
+  initialIsPrimary,
   open,
   onClose,
   onDelete,
   onSave,
 }: {
   editingCaregiver: EditingCaregiver;
+  initialIsPrimary: boolean;
   open: boolean;
   onClose: () => void;
   onDelete: (caregiver: ChildCaregiverProfile) => Promise<void>;
@@ -166,9 +168,9 @@ function CaregiverFormSheet({
     setEmail(editingCaregiver?.email ?? "");
     setPhone(editingCaregiver?.phone ?? "");
     setAvatarColor(editingCaregiver?.avatar_color ?? CAREGIVER_AVATAR_COLORS[0]);
-    setIsPrimary(editingCaregiver?.is_primary === 1);
+    setIsPrimary(editingCaregiver ? editingCaregiver.is_primary === 1 : initialIsPrimary);
     setIsConfirmingDelete(false);
-  }, [editingCaregiver, open]);
+  }, [editingCaregiver, initialIsPrimary, open]);
 
   const saveDisabled = displayName.trim().length === 0 || isSaving;
 
@@ -338,7 +340,6 @@ export function FamilyCaregiversSection({ activeChild }: { activeChild: Child | 
     currentCaregiverId,
     isLoading,
     error,
-    createDefaultCaregiver,
     createCaregiver,
     updateCaregiver,
     linkCaregiver,
@@ -348,6 +349,7 @@ export function FamilyCaregiversSection({ activeChild }: { activeChild: Child | 
   } = useCaregiverManagement(activeChild);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [editingCaregiver, setEditingCaregiver] = useState<EditingCaregiver>(null);
+  const [newCaregiverStartsPrimary, setNewCaregiverStartsPrimary] = useState(false);
   const [unlinkConfirmId, setUnlinkConfirmId] = useState<string | null>(null);
 
   const currentCaregiverOptions = useMemo(() => linkedCaregivers.map((caregiver) => ({
@@ -366,13 +368,15 @@ export function FamilyCaregiversSection({ activeChild }: { activeChild: Child | 
     }
   };
 
-  const openAddSheet = () => {
+  const openAddSheet = (startsPrimary = false) => {
     setEditingCaregiver(null);
+    setNewCaregiverStartsPrimary(startsPrimary);
     setIsSheetOpen(true);
   };
 
   const openEditSheet = (caregiver: ChildCaregiverProfile) => {
     setEditingCaregiver(caregiver);
+    setNewCaregiverStartsPrimary(false);
     setIsSheetOpen(true);
   };
 
@@ -422,7 +426,7 @@ export function FamilyCaregiversSection({ activeChild }: { activeChild: Child | 
     <section>
       <div className="mb-3 flex items-center justify-between gap-3">
         <h3 className={SETTINGS_SECTION_TITLE_CLASS}>Family &amp; Caregivers</h3>
-        <button type="button" onClick={openAddSheet} className="cursor-pointer text-xs font-semibold text-[var(--color-primary)]">
+        <button type="button" onClick={() => openAddSheet()} className="cursor-pointer text-xs font-semibold text-[var(--color-primary)]">
           Add
         </button>
       </div>
@@ -478,13 +482,11 @@ export function FamilyCaregiversSection({ activeChild }: { activeChild: Child | 
                 <Button
                   type="button"
                   variant="cta"
-                  onClick={() => {
-                    void runAction(createDefaultCaregiver, "Primary caregiver added.");
-                  }}
+                  onClick={() => openAddSheet(true)}
                 >
                   Add Primary caregiver
                 </Button>
-                <Button type="button" variant="secondary" onClick={openAddSheet}>
+                <Button type="button" variant="secondary" onClick={() => openAddSheet()}>
                   Add custom caregiver
                 </Button>
               </div>
@@ -542,6 +544,7 @@ export function FamilyCaregiversSection({ activeChild }: { activeChild: Child | 
 
       <CaregiverFormSheet
         editingCaregiver={editingCaregiver}
+        initialIsPrimary={newCaregiverStartsPrimary}
         open={isSheetOpen}
         onClose={() => setIsSheetOpen(false)}
         onDelete={(caregiver) => runAction(() => deleteCaregiver(caregiver.id), "Caregiver deleted.")}

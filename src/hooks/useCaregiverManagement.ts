@@ -64,11 +64,6 @@ export function useCaregiverManagement(activeChild: Child | null) {
     isLoading,
     error,
     refresh,
-    createDefaultCaregiver: useCallback(async () => {
-      if (!activeChild) return;
-      await caregivers.createDefaultCaregiverForChild(activeChild.id);
-      await refresh();
-    }, [activeChild, caregivers, refresh]),
     createCaregiver: useCallback(async (input: SaveCaregiverInput) => {
       if (!activeChild) return;
       await caregivers.createCaregiverForChild(activeChild.id, input);

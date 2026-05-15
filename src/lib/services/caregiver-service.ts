@@ -1,5 +1,4 @@
 import {
-  CAREGIVER_AVATAR_COLORS,
   CURRENT_CAREGIVER_SETTING_KEY,
   buildCaregiverDraft,
   findLinkedCurrentCaregiverForChild,
@@ -24,7 +23,6 @@ export interface CaregiverService {
   listChildCaregivers(childId: string): Promise<ChildCaregiverProfile[]>;
   listAvailableCaregiversForChild(childId: string): Promise<Caregiver[]>;
   createCaregiverForChild(childId: string, input: SaveCaregiverInput): Promise<Caregiver>;
-  createDefaultCaregiverForChild(childId: string): Promise<Caregiver>;
   updateCaregiver(caregiverId: string, input: SaveCaregiverInput): Promise<void>;
   linkCaregiverToChild(childId: string, caregiverId: string, relationship?: string | null): Promise<void>;
   unlinkCaregiverFromChild(linkId: string): Promise<void>;
@@ -108,33 +106,6 @@ export function createCaregiverService(
       }
 
       return caregiver;
-    },
-
-    async createDefaultCaregiverForChild(childId) {
-      const linked = await repositories.caregivers.listCaregiversForChild(childId);
-      const existingPrimary = linked.find((profile) => profile.is_primary === 1);
-      if (existingPrimary) return existingPrimary;
-
-      const caregiver = await repositories.caregivers.createCaregiver({
-        display_name: "Primary caregiver",
-        role: "parent",
-        relationship: "parent",
-        email: null,
-        phone: null,
-        avatar_color: CAREGIVER_AVATAR_COLORS[0],
-        is_primary: 0,
-      });
-      await repositories.caregivers.linkCaregiverToChild({
-        childId,
-        caregiverId: caregiver.id,
-        relationshipToChild: "parent",
-      });
-      await repositories.caregivers.setPrimaryCaregiver(caregiver.id);
-      await ensureCurrentCaregiverForChild(repositories, childId, caregiver.id);
-      return {
-        ...caregiver,
-        is_primary: 1,
-      };
     },
 
     async updateCaregiver(caregiverId, input) {
