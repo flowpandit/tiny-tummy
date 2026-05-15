@@ -1176,7 +1176,7 @@ export function Onboarding() {
 
   return (
     <div className="min-h-screen bg-[var(--color-onboarding-app-bg)] text-[var(--color-onboarding-text)]">
-      <div className="mx-auto min-h-[100dvh] max-w-[430px] overflow-hidden bg-[var(--color-onboarding-bg)] shadow-[var(--color-onboarding-shadow)]">
+      <div className="mx-auto min-h-[100dvh] w-full max-w-[430px] overflow-hidden bg-[var(--color-onboarding-bg)] shadow-[var(--color-onboarding-shadow)] md:max-w-none md:shadow-none">
         <AnimatePresence mode="wait">
           <motion.div
             key={step}

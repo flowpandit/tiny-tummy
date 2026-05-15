@@ -114,7 +114,7 @@ cargo tauri ios build
 Use Xcode/TestFlight when archive, signing, or upload needs manual control:
 
 ```bash
-npm run tauri ios open
+open -n src-tauri/gen/apple/tiny-tummy.xcodeproj
 ```
 
 ## Upload Targets

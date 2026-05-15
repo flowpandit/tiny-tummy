@@ -227,7 +227,7 @@ src-tauri/gen/apple/build/
 For TestFlight, use Xcode when archive/signing/export needs manual control:
 
 ```bash
-npm run tauri ios open
+open -n src-tauri/gen/apple/tiny-tummy.xcodeproj
 ```
 
 Then in Xcode, select a real iOS device or generic iOS device destination, archive, and distribute to App Store Connect/TestFlight. TestFlight purchase tests still use Apple's sandbox environment.

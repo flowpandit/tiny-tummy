@@ -282,7 +282,7 @@ To test on a physical iPhone, you need an Apple Developer account to configure s
 
 1. **Enable Developer Mode:** On your iPhone, go to Settings > Privacy & Security > Developer Mode and toggle it on. Restart when prompted.
 2. **Connect Device:** Plug your iPhone into your Mac and "Trust" the computer.
-3. **Open Xcode:** Run `npm run tauri ios open` (or open `src-tauri/gen/apple/tiny-tummy.xcodeproj` directly).
+3. **Open Xcode:** Run `open -n src-tauri/gen/apple/tiny-tummy.xcodeproj`.
 4. **Configure Account:** In Xcode, go to Xcode > Settings > Accounts and sign in with your Apple Developer account.
 5. **Set up Signing:**
    - Click the `tiny-tummy` project in the left Project Navigator.
@@ -331,7 +331,7 @@ To ensure the latest frontend changes and database optimizations are correctly i
 3. **Open Xcode**:
 
    ```bash
-   npm run tauri ios open
+   open -n src-tauri/gen/apple/tiny-tummy.xcodeproj
    ```
 
 4. **Clean Build Folder**: In Xcode, go to **Product > Clean Build Folder** (or `Cmd + Shift + K`). This is critical for clearing cached assets and ensuring the new SQLite WAL mode is active.
@@ -482,6 +482,7 @@ The `.ipa` is generated in `src-tauri/gen/apple/build/`. Upload to [App Store Co
 - **Safe areas**: iOS Safari WebView supports `env(safe-area-inset-top)` natively via `@supports` in CSS. No manual offsets needed.
 
 - **iOS deployment target stale after regenerating iOS**: `src-tauri/tauri.conf.json` sets `bundle.iOS.minimumSystemVersion` to `16.0`, which maps to `IPHONEOS_DEPLOYMENT_TARGET`. If an older generated Xcode project still shows iOS 14.0, run `npm run fix:ios-xcodeproj` and verify `IPHONEOS_DEPLOYMENT_TARGET = 16.0` in `src-tauri/gen/apple/tiny-tummy.xcodeproj/project.pbxproj`.
+- **iPad opens in a phone-sized frame**: run `npm run fix:ios-xcodeproj`, then verify `TARGETED_DEVICE_FAMILY = "1,2"` in `src-tauri/gen/apple/tiny-tummy.xcodeproj/project.pbxproj`. Delete the old app from the iPad before reinstalling so iPadOS does not keep launching an older iPhone-only build.
 
 - **Billing plugin stale after regenerating iOS**: `src-tauri/gen/apple/` is ignored and can be recreated. Run `cargo tauri ios init`, then `npm run fix:ios-xcodeproj` or `./scripts/build-rust-ios.sh` so `src-tauri/ios-templates/BillingPlugin.swift` is copied into the generated Xcode sources.
 
